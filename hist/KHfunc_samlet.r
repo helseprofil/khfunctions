@@ -381,7 +381,7 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##########################################################
 
 #
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list()){
+LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=TRUE,dumps=list()){
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
