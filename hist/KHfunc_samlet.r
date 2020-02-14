@@ -50,6 +50,7 @@ globglobs<-list(
   NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
   FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
   FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
+  KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
   #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
   #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
   #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
@@ -1452,10 +1453,10 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
     while (i<=nrow(KBsubs)){
       KBsub<-KBsubs[i,]
       if (valsubs==TRUE){
-        subsant<-rbind(subsant,data.frame(ORG=KBsub$ORGKODE,KBOMK=paste("<",KBsub$NYKODE,">",sep=""),OMK=paste("<",KBsub$NYKODE,">",sep=""),FREQ=length(grepl(KBsub$ORGKODE,omk)),OK=1))
+        subsant<-rbind(subsant,data.frame(ORG=KBsub$ORGKODE,KBOMK=paste("<",KBsub$NYKODE,">",sep=""),OMK=paste("<",KBsub$NYKODE,">",sep=""),FREQ=length(grepl(KBsub$ORGKODE,omk,perl=TRUE)),OK=1))
       }
       #omk<-sub(eval(parse(text=KBsub$ORGKODE)),eval(parse(text=KBsub$NYKODE)),omk)
-      omk<-sub(KBsub$ORGKODE,KBsub$NYKODE,omk)
+      omk<-sub(KBsub$ORGKODE,KBsub$NYKODE,omk,perl=TRUE)
       i<-i+1
     }
     if (valsubs==TRUE){
@@ -3542,15 +3543,23 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
     rektangularisert<-1
     cat("--TNF ferdig merget med KUBEd, dim(TNF)",dim(TNF),"\n")
   } else if (!is.na(filer[NN])){
-    kolsT<-unlist(globs$DefDesign$DelKolsF[FilDesL[[filer[TT]]]$OmkDeler])
-    kolsN<-unlist(globs$DefDesign$DelKolsF[FilDesL[[filer[NN]]]$OmkDeler])
+    #DEVELOP HER 20160122
+    #kolsT<-unlist(globs$DefDesign$DelKolsF[FilDesL[[filer[TT]]]$OmkDeler])
+    #kolsN<-unlist(globs$DefDesign$DelKolsF[FilDesL[[filer[NN]]]$OmkDeler])
+    kolsT<-FilDesL[[filer[TT]]]$KolNavn
+    kolsN<-FilDesL[[filer[NN]]]$KolNavn
     kols<-intersect(kolsT,kolsN)
+    #print(names(FGPs[[filer[TT]]]))
+    #kols<-intersect(FinnTabKols(names(filer[TT])),FinnTabKols(names(filer[NN])))
+    #print(FilDesL[[filer[TT]]])
     setkeyv(TF,kols)
     setkeyv(NF,kols)
+    #print(kols)
     
     #Når KubeD=NULL er det ikke nødvendig å fange implisitt 0 i teller selv om nevner finnes, 
     #derfor bare join TF->NF
     cat("TNF merges TNF<-NF[TF]\n")
+    
     TNF<-NF[TF]
     TNF<-SettMergeNAs(TNF,c(FGPs[[filer[TT]]]$vals,FGPs[[filer[NN]]]$vals)) 
     cat("--TNF ferdig merget TNF<-NF[TF] gir dim(TF)",dim(TF),", dim(NF)",dim(NF),", og dim(TNF)",dim(TNF),"\n")   
@@ -3766,7 +3775,14 @@ FinnKubeT<-function(fila,batch=NA,globs=FinnGlobs()){
   } else {
     filn<-paste(globs$path,"/",globs$KubeDirDat,fila,"_",batch,".rds",sep="")
   }
-  KUBE<-readRDS(filn)
+  KUBE<-data.table()
+  if(file.access(filn,mode=0)==-1){
+    cat("KRITISK FEIL: ",filn," finnes ikke\n")
+  } else if (file.access(filn,mode=4)==-1){
+    cat("KRITISK FEIL: ",filn," finnes, men lar seg ikke lese\n")
+  } else {
+    KUBE<-readRDS(filn)
+  }
   return(KUBE)
 }
 
@@ -4344,7 +4360,8 @@ OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
     }
     FIL<-rbind(FIL[,orgkols,with=FALSE],UDekk[,orgkols,with=FALSE])
     cat("UDEKKA:",nrow(RD$Udekk),"\n")
-    print(subset(RD$Udekk,GEOniv!="B"))
+    #print(subset(RD$Udekk,GEOniv!="B"))
+    print(RD$Udekk)
   }
   return(FIL)
 }
@@ -5224,6 +5241,7 @@ FinnTabKols<-function(knames){
   return(setdiff(knames,c(FinnValKolsF(knames),"KOBLID","ROW")))  
 }
 
+
 FinnTabKolsKUBE<-function(allnames,globs=FinnGlobs()){
   annet<-union(union(unlist(globs$NesstarOutputDef),FinnValKolsF(allnames)),c("NORMSMR","SMRtmp"))
   return(setdiff(allnames,annet))  
@@ -5628,6 +5646,114 @@ KjorStataSkript <- function(TABLE,script,batchdate=SettKHBatchDate(),globs=FinnG
   setwd(wdOrg)
   return(list(TABLE=TABLE,feil=feil))
 }
+
+
+#############################################
+SammelignAarganger<-function(globs=FinnGlobs(),aar1=globs$KHaargang,aar2=globs$KHaargang-1,modus="KH"){
+  KUBE1<-as.data.table(sqlQuery(globs$dbh,paste("SELECT KUBE_NAVN, VERSJON FROM ",modus,aar1,"_KUBESTATUS",sep=""),stringsAsFactors=F))
+  KUBE2<-as.data.table(sqlQuery(globs$dbh,paste("SELECT KUBE_NAVN, VERSJON FROM ",modus,aar2,"_KUBESTATUS",sep=""),stringsAsFactors=F))
+  setkey(KUBE1,"KUBE_NAVN")
+  setkey(KUBE2,"KUBE_NAVN")
+  PAR<-merge(KUBE1,KUBE2,by="KUBE_NAVN",suffixes=c("1","2"))
+  setnames(PAR,c("KUBE_NAVN"),c("KUBE_NAVN1"))
+  PAR[,KUBE_NAVN2:=KUBE_NAVN1]
+  SammenlignKubePar(PAR,modus=modus,globs=globs)
+}
+
+SammenlignKubePar<-function(PAR,modus=NA,globs=FinnGlobs()){
+  globs<-SettKubedirs(globs,modus=modus)
+  for (i in 1:nrow(PAR)){
+    paret<-PAR[i,]
+    if (grepl("^\\d{4}",paret$VERSJON1) & grepl("^\\d{4}",paret$VERSJON2)){
+      cat(paste("Skal merge",paret$KUBE_NAVN1,"\n"))
+      KUBE1<-FinnKubeT(paret$KUBE_NAVN1,batch=paret$VERSJON1,globs=globs)
+      KUBE2<-FinnKubeT(paret$KUBE_NAVN2,batch=paret$VERSJON2,globs=globs)
+      tabs1<-FinnTabKolsKUBE(names(KUBE1))
+      tabs2<-FinnTabKolsKUBE(names(KUBE2))
+      if (nrow(KUBE1)>0 & nrow(KUBE2) & length(setdiff(tabs1,tabs2))==0){
+        setkeyv(KUBE1,tabs1)
+        setkeyv(KUBE2,tabs1)
+        #VERSJON 1 INNER JOIN
+        KOMP<-KUBE2[KUBE1]
+        
+        #VERSJON 2 FULL OUTER JOIN, RESUUSRKREVENDE!
+        #KOMP<-merge(KUBE1,KUBE2,all=TRUE)
+        
+        #MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
+        
+        
+        utfil<-paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/VALIDERING/NESSTAR_KUBER/KH2016v2015/",paret$KUBE_NAVN1,"_",paret$VERSJON1,"v",paret$VERSJON2,".csv",sep="")
+        cat(paste("Skriver ut",utfil,"\n"))
+        write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
+      } else {
+        cat("!!!!!! ",paret$VERSJON1,"har ulike kolonner og kan ikke matches")
+      }
+    }
+  }
+}
+
+
+
+
+SettKubedirs<-function(globs,modus=NA){
+  if (modus=="KH"){
+    globs$KubeDir<-globs$KubeDir_KH
+    globs$KubeDirNy<-globs$KubeDirNy_KH
+    globs$KubeDirDat<-globs$KubeDirDat_KH
+    globs$FriskVDir<-globs$FriskVDir_KH
+  } else {
+    globs$KubeDir<-globs$KubeDir_NH
+    globs$KubeDirNy<-globs$KubeDirNy_NH
+    globs$KubeDirDat<-globs$KubeDirDat_NH
+    globs$FriskVDir<-globs$FriskVDir_NH
+  }
+  return(globs)
+}  
+
+
+
+TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=character(0),globs=FinnGlobs()){
+  
+  KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
+  KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+  
+  print(names(KUBE1))
+  print(names(KUBE2))
+  tabs<-unique(c(globs$FriskvikTabs,tabs))
+  
+  
+  tabs1<-intersect(names(KUBE1),tabs)
+  tabs2<-intersect(names(KUBE2),tabs)
+    
+  print(tabs1)
+  print(tabs2)
+  KHglobs$DefDesign$DesignKols
+  
+  if (nrow(KUBE1)>0 & nrow(KUBE2)>0 & length(setdiff(tabs1,tabs2))==0){
+    setkeyv(KUBE1,tabs1)
+    setkeyv(KUBE2,tabs1)
+    #VERSJON 1 INNER JOIN
+    KOMP<-KUBE2[KUBE1]
+    
+    #VERSJON 2 FULL OUTER JOIN, RESUUSRKREVENDE!
+    #KOMP<-merge(KUBE1,KUBE2,all=TRUE)
+    
+    #MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
+    
+    
+    utfil<-paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/VALIDERING/NESSTAR_KUBER/NH2016v2015/",KUBENAVN,".csv",sep="")
+    cat(paste("Skriver ut",utfil,"\n"))
+    write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
+  } else {
+    cat("!!!!!! tabellene har ulike kolonner og kan ikke matches")
+  }
+}
+
+
+#############################################
+
+
+
 
 KHglobs<-FinnGlobs()
 
