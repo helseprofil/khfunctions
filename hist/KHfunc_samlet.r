@@ -749,6 +749,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     DF<-as.data.frame(DF[,eval(parse(text=lp)), by=tabkols])
   }
   
+  
+ 
+  
    ######################################################
   #SKILL EVT UT SOM EGEN FUNKSJON
   #Nullstill logg
@@ -1013,7 +1016,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   if (ok==0){
     DF<-data.frame()
     #DF<-DF[0,] #Fungerer ikke mht class, som kan være feil
-  }  
+  }
+ 
   return(DF)
 }
 
@@ -1080,6 +1084,8 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
           DF<-INNLES          
         }
       }
+      #Må sikre at data.frame, noen filer kan være bare en skalar (jfr ENPERSON)
+      DF<-as.data.frame(DF,stringsAsFactors=FALSE)
       if (ok==0){
         TilFilLogg(filbesk$KOBLID,"INNLESARGerr",innleserr,batchdate=batchdate,globs=globs)
       } else {
@@ -1089,7 +1095,6 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
       
     }
   }
-  
   
   #Fortsett hvis lest inn er ok
   if(ok==1){    
@@ -1196,7 +1201,7 @@ KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quo
   if (brukfread==TRUE){
     csvT<-as.data.frame(fread(filn,header=FALSE,skip=0,colClasses="character",sep=sep,na.strings=na.strings))
   } else {
-    csvT<-read.csv(filn,header=FALSE,skip=0,colClasses="character",sep=sep,quote=quote,dec=dec,fill=TRUE,encoding=encoding,blank.lines.skip=FALSE,na.strings=na.strings)
+    csvT<-as.data.frame(read.csv(filn,header=FALSE,skip=0,colClasses="character",sep=sep,quote=quote,dec=dec,fill=TRUE,encoding=encoding,blank.lines.skip=FALSE,na.strings=na.strings))
   }
   return(csvT)
 }
@@ -1228,7 +1233,6 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
     DF<-DF[1:(sisteRad-skip-length(slettRader)),]
   }
   
-  
   if (TomRadSlutt==TRUE){
     tomr<-which(rowSums(is.na(DF) | DF=="") == ncol(DF))
     if (!is.na(tomr[1])){
@@ -1238,12 +1242,11 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
   if (FjernTommeRader==TRUE){
     DF<-DF[rowSums(is.na(DF) | DF=="") != ncol(DF),]
   }
- 
-  
   if (FjernTommeKol==TRUE){
     DF<-DF[,colSums(is.na(DF) | DF=="") != nrow(DF)]
   }
-  
+  #Må sikre at data.frame, noen filer kan være bare en skalar (jfr ENPERSON)
+  DF<-as.data.frame(DF,stringsAsFactors=FALSE)
   
   #Sett header. Default er vanlige Excel-kolonnenavn
   names(DF)<-globs$XLScols[1:length(names(DF))]
@@ -1273,10 +1276,14 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
     #Dropp linjer brukt til header
     DF<-DF[-(1:length(mhl$rader)),]
   } else if (header==TRUE){
-    #Bruk defaultnavn i celler der header mangler
-    nonempty<-as.vector(which(DF[1,]!=""))
-    names(DF)[nonempty]<-DF[1,nonempty]
-    DF<-DF[-1,]
+    if (nrow(DF)>1){
+      #Bruk defaultnavn i celler der header mangler
+      nonempty<-as.vector(which(DF[1,]!=""))
+      names(DF)[nonempty]<-DF[1,nonempty]
+      DF<-DF[-1,]
+    } else {
+      print("*******************ADVARSEL: Kan ikke sette header fra fil med bare en rad. Skal vel ha opsjon 'header=FALSE'")
+    }
   }
   if (!is.na(filbesk$UNDERTABLOK)){
     names(DF)[ncol(DF)]<-gsub("^(.*?):.*","\\1",filbesk$UNDERTABLOK) 
@@ -2994,7 +3001,32 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       tabs<-setdiff(tabs,"KJONN")
     }
     
-    
+    ######################################################
+    #EVT SPESIALBEHANDLING
+    if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS=="")){
+      synt<-gsub("\\\r","\\\n",KUBEdscr$RSYNT_POSTPROSESS)
+      error<-""
+      ok<-1
+      if (grepl("<STATA>",synt)){
+        synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
+        RES<-KjorStataSkript(KUBE,synt,tableTYP="DT",batchdate=batchdate,globs=globs)
+        if (RES$feil!=""){
+          error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
+          ok<-0
+        } else {
+          KUBE<-RES$TABLE
+        }
+      } else {
+        rsynterr<-try(eval(parse(text=synt)),silent=TRUE)
+        if(class(rsynterr)=="try-error"){
+          ok<-0
+          error<-rsynterr
+        }
+      }
+      if (ok==0){
+        print(error)
+      }
+    }
     
     #LAYOUT
     utkols<-c(tabs,OutVar)
