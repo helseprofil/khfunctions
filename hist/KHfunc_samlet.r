@@ -25,7 +25,7 @@ require(data.table) #Bruker data.table for rask merge
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2015,
+  KHaargang=2016,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -38,8 +38,9 @@ globglobs<-list(
   KubeDir_KH="PRODUKTER/KUBER/KOMMUNEHELSA/",
   KubeDirNy_KH="PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R/",
   KubeDirDat_KH="PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/",
-  FriskVDir_NH="PRODUKTER/KUBER/FRISKVIK_FYLKE/",
-  FriskVDir_KH="PRODUKTER/KUBER/FRISKVIK_KOMM/",
+  FriskVDir_F="PRODUKTER/KUBER/FRISKVIK_FYLKE/",
+  FriskVDir_K="PRODUKTER/KUBER/FRISKVIK_KOMM/",
+  FriskVDir_B="PRODUKTER/KUBER/FRISKVIK_BYDEL/",
   TNPDirNy="PRODUKTER/MELLOMPROD/R/TNP/NYESTE",
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
@@ -203,6 +204,22 @@ SettTotalKoder<-function(globs=FinnGlobs()){
   return(TotKoder)
 }
 
+FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
+  Exe<-""
+  Vers<-0
+  i<-1
+  while (Exe=="" & i<=length(prior)){
+    tmpExe<-paste(PFpath,"\\Stata",prior[i],"\\StataSE-64.exe",sep="")
+    if (file.exists(tmpExe)){
+      Exe<-tmpExe
+      Vers<-prior[i]
+    }
+    i<-i+1
+  }
+  #Exe<-gsub("\\","\\\\",Exe)
+  return(list(Exe=Exe,Vers=Vers))
+}
+
 #GAMMEL, UTGÅTT
 SettKodeBokGn<-function(){
   GnOmk<-list(
@@ -321,7 +338,9 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   globs$KB<-SettKodeBokGlob(globs=globs)
   globs$LegKoder<-SettLegitimeKoder(globs=globs)
   globs$TotalKoder<-SettTotalKoder(globs=globs)
-  
+  Stata<-FinnStataExe()
+  globs$StataExe<-Stata$Exe
+  globs$StataVers<-Stata$Vers
   return(c(globs,list(GeoNavn=GeoNavn,GeoKoder=GeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
 }
 
@@ -361,7 +380,7 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##########################################################
 
 #
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE){
+LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list()){
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -384,7 +403,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
         #Sett evt default for år basert på aktuelt årstall
         filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
         #LagTabell
-        DF<-LagTabellFraFil(filbesk,FGP,batchdate=batchdate,diagnose=diagnose,globs=globs,versjonert=versjonert)
+        DF<-LagTabellFraFil(filbesk,FGP,batchdate=batchdate,diagnose=diagnose,globs=globs,versjonert=versjonert,dumps=dumps)
         #Stable delfiler
         Filgruppe<-rbind.fill(Filgruppe,DF)
         
@@ -438,13 +457,44 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     }
     FGP1<-copy(Filgruppe)
     
+    if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)){
+      for (format in dumps[["RSYNT_PRE_FGLAGRINGpre"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpre",sep="_"),globs=globs,format=format)
+      }
+    }
+    
+    
+    ######################################################
+    #EVT SPESIALBEHANDLING
     if (!is.na(FGP$RSYNT_PRE_FGLAGRING)){
-      FGP$RSYNT_PRE_FGLAGRING<-gsub("\\\r","\\\n",FGP$RSYNT_PRE_FGLAGRING)
-      rsynt1err<-try(eval(parse(text=FGP$RSYNT_PRE_FGLAGRING)),silent=TRUE)
-      if(class(rsynt1err)=="try-error"){
-        print(rsynt1err)
-        ok<-0
-      } 
+      synt<-gsub("\\\r","\\\n",FGP$RSYNT_PRE_FGLAGRING)
+      error<-""
+      ok<-1
+      if (grepl("<STATA>",synt)){
+        synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
+        RES<-KjorStataSkript(Filgruppe,synt,batchdate=batchdate,globs=globs)
+        if (RES$feil!=""){
+          error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
+          ok<-0
+        } else {
+          Filgruppe<-RES$TABLE
+        }
+      } else {
+        rsynterr<-try(eval(parse(text=synt)),silent=TRUE)
+        if(class(rsynterr)=="try-error"){
+          ok<-0
+          error<-rsynterr
+        }
+      }
+      if (ok==0){
+        print(error)
+      }
+    }
+    
+    if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)){
+      for (format in dumps[["RSYNT_PRE_FGLAGRINGpost"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpost",sep="_"),globs=globs,format=format)
+      }
     }
     
     
@@ -484,14 +534,14 @@ LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate()
 }
 
 #
-LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,globs=FinnGlobs(),versjonert=FALSE,echo=FALSE) {
+LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,globs=FinnGlobs(),versjonert=FALSE,echo=FALSE,dumps=list()) {
   
   klokke<-proc.time()
   ######################################################
   #INNLESING
   filn<-filbesk$filn
   cat("\n#################\nLAGER TABELL FRA FIL:\n",filn,"\n")
-  LestFil<-LesFil(filbesk,batchdate=batchdate,globs=globs)
+  LestFil<-LesFil(filbesk,batchdate=batchdate,globs=globs,dumps=dumps)
   ok<-LestFil$ok
   DF<-LestFil$DF
   
@@ -507,6 +557,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   #     eval(parse(text=filbesk$RSYNT1))
   #   }
     #cat("\nETTER INNLES\n#############################\n")
+  
   
   
   if (ok==1){
@@ -543,6 +594,13 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     if (!is.na(filbesk$KASTKOLS)){
       eval(parse(text=paste("DF<-DF[,-",filbesk$KASTKOLS,"]",sep="")))
     }
+    
+    if ("RESHAPEpre" %in% names(dumps)){
+      for (format in dumps[["RESHAPEpre"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RESHAPEpre",sep="_"),globs=globs,format=format)
+      }
+    }
+    
     #if (!(is.na(filbesk$RESHAPEid) || filbesk$RESHAPEid=='')){
     if (!(is.na(filbesk$RESHAPEvar) || filbesk$RESHAPEvar=='')){
       rshpDF<-ReshapeTab(DF,filbesk,batchdate=batchdate,globs=globs)
@@ -552,9 +610,16 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       #print(head(DF))
     }
     
+    if ("RESHAPEpost" %in% names(dumps)){
+      for (format in dumps[["RESHAPEpost"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RESHAPEpost",sep="_"),globs=globs,format=format)
+      }
+    }
+    
     
     TilFilLogg(filbesk$KOBLID,"RESHAPEh",DFHeadToString(DF),batchdate=batchdate,globs=globs)    
   }
+  
   if (ok==1){
         
     #Må splitte evt kolonne fra MULTIHEAD
@@ -562,15 +627,47 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       mhl<-LesMultiHead(filbesk$MULTIHEAD)
       DF[,mhl$colnames]<-str_split_fixed(DF[,mhl$varname],mhl$sep,2)
     }
-    #EVT SPESIALBEHANDLING2
-    if (!is.na(filbesk$RSYNT2)){
-      filbesk$RSYNT2<-gsub("\\\r","\\\n",filbesk$RSYNT2)
-      rsynt2err<-try(eval(parse(text=filbesk$RSYNT2)))
-      if(class(rsynt2err)=="try-error"){
-        TilFilLogg(filbesk$KOBLID,"RSYNT2ERR",rsynt2err,batchdate=batchdate,globs=globs)
-        ok<-0
-      }     
+    
+    if ("RSYNT2pre" %in% names(dumps)){
+      for (format in dumps[["RSYNT2pre"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RSYNT2pre",sep="_"),globs=globs,format=format)
+      }
     }
+    
+    ######################################################
+    #EVT SPESIALBEHANDLING
+    if (!is.na(filbesk$RSYNT2)){
+      synt<-gsub("\\\r","\\\n",filbesk$RSYNT2)
+      error<-""
+      ok<-1
+      if (grepl("<STATA>",synt)){
+        synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
+        RES<-KjorStataSkript(DF,synt,batchdate=batchdate,globs=globs)
+        if (RES$feil!=""){
+          error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
+          ok<-0
+        } else {
+          DF<-RES$TABLE
+        }
+      } else {
+        rsynterr<-try(eval(parse(text=synt)),silent=TRUE)
+        if(class(rsynterr)=="try-error"){
+          ok<-0
+          error<-rsynterr
+        }
+      }
+      if (ok==0){
+        print(error)
+        TilFilLogg(filbesk$KOBLID,"RSYNT2ERR",error,batchdate=batchdate,globs=globs)
+      }
+    }
+    
+    if ("RSYNT2post" %in% names(dumps)){
+      for (format in dumps[["RSYNT2post"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RSYNT2post",sep="_"),globs=globs,format=format)
+      }
+    }
+    
   }
   
   if (ok==1){
@@ -632,6 +729,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   }
   TilFilLogg(filbesk$KOBLID,"INNLES_OK",ok,batchdate=batchdate,globs=globs)
   
+  
   if (!is.na(filbesk$GRUNNKRETS) && filbesk$GRUNNKRETS==1){
     setDT(DF)
     setkeyv(DF,"GEO")
@@ -650,10 +748,14 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     DF<-as.data.frame(DF[,eval(parse(text=lp)), by=tabkols])
   }
   
-  
    ######################################################
   #SKILL EVT UT SOM EGEN FUNKSJON
   #Nullstill logg
+  if ("KODEBOKpre" %in% names(dumps)){
+    for (format in dumps[["KODEBOKpre"]]) {
+      DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"KODEBOKpre",sep="_"),globs=globs,format=format)
+    }
+  }
   sqlQuery(globs$log,paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=",filbesk$KOBLID,sep=""))
   if (ok==1){
     colClass<-sapply(DF,class)
@@ -776,7 +878,11 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF$LANDBAK<-as.integer(mapvalues(DF$LANDBAK,landbak$ORG,landbak$OMK,warn_missing = FALSE))
     }
     
-    
+    if ("KODEBOKpost" %in% names(dumps)){
+      for (format in dumps[["KODEBOKpost"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"KODEBOKpost",sep="_"),globs=globs,format=format)
+      }
+    }
     
     #DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER måtte tas over pga intervall)
     DF<-subset(DF,rowSums(DF[,names(DF) %in% globs$taborgs]=="-")==0)
@@ -855,6 +961,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       
       TilFilLogg(filbesk$KOBLID,paste(val,"OK",sep="_"),valok,batchdate=batchdate,globs=globs)
     }
+    
         
     default.stringsAsFactors=TRUE 
     Kols<-c(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(DF)],names(DF)[grepl("^VAL\\d+(\\.(f|a)|)$",names(DF))])
@@ -873,6 +980,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     GeoTil<-setNames(globs$GeoKoder$TIL,globs$GeoKoder$GEO)
     valkols<-FinnValKols(names(DF))
     #Skjønner ikke hvorfor dette ikke funker
+    
     DF2<-DF[!((unlist(GeoTil[DF$GEO])<=DF$AARl | unlist(GeoFra[DF$GEO])>=DF$AARh) & rowSums(is.na(data.frame(DF[,valkols])))==length(valkols)),]
     DF<-DF2
     
@@ -909,7 +1017,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 }
 
 #
-LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()) {
+LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=character()) {
   klokke<-proc.time()
   DF<-data.frame()
   ok<-1
@@ -1019,6 +1127,14 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()) {
     
     TilFilLogg(filbesk$KOBLID,"modINNLESh",DFHeadToString(DF),batchdate=batchdate,globs=globs)
     
+    
+    
+    if ("RSYNT1pre" %in% names(dumps)){
+      for (format in dumps[["RSYNT1pre"]]) {
+        DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RSYNT1pre",sep="_"),globs=globs,format=format)
+      }
+    }
+    
     ######################################################
     #EVT SPESIALBEHANDLING
     if (!is.na(filbesk$RSYNT1)){
@@ -1027,9 +1143,9 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()) {
       ok<-1
       if (grepl("<STATA>",synt)){
         synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
-        RES<-KjorStataSkript(DF,synt,globs)
-        if (RES$feil>0){
-          error<-"Noe gikk galt i kjøring av STATA"
+        RES<-KjorStataSkript(DF,synt,batchdate=batchdate,globs=globs)
+        if (RES$feil!=""){
+          error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
           ok<-0
         } else {
           DF<-RES$TABLE
@@ -1038,6 +1154,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()) {
         rsynterr<-try(eval(parse(text=synt)),silent=TRUE)
         if(class(rsynterr)=="try-error"){
           ok<-0
+          error<-rsynterr
         }
       }
       if (ok==0){
@@ -1045,7 +1162,15 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()) {
         TilFilLogg(filbesk$KOBLID,"RSYNT1ERR",error,batchdate=batchdate,globs=globs)
       }
     }
+    
   }
+  
+  if ("RSYNT1post" %in% names(dumps)){
+    for (format in dumps[["RSYNT1post"]]) {
+      DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RSYNT1post",sep="_"),globs=globs,format=format)
+    }
+  }
+  
   #sink(file=paste(globs$path,"/hoder.txt",sep=""),append=TRUE)
   #cat("\n#################\nFIL: ")
   #cat(filn)
@@ -1657,8 +1782,8 @@ LANDBAKvask<-function (landbak,filbesk=data.frame(),batchdate=SettKHBatchDate(),
   landbak$OMK<-sub("^ *(Alle) *$","0",landbak$OMK,ignore.case = TRUE)
   
   #Ugyldig verdi/ukjent kode
-  landbak$OMK[!(landbak$OMK %in% c(0,1,2,3,4,5,6,7,8,9,"-"))]<-globs$landbak_illeg
-  landbak$OK[!(landbak$OMK %in% c(0,1,2,3,4,5,6,7,8,9,"-"))]<-0
+  landbak$OMK[!(landbak$OMK %in% c(-1,0,1,2,3,4,5,6,7,8,9,"-"))]<-globs$landbak_illeg
+  landbak$OK[!(landbak$OMK %in% c(-1,0,1,2,3,4,5,6,7,8,9,"-"))]<-0
   
   return(landbak)
 }
@@ -1866,7 +1991,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGl
     #Sette endelig default alder ALLE
     #Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
     amin<-0
-    amax<-as.numeric(sqlQuery(dbh,"SELECT ALDinf FROM HOVEDPARAMETRE")[1])
+    amax<-as.numeric(sqlQuery(dbh,"SELECT ALDinf FROM HOVEDPARAMETREg")[1])
     #Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
     if(!is.na(FGP$ALDER_ALLE)){
       if (grepl("^\\d+_(\\d+|)$",FGP$ALDER_ALLE)){
@@ -2017,19 +2142,19 @@ readRDS_KH<-function(file,IDKOLS=FALSE,...){
   return(FIL)
 }
 
-LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs()){
+LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs(),dumps=list()){
   batchdate=SettKHBatchDate()
   loggfile<-paste(globs$path,"/",globs$KubeDir,"LOGG/",batchdate,".txt",sep="")
   sink(loggfile,split=TRUE)
   cat("BATCH:",batchdate,"\n")
   for (KUBEid in KUBEidA){
-    KK<-LagKUBE(KUBEid,batchdate=batchdate,versjonert=versjonert,csvcopy=csvcopy,globs=globs)
+    KK<-LagKUBE(KUBEid,batchdate=batchdate,versjonert=versjonert,csvcopy=csvcopy,globs=globs,dumps=dumps)
   }
   sink()
 }
 
-LagKubeDatertCsv<-function(KUBEID){
-  invisible(LagFlereKuber(KUBEID,versjonert=TRUE,csvcopy=TRUE))
+LagKubeDatertCsv<-function(KUBEID,dumps=list()){
+  invisible(LagFlereKuber(KUBEID,versjonert=TRUE,csvcopy=TRUE,dumps=dumps))
 }
 
 KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FILbatch=NA,batchdate=SettKHBatchDate(),GeoHarmDefault=1,globs=FinnGlobs()){
@@ -2045,34 +2170,50 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
   if (length(FilterDscr$FILVERSJON)>0){
     FGP<-FinnFilgruppeParametre(FilterDscr$ORGFIL,batchdate=batchdate,globs=globs)
     if (is.null(BUFFER[[FilVers]])){
-	    FILn<-FinnFil(FilterDscr$ORGFIL,batch=FILbatch,versjonert=versjonert)    
+      if (!is.na(FilterDscr$SUBSET)){
+        if (FilterDscr$SUBSET!=""){
+          if (TabFSub!=""){
+            TabFSub<-paste(TabFSub,FilterDscr$SUBSET,sep=" & ")
+          } else {
+            TabFSub<-FilterDscr$SUBSET
+          }
+        }
+      }
+      
+      FILn<-FinnFil(FilterDscr$ORGFIL,batch=FILbatch,versjonert=versjonert)    
       FIL<-FILn$FT
       sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilterDscr$ORGFIL,"_",FILn$batch,"'",sep=""))
       if (TabFSub!=""){
+        print("ASKJDLKJASLDKJL  TabFSub")
         cat("Filtrer med tab-filter, før er dim(FIL)",dim(FIL))
         FIL<-eval(parse(text=paste("subset(FIL,",TabFSub,")",sep="")))
         cat(" og etter", dim(FIL),"\n")
       }
       
+      
       orgkols<-copy(names(FIL))
       if (grepl("\\S",FilterDscr$KOLLAPSdeler)){
+        cat("Før aggregering er dim(FIL)",dim(FIL))
+        tabkols<-FinnTabKols(names(FIL))
+        setkeyv(FIL,tabkols)
         kolldel<-unlist(str_split(FilterDscr$KOLLAPSdeler,","))
         kolldelN<-unlist(globs$DefDesign$DelKolsF[kolldel])
-        FIL[,(kolldelN):=NULL]
-        tabkols<-FinnTabKols(names(FIL))
+        #FIL[,(kolldelN):=NULL]
+        FIL[,(kolldelN):=KHglobs$TotalKoder[kolldel]]
         FIL<-FIL[,lapply(.SD,sum),by=tabkols]
         FIL[,(kolldelN):=KHglobs$TotalKoder[kolldel]]
         FIL<-FIL[,orgkols,with=FALSE]
+        cat(" og etter", dim(FIL),"\n")
       }
-      
       
       if (!(is.na(FilterDscr$NYEKOL_KOL_preRAD) | FilterDscr$NYEKOL_KOL_preRAD=="")){
         FIL<-LeggTilNyeVerdiKolonner(FIL,FilterDscr$NYEKOL_KOL_preRAD,slettInf=TRUE)
       }
-      Filter<-SettFilterDesign(FilterDscr,bruk0=FALSE,FGP=FGP,globs=globs)
+	    Filter<-SettFilterDesign(FilterDscr,bruk0=FALSE,FGP=FGP,globs=globs)
       if (length(Filter)>0){
         FIL<-OmkodFil(FIL,FinnRedesign(FinnDesign(FIL),list(Parts=Filter)),globs=globs,echo=1)
-      }  
+      } 
+	    
       if (FilterDscr$GEOHARM==1){
         rektiser<-ifelse (FilterDscr$REKTISER==1,1,0)
         FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=rektiser,batchdate=batchdate,globs=globs)
@@ -2080,12 +2221,14 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
       if (!(is.na(FilterDscr$NYETAB) | FilterDscr$NYETAB=="")){
         FIL<-AggregerRader(FIL,FilterDscr$NYETAB,FGP=FGP)
       }
+	    
       if (grepl("\\S",FilterDscr$NYEKOL_RAD)){
         FIL<-LeggTilSumFraRader(FIL,FilterDscr$NYEKOL_RAD,FGP=FGP,globs=globs)
       }
       if (!(is.na(FilterDscr$NYEKOL_KOL) | FilterDscr$NYEKOL_KOL=="")){
         FIL<-LeggTilNyeVerdiKolonner(FIL,FilterDscr$NYEKOL_KOL,slettInf=TRUE)
       }
+	    
 	    if (!(is.na(FilterDscr$NYKOLSmerge) | FilterDscr$NYKOLSmerge=="")){
 	      NY<-eval(parse(text=FilterDscr$NYKOLSmerge))
         tabK<-intersect(FinnTabKols(names(NY)),FinnTabKols(names(FIL)))
@@ -2111,16 +2254,17 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
     else {
       FIL<-copy(BUFFER[[FilVers]])
       print(FilVers)
-      print(BUFFERbatch)
-      sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilterDscr$ORGFIL,"_",BUFFERbatch[[FilVers]],"'",sep=""))
-      
+      #print(BUFFERbatch)
+      if (versjonert==TRUE){
+        #sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilterDscr$ORGFIL,"_",BUFFERbatch[[FilVers]],"'",sep=""))
+      }
     }
   }
   #Har ikke oppsatt filter, bruk rå
   else {
     FILn<-FinnFil(FilVers,versjonert=versjonert,batch=FILbatch)
     FIL<-FILn$FT
-    sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilVers,"_",FILn$batch,"'",sep=""))
+    #sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilVers,"_",FILn$batch,"'",sep=""))
 	
     if (TabFSub!=""){
       cat("Filtrer med tab-filter, før er dim(FIL)",dim(FIL))
@@ -2132,7 +2276,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
       FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=FALSE,batchdate=batchdate,globs=globs)
     }
     .GlobalEnv$BUFFER[[FilVers]]<-FIL
-    .GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
+    #.GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
     TilBuffer<-1
   }
  
@@ -2190,18 +2334,22 @@ SettFilterDesign<-function(KUBEdscr,OrgParts=list(),bruk0=TRUE,FGP=list(amin=0,a
     else if (globs$DefDesign$DelType[del]=="INT"){
       start<-KUBEdscr[[paste(koldel,"_START",sep="")]]
       stopp<-KUBEdscr[[paste(koldel,"_STOP",sep="")]]
-      if (!(is.null(start) | is.null(stopp) )){
-        if (stopp>=start){
-          if (!is.null(OrgParts[[del]])){
-            Deler[[del]]<-subset(OrgParts[[del]],eval(parse(text=paste(koldel,"l>=",start," & ",koldel,"h<=",stopp,sep=""))))
-          } else  {
-            #Deler[[del]]<-setNames(as.data.frame(cbind(start:stopp,start:stopp)),paste(koldel,c("l","h"),sep=""))
+      if (!(is.null(start) | is.null(stopp))){
+        if (!(is.na(start) | is.na(stopp))){
+          if (!(start=="" | stopp=="")){
+            if (stopp>=start){
+              if (!is.null(OrgParts[[del]])){
+                Deler[[del]]<-subset(OrgParts[[del]],eval(parse(text=paste(koldel,"l>=",start," & ",koldel,"h<=",stopp,sep=""))))
+              } else  {
+                #Deler[[del]]<-setNames(as.data.frame(cbind(start:stopp,start:stopp)),paste(koldel,c("l","h"),sep=""))
+              }
+            }
+            else {
+              cat("FEIL!!!!!!!! kan ikke ha start ",start,"> stopp ", stopp,"\n")
+            }
           }
-        }
-        else {
-          cat("FEIL!!!!!!!! kan ikke ha start ",start,"> stopp ", stopp,"\n")
-        }
-      }
+        }        
+      }    
     } 
   }
   return(Deler)
@@ -2306,7 +2454,7 @@ SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,gl
 
 
 
-LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FALSE,bare_TN=0,drop_TN=0,tmpbryt=0,FullUt=0,csvcopy=FALSE,globs=FinnGlobs(),echo=0){
+LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FALSE,bare_TN=0,drop_TN=0,tmpbryt=0,FullUt=0,csvcopy=FALSE,globs=FinnGlobs(),echo=0,dumps=list()){
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   rapport<-list(KUBE=KUBEid,lagRapport=lagRapport)
   
@@ -2468,6 +2616,13 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
   
   rydd<-setdiff(Finfo$tmpBUFFER,c("BEF_GKa","BEF_GKu"))
   .GlobalEnv$BUFFER[rydd]<-NULL
+  
+  if ("raaKUBE0" %in% names(dumps)){
+    for (format in dumps[["raaKUBE0"]]) {
+      DumpTabell(KUBE,paste(KUBEid,"raaKUBE0",sep="_"),globs=globs,format=format)
+    }
+  }
+  
   if (tmpbryt>0){raaKUBE0<-copy(KUBE)}
   if (tmpbryt==1){return(fullresult)}
   if (bare_TN==0){
@@ -2547,7 +2702,11 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[GEOniv=="B" & AARl<FGPs[[filer["T"]]][["B_STARTAAR"]],(paste(valK,".f",sep="")):=9]
     }
     
-   
+    if ("maKUBE0" %in% names(dumps)){
+      for (format in dumps[["maKUBE0"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"maKUBE0",sep="_"),globs=globs,format=format)
+      }
+    }
     
     raaKUBE<-copy(KUBE)
     #Anonymiser og skjul
@@ -2571,6 +2730,11 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       eval(parse(text=lp))
     }    
     
+    if ("anoKUBE1" %in% names(dumps)){
+      for (format in dumps[["anoKUBE1"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"anoKUBE1",sep="_"),globs=globs,format=format)
+      }
+    }
     
     #Anonymiser, trinn 2 Ekte anonymisering basert på liten teller, liten nevner og liten N-T
     if (!(is.na(KUBEdscr$PRIKK_T) | KUBEdscr$PRIKK_T=="")){
@@ -2588,12 +2752,21 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[NEVNER<=KUBEdscr$PRIKK_N & NEVNER.f>=0,c("TELLER","TELLER.f","RATE","RATE.f"):=list(NA,3,NA,3)]
     }
     
+    if ("anoKUBE2" %in% names(dumps)){
+      for (format in dumps[["anoKUBE2"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"anoKUBE2",sep="_"),globs=globs,format=format)
+      }
+    }
     #Anonymiser trinn 3. Anonymiser naboer
     if (!(is.na(KUBEdscr$OVERKAT_ANO) | KUBEdscr$OVERKAT_ANO=="")){
       #DEVELOP: BRuk .f=4 her slik at ikke slår ut i HULL under
       KUBE<-AnonymiserNaboer(KUBE,KUBEdscr$OVERKAT_ANO,FGP=FGPs[[filer[["T"]]]],globs=globs)
     }
-   
+    if ("anoKUBE3" %in% names(dumps)){
+      for (format in dumps[["anoKUBE3"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"anoKUBE3",sep="_"),globs=globs,format=format)
+      }
+    }
     
     raaKUBE2<-copy(KUBE)
     
@@ -2615,24 +2788,57 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[,c("SVAK","HULL","SKJUL","AntAar"):=NULL]
     }
     raaKUBE3<-copy(KUBE)
-    
+    if ("anoKUBE4" %in% names(dumps)){
+      for (format in dumps[["anoKUBE4"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"anoKUBE4",sep="_"),globs=globs,format=format)
+      }
+    }
     
     
     ####################################################
     # LAYOUT
     ####################################################3
     
-    
-    #UTFØR EVT AD-HOC MANIPULERING
-    if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER=="")){
-      KUBEdscr$SLUTTREDIGER<-gsub("\\\r","\\\n",KUBEdscr$SLUTTREDIGER)
-      rsynt1err<-try(eval(parse(text=KUBEdscr$SLUTTREDIGER)),silent=TRUE)
-      print("***AD HOC MANIPULERING\n")
-      if(class(rsynt1err)=="try-error"){
-        print(rsynt1err)
-      } 
+    if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)){
+      for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"KUBE_SLUTTREDIGERpre",sep="_"),globs=globs,format=format)
+      }
     }
     
+    ######################################################
+    #EVT SPESIALBEHANDLING
+    if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER=="")){
+      synt<-gsub("\\\r","\\\n",KUBEdscr$SLUTTREDIGER)
+      error<-""
+      ok<-1
+      if (grepl("<STATA>",synt)){
+        synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
+        RES<-KjorStataSkript(KUBE,synt,batchdate=batchdate,globs=globs)
+        if (RES$feil!=""){
+          error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
+          ok<-0
+        } else {
+          KUBE<-RES$TABLE
+        }
+      } else {
+        rsynterr<-try(eval(parse(text=synt)),silent=TRUE)
+        if(class(rsynterr)=="try-error"){
+          ok<-0
+          error<-rsynterr
+        }
+      }
+      if (ok==0){
+        print(error)
+      }
+    }
+    
+    
+    
+    if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)){
+      for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
+        DumpTabell(KUBE,paste(KUBEid,"KUBE_SLUTTREDIGERpost",sep="_"),globs=globs,format=format)
+      }
+    }
     
     #mapvalues(KUBE$SPVFLAGG,c(0,1,2,3),c(0,2,1,3),warn_missing = FALSE)     #BRUKER 1='.",2='.." i NESSTAR
     
@@ -2899,88 +3105,101 @@ FinnDesignEtterFiltrering<-function(ORGd,Filter,FilterKols=character(0),FGP=list
 
 
 LagAlleFriskvikIndikatorerForKube<-function(KUBEid,globs=FinnGlobs(),modus=globs$HOVEDMODUS,aargang=format(Sys.time(), "%Y"),...){
-  if (modus=='NH'){
-    friskvikTAB="FRISKVIK_FYLKE"  
-  } else {
-    friskvikTAB="FRISKVIK"
-  }
   
-  indikatorer<-unlist(sqlQuery(globs$dbh,paste("SELECT INDIKATOR FROM ",friskvikTAB,aargang," WHERE KUBE_NAVN='",KUBEid,"'",sep=""),as.is=TRUE))
+  #indikatorer<-unlist(sqlQuery(globs$dbh,paste("SELECT INDIKATOR FROM ",friskvikTAB,aargang," WHERE KUBE_NAVN='",KUBEid,"'",sep=""),as.is=TRUE))
+  indikatorer<-sqlQuery(globs$dbh,paste("SELECT INDIKATOR, ID FROM FRISKVIK WHERE AARGANG=",aargang,"AND KUBE_NAVN='",KUBEid,"'",sep=""),as.is=TRUE)
   
-  if (length(indikatorer)>0){
-    for (indikator in indikatorer){
-      cat("Lager Friskvikfil for ",indikator,"\n")
-      LagFriskvikIndikator(indikator=indikator,aargang=aargang,modus=modus,globs=globs,...)
+  if (dim(indikatorer)[1]>0){
+    for (i in 1:dim(indikatorer)[1]){
+      cat("Lager Friskvikfil for ",indikatorer[i,1],"\n")
+      LagFriskvikIndikator(id=indikatorer[i,2],aargang=aargang,modus=modus,globs=globs,...)
     }
   }
 }
 
-LagFriskvikIndikator<-function(indikator,KUBE=data.table(),FGP=list(amin=0,amax=120),GEOfilter=c("B","K","F","L"),versjonert=FALSE,aargang=format(Sys.time(), "%Y"),batchdate=SettKHBatchDate(),globs=FinnGlobs(),modus=globs$HOVEDMODUS){
-  if (modus=='NH'){
-    friskvikTAB="FRISKVIK_FYLKE"  
-  } else {
-    friskvikTAB="FRISKVIK"
-  }
+LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),versjonert=FALSE,aargang=format(Sys.time(), "%Y"),batchdate=SettKHBatchDate(),globs=FinnGlobs(),modus=globs$HOVEDMODUS){
+  
   
   #FVdscr<-sqlQuery(globs$dbh,paste("SELECT * FROM ",aargang," WHERE INDIKATOR='",indikator,"' AND VERSJONFRA<=",datef," AND VERSJONTIL>",datef,sep=""),as.is=TRUE)
-  FVdscr<-sqlQuery(globs$dbh,paste("SELECT * FROM ",friskvikTAB,aargang," WHERE INDIKATOR='",indikator,"'",sep=""),as.is=TRUE)
+  FVdscr<-sqlQuery(globs$dbh,paste("SELECT * FROM FRISKVIK WHERE ID=",id,sep=""),as.is=TRUE)
   
-  #FILTRER RADER
-  filterA<-"(GEOniv %in% GEOfilter)"
-  if (grepl("\\S",FVdscr$ALDER) & FVdscr$ALDER !="-"){
-    FVdscr$ALDER<-gsub("^(\\d+)$","\\1_\\1",FVdscr$ALDER)
-    FVdscr$ALDER<-gsub("^(\\d+)_$",paste("\\1_",FGP$amax,sep=""),FVdscr$ALDER)
-    FVdscr$ALDER<-gsub("^_(\\d+)$",paste(FGP$amin,"_\\1",sep=""),FVdscr$ALDER)
-    FVdscr$ALDER<-gsub("^ALLE$",paste(FGP$amin,"_",FGP$amax,sep=""),FVdscr$ALDER)
-    filterA<-c(filterA,paste("ALDER=='",FVdscr$ALDER,"'",sep=""))
-  }
-  for (tab in c("AARh","KJONN","SIVST","UTDANN","LANDBAK")){
-    if (grepl("\\S",FVdscr[[tab]]) & FVdscr[[tab]]!="-"){
-      filterA<-c(filterA,paste(tab,"==",FVdscr[[tab]],sep=""))
+  moduser<-unlist(str_split(FVdscr$MODUS,""))
+  
+  for (modus in moduser){
+    if (modus %in% c("K","F","B")){
+      FriskVDir<-""
+      GEOfilter<-character(0)
+      if (modus=="K"){
+        FriskVDir<-globs$FriskVDir_K
+        GEOfilter<-c("K","F","L")
+      } else if (modus=="B"){
+        FriskVDir<-globs$FriskVDir_B
+        GEOfilter<-c("B","K","F","L")
+      } else if (modus=="F"){
+        FriskVDir<-globs$FriskVDir_F
+        GEOfilter<-c("F","L")
+      }
+                    
+      #FILTRER RADER
+      filterA<-"(GEOniv %in% GEOfilter)"
+      if (grepl("\\S",FVdscr$ALDER) & FVdscr$ALDER !="-"){
+        FVdscr$ALDER<-gsub("^(\\d+)$","\\1_\\1",FVdscr$ALDER)
+        FVdscr$ALDER<-gsub("^(\\d+)_$",paste("\\1_",FGP$amax,sep=""),FVdscr$ALDER)
+        FVdscr$ALDER<-gsub("^_(\\d+)$",paste(FGP$amin,"_\\1",sep=""),FVdscr$ALDER)
+        FVdscr$ALDER<-gsub("^ALLE$",paste(FGP$amin,"_",FGP$amax,sep=""),FVdscr$ALDER)
+        filterA<-c(filterA,paste("ALDER=='",FVdscr$ALDER,"'",sep=""))
+      }
+      for (tab in c("AARh","KJONN","SIVST","UTDANN","LANDBAK")){
+        if (grepl("\\S",FVdscr[[tab]]) & FVdscr[[tab]]!="-"){
+          filterA<-c(filterA,paste(tab,"==",FVdscr[[tab]],sep=""))
+        }
+      }
+      if (grepl("\\S",FVdscr$EKSTRA_TAB) & FVdscr$EKSTRA_TAB !="-"){
+        filterA<-c(filterA,FVdscr$EKSTRA_TAB)
+        KUBE$ETAB<-FVdscr$EKSTRA_TAB
+      }
+      filter<-paste(filterA,collapse=" & ")
+      FRISKVIK<-subset(KUBE,eval(parse(text=filter)))
+      
+      
+      defrows<-nrow(subset(KHglobs$GeoKoder,FRA<=aargang & TIL>aargang & TYP=="O" & GEOniv %in% GEOfilter))
+      if (nrow(FRISKVIK)!=defrows){
+        KHerr(paste("FEIL I FRISKVIKFILTER", filter, "GIR bare", nrow(FRISKVIK),"/",defrows,"rader!"))           
+      }
+      
+      #SISTE RYDD KOLONNER (bare for TabKols)
+      MissKol<-setdiff(c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","ETAB"),names(FRISKVIK))
+      if (length(MissKol)>0){
+        FRISKVIK[,(MissKol):=NA]
+      }
+      
+      MissKol2<-setdiff(c(globs$FriskvikTabs,globs$FriskvikVals),names(FRISKVIK))
+      if (length(MissKol2)>0) {
+        KHerr(paste("FEIL: Kolonnene", MissKol2, "mangler i Friskvik!"))
+        FRISKVIK[,(MissKol2):=NA]
+      }
+      
+      if(grepl("\\S",FVdscr$ALTERNATIV_MALTALL)){
+        FRISKVIK$MALTALL<-FRISKVIK[[FVdscr$ALTERNATIV_MALTALL]]
+        kastkols<-setdiff(globs$FriskvikVals,"MALTALL")
+        FRISKVIK[,(kastkols):=NA]
+      }
+     
+      
+      FRISKVIK<-FRISKVIK[,c(globs$FriskvikTabs,globs$FriskvikVals),with=FALSE]
+      
+      versjonert=TRUE
+      #SKRIV UT
+      if (versjonert==TRUE){
+        #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
+        utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
+        cat("FRISKVIK EKSPORT:",utfiln,"\n")
+        write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
+        #write.dta(FRISKVIK,file=utfiln)
+      }
+    } else {
+      cat("ADVARSEL!!!!!!!! modus ",modus,"i FRISKVIK støttes ikke\n")
     }
-  }
-  if (grepl("\\S",FVdscr$EKSTRA_TAB) & FVdscr$EKSTRA_TAB !="-"){
-    filterA<-c(filterA,FVdscr$EKSTRA_TAB)
-    KUBE$ETAB<-FVdscr$EKSTRA_TAB
-  }
-  filter<-paste(filterA,collapse=" & ")
-  FRISKVIK<-subset(KUBE,eval(parse(text=filter)))
-  
-  
-  defrows<-nrow(subset(KHglobs$GeoKoder,FRA<=aargang & TIL>aargang & TYP=="O" & GEOniv %in% GEOfilter))
-  if (nrow(FRISKVIK)!=defrows){
-    KHerr(paste("FEIL I FRISKVIKFILTER", filter, "GIR bare", nrow(FRISKVIK),"/",defrows,"rader!"))           
-  }
-  
-  #SISTE RYDD KOLONNER (bare for TabKols)
-  MissKol<-setdiff(c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","ETAB"),names(FRISKVIK))
-  if (length(MissKol)>0){
-    FRISKVIK[,(MissKol):=NA]
-  }
-  
-  MissKol2<-setdiff(c(globs$FriskvikTabs,globs$FriskvikVals),names(FRISKVIK))
-  if (length(MissKol2)>0) {
-    KHerr(paste("FEIL: Kolonnene", MissKol2, "mangler i Friskvik!"))
-    FRISKVIK[,(MissKol2):=NA]
-  }
-  
-  if(grepl("\\S",FVdscr$ALTERNATIV_MALTALL)){
-    FRISKVIK$MALTALL<-FRISKVIK[[FVdscr$ALTERNATIV_MALTALL]]
-    kastkols<-setdiff(globs$FriskvikVals,"MALTALL")
-    FRISKVIK[,(kastkols):=NA]
-  }
- 
-  
-  FRISKVIK<-FRISKVIK[,c(globs$FriskvikTabs,globs$FriskvikVals),with=FALSE]
-  
-  
-  #SKRIV UT
-  if (versjonert==TRUE){
-    #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
-    utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/csv/",indikator,"_",batchdate,".csv",sep="")
-    cat("FRISKVIK EKSPORT:",utfiln,"\n")
-    write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
-    #write.dta(FRISKVIK,file=utfiln)
   }
 }
 
@@ -3505,7 +3724,7 @@ FinnFil<-function(FILID,versjonert=FALSE,batch=NA,ROLLE="",TYP="STABLAORG",IDKOL
     cat("Hentet ", ROLLE,"FIL ", FILID," fra BUFFER (",dim(FT)[1]," x ",dim(FT)[2],")\n",sep="")
   } else {
     if(!is.na(batch)){
-      filn<-paste(globs$path,"/",globs$StablaDirDat,FILID,"_",batch,".rds",sep="")
+      filn<-paste(globs$path,"/",globs$StablaDirDat,"/",FILID,"_",batch,".rds",sep="")
     } else if(versjonert==TRUE){
       orgwd<-getwd()
       path<-paste(globs$path,"/",globs$StablaDirDat,sep="")
@@ -3522,6 +3741,7 @@ FinnFil<-function(FILID,versjonert=FALSE,batch=NA,ROLLE="",TYP="STABLAORG",IDKOL
     }
     else {
       filn<-paste(globs$path,"/",globs$StablaDirNy,"/",FILID,".rds",sep="")
+      print(filn)
     }
     if(file.access(filn,mode=0)==-1){
       cat("KRITISK FEIL: ",filn," finnes ikke\n")
@@ -5346,7 +5566,11 @@ DumpTabell <- function (TABELL,TABELLnavn,globs=FinnGlobs(),format=globs$DefDump
   } else if (format=="R"){
     .GlobalEnv$DUMPtabs[[TABELLnavn]]<-TABELL
     print(DUMPtabs)
-  }  
+  } else if (format=="STATA") {
+    TABELL[TABELL==""]<-" "  #STATA støtter ikke "empty-string"
+    names(TABELL)<-gsub("^(\\d.*)$","S_\\1",names(TABELL))   #STATA 14 tåler ikke numeriske kolonnenavn 
+    write.dta(TABELL,paste(globs$path,"/",globs$DUMPdir,"/",TABELLnavn,".dta",sep=""))
+  }
 }
 
 FinnKubeInfo<-function(kube){
@@ -5359,5 +5583,52 @@ FinnKubeInfo<-function(kube){
                                   WHERE KUBER.KUBE_NAVN='",kube,"'",sep=""),stringsAsFactors=FALSE)[1,])
 }
 
+
+KjorStataSkript <- function(TABLE,script,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+  tmpdir<-paste(globs$path,"/",globs$BUFFERdir,"/",sep="")
+  wdOrg<-getwd()
+  setwd(tmpdir)
+  tmpdo<-paste("STATAtmp_",batchdate,".do",sep="")
+  tmpdta<-paste("STATAtmp_",batchdate,".dta",sep="")
+  tmplog<-paste("STATAtmp_",batchdate,".log",sep="")
+  TABLE[TABLE==""]<-" "  #STATA støtter ikke "empty-string"
+  names(TABLE)<-gsub("^(\\d.*)$","S_\\1",names(TABLE))   #STATA 14 tåler ikke numeriske kolonnenavn 
+  #DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
+  write.dta(TABLE,tmpdta)
+  #file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
+  sink(tmpdo)
+  cat("use ",tmpdta,"\n",sep="")
+  cat(script,"\n")
+  #cat("save ",tmpdta,", replace\n",sep="")
+  if (globs$StataVers<12){
+    cat("save ",tmpdta,",  replace\n",sep="")
+  } else if (globs$StataVers %in% 12:13) {
+    cat("saveold ",tmpdta,", replace\n",sep="")
+  } else {
+    cat("saveold ",tmpdta,", version(11) replace\n",sep="")
+  }
+  sink()
+  #system(paste("\"",globs$StataExe,"\" /e do",tmpdo,"\n",sep=""),intern=TRUE)
+  statacall<-paste("\"",globs$StataExe,"\" /e do ",tmpdo," \n",sep="")
+  system(statacall,intern=TRUE)
+  #system(paste("\"C:\\Program Files (x86)\\Stata11\\StataSE-64.exe\"","/e do",tmpdo,"\n"),intern=TRUE)
+  #system(paste("StataSE-64 /e do",tmpdo,"\n"),intern=TRUE)
+  log<-readLines(tmplog)
+  feil<-""
+  if (log[length(log)]!="end of do-file"){
+    log_start<-which(grepl(paste("do",tmpdo),log))
+    feil<-paste(log[log_start:length(log)],collapse="\n")                     
+  } else {
+    TABLE<-read.dta(tmpdta)
+  }
+  #Reverserer omforminger for å kunne skrive til STATA
+  TABLE[TABLE==" "]<-""
+  names(TABLE)<-gsub("^S_(\\d.*)$","\\1",names(TABLE))
+  #file.remove(tmpdo,tmpdta,tmplog)
+  setwd(wdOrg)
+  return(list(TABLE=TABLE,feil=feil))
+}
+
 KHglobs<-FinnGlobs()
+
 
