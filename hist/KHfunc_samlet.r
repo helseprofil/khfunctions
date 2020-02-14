@@ -4677,7 +4677,13 @@ OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
     setkeyv(UDekk,names(UDekk))
     FIL<-FIL[!UDekk,]
     valkolsF<-unlist(lapply(valkols,function(x){paste(x,c("",".f",".a"),sep="")}))
-    UDekk[,(valkolsF):=list(NA,9,0)]
+    ## feil med recycling av := lest NEWS 1.12.2 data.table
+    ## UDekk[,(valkolsF):=list(NA,9,0)]
+    UDekk[, (valkols) := NA]
+    valg_f <- grep(".f$", valkolsF, value = TRUE)
+    UDekk[, (valg_f) := 9]
+    valg_a <- grep(".a$", valkolsF, value = TRUE)
+    UDekk[, (valg_a) := 0]
     if (length(restkols)>0){
       rest<-as.data.frame(unique(FIL[,restkols,with=FALSE]))
       UDekk<-data.table(expand.grid.df(rest,as.data.frame(UDekk)))
