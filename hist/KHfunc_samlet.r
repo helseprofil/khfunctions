@@ -1006,12 +1006,29 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
           SkrivKBLogg(KB=valKBut,type=val,filbesk=filbesk,FGP$FILGRUPPE,batchdate=batchdate,globs=globs)
         }
         
+       
         DF[,val]<-NULL
         DF<-setNames(DF,mapvalues(names(DF),valomk,val))
+        
+        #########################
+        # DEVELOP20191219
+        #########################
+        
+        reskaler<-as.numeric(filbesk[[eval(paste("SKALA","_",val,sep=""))]])
+        
+        if (!(reskaler==1 | is.na(reskaler))){
+          DF[,val]<-DF[,val]*filbesk[[eval(paste("SKALA","_",val,sep=""))]]
+        }
+        
       }
       
       TilFilLogg(filbesk$KOBLID,paste(val,"OK",sep="_"),valok,batchdate=batchdate,globs=globs)
     }
+    
+    
+    
+    
+    
     
         
     default.stringsAsFactors=TRUE 
