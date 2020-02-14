@@ -25,8 +25,8 @@ require(data.table) #Bruker data.table for rask merge
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2018,
-  GEOstdAAR=2018,
+  KHaargang=2019,
+  GEOstdAAR=2019,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -321,7 +321,8 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   globs<-c(globs,list(dbh=KHOc,log=KHLc,path=path))
   
   #Mod20171206 Slår av som utgått
-  #GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
+  #20180104 Prøver å slå den på igjen, fant feil i LAVINNTEKT
+  GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
   GeoKoder<-data.table(sqlQuery(KHOc,"SELECT * from GEOKoder",as.is=TRUE),key=c("GEO"))
   #DEBUG
   KnrHarm<-data.table(sqlQuery(KHOc,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
@@ -1590,11 +1591,12 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
   #Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
   UGeo<-data.frame(NAVN=geo$OMK[!grepl("^\\d+$",geo$OMK)])
   #Mod20171206 Slår av som utgått
-  # if(nrow(UGeo)>0){
-  #   GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
-  #   omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
-  #   geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
-  # }
+  #20180104 Prøver å slå den på igjen, fant feil i LAVINNTEKT
+   if(nrow(UGeo)>0){
+     GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
+     omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
+     geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
+   }
   
   
   if (grepl("4",filbesk$SONER)){
