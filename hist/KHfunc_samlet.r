@@ -25,7 +25,7 @@ require(data.table) #Bruker data.table for rask merge
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2016,
+  KHaargang=2017,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -460,7 +460,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     
     if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)){
       for (format in dumps[["RSYNT_PRE_FGLAGRINGpre"]]) {
-        DumpTabell(DF,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpre",sep="_"),globs=globs,format=format)
+        DumpTabell(Filgruppe,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpre",sep="_"),globs=globs,format=format)
       }
     }
     
@@ -494,7 +494,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     
     if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)){
       for (format in dumps[["RSYNT_PRE_FGLAGRINGpost"]]) {
-        DumpTabell(DF,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpost",sep="_"),globs=globs,format=format)
+        DumpTabell(Filgruppe,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpost",sep="_"),globs=globs,format=format)
       }
     }
     
@@ -2814,7 +2814,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       ok<-1
       if (grepl("<STATA>",synt)){
         synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
-        RES<-KjorStataSkript(KUBE,synt,batchdate=batchdate,globs=globs)
+        RES<-KjorStataSkript(KUBE,synt,tableTYP="DT",batchdate=batchdate,globs=globs)
         if (RES$feil!=""){
           error<-paste("Noe gikk galt i kjøring av STATA",RES$feil,sep="\n")
           ok<-0
@@ -5602,7 +5602,7 @@ FinnKubeInfo<-function(kube){
 }
 
 
-KjorStataSkript <- function(TABLE,script,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+KjorStataSkript <- function(TABLE,script,tableTYP="DF",batchdate=SettKHBatchDate(),globs=FinnGlobs()){
   tmpdir<-paste(globs$path,"/",globs$BUFFERdir,"/",sep="")
   wdOrg<-getwd()
   setwd(tmpdir)
@@ -5611,6 +5611,8 @@ KjorStataSkript <- function(TABLE,script,batchdate=SettKHBatchDate(),globs=FinnG
   tmplog<-paste("STATAtmp_",batchdate,".log",sep="")
   TABLE[TABLE==""]<-" "  #STATA støtter ikke "empty-string"
   names(TABLE)<-gsub("^(\\d.*)$","S_\\1",names(TABLE))   #STATA 14 tåler ikke numeriske kolonnenavn 
+  #DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
+  names(TABLE)<-gsub("^(.*)\\.([afn])$","\\1_\\2",names(TABLE))   #Endre .a, .f, .n til _
   #DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
   write.dta(TABLE,tmpdta)
   #file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
@@ -5642,8 +5644,13 @@ KjorStataSkript <- function(TABLE,script,batchdate=SettKHBatchDate(),globs=FinnG
   #Reverserer omforminger for å kunne skrive til STATA
   TABLE[TABLE==" "]<-""
   names(TABLE)<-gsub("^S_(\\d.*)$","\\1",names(TABLE))
+  #DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
+  names(TABLE)<-gsub("^(.*)_([afn])$","\\1.\\2",names(TABLE))   #Endre .a, .f, .n til _
   #file.remove(tmpdo,tmpdta,tmplog)
   setwd(wdOrg)
+  if (tableTYP=="DT"){
+    setDT(TABLE)
+  }
   return(list(TABLE=TABLE,feil=feil))
 }
 
