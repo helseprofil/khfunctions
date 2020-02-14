@@ -1450,6 +1450,10 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
       ok<-0
     } else {
       DF<-setNames(INNLES, globs$XLScols[1:ncol(INNLES)])
+      ## ## Finner ut hvis hele kolonne er missing
+      ## colMISS = sapply(DF, function(x) all(is.na(x)))
+      ## missUT = attributes(colMISS[colMISS==1])$names
+      ## DF[missUT] = NULL
     }
     
   }
@@ -1527,7 +1531,8 @@ subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=in
 
 
 KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
-  datef<-format(Sys.time(), "#%Y-%m-%d#")
+    
+    datef<-format(Sys.time(), "#%Y-%m-%d#")
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   }
@@ -1708,8 +1713,10 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
     geo$OMK[nchar(geo$OMK)==6]<-gsub("^(\\d{4})00$",paste("\\1","99",sep=""),geo$OMK[nchar(geo$OMK)==6])
   }
   geo$GEOniv[nchar(geo$OMK)==4]<-"K"
-  geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(51:54)]<-"F"
-  geo$GEOniv[geo$OMK %in% c(51:54)]<-"H"
+  # geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(51:54)]<-"F"
+  geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(81:84)]<-"F"
+  # geo$GEOniv[geo$OMK %in% c(51:54)]<-"H"
+  geo$GEOniv[geo$OMK %in% c(81:84)]<-"H"
   geo$GEOniv[geo$OMK==0]<-"L"
   geo$GEOniv[geo$OMK=="-"]<-"-"
   geo$GEOniv[is.na(geo$GEOniv)]<-"U"      
