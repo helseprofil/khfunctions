@@ -25,7 +25,8 @@ require(data.table) #Bruker data.table for rask merge
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2017,
+  KHaargang=2018,
+  GEOstdAAR=2018,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -319,8 +320,10 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   globs<-c(globs,list(dbh=KHOc,log=KHLc,path=path))
   
-  GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
+  #Mod20171206 Slår av som utgått
+  #GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
   GeoKoder<-data.table(sqlQuery(KHOc,"SELECT * from GEOKoder",as.is=TRUE),key=c("GEO"))
+  #DEBUG
   KnrHarm<-data.table(sqlQuery(KHOc,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
   TKNR<-data.table(sqlQuery(KHOc,"SELECT * from TKNR",as.is=TRUE),key=c("ORGKODE"))
   HELSEREG<-data.table(sqlQuery(KHOc,"SELECT * from HELSEREG",as.is=TRUE),key=c("FYLKE"))
@@ -342,7 +345,22 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   Stata<-FinnStataExe()
   globs$StataExe<-Stata$Exe
   globs$StataVers<-Stata$Vers
-  return(c(globs,list(GeoNavn=GeoNavn,GeoKoder=GeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
+  return(c(globs,list(GeoKoder=GeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
+}
+
+
+#DEVELOP: Må takle "rekursive" endringer i kommunekode, slik som for Inderøy/Mosvik
+#Dette ved selv-join, men må holde tunga rett i munnen her
+SettKnrHarm<-function(globs=FinnGlobs()){
+  KnrHarm<-data.table(sqlQuery(globs$dbh,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
+  #KnrHarm[HarmStd<=globs$GEOstd]
+  recursive<-1
+  #while(recursive==1){
+    print(merge(KnrHarm,KnrHarm,by.x="GEO_omk",by.y="GEO")) 
+  #}  
+  
+  
+ return(KnrHarm)
 }
 
 #
@@ -1571,11 +1589,12 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
   #Kode fra navn
   #Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
   UGeo<-data.frame(NAVN=geo$OMK[!grepl("^\\d+$",geo$OMK)])
-  if(nrow(UGeo)>0){
-    GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
-    omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
-    geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
-  }
+  #Mod20171206 Slår av som utgått
+  # if(nrow(UGeo)>0){
+  #   GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
+  #   omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
+  #   geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
+  # }
   
   
   if (grepl("4",filbesk$SONER)){
@@ -1619,6 +1638,7 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
     geo$OMK[nchar(geo$OMK)==6]<-gsub("^(\\d{4})00$",paste("\\1","99",sep=""),geo$OMK[nchar(geo$OMK)==6])
   }
   geo$GEOniv[nchar(geo$OMK)==4]<-"K"
+  #DEVELOP_GEO  Gir krasj dersom det finnes fylker i 51:54
   geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(51:54)]<-"F"
   geo$GEOniv[geo$OMK %in% c(51:54)]<-"H"
   geo$GEOniv[geo$OMK==0]<-"L"
@@ -2214,6 +2234,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
         cat(" og etter", dim(FIL),"\n")
       }
       
+      
       if (!(is.na(FilterDscr$NYEKOL_KOL_preRAD) | FilterDscr$NYEKOL_KOL_preRAD=="")){
         FIL<-LeggTilNyeVerdiKolonner(FIL,FilterDscr$NYEKOL_KOL_preRAD,slettInf=TRUE)
       }
@@ -2224,7 +2245,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
 	    
       if (FilterDscr$GEOHARM==1){
         rektiser<-ifelse (FilterDscr$REKTISER==1,1,0)
-        FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=rektiser,batchdate=batchdate,globs=globs)
+        FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=rektiser,globs=globs)
       }
       if (!(is.na(FilterDscr$NYETAB) | FilterDscr$NYETAB=="")){
         FIL<-AggregerRader(FIL,FilterDscr$NYETAB,FGP=FGP)
@@ -2244,7 +2265,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
         setkeyv(FIL,tabK)
         FIL<-NY[FIL]
 	    }
-      
+	    
 	    #FF_RSYNT1
 	    if (!(is.na(FilterDscr$FF_RSYNT1) | FilterDscr$FF_RSYNT1=="")){
 	      FilterDscr$FF_RSYNT1<-gsub("\\\r","\\\n",FilterDscr$FF_RSYNT1)
@@ -2280,15 +2301,15 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
       cat(" og etter", dim(FIL),"\n")
     }
     FGP<-FinnFilgruppeParametre(FilVers,batchdate=batchdate,globs=globs)
+    
     if (GeoHarmDefault==1){
-      FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=FALSE,batchdate=batchdate,globs=globs)
+      FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=FALSE,globs=globs)
     }
     .GlobalEnv$BUFFER[[FilVers]]<-FIL
     #.GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
     TilBuffer<-1
   }
  
-  
   FILd<-FinnDesign(FIL,FGP=FGP,globs=globs)
   return(list(FIL=FIL,FGP=FGP,FILd=FILd,TilBuffer=TilBuffer))
 }
@@ -2507,6 +2528,8 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       cat("TNF:\n")
       print(TNF)
     }
+    
+    
     cat("------FERDIG TNF\n")
   }
   
@@ -3465,8 +3488,9 @@ AnonymiserNaboer<-function(FG,ovkatstr,FGP=list(amin=0,amax=120),globs=FinnGlobs
   return(FG)
 }
 
-RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
-  delDFstr<-character(0)
+#RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
+RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),GEOstdAAR=globs$GEOstdAAR,globs=FinnGlobs()){
+    delDFstr<-character(0)
   delkolsA<-character(0)
   for (del in names(KubeD)){
     delkols<-globs$DefDesign$DelKols[[del]]
@@ -3534,6 +3558,9 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
   cat("***Lager TF fra",filer[TT],"\n")
   TF<-OmkodFil(FinnFilT(filer[TT]),RDT,globs=globs,echo=1)
   
+  
+  
+  
   #TF<-GeoHarm(TF,vals=FGPs[[filer[TT]]]$vals,globs=globs) #Trengs ikke om KUBEd, da tas rektisering i 
   if (!is.na(filer[NN])){
     RDN<-FinnRedesign(FilDesL[[filer[NN]]],TNdes,globs=globs)
@@ -3543,16 +3570,15 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
     cat("Lager NF fra",filer[NN],"\n")
     NF<-OmkodFil(FinnFilT(filer[NN]),RDN,globs=globs,echo=1)
     
-    
     #NF<-GeoHarm(NF,vals=FGPs[[filer[NN]]]$vals,globs=globs)
   }
   
   #Hvis TN er hoved i KUBE, brukes full rektangularisering
-  
-  if (length(KUBEd)>0){
+   if (length(KUBEd)>0){
     KubeDRekt<-RektangulariserKUBE(names(TF),KUBEd$TMP,globs=globs)
     setkeyv(KubeDRekt,intersect(names(KubeDRekt),names(TF)))
     setkeyv(TF,intersect(names(KubeDRekt),names(TF)))
+    
     TF<-TF[KubeDRekt]
     cat("REktangularisering TF, dim(KUBEd)", dim(KubeDRekt),"dim(TF)", dim(TF),"\n")
     TF<-SettMergeNAs(TF,FGPs[[filer[TT]]]$vals) 
@@ -3570,8 +3596,7 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
       TNF<-TF
     }
     
-    
-    
+   
     rektangularisert<-1
     cat("--TNF ferdig merget med KUBEd, dim(TNF)",dim(TNF),"\n")
   } else if (!is.na(filer[NN])){
@@ -3599,8 +3624,7 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
     TNF<-TF
     cat("--TNF ferdig, har ikke nevner, så TNF<-TF\n")
   }
-  
-  
+ 
   
   #Evt prossesering av nye kolonner etter merge/design
   if (!(is.na(TNPdscr$NYEKOL_RAD) | TNPdscr$NYEKOL_RAD=="")){
@@ -3818,8 +3842,8 @@ FinnKubeT<-function(fila,batch=NA,globs=FinnGlobs()){
   return(KUBE)
 }
 
-
-GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
+#GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
+GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),GEOstdAAR=globs$GEOstdAAR,globs=FinnGlobs()){
   if (identical(class(FIL),"data.frame")){FIL<-data.table(FIL)}
   keyorg<-key(FIL)
   geoomk<-globs$KnrHarm
@@ -3847,6 +3871,7 @@ GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),batchdate=SettKHB
   
   
   FIL[,FYLKE:=ifelse(GEOniv %in% c("H","L"),"00",substr(GEO,1,2))]
+  
   return(FIL)
 }
 
@@ -4294,6 +4319,7 @@ LeggTilNyeVerdiKolonner<-function(TNF,NYEdscr,slettInf=TRUE,postMA=FALSE){
 OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
   orgkols<-names(FIL)
   setDT(FIL)
+  
   tabnames<-FinnTabKols(names(FIL))
   valkols<-FinnValKols(names(FIL))  
   lp<-paste(valkols,"=sum(",valkols,"),",
@@ -4340,12 +4366,14 @@ OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
         #FIL<-FIL[RD$KBs[[del]],nomatch=0]
         if (echo==1){cat(" og",dim(FIL),"etter merge")}
         if (del=="Gn"){
+          
+          
           #Omkod geo
           FIL[GEOniv_omk=="K",GEO:=substr(GEO,0,4)]
           FIL[GEOniv_omk=="F",GEO:=FYLKE]
           FIL[GEOniv_omk=="L",c("GEO","FYLKE"):=list("0","00")]
           #FIL[GEOniv_omk=="B" & GEOniv=="S" & grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list(substr(GEO,0,6),substr(GEO,0,2))]
-          FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list("999999","99")]
+          FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601|5001)",GEO),c("GEO","FYLKE"):=list("999999","99")]
           cat("\n")
           FIL[GEOniv_omk=="H" & GEOniv!="H",GEO:=mapvalues(FYLKE,globs$HELSEREG$FYLKE,globs$HELSEREG$HELSEREG,warn_missing = FALSE)] 
           #FIL[GEOniv_omk=="H" & GEOniv!="H",FYLKE:="00"]
