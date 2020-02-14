@@ -1,3 +1,41 @@
+#################################################################
+# ENDRINGSLOGG
+##########################################################
+#20190927:
+# Endret 1601->5001 og 1902->5401 i linje 1591 
+# FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|4601|5401)",GEO),c("GEO","FYLKE"):=list("999999","99")]
+# Dette er forstatt en meget dårlig løsning. Bør ikke være hardkodet!
+# Har lagt inn det jeg tror er løsningen, men ikke slått på denne nå.
+# 
+# Lagt til/endret filter for å luke vekk geokoder som ikke skal rapporteres (ca 3324)
+# Bruker attributtet TYP som filter
+# Lagt til UtGeoKoder=GeoKoder[TYP=="0"]$GEO i globs
+# KUBE<-KUBE[GEO %in% globs$UtGeoKoder[TYP=="0"]$GEO]
+# NESSTAR<-NESSTAR[GEO %in% globs$UtGeoKoder[TYP=="0"]$GEO]
+
+#20190827:
+#delkols<-globs$DefDesign$DelKols[[del]] flyttet opp til linje 5095 i FinnRedesign
+#Fjernet unntak for D_develop_predtype=="DIR" samme sted
+#Her var/er det en del rot. Unntaket var egentlig en oppretting av at ting gikk feil over
+#Så vidt jeg skjønner skal det være delkols<-globs$DefDesign$DelKols[[del]] gjennom hele FinnRedsign. 
+#Det er forstatt for mye dilldall rundt det
+
+
+
+#20190821:
+# defpaths flyttet opp for synlighet
+# Xls2R.KH endret: readxl og read_excel erstatter gammel Xls2TmpCsv.  
+# Dirty løsning for integrereing av Direkte standardisering tatt inn
+#   D_develop_predtype="IND" er gammel hovedløsning med indirekte standardisering
+#   D_develop_predtype="DIR" er quick fix for direkte standardisering
+#   Se kommentarer på enkeltpunktene for mer antydninger om hva som må gjøres for å fikse dette mer solid
+
+
+#20190627:
+# GEOstdAAR=globs$KHaargang i RektangulariserKUBE og KNRHarm
+# TO-DO: Legg til feilmelding om GEO som kastes ved KNRharm!!!
+
+
 #version 0.2.4
 #Flere viktige oppstramminger/feilretting i detaljreging. Særlig i FinnSumOverAar 
 #og behandling av VAL.f=9 og VAL.f=-1 
@@ -5,6 +43,8 @@
 #NYEKOL_RAD_postMA for variabler av type dekningsgrad som trengs å tas etter årssnitt (blir snitt/snitt)
 
 #0.2.3.1: Generalisert NaboAno til betinget
+
+
 
 require(RODBC)  #Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
 require(foreign) #Brukes ved lesing av SPSS, dBF
@@ -18,6 +58,16 @@ require(sqldf)
 require(stringr)
 require(intervals)
 require(data.table) #Bruker data.table for rask merge
+require(readxl)
+
+
+#Brukte pather under utvikling (NB: prioritert rekkefølge under)
+defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+            "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+            "J:/FHI/PRODUKSJON",
+            "J:/kbDEV")
+
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -25,8 +75,7 @@ require(data.table) #Bruker data.table for rask merge
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2019,
-  GEOstdAAR=2019,
+  KHaargang=2020,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -284,11 +333,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   KHdbname<-globs$KHdbname
   #Sett path om denne ikker er oppgitt:
-  #Brukte pather under utvikling (NB: prioritert rekkefølge under)
-  defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-              "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-              "J:/FHI/PRODUKSJON",
-              "J:/kbDEV")
+ 
   
   if (path==""){
     if(file.exists(paste(getwd(),KHdbname,sep="/"))){
@@ -320,11 +365,9 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   globs<-c(globs,list(dbh=KHOc,log=KHLc,path=path))
   
-  #Mod20171206 Slår av som utgått
-  #20180104 Prøver å slå den på igjen, fant feil i LAVINNTEKT
   GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
   GeoKoder<-data.table(sqlQuery(KHOc,"SELECT * from GEOKoder",as.is=TRUE),key=c("GEO"))
-  #DEBUG
+  UtGeoKoder<-GeoKoder[TYP=="O"]$GEO
   KnrHarm<-data.table(sqlQuery(KHOc,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
   TKNR<-data.table(sqlQuery(KHOc,"SELECT * from TKNR",as.is=TRUE),key=c("ORGKODE"))
   HELSEREG<-data.table(sqlQuery(KHOc,"SELECT * from HELSEREG",as.is=TRUE),key=c("FYLKE"))
@@ -346,22 +389,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   Stata<-FinnStataExe()
   globs$StataExe<-Stata$Exe
   globs$StataVers<-Stata$Vers
-  return(c(globs,list(GeoKoder=GeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
-}
-
-
-#DEVELOP: Må takle "rekursive" endringer i kommunekode, slik som for Inderøy/Mosvik
-#Dette ved selv-join, men må holde tunga rett i munnen her
-SettKnrHarm<-function(globs=FinnGlobs()){
-  KnrHarm<-data.table(sqlQuery(globs$dbh,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
-  #KnrHarm[HarmStd<=globs$GEOstd]
-  recursive<-1
-  #while(recursive==1){
-    print(merge(KnrHarm,KnrHarm,by.x="GEO_omk",by.y="GEO")) 
-  #}  
-  
-  
- return(KnrHarm)
+  return(c(globs,list(GeoNavn=GeoNavn,GeoKoder=GeoKoder,UtGeoKoder=UtGeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
 }
 
 #
@@ -400,7 +428,7 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##########################################################
 
 #
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=TRUE,dumps=list()){
+LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list()){
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -1334,7 +1362,8 @@ LesMultiHead<-function(mhstr){
 }
 
 #
-Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("NA"),ryddOpp=1,...){
+#
+Xls2R.KH.Gammel<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("NA"),ryddOpp=1,...){
   err<-""
   ok<-1
   DF<-data.frame()
@@ -1385,6 +1414,47 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
   return(list(DF=DF,ok=ok,err=err))
 }
 
+Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("NA"),ryddOpp=1,...){
+  err<-""
+  ok<-1
+  DF<-data.frame()
+  #step 1: Validate sheetname with fuzzy match
+  #rdbh<-odbcConnectExcel2007(xlsfil)
+  #rdbh<-odbcConnectExcel(xlsfil)
+  #tables<-sqlTables(rdbh)$TABLE_NAME
+  #close(rdbh)
+  
+  tables<-excel_sheets(xlsfil)
+  
+  tables<-gsub("\'","",tables)  
+  tables<-gsub("\\$","",tables)  #Something is strange with resepct to $ in R's regexp-syntax, but should work
+  if (ark=="" | is.na(ark)){
+    ark<-tables[1]
+  } else if (!(ark %in% tables)){
+    kand<-tables[grepl(ark,tables,ignore.case=TRUE)]
+    if (length(kand)==1){
+      ark <- kand[1]
+    } else if (length(kand)>1){
+      err<-paste("Arknavn ",ark," ikke unik, passer med flere av (",paste(tables,collapse=","),")",sep="")
+      ok<-0
+    } else {
+      err<-paste("Arknavn ",ark," finnes ikke (",paste(tables,collapse=","),")",sep="")
+      ok<-0
+    }    
+  }
+  if (ok==1){
+    
+    INNLES<-try(as.data.frame(read_excel(xlsfil,sheet=ark,col_names=FALSE,col_types="text",skip=0,na=na.strings)))
+    if(class(INNLES)=="try-error"){
+      err<-INNLES
+      ok<-0
+    } else {
+      DF<-setNames(INNLES, globs$XLScols[1:ncol(INNLES)])
+    }
+    
+  }
+  return(list(DF=DF,ok=ok,err=err))
+}
 #
 Xls2TmpCsv<-function(xlsfil,sheet,globs=FinnGlobs()){
   #Calls on VB-script that converts sheet in xlsfil to csv 
@@ -1590,13 +1660,11 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
   #Kode fra navn
   #Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
   UGeo<-data.frame(NAVN=geo$OMK[!grepl("^\\d+$",geo$OMK)])
-  #Mod20171206 Slår av som utgått
-  #20180104 Prøver å slå den på igjen, fant feil i LAVINNTEKT
-   if(nrow(UGeo)>0){
-     GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
-     omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
-     geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
-   }
+  if(nrow(UGeo)>0){
+    GeoNavn<-sqlQuery(globs$dbh,"SELECT * from GeoNavn",as.is=TRUE)
+    omk<-sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN") 
+    geo$OMK<-mapvalues(geo$OMK,omk$NAVN,omk$GEO,warn_missing = FALSE)
+  }
   
   
   if (grepl("4",filbesk$SONER)){
@@ -1640,7 +1708,6 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
     geo$OMK[nchar(geo$OMK)==6]<-gsub("^(\\d{4})00$",paste("\\1","99",sep=""),geo$OMK[nchar(geo$OMK)==6])
   }
   geo$GEOniv[nchar(geo$OMK)==4]<-"K"
-  #DEVELOP_GEO  Gir krasj dersom det finnes fylker i 51:54
   geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(51:54)]<-"F"
   geo$GEOniv[geo$OMK %in% c(51:54)]<-"H"
   geo$GEOniv[geo$OMK==0]<-"L"
@@ -2214,7 +2281,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
       FIL<-FILn$FT
       sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilterDscr$ORGFIL,"_",FILn$batch,"'",sep=""))
       if (TabFSub!=""){
-        print("ASKJDLKJASLDKJL  TabFSub")
+        #print("ASKJDLKJASLDKJL  TabFSub")
         cat("Filtrer med tab-filter, før er dim(FIL)",dim(FIL))
         FIL<-eval(parse(text=paste("subset(FIL,",TabFSub,")",sep="")))
         cat(" og etter", dim(FIL),"\n")
@@ -2236,7 +2303,6 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
         cat(" og etter", dim(FIL),"\n")
       }
       
-      
       if (!(is.na(FilterDscr$NYEKOL_KOL_preRAD) | FilterDscr$NYEKOL_KOL_preRAD=="")){
         FIL<-LeggTilNyeVerdiKolonner(FIL,FilterDscr$NYEKOL_KOL_preRAD,slettInf=TRUE)
       }
@@ -2247,7 +2313,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
 	    
       if (FilterDscr$GEOHARM==1){
         rektiser<-ifelse (FilterDscr$REKTISER==1,1,0)
-        FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=rektiser,globs=globs)
+        FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=rektiser,batchdate=batchdate,globs=globs)
       }
       if (!(is.na(FilterDscr$NYETAB) | FilterDscr$NYETAB=="")){
         FIL<-AggregerRader(FIL,FilterDscr$NYETAB,FGP=FGP)
@@ -2267,7 +2333,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
         setkeyv(FIL,tabK)
         FIL<-NY[FIL]
 	    }
-	    
+      
 	    #FF_RSYNT1
 	    if (!(is.na(FilterDscr$FF_RSYNT1) | FilterDscr$FF_RSYNT1=="")){
 	      FilterDscr$FF_RSYNT1<-gsub("\\\r","\\\n",FilterDscr$FF_RSYNT1)
@@ -2303,15 +2369,15 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
       cat(" og etter", dim(FIL),"\n")
     }
     FGP<-FinnFilgruppeParametre(FilVers,batchdate=batchdate,globs=globs)
-    
     if (GeoHarmDefault==1){
-      FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=FALSE,globs=globs)
+      FIL<-GeoHarm(FIL,vals=FGP$vals,rektiser=FALSE,batchdate=batchdate,globs=globs)
     }
     .GlobalEnv$BUFFER[[FilVers]]<-FIL
     #.GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
     TilBuffer<-1
   }
  
+  
   FILd<-FinnDesign(FIL,FGP=FGP,globs=globs)
   return(list(FIL=FIL,FGP=FGP,FILd=FILd,TilBuffer=TilBuffer))
 }
@@ -2496,6 +2562,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
   TNPdscr<-Finfo$TNPdscr
   filer<-Finfo$filer
   PredFilter<-Finfo$PredFilter
+  D_develop_predtype <- Finfo$PredFilter$D_develop_predtype
   STNPdscr<-Finfo$STNPdscr
   FGPs<-Finfo$FGPs
   FilDesL<-Finfo$FilDesL
@@ -2530,10 +2597,9 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       cat("TNF:\n")
       print(TNF)
     }
-    
-    
     cat("------FERDIG TNF\n")
   }
+  
   
   if (bare_TN==1){
     RESULTAT=list(KUBE=TNF,TNPdscr=TNPdscr)
@@ -2646,7 +2712,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
     fullresult<-list(TNF=TNF)
   }
   #Fjern temporære BUFFER filer
-  
+   
   rydd<-setdiff(Finfo$tmpBUFFER,c("BEF_GKa","BEF_GKu"))
   .GlobalEnv$BUFFER[rydd]<-NULL
   
@@ -2659,6 +2725,42 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
   if (tmpbryt>0){raaKUBE0<-copy(KUBE)}
   if (tmpbryt==1){return(fullresult)}
   if (bare_TN==0){
+    
+    if (D_develop_predtype=="DIR"){
+      #Sett skala for teller (må gjøres før rate brukes i MEISskala) 
+      if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA=="")){
+        KUBE[,RATE:=RATE*as.numeric(KUBEdscr$RATESKALA)]
+      }
+      
+      #FINN MEISskala Merk at dette gjelder både ved REFVERDI_VP=P og =V  
+      ########################################################################
+      
+      if (KUBEdscr$REFVERDI_VP=="P"){
+        VF<-eval(parse(text=paste("subset(KUBE,",PredFilter$PfiltStr,")",sep="")))  
+        #Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
+        if(nrow(VF)==0){
+          cat("************************************\nNOE RART MED PredFilter, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
+          VF<-OmkodFilFraPart(TNF,PredFilter$Design,FGP=FGPs[[filer["T"]]],globs=globs)
+        }
+        
+        VF[,MEISskala:=RATE]
+        VFtabkols<-setdiff(intersect(names(VF),globs$DefDesign$DesignKolsFA),PredFilter$Pkols)
+        VF<-VF[,c(VFtabkols,"MEISskala"),with=FALSE]
+        
+        
+        setkeyv(KUBE,VFtabkols)
+        setkeyv(VF,VFtabkols)
+        KUBE<-VF[KUBE]
+      } else {
+        KUBE[,MEISskala:=NA_real_]
+      }
+      
+      print("D-develop")
+      cat("Meisskala1:\n")
+      print(unique(KUBE$MEISskala))
+    }
+
+    
     
     
     
@@ -2694,6 +2796,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[eval(parse(text=fmax))==-1,(tuppel):=list(3)]
     }
     
+    
     ma_satt<-0
     orgintMult<-1
     if (KUBEdscr$MOVAV>1){
@@ -2710,6 +2813,11 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
         #sett rate på nytt
         if(TNPdscr$NEVNERKOL!="-"){
           maKUBE<-LeggTilNyeVerdiKolonner(maKUBE,"RATE={TELLER/NEVNER}")
+          if (D_develop_predtype=="DIR"){
+            if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA=="")){
+              maKUBE[,RATE:=RATE*as.numeric(KUBEdscr$RATESKALA)]
+            }
+          }
         }
         ma_satt<-1
         #maKUBE<-maKUBE[,names(maKUBE)[!grepl(".n$",names(maKUBE))],with=FALSE]  #Kast .n kolonner, ferdig med disse
@@ -2793,7 +2901,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
     #Anonymiser trinn 3. Anonymiser naboer
     if (!(is.na(KUBEdscr$OVERKAT_ANO) | KUBEdscr$OVERKAT_ANO=="")){
       #DEVELOP: BRuk .f=4 her slik at ikke slår ut i HULL under
-      KUBE<-AnonymiserNaboer(KUBE,KUBEdscr$OVERKAT_ANO,FGP=FGPs[[filer[["T"]]]],globs=globs)
+      KUBE<-AnonymiserNaboer(KUBE,KUBEdscr$OVERKAT_ANO,FGP=FGPs[[filer[["T"]]]],D_develop_predtype,globs=globs)
     }
     if ("anoKUBE3" %in% names(dumps)){
       for (format in dumps[["anoKUBE3"]]) {
@@ -2802,8 +2910,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
     }
     
     raaKUBE2<-copy(KUBE)
-    
-    #Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
+     #Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
     SvakAndelAvSerieGrense<-0.5
     HullAndelAvSerieGrense<-0.2
     
@@ -2885,10 +2992,13 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[,RATE:=NA]
     }
     
-    #Sett skala for teller
-    if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA=="")){
-      KUBE[,RATE:=RATE*as.numeric(KUBEdscr$RATESKALA)]
+    if (D_develop_predtype!="DIR"){
+      #Sett skala for teller
+      if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA=="")){
+        KUBE[,RATE:=RATE*as.numeric(KUBEdscr$RATESKALA)]
+      }
     }
+
     
     #Legg til manglende kolonner for homogen behandling under
     missKol<-setdiff(unlist(lapply(c("TELLER","NEVNER","RATE","PREDTELLER"),function(x){paste(x,c("",".f",".a",".n"),sep="")})),names(KUBE))
@@ -2916,7 +3026,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE<-LeggTilNyeVerdiKolonner(KUBE,TNPdscr$NYEKOL_RAD_postMA,slettInf=TRUE,postMA=TRUE)
     }
     
-    
+   
     
     if (grepl("\\S",KUBEdscr$MTKOL)){
       maltall=KUBEdscr$MTKOL
@@ -2929,58 +3039,101 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       KUBE[,MALTALL:=RATE]
     }
     #maltallt<-intersect(paste(maltall,""))
-    
-    #SETT SMRtmp. For å lage NORMSMR under må denne settes før NORM. Derfor kan jeg ikke sette SMR=MALTALL/NORM nå. 
-    #Men NORMSMR er selvsagt alltid 100 for REFVERDI_P="V"  
-    if (KUBEdscr$REFVERDI_VP=="P"){
-      KUBE[,SMRtmp:=sumTELLER/sumPREDTELLER*100]
-    } else if (KUBEdscr$REFVERDI_VP=="V"){
-      KUBE[,SMRtmp:=100]
+
+    if (D_develop_predtype=="DIR"){
+      print("D-develop")
+      cat("Meisskala3:\n")
+      print(unique(KUBE$MEISskala))
+      print(KUBE)
+      
+      
+      #SETT SMR og MEIS
+      
+      if (KUBEdscr$REFVERDI_VP=="P"){
+        KUBE[,SMR:=sumTELLER/sumPREDTELLER*100]
+        KUBE[,MEIS:=(sumTELLER/sumPREDTELLER)*MEISskala]
+      } else if (KUBEdscr$REFVERDI_VP=="V"){
+        KUBE[,SMR:=NA_real_]
+        KUBE[,MEIS:=MALTALL]
+      } else {
+        KUBE[,SMR:=NA_real_]
+        KUBE[,MEIS:=MALTALL]
+      }
     } else {
-      KUBE[,SMRtmp:=NA]
+      #SETT SMRtmp. For å lage NORMSMR under må denne settes før NORM. Derfor kan jeg ikke sette SMR=MALTALL/NORM nå.
+      #Men NORMSMR er selvsagt alltid 100 for REFVERDI_P="V"
+      if (KUBEdscr$REFVERDI_VP=="P"){   
+        KUBE[,SMRtmp:=sumTELLER/sumPREDTELLER*100]
+      } else if (KUBEdscr$REFVERDI_VP=="V"){
+        KUBE[,SMRtmp:=100]
+      } else {
+        KUBE[,SMRtmp:=NA]
+      }
     }
-    
     
     #FINN "LANDSNORMAL". Merk at dette gjelder både ved REFVERDI_VP=P og =V  
     ########################################################################
     
-    VF<-eval(parse(text=paste("subset(KUBE,",PredFilter$PfiltStr,")",sep="")))  
+    if (D_develop_predtype=="DIR"){
+      #Midlertidig dirty løsning
+      #KUBER:REFVERDI bør omdøpes til KUBER:PREDFILTER og det er denne som brukes i SettPredFilter
+      #Det bør så lages en ny kolonne KUBER:REFGEOn som har GEOniv for referanseverdi. Denne brukes primært for å sette SMR i modus=V 
+      RefGEOn<-"L"
+      RefGEOnFilt<-paste("GEOniv=='",RefGEOn,"'",sep="")
+      VF<-eval(parse(text=paste("subset(KUBE,",RefGEOnFilt,")",sep="")))  
+    } else {
+      VF<-eval(parse(text=paste("subset(KUBE,",PredFilter$PfiltStr,")",sep="")))  
+    }
+    
     #Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
     if(nrow(VF)==0){
       cat("************************************\nNOE RART MED LANDSNORM, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
       VF<-OmkodFilFraPart(TNF,PredFilter$Design,FGP=FGPs[[filer["T"]]],globs=globs)
     }
-    
-    
-    VFtabkols<-setdiff(intersect(names(VF),globs$DefDesign$DesignKolsFA),PredFilter$Pkols)
-    if (maltall %in% c("TELLER","RATE")){
-      setnames(VF,c(paste(maltall,c("",".f",".a",".n"),sep=""),"SMRtmp"),c(paste("NORM",c("",".f",".a",".n"),sep=""),"NORMSMR"))
-      VF<-VF[,c(VFtabkols,paste("NORM",c("",".f",".a",".n"),sep=""),"NORMSMR"),with=FALSE]
+
+    if (D_develop_predtype=="IND"){    
+      VFtabkols<-setdiff(intersect(names(VF),globs$DefDesign$DesignKolsFA),PredFilter$Pkols)
+      if (maltall %in% c("TELLER","RATE")){
+        setnames(VF,c(paste(maltall,c("",".f",".a",".n"),sep=""),"SMRtmp"),c(paste("NORM",c("",".f",".a",".n"),sep=""),"NORMSMR"))
+        VF<-VF[,c(VFtabkols,paste("NORM",c("",".f",".a",".n"),sep=""),"NORMSMR"),with=FALSE]
+      } else {
+        setnames(VF,c(maltall,"SMRtmp"),c("NORM","NORMSMR"))
+        VF<-VF[,c(VFtabkols,"NORM","NORMSMR"),with=FALSE]
+      }
     } else {
-      setnames(VF,c(maltall,"SMRtmp"),c("NORM","NORMSMR"))
-      VF<-VF[,c(VFtabkols,"NORM","NORMSMR"),with=FALSE]
+      VF[,lopendeMEISref:=MEIS]
+      VFtabkols<-setdiff(intersect(names(VF),globs$DefDesign$DesignKolsFA),c("GEOniv","GEO","FYLKE"))
+      VF<-VF[,c(VFtabkols,"lopendeMEISref"),with=FALSE]
     }
-    
     setkeyv(KUBE,VFtabkols)
     setkeyv(VF,VFtabkols)
     
     KUBE<-VF[KUBE]
-    
-    #Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
-    #SMR>100 kan oppstå dersom det f.eks. er noen med ukjent alder/kjønn. 
-    #Ratene for ukjent alder/kjønn vil ikke matche nevner fra BEF, derfor vil det predikeres for får døde relativt til observert
-    if (KUBEdscr$REFVERDI_VP=="P"){
-      KUBE[,SMR:=sumTELLER/sumPREDTELLER*100]
-    } else if (KUBEdscr$REFVERDI_VP=="V"){
-      KUBE[,SMR:=MALTALL/NORM*100]
+  
+    if (D_develop_predtype=="IND"){  
+      #Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
+      #SMR>100 kan oppstå dersom det f.eks. er noen med ukjent alder/kjønn.
+      #Ratene for ukjent alder/kjønn vil ikke matche nevner fra BEF, derfor vil det predikeres for får døde relativt til observert
+      if (KUBEdscr$REFVERDI_VP=="P"){
+        KUBE[,SMR:=sumTELLER/sumPREDTELLER*100]
+      } else if (KUBEdscr$REFVERDI_VP=="V"){
+        KUBE[,SMR:=MALTALL/NORM*100]
+      } else {
+        KUBE[,SMR:=NA]
+      }
+  
+      KUBE[,SMR:=100*(SMR/NORMSMR)]
+  
+      KUBE[,MEIS:=SMR*NORM/100]
     } else {
-      KUBE[,SMR:=NA]
+      KUBE[,lopendeFORHOLDSVERDI:=MEIS/lopendeMEISref*100]
+      
+      #D-develop
+      #Dirty tricks i denne midlertidige løsninga, bruker gamle utnavn
+      KUBE[,SMR:=lopendeFORHOLDSVERDI]
+      KUBE[,NORM:=lopendeMEISref]
     }
-    
-    KUBE[,SMR:=100*(SMR/NORMSMR)]
-    
-    KUBE[,MEIS:=SMR*NORM/100]
-    
+
     #Bytt til eksterne TAB-navn for ekstradimensjoner
     FGP<-FGPs[[filer[["T"]]]]
     etabs<-character(0)
@@ -3053,6 +3206,7 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
       }
     }
     
+    
     #LAYOUT
     utkols<-c(tabs,OutVar)
     NESSTAR<-copy(KUBE)
@@ -3074,9 +3228,13 @@ LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FAL
     NESSTAR[is.na(SPVFLAGG),SPVFLAGG:=0]
     NESSTAR[,SPVFLAGG:=mapvalues(SPVFLAGG,c(-1,9,4),c(3,1,3),warn_missing = FALSE)]
     
+    
+    #Filtrer bort GEO som ikke skal rapporteres 
+    KUBE<-KUBE[GEO %in% globs$UtGeoKoder]
+    NESSTAR<-NESSTAR[GEO %in% globs$UtGeoKoder]
+    #NESSTAR<-NESSTAR[!grepl("99|9900$|1902\\d{2}|5401\\d{2}|03011[67]",GEO),]
+    
     #Filtrer bort uønskede tabs
-    #Dette er helt ad hoc nå, ma parametriseres mot KHkodebok/LegKoder
-    NESSTAR<-NESSTAR[!grepl("99|9900$|1902\\d{2}|03011[67]",GEO),]
     if ("ALDER" %in% names(KUBE)){
       NESSTAR<-NESSTAR[!ALDER %in% c("999_999","888_888"),]
     } 
@@ -3347,6 +3505,68 @@ FinnSnittOverAar<-function(KUBE,ma=1,AntYMiss=0,globs=FinnGlobs()){
 SettPredFilter<-function(refvstr,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
   PredFilter<-list()
   Pcols<-character(0)
+  
+  #D-develop
+  D_develop_predtype <- "IND"
+  if (grepl("AAR",refvstr)){
+    D_develop_predtype<-"DIR"
+  }
+  
+  #Må utvikles til å lese KUBEdscr$REFVERDI 
+  if (is.null(refvstr) || is.na(refvstr)){
+    PredFilter=list(Gn=data.frame(GEOniv="L"))
+  } else {
+    refvstr<-gsub("(.*)ALDER=='*ALLE'*(.*)",paste("\\1","ALDER==",FGP$amin,"_",FGP$amax,"\\2",sep=""),refvstr)
+    for (del in names(globs$DefDesign$DelKolN)){
+      delN<-globs$DefDesign$DelKolN[del]
+      if (globs$DefDesign$DelType[del]=="COL"){
+        if (grepl(paste("(^|\\&) *",delN," *== *'*(.*?)'* *(\\&|$)",sep=""),refvstr)){
+          Pcols<-c(Pcols,globs$DefDesign$DelKolsF[[del]])
+          val<-gsub(paste(".*(^|\\&) *",delN," *== *'*(.*?)'* *(\\&|$).*",sep=""),"\\2",refvstr)
+          if (globs$DefDesign$DelFormat[del]=="integer"){
+            PredFilter[[del]]<-eval(parse(text=paste("data.frame(",delN,"=",as.integer(val),",stringsAsFactors=FALSE)",sep="")))
+          } else {
+            PredFilter[[del]]<-eval(parse(text=paste("data.frame(",delN,"=\"",val,"\",stringsAsFactors=FALSE)",sep="")))
+          }
+        }
+      }
+      else if (globs$DefDesign$DelType[del]=="INT"){
+        if (grepl(paste("(^|\\&) *",delN,"l *== *'*(.*?)'* *($|\\&)",sep=""),refvstr)
+            && grepl(paste("(^|\\&) *",delN,"h *== *'*(.*?)'* *($|\\&)",sep=""),refvstr)){
+          Pcols<-c(Pcols,globs$DefDesign$DelKolsF[[del]])
+          vall<-gsub(paste(".*(^|\\&) *",delN,"l *== *'*(.*?)'* *($|\\&).*",sep=""),"\\2",refvstr)
+          valh<-gsub(paste(".*(^|\\&) *",delN,"h *== *'*(.*?)'* *($|\\&).*",sep=""),"\\2",refvstr)
+          PredFilter[[del]]<-eval(parse(text=paste("data.frame(",delN,"l=",as.integer(vall),",",delN,"h=",as.integer(valh),",stringsAsFactors=FALSE)",sep="")))
+        } else if (grepl(paste("(^|\\&) *",delN,"l{0,1} *== *'*(.*?)'* *($|\\&)",sep=""),refvstr)){
+          intval1<-as.integer(gsub(paste("(^|.*\\&) *",delN,"l{0,1} *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr))
+          intval<-c(intval1,intval1)
+          #Gammelt: kunne ha f.eks. AAR='2012_2014'. Dette blir for dillete mot annen bruk, må da ha "AARl='2012' & AARh='2014'" 
+          #intval<-as.integer(unlist(str_split(gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr),"_")))
+          #if (length(intval)==1){intval<-c(intval,intval)} 
+          
+          #Gammelt, feil?
+          #val<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr)
+          #refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
+          #          paste("\\1", paste(delN,"l",sep=""),"==\\2 &"," \\1 ",paste(delN,"l",sep=""),"==\\2"," \\3",sep=""),refvstr)
+          #refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
+          #              paste("\\1",paste(delN,"l",sep=""),"==",intval[1]," & ",paste(delN,"h",sep=""),"==",intval[2],"\\3",sep=""),refvstr)
+          
+          #Litt shaky her. For AAR kan man ikke sette 'AARl=y & AARh=y' fordi det vil krasje med AARs intervall ved snitt
+          #Derfor bare 'AARl=y'
+          refvstr<-gsub(paste(delN,"=",sep=""),paste(delN,"l=",sep=""),refvstr)
+          Pcols<-c(Pcols,globs$DefDesign$DelKolsF[[del]])
+          PredFilter[[del]]<-eval(parse(text=paste("data.frame(",delN,"l=",intval[1],",",delN,"h=",intval[2],",stringsAsFactors=FALSE)",sep="")))
+        }
+      }
+      
+    }
+  }
+  return(list(Design=PredFilter,PfiltStr=refvstr,Pkols=Pcols,D_develop_predtype=D_develop_predtype))
+}
+
+SettPredFilterGml<-function(refvstr,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
+  PredFilter<-list()
+  Pcols<-character(0)
   #Må utvikles til å lese KUBEdscr$REFVERDI 
   if (is.null(refvstr) || is.na(refvstr)){
     PredFilter=list(Gn=data.frame(GEOniv="L"))
@@ -3438,12 +3658,18 @@ SettNaboAnoSpec<-function(ovkatspec,FGP=list(amin=0,amax=120),globs=FinnGlobs())
   return(Foverkat)  
 }
 
-AnonymiserNaboer<-function(FG,ovkatstr,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
+AnonymiserNaboer<-function(FG,ovkatstr,FGP=list(amin=0,amax=120),D_develop_predtype="IND",globs=FinnGlobs()){
   FG<-copy(FG)
   AoverkSpecs<-SettNaboAnoSpec(ovkatstr,FGP=FGP,globs=globs)
   
   vals<-FinnValKols(names(FG))
-  alletabs<-setdiff(names(FG),FinnValKolsF(names(FG)))
+  #FinnValKolsF funker ikke riktig!!!! Både pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
+  #Må utbedres gjennomgripende, men kan ikke gjøre dette nå derfor bare denne ad hoc løsninga
+  if (D_develop_predtype=="IND"){
+    alletabs<-setdiff(names(FG),FinnValKolsF(names(FG)))
+  } else {
+    alletabs<-intersect(c("GEO","GEOniv","FYLKE","AARl","AARh","ALDERl","ALDERh","KJONN","TAB1","TAB2","UTDANN","SIVST","LANDBAK"),names(FG))
+  }
   for (ovkSpec in AoverkSpecs){
     FGt<-FG[eval(parse(text=ovkSpec$subcond)),]
     FGr<-FG[!eval(parse(text=ovkSpec$subcond)),]
@@ -3490,9 +3716,8 @@ AnonymiserNaboer<-function(FG,ovkatstr,FGP=list(amin=0,amax=120),globs=FinnGlobs
   return(FG)
 }
 
-#RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
-RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),GEOstdAAR=globs$GEOstdAAR,globs=FinnGlobs()){
-    delDFstr<-character(0)
+RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),GEOstdAAR=globs$KHaargang){
+  delDFstr<-character(0)
   delkolsA<-character(0)
   for (del in names(KubeD)){
     delkols<-globs$DefDesign$DelKols[[del]]
@@ -3508,6 +3733,7 @@ RektangulariserKUBE<-function(orgnames,KubeD,vals=list(),GEOstdAAR=globs$GEOstdA
   #Switch for TYP=="O" ?? 
   for (Gn in KubeD[["Gn"]][["GEOniv"]]){
     GEOK<-subset(globs$GeoKoder,FRA<=GEOstdAAR & TIL>GEOstdAAR & GEOniv==Gn)
+    
     #FYLKE
     subfylke<-which(GEOK$GEOniv %in% c("G","S","K","F","B"))
     GEOK$FYLKE<-NA
@@ -3560,27 +3786,39 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
   cat("***Lager TF fra",filer[TT],"\n")
   TF<-OmkodFil(FinnFilT(filer[TT]),RDT,globs=globs,echo=1)
   
-  
-  
-  
   #TF<-GeoHarm(TF,vals=FGPs[[filer[TT]]]$vals,globs=globs) #Trengs ikke om KUBEd, da tas rektisering i 
   if (!is.na(filer[NN])){
     RDN<-FinnRedesign(FilDesL[[filer[NN]]],TNdes,globs=globs)
     if (nrow(RDN$Udekk)>0){
-      KHerr("UDEKKA i RDT")
+      KHerr("UDEKKA i RDN")
     }
     cat("Lager NF fra",filer[NN],"\n")
     NF<-OmkodFil(FinnFilT(filer[NN]),RDN,globs=globs,echo=1)
+    
     
     #NF<-GeoHarm(NF,vals=FGPs[[filer[NN]]]$vals,globs=globs)
   }
   
   #Hvis TN er hoved i KUBE, brukes full rektangularisering
-   if (length(KUBEd)>0){
+  
+  if (length(KUBEd)>0){
     KubeDRekt<-RektangulariserKUBE(names(TF),KUBEd$TMP,globs=globs)
+    
+    kast<-unique(setdiff(TF$GEO,KubeDRekt$GEO))
+    kastTell<-kast[!grepl("99$",kast)]
+    if (length(kastTell)>0){
+      cat("############################### ADVARSEL!!!!!!!!!!!!!!!!! ####################################################\n")
+      cat("GEO ",paste(kastTell,collapse=",")," kastes ved rektangulariseing!!\n")
+      cat("Dessuten kastes ",length(setdiff(kast,kastTell)), "99-koder!!\n")
+      print(TF[GEO %in% kast])
+      cat("##############################################################################################################\n")
+    } else if (length(setdiff(kast,kastTell))>0) {
+      cat("Kaster ",length(setdiff(kast,kastTell)), "99-koder ved rektangulerisering.\n")
+    }
+    
+    
     setkeyv(KubeDRekt,intersect(names(KubeDRekt),names(TF)))
     setkeyv(TF,intersect(names(KubeDRekt),names(TF)))
-    
     TF<-TF[KubeDRekt]
     cat("REktangularisering TF, dim(KUBEd)", dim(KubeDRekt),"dim(TF)", dim(TF),"\n")
     TF<-SettMergeNAs(TF,FGPs[[filer[TT]]]$vals) 
@@ -3598,7 +3836,8 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
       TNF<-TF
     }
     
-   
+    
+    
     rektangularisert<-1
     cat("--TNF ferdig merget med KUBEd, dim(TNF)",dim(TNF),"\n")
   } else if (!is.na(filer[NN])){
@@ -3626,7 +3865,8 @@ LagTNtabell<-function(filer,FilDesL,FGPs,TNPdscr,TT="T",NN="N",Design=NULL,KUBEd
     TNF<-TF
     cat("--TNF ferdig, har ikke nevner, så TNF<-TF\n")
   }
- 
+  
+  
   
   #Evt prossesering av nye kolonner etter merge/design
   if (!(is.na(TNPdscr$NYEKOL_RAD) | TNPdscr$NYEKOL_RAD=="")){
@@ -3844,8 +4084,8 @@ FinnKubeT<-function(fila,batch=NA,globs=FinnGlobs()){
   return(KUBE)
 }
 
-#GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),batchdate=SettKHBatchDate(),GEOstdAAR=substr(batchdate,1,4),globs=FinnGlobs()){
-GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),GEOstdAAR=globs$GEOstdAAR,globs=FinnGlobs()){
+
+GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),GEOstdAAR=globs$KHaargang){
   if (identical(class(FIL),"data.frame")){FIL<-data.table(FIL)}
   keyorg<-key(FIL)
   geoomk<-globs$KnrHarm
@@ -3873,7 +4113,6 @@ GeoHarm<-function(FIL,vals=list(),rektiser=TRUE,FDesign=list(),GEOstdAAR=globs$G
   
   
   FIL[,FYLKE:=ifelse(GEOniv %in% c("H","L"),"00",substr(GEO,1,2))]
-  
   return(FIL)
 }
 
@@ -4321,7 +4560,6 @@ LeggTilNyeVerdiKolonner<-function(TNF,NYEdscr,slettInf=TRUE,postMA=FALSE){
 OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
   orgkols<-names(FIL)
   setDT(FIL)
-  
   tabnames<-FinnTabKols(names(FIL))
   valkols<-FinnValKols(names(FIL))  
   lp<-paste(valkols,"=sum(",valkols,"),",
@@ -4368,15 +4606,15 @@ OmkodFil<-function(FIL,RD,globs=FinnGlobs(),echo=0){
         #FIL<-FIL[RD$KBs[[del]],nomatch=0]
         if (echo==1){cat(" og",dim(FIL),"etter merge")}
         if (del=="Gn"){
-          
-          
           #Omkod geo
           FIL[GEOniv_omk=="K",GEO:=substr(GEO,0,4)]
           FIL[GEOniv_omk=="F",GEO:=FYLKE]
           FIL[GEOniv_omk=="L",c("GEO","FYLKE"):=list("0","00")]
           #FIL[GEOniv_omk=="B" & GEOniv=="S" & grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list(substr(GEO,0,6),substr(GEO,0,2))]
-          FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601|5001)",GEO),c("GEO","FYLKE"):=list("999999","99")]
-          cat("\n")
+          #FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list("999999","99")]
+          FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601|4601|5001)",GEO),c("GEO","FYLKE"):=list("999999","99")]
+          #Dette er dårlig, bør endre til
+          #FIL[GEOniv_omk=="B" & GEOniv=="S" & !GEO %in% globs$GeoKoder[GEOniv=="B"]$GEO,c("GEO","FYLKE"):=list("999999","99")]
           FIL[GEOniv_omk=="H" & GEOniv!="H",GEO:=mapvalues(FYLKE,globs$HELSEREG$FYLKE,globs$HELSEREG$HELSEREG,warn_missing = FALSE)] 
           #FIL[GEOniv_omk=="H" & GEOniv!="H",FYLKE:="00"]
           FIL[GEOniv_omk=="H",FYLKE:="00"]
@@ -4884,6 +5122,7 @@ FinnRedesign<-function(DesFRA,DesTIL,SkalAggregeresOpp=character(),ReturnerFullF
   ubeting<-intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1],c(globs$DefDesign$UBeting))
   
   for (del in intersect(c(beting,ubeting),names(Parts))){
+    delkols<-globs$DefDesign$DelKols[[del]]
     if (length(DesFRA[["UBeting"]])>0){
       if (del %in% DesFRA[["UBeting"]]){
         kombn<-"bet"
@@ -4891,7 +5130,6 @@ FinnRedesign<-function(DesFRA,DesTIL,SkalAggregeresOpp=character(),ReturnerFullF
         kombn<-paste("bet",del,sep="")
       }
       #Koble med DeSFRA
-      delkols<-globs$DefDesign$DelKols[[del]]
       setkeyv(Parts[[del]],delkols)
       setkeyv(DesFRA$SKombs[[kombn]],delkols)
       betD<-DesFRA$SKombs[[kombn]][Parts[[del]],allow.cartesian=TRUE]
@@ -4959,7 +5197,10 @@ FinnRedesign<-function(DesFRA,DesTIL,SkalAggregeresOpp=character(),ReturnerFullF
     setkeyv(KB,common)
     setkeyv(FULL,common)
     FULL<-FULL[KB[,common,with=FALSE],nomatch=0,allow.cartesian=TRUE]
-   
+    
+    # if (D_develop_predtype=="DIR"){
+    #   delkols<-KHglobs$DefDesign$DelKols[[del]]
+    # }
     
     #Ignorer KB der det ikke foregår reell omkoding
     if(all(KBs[[del]][,delkols,with=FALSE]==KBs[[del]][,paste(delkols,"_omk",sep=""),with=FALSE])){
