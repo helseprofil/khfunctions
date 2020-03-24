@@ -55,8 +55,9 @@ DF[, .(ind = .I[1:5]), by=Kjonn]
 
 
 ## Select only 5 groups
+print(DF[Prikket == 1, .N, by = Enhetsnavn], topn = 50)
 valgEnh <- unique(DF$Enhetsnavn)[1:3]
-dtSub <- c(valgEnh, "Aremark", "Grong") #med Prikket
+dtSub <- c(valgEnh, "Aremark","Hasvik", "Grong") #med Prikket
 dt <- DF[DF[,.I[1:5],by=.(Enhetsnavn)]$V1][Enhetsnavn  %in% dtSub, ]
 
 fwrite(dt, paste(rawPath, "testPrikk.csv", sep = "\\"), sep = ";")
