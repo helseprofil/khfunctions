@@ -36,14 +36,26 @@ dumps=list() #-> Ingen dump
 trace("LagFilgruppe", tracer = quote(print(as.list(match.call()))),
       exit = quote(print(returnValue())))
 
+## List of Filgruppenavn to check
+## ------------------------------
+gpnavn <- c("ELEVUNDER", "ARBLEDIGE")
+## Subset file for testing purposes
+gpnavnSub <- c("ELEVUNDER")
+
+## notes:
+## ELEVUNDER is tested with PRIKKET
+
+
 #Dump i innlesingen
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
-LagFilgruppe("ELEVUNDER", testfil = TRUE) #CSV fil
+LagFilgruppe("ELEVUNDER") #CSV fil
+LagFilgruppe(gpnavnSub[1])
 LagFilgruppe("ELEVUNDER_NH") #CSV fil
-LagFilgruppe("HKR", testfil = TRUE) #csv
+LagFilgruppe(gpnavn[2], testfil = TRUE) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
 LagFilgruppe("UTDANN_NH",versjonert=TRUE)
 LagFilgruppe("BRUTTOINNTEKT", testfil = TRUE)
+LagFilgruppe("UFORE", testfil = TRUE)
 LagFilgruppe("LESEFERD") #crash med SkrivBKLogg()
 LagFilgruppe("BEF_GKny")
 

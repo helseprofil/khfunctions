@@ -1272,7 +1272,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     #DF<-DF[0,] #Fungerer ikke mht class, som kan v?re feil
   }
 
-  return(DF)
+  invisible(return(DF))
 }
 
 #
@@ -1323,9 +1323,10 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
       } else {
         #Feilstyring fra eksterne rutiner med try()
         if (format=='CSV'){
-          
+          ## FUN05
           expr<-paste("KHCsvread(filn",ifelse(is.na(opt),"",paste(",",opt,sep="")),")",sep="")
           INNLES<-try(eval(parse(text=expr)),silent=TRUE)
+          
         } else if (format=='SPSS'){
           INNLES<-try(as.data.frame(read.spss(file=filn, use.value.labels = FALSE,max.value.labels = 0),stringsAsFactors=FALSE),silent=TRUE)
           #ALternativ metode: T<-spss.get(file=fil)
@@ -1358,11 +1359,19 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
     }
   }
 
+  ## OUTPUT - create data.frame by reading csv file as it is but it creates default header ie. V1
+  ## etc. Alternativ could have used colnames as V1_A, V2_B, V3_C etc instead of letters A,B etc due
+  ## to logical F and T for FALSE and TRUE.
+  
+  
+  
+  
   #Fortsett hvis lest inn er ok
   if(ok==1){
     #Gj?r om innlest CSV-aktig til tabell
 
     if (format %in% c("CSV","XLS","XLSX")){
+      ## FUN06
       eval(parse(text=paste("DF<-cSVmod(DF,filbesk,",ifelse(is.na(opt),"",paste(",",opt,sep="")),",globs=globs)",sep="")))
     }
 
@@ -1379,11 +1388,14 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
       #eval(parse(text=paste("names(DF)",filbesk$MANHEADER,sep="")))
     }
 
+    ## HEADER
     #Fix header
+    ## Delete all space either start or end with space ie. newline, tab or space
     names(DF)<-gsub("^\\s","",names(DF))
     names(DF)<-gsub("\\s$","",names(DF))
     names(DF)[names(DF)==""]<-paste("C",which(names(DF)==""),sep="")
 
+    
 
     #DEV dette b?r v?re un?dvendig '' skal v?re lest inn som NA
     #DF[DF==""]<-NA
@@ -1396,7 +1408,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
     TilFilLogg(filbesk$KOBLID,"modINNLESh",DFHeadToString(DF),batchdate=batchdate,globs=globs)
 
 
-
+    ## OBS! Where or which table is RSYNT1pre?
     if ("RSYNT1pre" %in% names(dumps)){
       for (format in dumps[["RSYNT1pre"]]) {
         DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RSYNT1pre",sep="_"),globs=globs,format=format)
@@ -1490,30 +1502,55 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
     DF<-cbind(DF,nytab,stringsAsFactors=FALSE)
   }
 
+  
   ## Get input from column INNLESARG in Access tabel INNLESING
   ## ---------------------------------------------------------
+  ## it can contain different args eg. slettRader=c(8,9,12)
+  
   if (length(slettRader)>0){
     DF<-DF[-slettRader,]
   }
+
+  ## Skip and slettRader could be joined together
   if (skip>0){
     DF<-DF[-(1:skip),]
   }
+  
   if (sisteRad>0) {
     DF<-DF[1:(sisteRad-skip-length(slettRader)),]
   }
 
+
   if (TomRadSlutt==TRUE){
+    ## OBS! restructure for checking
+    ## -----------------------------
+    ## Find where empty row starts
+    totMiss <- rowSums(DF == "")
+    totNA <- rowSums(is.na(DF))
+    tomr1 <- which(totMiss == ncol(DF))
+    tomr2 <- which(totNA == ncol(DF))
+    tomr3 <- c(tomr1, tomr2) #same as tomr below
+
+    #Alternativ with apply and faster
+    ## row.names(DF[apply(DF=="", 1, all),])
+    tnames <- rownames(DF[apply(is.na(DF) | DF == "", 1, all), ])
+    tomr4 <- which(rownames(DF) %in% tnames)
+
+    ## Original code
     tomr<-which(rowSums(is.na(DF) | DF=="") == ncol(DF))
     if (!is.na(tomr[1])){
       DF<-DF[1:(tomr[1]-1),]
     }
   }
+  
   if (FjernTommeRader==TRUE){
     DF<-DF[rowSums(is.na(DF) | DF=="") != ncol(DF),]
   }
+  
   if (FjernTommeKol==TRUE){
     DF<-DF[,colSums(is.na(DF) | DF=="") != nrow(DF)]
   }
+
   #M? sikre at data.frame, noen filer kan v?re bare en skalar (jfr ENPERSON)
   DF<-as.data.frame(DF,stringsAsFactors=FALSE)
 
@@ -1531,6 +1568,8 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
   #i sine respektive kolonner
   #Kan ogs? v?re pastet sammen originalt
   #Syntaks gir radnummer for de ulike leddene i multihead "c(TABNAVN1=rad1,TABNAVN2=rad2,...)
+
+  ## OBS! Find out how MULTIHEAD is used. Mostly in xls files
   if (!is.na(filbesk$MULTIHEAD)){
     #Prossesser parameterstreng for multihead, gir liste med relevante deler
     mhl<-LesMultiHead(filbesk$MULTIHEAD)
@@ -1551,13 +1590,20 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
   } else if (header==TRUE){
     if (nrow(DF)>1){
       #Bruk defaultnavn i celler der header mangler
+
+      ## Find rows that has EMPTY header
       nonempty<-as.vector(which(DF[1,]!=""))
+      ## Copy columnnames that isn't empty in first row to column names replacing the dummy colnames
+      ## from globs ie. globs$XLScols
       names(DF)[nonempty]<-DF[1,nonempty]
+      ## Delete first row ie. colnames from row data
       DF<-DF[-1,]
     } else {
       print("*******************ADVARSEL: Kan ikke sette header fra fil med bare en rad. Skal vel ha opsjon 'header=FALSE'")
     }
   }
+
+  # OBS! what is UNDERTABLOK?
   if (!is.na(filbesk$UNDERTABLOK)){
     names(DF)[ncol(DF)]<-gsub("^(.*?):.*","\\1",filbesk$UNDERTABLOK)
   }
@@ -2560,7 +2606,7 @@ SetBuffer<-function(filer=c("BEFOLK"),globs=FinnGlobs()){
       print(fil$err)
     }
   }
-  return(BUFFER)
+  invisible(return(BUFFER))
 }
 
 
