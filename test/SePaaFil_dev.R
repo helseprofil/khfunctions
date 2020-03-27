@@ -2,7 +2,11 @@
 #NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
 
-source('c:/enc/khfun_dev.R')
+## Bytt til FALSE for å bruke defpaths i PRODUKSJON
+runtest = TRUE
+
+if (!require(here)) install.packages("here")
+source(here('khfun_dev.R'))
 
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 #BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
@@ -39,6 +43,7 @@ trace("LagFilgruppe", tracer = quote(print(as.list(match.call()))),
 ## List of Filgruppenavn to check
 ## ------------------------------
 gpnavn <- c("ELEVUNDER", "ARBLEDIGE")
+
 ## Subset file for testing purposes
 gpnavnSub <- c("ELEVUNDER")
 
@@ -50,13 +55,12 @@ gpnavnSub <- c("ELEVUNDER")
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
 LagFilgruppe("ELEVUNDER") #CSV fil
 LagFilgruppe(gpnavnSub[1])
-LagFilgruppe("ELEVUNDER_NH") #CSV fil
 LagFilgruppe(gpnavn[2], testfil = TRUE) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
 LagFilgruppe("UTDANN_NH",versjonert=TRUE)
 LagFilgruppe("BRUTTOINNTEKT", testfil = TRUE)
 LagFilgruppe("UFORE", testfil = TRUE)
-LagFilgruppe("LESEFERD") #crash med SkrivBKLogg()
+LagFilgruppe("LESEFERD", testfil = T) #crash med SkrivBKLogg()
 LagFilgruppe("BEF_GKny")
 
 #Dump i kubeproduksjonen

@@ -78,17 +78,39 @@ library(fs)
 ## Choose PATH relevent to testing
 ## -------------------------------
 
-## Brukte pather under utvikling (NB: prioritert rekkef?lge under)
+
+## ## Brukte pather under utvikling (NB: prioritert rekkef?lge under)
 ## defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+##             "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING",
 ##             "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
 ##             "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
 ##             "J:/FHI/PRODUKSJON",
 ##             "J:/kbDEV")
 
+## ## For TEST files
+## defpaths <- "c:/enc/DBtest"
 
-defpaths <- "c:/enc/DBtest"
-## for ORIGINAL filer
-orgPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
+## for ORIGINAL filer when testfil=TRUE
+originalPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
+
+
+if(isFALSE(exists("runtest"))) {runtest = FALSE}
+if(isTRUE(runtest)) {test = "Ja"} else {test = "Nei"}
+
+## Path for Database
+defpaths <- switch(test,
+                   "Nei" = c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+                            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING",
+                            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+                            "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+                            "J:/FHI/PRODUKSJON",
+                            "J:/kbDEV"),
+                   "Ja" = "c:/enc/DBtest")
+
+## Database filename
+filDB <- switch(test,
+                "Nei" = "KHELSA.mdb",
+                "Ja" = "KHELSA_dev.mdb")
 
 
 ##GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes s? inn i globs
@@ -100,7 +122,7 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2020,
   KHgeoniv="K",
-  KHdbname="KHELSA_dev.mdb",
+  KHdbname = filDB,
   KHlogg="KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
@@ -156,22 +178,23 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
   ## --------------------------------------
   Deler<-sqlQuery(globs$dbh,"SELECT * FROM KH_DELER",as.is=TRUE,stringsAsFactors=FALSE)
 
+
   ##DelKols<-lapply(as.list(setNames(Deler$DelKols, Deler$DEL)),function(x){unlist(str_split(x,pattern=","))})
   ##Tilrettelegging for enkle oppslag:
   DelKolN<-setNames(Deler$DelKol,Deler$DEL) #give attributes DEL to DelKol
-  DelKolE<-setNames(Deler$DelKolE,Deler$DEL)
-  DelType<-setNames(Deler$TYPE,Deler$DEL)
-  DelFormat<-setNames(Deler$FORMAT,Deler$DEL)
+  DelKolE<-setNames(Deler$DelKolE,Deler$DEL) #give attributes DEL to DelKolE ie. "FYLKE,GEO"
+  DelType<-setNames(Deler$TYPE,Deler$DEL) # column TYPE with attribute from DEL
+  DelFormat<-setNames(Deler$FORMAT,Deler$DEL) #column FORMAT with attribute DEL
   AggPri<-Deler$DEL[order(Deler$AGGREGERPRI)] #get ordered DEL according to AGGREGERPRI
-  AggVedStand<-Deler$DEL[Deler$AGGREGERvedPRED==1] #select only A and K
+  AggVedStand<-Deler$DEL[Deler$AGGREGERvedPRED==1] #select only A and K. Why??
   IntervallHull<-setNames(Deler$INTERVALLHULL,Deler$DEL)
   IntervallHull<-IntervallHull[!(is.na(IntervallHull) | IntervallHull=="")]
 
   DelKols<-as.list(DelKolN)
-  DelKolsF<-DelKols #
+  DelKolsF<-DelKols # Why do we need this?
   KolsDel<-list()
   for (del in names(DelKols)){
-
+    ## loop column DEL and check TYPE
     if (DelType[del]=="INT"){
       ## Add l (lower) and h (high) if FORMAT is INT i.e AAR and ALDER
       DelKols[[del]]<-paste(DelKols[[del]],c("l","h"),sep="")
@@ -237,6 +260,8 @@ SettKodeBokGlob<-function(globs=FinnGlobs()){
 
   KB<-list()
 
+
+
   ## !OBS! What this process is doing???
   ## NYKODE as B/H etc under NYKODE - H=Helseregion B=Bydel
   for (del in names(globs$DefDesign$DelKolN)){
@@ -261,6 +286,8 @@ SettKodeBokGlob<-function(globs=FinnGlobs()){
     KB[[del]]<-KBD[,names(KBD)[!names(KBD) %in% c("ID","DEL")]]
   }
 
+
+  print(head(KB))
 
   return(KB)
 
@@ -360,7 +387,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   ##Merk at globs$dbh ikke lukkes av seg selv, dermed kan det bli rot med gamle slike om FinnGlobs brukes for mye
   ##Bruk evy odbcCloseAll() for ? rydde absolutt alle
 
-  
+
   ##Les globglobs (se topp av fil)
   globs<-globglobs
   if (is.na(modus)){
@@ -517,6 +544,8 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 
 LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE){
 
+  ## testfil is TRUE when column 'TESTING' is used for selecting the file to be processed
+
   ##Essensielt bare loop over alle delfiler/orignalfiler
   ##For hver orignalfil kj?res LagTabellFraFil
   ##Stables til tabellen FG
@@ -537,11 +566,11 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     ## FUN02
     ## -------
     ## add testfil for selecting file for testing
-    
+
     #Finn parameterbeskrivelse av delfilene
     delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs,testfil = testfil)
 
-    
+
     ## NEW!! ifelse is stopped. It gives error for testing the row
     ## gives value i to 1 for testing and check for how many files is there is not used
     ## -----------------------------------------------------------
@@ -549,15 +578,16 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     ## if(nrow(delfiler)>0){
       for (i in 1:nrow(delfiler)){
 
-        ## For testing file path to Original File
-        if (isTRUE(testfil)){globs$path <- orgPath}
+        getSti <- globs$path
 
-        
+        ## For testing file path to Original File
+        if (isTRUE(testfil)){getSti <- originalPath}
+
         ## read row by row in delfiler
         filbesk<-delfiler[i,]
         tm<-proc.time()
         ## get the path for files
-        filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
+        filbesk$filn<-paste(getSti,filbesk$FILNAVN,sep="/")
         ## change slash for path to be standard since loading from Access uses \\ while globs$path
         ## uses / and create absolute path
         filbesk$filn<-gsub("\\\\","/",filbesk$filn)
@@ -565,9 +595,11 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
         ## This is when AAR input is $y then used DEFAAR from table ORIGINALFILER
         ##Sett evt default for ?r basert p? aktuelt ?rstall
         filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
-        
 
-        
+
+        ## Show path for file
+        logger::log_info(paste0("Path: ", filbesk$filn))
+
         ## CHK 3 : Breakpoint
         ## ------------------
 
@@ -595,7 +627,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
     #DEV: SPESIALBEHANDLING AV FILGRUPPE HER!! F.EKS. IMPUTER NPR
 
-    
+
     #Diagnostisering og rapportering p? hele filgruppa under ett
 
     if(nrow(Filgruppe)>0 & diagnose==1){
@@ -626,7 +658,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
     }
 
-    
+
     ## CHK 2 : Breakpoint
     ## Rename VAL1, VAL2 and VAL3 to the specified names in FILGRUPPER
     ## Could use data.table::setnames() or use reference table
@@ -676,7 +708,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
       }
     }
 
-    
+
     if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)){
       for (format in dumps[["RSYNT_PRE_FGLAGRINGpost"]]) {
         DumpTabell(Filgruppe,paste(filbesk$FILGRUPPE,"RSYNT_PRE_FGLAGRINGpost",sep="_"),globs=globs,format=format)
@@ -686,18 +718,18 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
     ## Give date for production in FILGRUPPER tabel
     ## but not sure if info is used
-    ## ============================================ 
+    ## ============================================
     #Datostempel
     sqlQuery(globs$dbh,paste("UPDATE FILGRUPPER SET PRODDATO='",format(Sys.time(), "%Y-%m-%d %X"),"' WHERE FILGRUPPE='",gruppe,"'",sep=""))
 
     ## CKH 1 : Breakpoint
-    
+
     #SKRIV RESULTAT
     path<-globs$path
 
     ## Test file path for output RDS
     if (isTRUE(testfil)) {path <- defpaths}
-    
+
     if (printR){
       utfiln<-paste(path,"/",globs$StablaDirNy,"/",gruppe,".rds",sep="")
       #save(Filgruppe,file=utfiln)
@@ -736,7 +768,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
                            versjonert=FALSE,echo=TRUE,dumps=list()) {
 
   cat("-->>> Entering function LagTabellFraFil \n")
-  
+
   klokke<-proc.time()
   ######################################################
   #INNLESING
@@ -763,7 +795,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   #   }
   #cat("\nETTER INNLES\n#############################\n")
 
-  
+
 
   if (ok==1){
 
@@ -939,7 +971,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   }
 
 
-  
+
   if (echo==TRUE){
     cat("\nETTER TRINN3\n#############################\n")
     print(head(DF))
@@ -996,7 +1028,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       ## OBS!! crash here
       SkrivKBLogg(KB=geo,type="GEO",filbesk=filbesk,FGP$FILGRUPPE,batchdate=batchdate,globs=globs)
 
-      
+
       TilFilLogg(filbesk$KOBLID,"GEO_ok",ifelse(0 %in% geo$OK,0,1),batchdate=batchdate,globs=globs)
 
       DF$GEOniv<-mapvalues(DF$GEO,geo$ORG,geo$GEOniv,warn_missing = FALSE)
@@ -1119,20 +1151,21 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ## CHK 11 : Breakpoint
     ## -------------------
     ## gives "" for NA in c("VAL1","VAL2","VAL3") - don't know what is the reason
-    
-    
+
+
     #VASK VERDIER. Litt annen prosess, bruker KB, men tabulerer bare ikke-numeriske.
     #Setter numerisk, med flagg for type NA
     for (val in c("VAL1","VAL2","VAL3")){
       #Bedre, men funker ikke i forhold til logg
       #for (val in names(DF)[grepl("VAL\\d+$",names(DF))]){
       if (val %in% names(DF)){
-        
+
         ## Check values
         print(sum(is.na(DF[, val])))
 
-        
+
         DF[is.na(DF[,val]),val]<-""
+
 
         valKB<-KBomkod(DF[,val],type=val,valsubs=TRUE,filbesk=filbesk,batchdate=batchdate,globs=globs)
         valKBut<-valKB$subsant
@@ -1142,8 +1175,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
         vala<-paste(val,".a",sep="")
         valomk<-paste(val,"omk",sep="")
 
-        
-        
+
+
         #Lag omkodet verdi med numerisk. Ikke numerisk blir forel?pig NA
         suppressWarnings(DF[,valomk]<-as.numeric(valKB$omk))
         DF[,valf]<-0
@@ -1152,7 +1185,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
         DF[valKB$omk=="." & DF[,val]!=valKB$omk,valf]<-2 #Lar seg ikke beregne
         DF[valKB$omk==":" & DF[,val]!=valKB$omk,valf]<-3 #Anonymisert
 
-        
+
         #Behandle (resterende) ikke-numeriske
         nonNum<-which(is.na(DF[,valomk]) & DF[,val]==valKB$omk)
 
@@ -1217,7 +1250,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     }
 
 
-    
+
 
 
     default.stringsAsFactors=TRUE
@@ -1238,9 +1271,12 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     valkols<-FinnValKols(names(DF))
     #Skj?nner ikke hvorfor dette ikke funker
 
+
     DF2<-DF[!((unlist(GeoTil[DF$GEO])<=DF$AARl | unlist(GeoFra[DF$GEO])>=DF$AARh) & rowSums(is.na(data.frame(DF[,valkols])))==length(valkols)),]
     DF<-DF2
 
+
+    ## This column is from INNLESING with mostly value = 1 (Not tested yet)
 
     #Aggreger ned. Unntaksvis der filene er "ucollapset"
     #etter f.eks omkoding av alder til aldersgrupper
@@ -1283,18 +1319,19 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
   filn<-filbesk$filn
   format<-filbesk$FORMAT
 
-  ## Add extra arguments for read csv..xls eg. sheet etc. 
+  ## Add extra arguments for read csv..xls eg. sheet etc.
   opt<-filbesk$INNLESARG
 
 
-  
+
   ## use FinnFilGruppeFraKoblid() function to get filgruppenavn
-  
+
   #Initier log
   sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=",filbesk$KOBLID,"AND SV='S'",sep=""))
   sqlQuery(globs$log,paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =",filbesk$KOBLID,",'",batchdate,"', 'S','",FinnFilGruppeFraKoblid(filbesk$KOBLID),"'",sep=""))
 
   #Sjekk om fil eksisterer
+  ## Should use file.exists(filn)
   if(file.access(filn,mode=0)==-1){
     TilFilLogg(filbesk$KOBLID,"FILNAVNERR",paste("KRITISK FEIL: ",filn," finnes ikke",sep=""),batchdate=batchdate,globs=globs)
     ok<-0
@@ -1326,7 +1363,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
           ## FUN05
           expr<-paste("KHCsvread(filn",ifelse(is.na(opt),"",paste(",",opt,sep="")),")",sep="")
           INNLES<-try(eval(parse(text=expr)),silent=TRUE)
-          
+
         } else if (format=='SPSS'){
           INNLES<-try(as.data.frame(read.spss(file=filn, use.value.labels = FALSE,max.value.labels = 0),stringsAsFactors=FALSE),silent=TRUE)
           #ALternativ metode: T<-spss.get(file=fil)
@@ -1362,10 +1399,10 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
   ## OUTPUT - create data.frame by reading csv file as it is but it creates default header ie. V1
   ## etc. Alternativ could have used colnames as V1_A, V2_B, V3_C etc instead of letters A,B etc due
   ## to logical F and T for FALSE and TRUE.
-  
-  
-  
-  
+
+
+
+
   #Fortsett hvis lest inn er ok
   if(ok==1){
     #Gj?r om innlest CSV-aktig til tabell
@@ -1395,7 +1432,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
     names(DF)<-gsub("\\s$","",names(DF))
     names(DF)[names(DF)==""]<-paste("C",which(names(DF)==""),sep="")
 
-    
+
 
     #DEV dette b?r v?re un?dvendig '' skal v?re lest inn som NA
     #DF[DF==""]<-NA
@@ -1469,7 +1506,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
 
 #
 KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quote = "\"",dec = ".",fill=FALSE,encoding = "unknown",blank.lines.skip=FALSE,na.strings=c("NA"),brukfread=TRUE,...) {
-  
+
   if(!(quote=="\"" && dec=="." && fill==FALSE && encoding == "unknown")){
     brukfread<-FALSE
   }
@@ -1484,13 +1521,13 @@ KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quo
 
 
 ## OBS! integer(0) should be 0L
-# 
+#
 cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1,TomRadSlutt=FALSE,FjernTommeRader=FALSE,FjernTommeKol=TRUE,globs=FinnGlobs(),...){
   #Ved bruk av undertabeller med titler som ikke st?r i egen kolonne
   #Lager egen kolonne av undertitler som blir ekta TAB
   #Ikke s? veldig elegant, men funker for de f?r tilfellene der dette trengs og som ellers ville trengt h?nds?m
   #Syntaks UNDERTABLOK er TAB:kolonne:kommasep liste undertitler:kommasep liste/skalar offset av disse (dvs antall raders forrykking)
-  
+
   if (!is.na(filbesk$UNDERTABLOK)){
     utl<-unlist(str_split(filbesk$UNDERTABLOK,":"))
     loks<-as.numeric(unlist(str_split(utl[3],",")))
@@ -1502,11 +1539,11 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
     DF<-cbind(DF,nytab,stringsAsFactors=FALSE)
   }
 
-  
+
   ## Get input from column INNLESARG in Access tabel INNLESING
   ## ---------------------------------------------------------
   ## it can contain different args eg. slettRader=c(8,9,12)
-  
+
   if (length(slettRader)>0){
     DF<-DF[-slettRader,]
   }
@@ -1515,7 +1552,7 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
   if (skip>0){
     DF<-DF[-(1:skip),]
   }
-  
+
   if (sisteRad>0) {
     DF<-DF[1:(sisteRad-skip-length(slettRader)),]
   }
@@ -1542,11 +1579,11 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
       DF<-DF[1:(tomr[1]-1),]
     }
   }
-  
+
   if (FjernTommeRader==TRUE){
     DF<-DF[rowSums(is.na(DF) | DF=="") != ncol(DF),]
   }
-  
+
   if (FjernTommeKol==TRUE){
     DF<-DF[,colSums(is.na(DF) | DF=="") != nrow(DF)]
   }
@@ -1554,10 +1591,10 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
   #M? sikre at data.frame, noen filer kan v?re bare en skalar (jfr ENPERSON)
   DF<-as.data.frame(DF,stringsAsFactors=FALSE)
 
-  
+
   ## OBS!! Change the header to ABCDEF.... why F??
   ## ------------------------------------------------
-  
+
   #Sett header. Default er vanlige Excel-kolonnenavn
   names(DF)<-globs$XLScols[1:length(names(DF))]
 
@@ -1814,12 +1851,13 @@ subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=in
 
 KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
 
+
   ## CHK 21
   ## -------------------
-  ## org is based on DF[,val] from LagTabellFraFil() eg. all GEO values
-  ## type is 'val' value eg. GEO
+  ## 'org' is based on DF[,val] from LagTabellFraFil() eg. all GEO values
+  ## type is 'val' value eg. GEO, KJONN etc
   ## get values from KODEBOK tabel in Access
-  
+
   datef<-format(Sys.time(), "#%Y-%m-%d#")
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
@@ -1834,21 +1872,27 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
              " AND VERSJONTIL>",datef,sep="")
   kbok<-sqlQuery(globs$dbh,sql,as.is=TRUE)
   kbok[is.na(kbok)]<-""
+
+  ## Create empty data.frame.
   subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=integer(0),OK=integer(0))
   if (nrow(kbok)>0){
+    ## Split those with regexp ie. SUB and 1-to-1 substitute ie. KB
+    ## ------------------------------------------------------------
     KBsubs<-subset(kbok,TYPE=="SUB")   #Regul?ruttrykk
     KB<-subset(kbok,TYPE=="KB")       #Oppslagsliste
     i<-1
     while (i<=nrow(KBsubs)){
       KBsub<-KBsubs[i,]
-      if (valsubs==TRUE){
+
+      if (valsubs==TRUE){ #OBS! what is valsubs??
         subsant<-rbind(subsant,data.frame(ORG=KBsub$ORGKODE,KBOMK=paste("<",KBsub$NYKODE,">",sep=""),OMK=paste("<",KBsub$NYKODE,">",sep=""),FREQ=length(grepl(KBsub$ORGKODE,omk,perl=TRUE)),OK=1))
       }
       #omk<-sub(eval(parse(text=KBsub$ORGKODE)),eval(parse(text=KBsub$NYKODE)),omk)
       omk<-sub(KBsub$ORGKODE,KBsub$NYKODE,omk,perl=TRUE)
       i<-i+1
     }
-    if (valsubs==TRUE){
+
+    if (valsubs==TRUE){ ##Obs! What does this mean?
       #Ta bare numeriske fra
       KB<-KB[!is.na(suppressWarnings(as.numeric(KB$ORGKODE))),]
       if (nrow(KB)>0){
@@ -1861,6 +1905,7 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
         }
       }
     } else {
+      ## Recode those that match KB$ORGKODE to KB$NYKODE
       omk<-mapvalues(omk,KB$ORGKODE,KB$NYKODE,warn_missing = FALSE)
     }
   }
@@ -2376,7 +2421,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
   logger::log_info("Entering function FinnFilgruppeparametre")
   ## cat("--->> Entering function FinnFilgruppeParametre \n")
 
-  
+
 
   ## Connection to Access Tabels
   dbh<-globs$dbh
@@ -2413,9 +2458,9 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
     #Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
     amin<-0
 
-    ## OBS! HOVEDPARAMETREg is used only to get max age i.e 120 if missing! 
+    ## OBS! HOVEDPARAMETREg is used only to get max age i.e 120 if missing!
     amax<-as.numeric(sqlQuery(dbh,"SELECT ALDinf FROM HOVEDPARAMETREg")[1])
-    ## used as default when ALDER_ALLE has only one alder ie. 25_ 
+    ## used as default when ALDER_ALLE has only one alder ie. 25_
 
     #Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
     if(!is.na(FGP$ALDER_ALLE)){
@@ -2433,7 +2478,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
       }
     }
 
-    
+
     ## Gets VAL1 to VAL3 input ie. navn,sumbar and miss
     ## ------------------------------------------------
     ## create 'vals' list which is of values from VAL1,2,3 including alder min and max from
@@ -2464,24 +2509,43 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
 #
 FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
 
-  
 
   logger::log_info("--->> Entering function FinnFilBeskGruppe")
   ## cat("--->> Entering function FinnFilBeskGruppe \n")
   #Default er ? finne filbesk gyldige n? (Sys.time)
   datef<-format(Sys.time(), "#%Y-%m-%d#")
 
-  
+  ## Select files for testing if testfil=TRUE
+  extArg <- list(...)
+
+
   #ALternativt kan man finne for en historisk batchdate
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   }
 
 
-  
+
   ## Picking up files path that is refered to in INNLESSING
   ## --------------------------------------------------------
-  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+  if (isTRUE(extArg$testfil)) {
+
+    sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+              FROM INNLESING INNER JOIN
+              (  ORGINNLESkobl INNER JOIN ORIGINALFILER
+              ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
+              ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
+              AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
+              WHERE INNLESING.FILGRUPPE='",filgruppe,"'
+              AND TESTING = 1
+              AND ORIGINALFILER.IBRUKFRA<=",datef,"
+              AND ORIGINALFILER.IBRUKTIL>", datef,"
+              AND INNLESING.VERSJONFRA<=",datef,"
+              AND INNLESING.VERSJONTIL>",datef,sep=""
+              )
+  } else {
+
+    sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
               FROM INNLESING INNER JOIN
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER
               ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
@@ -2492,26 +2556,10 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
               AND ORIGINALFILER.IBRUKTIL>", datef,"
               AND INNLESING.VERSJONFRA<=",datef,"
               AND INNLESING.VERSJONTIL>",datef,sep="")
-
-  
-  ## Select files for testing
-  extArg <- list(...)
-  
-  if (isTRUE(extArg$testfil)) {
-    sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
-              FROM INNLESING INNER JOIN
-              (  ORGINNLESkobl INNER JOIN ORIGINALFILER
-              ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
-              ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
-              AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
-              WHERE INNLESING.FILGRUPPE='",filgruppe,"'
-              AND ORIGINALFILER.TESTING=1
-              AND INNLESING.VERSJONFRA<=",datef,"
-              AND INNLESING.VERSJONTIL>",datef,sep="")
-
   }
-  
-  
+
+
+
 
   fb<-sqlQuery(globs$dbh,sqlt,stringsAsFactors=FALSE)
   return(fb)
