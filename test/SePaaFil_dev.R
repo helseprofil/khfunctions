@@ -2,8 +2,8 @@
 #NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
 
-## Bytt til FALSE for å bruke defpaths i PRODUKSJON
-runtest = TRUE
+## ## Bytt til FALSE for å bruke defpaths i PRODUKSJON
+## runtest = TRUE
 
 if (!require(here)) install.packages("here")
 source(here('khfun_dev.R'))
@@ -54,6 +54,7 @@ gpnavnSub <- c("ELEVUNDER")
 #Dump i innlesingen
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
 LagFilgruppe("ELEVUNDER") #CSV fil
+LagFilgruppe("ELEVUNDER", testfil = TRUE) #CSV fil testfile
 LagFilgruppe(gpnavnSub[1])
 LagFilgruppe(gpnavn[2], testfil = TRUE) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
@@ -62,6 +63,9 @@ LagFilgruppe("BRUTTOINNTEKT", testfil = TRUE)
 LagFilgruppe("UFORE", testfil = TRUE)
 LagFilgruppe("LESEFERD", testfil = T) #crash med SkrivBKLogg()
 LagFilgruppe("BEF_GKny")
+
+## ORigial Access DB. When runtest = FALSE
+LagFilgruppe("LESEFERD")
 
 #Dump i kubeproduksjonen
 

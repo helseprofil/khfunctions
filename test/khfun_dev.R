@@ -93,14 +93,13 @@ library(fs)
 ## for ORIGINAL filer when testfil=TRUE
 originalPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
 
-
 if(isFALSE(exists("runtest"))) {runtest = FALSE}
+
 if(isTRUE(runtest)) {test = "Ja"} else {test = "Nei"}
 
 ## Path for Database
 defpaths <- switch(test,
                    "Nei" = c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-                            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING",
                             "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
                             "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
                             "J:/FHI/PRODUKSJON",
@@ -113,6 +112,10 @@ filDB <- switch(test,
                 "Ja" = "KHELSA_dev.mdb")
 
 
+## BIG TROUBLE!!! Watch out when setting up path. Too many 'setwd()' are used!
+## Path is specified to where the "STYRING/NameAccessFile.mdb" file is in!
+
+
 ##GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes s? inn i globs
 ##Merk at alle elementer angitt i denne lista vil v?re tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
 
@@ -122,8 +125,8 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2020,
   KHgeoniv="K",
-  KHdbname = filDB,
-  KHlogg="KHlogg.mdb",
+  KHdbname = paste("STYRING", filDB, sep = "/"),
+  KHlogg="STYRING/KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat="PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
@@ -542,9 +545,10 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 
 ## OBS! Add tesfil=FALSE for selecting file for testing
 
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE){
+LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE, DBtest = FALSE){
 
   ## testfil is TRUE when column 'TESTING' is used for selecting the file to be processed
+  ## DBtest - FALSE to use test Path for saveRDS.
 
   ##Essensielt bare loop over alle delfiler/orignalfiler
   ##For hver orignalfil kj?res LagTabellFraFil
@@ -582,6 +586,11 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
         ## For testing file path to Original File
         if (isTRUE(testfil)){getSti <- originalPath}
+
+        ## ## use original Access DB when not in runtest
+        ## ## this is needed when KHfunction.R is in different folder
+        ## ## Default is KHfunction is in the PRODUKSJON folder
+        ## if (isFALSE(DBtest)) {getSti <- originalPath}
 
         ## read row by row in delfiler
         filbesk<-delfiler[i,]
@@ -730,6 +739,8 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     ## Test file path for output RDS
     if (isTRUE(testfil)) {path <- defpaths}
 
+    ## Save as RDS
+    ## -----------
     if (printR){
       utfiln<-paste(path,"/",globs$StablaDirNy,"/",gruppe,".rds",sep="")
       #save(Filgruppe,file=utfiln)
@@ -6344,7 +6355,12 @@ FinnKubeInfo<-function(kube){
 
 
 KjorStataSkript <- function(TABLE,script,tableTYP="DF",batchdate=SettKHBatchDate(),globs=FinnGlobs()){
-  tmpdir<-paste(globs$path,"/",globs$BUFFERdir,"/",sep="")
+
+  #From default value
+  tempPath<-globs$path
+
+  ## tmpdir<-paste(globs$path,"/",globs$BUFFERdir,"/",sep="")
+  tmpdir<-paste(tempPath,"/",globs$BUFFERdir,"/",sep="")
   wdOrg<-getwd()
   setwd(tmpdir)
   tmpdo<-paste("STATAtmp_",batchdate,".do",sep="")
@@ -6500,7 +6516,12 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 
 #############################################
 
-
-
-
 KHglobs<-FinnGlobs()
+
+
+## TEST
+testmsg <- "#============================#
+#---[ OBS!! Testing pågår ]--#
+#============================#
+"
+if (isTRUE(runtest)){cat(testmsg)}
