@@ -88,7 +88,7 @@ utFil <- readRDS(file.path(utPath, rdsFil))
 
 
 
-
+LagKUBE("DROPOUT_TN_tabU")
 
 k <- LagKUBE("SYSVAK_1",dumps=dumps)
 

@@ -140,7 +140,7 @@ globglobs<-list(
   FriskVDir_K="PRODUKTER/KUBER/FRISKVIK_KOMM/",
   FriskVDir_B="PRODUKTER/KUBER/FRISKVIK_BYDEL/",
   ovpDir_F="PRODUKTER/KUBER/OVP_FYLKE/",
-  ovpVDir_K="PRODUKTER/KUBER/OVP_KOMM/",
+  ovpDir_K="PRODUKTER/KUBER/OVP_KOMM/",
   ovpDir_B="PRODUKTER/KUBER/OVP_BYDEL/",
   TNPDirNy="PRODUKTER/MELLOMPROD/R/TNP/NYESTE",
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
@@ -3914,14 +3914,27 @@ LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),ve
       FRISKVIK<-FRISKVIK[,c(globs$FriskvikTabs,globs$FriskvikVals),with=FALSE]
 
       versjonert=TRUE
-      #SKRIV UT
-      if (versjonert==TRUE){
-        #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
-        utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
-        cat("FRISKVIK EKSPORT:",utfiln,"\n")
-        write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
-        #write.dta(FRISKVIK,file=utfiln)
+
+      if (versjonert == TRUE){
+
+        setPath <- paste(globs$path,"/", FriskVDir,aargang,"/csv/", sep = "")
+
+        ## Check path if doesn't exist so create
+        if (!fs::dir_exists(setPath)) fs::dir_create(setPath)
+
+        utfiln <- paste0(setPath, FVdscr$INDIKATOR,"_",batchdate,".csv")
+        cat("-->> FRISKVIK EKSPORT:",utfiln,"\n")
+        data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
       }
+
+      ## #SKRIV UT
+      ## if (versjonert==TRUE){
+      ##   #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
+      ##   utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
+      ##   cat("FRISKVIK EKSPORT:",utfiln,"\n")
+      ##   write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
+      ##   #write.dta(FRISKVIK,file=utfiln)
+      ## }
     } else {
       cat("ADVARSEL!!!!!!!! modus ",modus,"i FRISKVIK st?ttes ikke\n")
     }
