@@ -3,10 +3,11 @@
 rm(list = ls())
 
 ## ## Bytt til FALSE for å bruke defpaths i PRODUKSJON
-## runtest = TRUE
+
+runtest = TRUE
 
 if (!require(here)) install.packages("here")
-source(here('khfun_dev.R'))
+source(here('test', 'khfun_dev.R'))
 
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 #BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))

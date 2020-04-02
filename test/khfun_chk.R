@@ -29,7 +29,9 @@ library(data.table)
 setDT(df)
 df
 
-df1 <- copy(df)
+names(df)
+df[, .N, by = GEOniv]
+df[, .N, by = GEO]
 
 
 ## EDIT Raw Files for testing

@@ -143,6 +143,9 @@ globglobs<-list(
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
   DUMPdir="RUNTIMEDUMP",
+
+  ## Standard columns
+  ## -----------------
   kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
   taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
   NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
@@ -559,6 +562,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
   ## -----
   FGP<-FinnFilgruppeParametre(gruppe,batchdate=batchdate,globs=globs)
 
+
   #Initier tom tabell
   Filgruppe<-data.frame()
   if (FGP$ok==1){
@@ -572,6 +576,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     ## add testfil for selecting file for testing
 
     #Finn parameterbeskrivelse av delfilene
+    ## Get info from INNLESING and ORIGINALFILER
     delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs,testfil = testfil)
 
 
@@ -630,7 +635,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
         stid<-format(Sys.time(), "%Y-%m-%d %X")
       }
     ## } else {
-      #M? gi fornuftig tilbakemelding
+    #M? gi fornuftig tilbakemelding
     ## }
 
 
@@ -753,7 +758,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     }
   }
 
-## Make silently and not printing all the tables!!
+  ## Make silently and not printing all the tables!!
   invisible(return(Filgruppe))
 }
 
@@ -787,6 +792,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   cat("\n#################\nLAGER TABELL FRA FIL:\n",filn,"\n")
 
   ## FUN04
+  ## Read file as it's and create object LestFil$DF
   LestFil<-LesFil(filbesk,batchdate=batchdate,globs=globs,dumps=dumps)
 
 
@@ -817,15 +823,17 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     #Valdiering skjer ved siste endring
     kolorgs<-globs$kolorgs
     #Finn kolonner spesifisert i filbesk
+    ## Get coloums that exist in filbesk except those with <..> from INNLESING tabel
     HarCols<-filbesk[kolorgs[grepl("^[^-<]",filbesk[kolorgs])]]
     HarCols<-HarCols[HarCols %in% names(DF)]
     #Sett standard kolonnenavn
+    ## RENAME colums from raw file
     names(DF)<-mapvalues(names(DF),HarCols,names(HarCols)) #rename columns can use setnames
 
 
 
     ######################################################
-
+    ## What FYLLTAB is needed for??
     #EVT INNFYLLING AV TABULATOR N?R DENNE ER INNRYKKET
     if (!is.na(filbesk$FYLLTAB)){
       TAB<-as.character(read.csv(text=filbesk$FYLLTAB,header=FALSE,stringsAsFactors=FALSE))
@@ -843,6 +851,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       eval(parse(text=paste("DF<-DF[,-",filbesk$KASTKOLS,"]",sep="")))
     }
 
+    ## Where is this column? Don't find it in INNLESING.
     if ("RESHAPEpre" %in% names(dumps)){
       for (format in dumps[["RESHAPEpre"]]) {
         DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RESHAPEpre",sep="_"),globs=globs,format=format)
@@ -858,6 +867,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       #print(head(DF))
     }
 
+    ## Where does this come from?? Can't find in INNLESING
     if ("RESHAPEpost" %in% names(dumps)){
       for (format in dumps[["RESHAPEpost"]]) {
         DumpTabell(DF,paste(filbesk$FILGRUPPE,filbesk$KOBLID,"RESHAPEpost",sep="_"),globs=globs,format=format)
@@ -920,6 +930,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
   if (ok==1){
 
+    ## Why need to rename again?? Because of STATA process?
     ######################################################
     #Omd?p kolonnenavn, runde 2.
 
@@ -934,9 +945,10 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ##-----------------------------------------------------------------------------------------
     #Finn kolonner med standardverdi ('<.*>' i filbesk)
     DefVCols<-kolorgs[grepl("^<.*>",filbesk[kolorgs])]
-    DefV<-matrix(sub("^<(.*)>$","\\1",filbesk[DefVCols]),nrow=1)
+    DefV<-matrix(sub("^<(.*)>$","\\1",filbesk[DefVCols]),nrow=1) #Get value inside <..>
 
-    ## Merge those with <ALLE> to the DF. Could just use merge()
+    ## Bind those with <ALLE> to the DF. Could just use cbind()?
+    ## Add all the values in <..> to the rows and bind with the DF
     ##-----------------------------------------------------------
     #Sett standardverdier (f?r ikke til dette med enklere syntaks n?r det kan v?re tuppel, virker kl?nete)
     DF<-setNames(data.frame(DF,DefV,stringsAsFactors = FALSE),c(names(DF),DefVCols))
@@ -972,6 +984,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ##-------------------------
     #Merge GEO delt i to
     if (filbesk$GEOd2!="-" & !is.na(filbesk$GEOd2)){
+      ## WHAT GEOd2 is for??
       DF[,filbesk$GEOd2]<-gsub("^(\\d|\\d{3})$","0\\1",DF[,filbesk$GEOd2])
       DF$GEO<-paste(DF$GEO,DF[,filbesk$GEOd2],sep="")
     }
@@ -1033,7 +1046,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
     #RENSK GEO (Alle er legit inntil videre??? Eller kod til 9999???)
     if ("GEO" %in% names(DF)){
+      ## Create table with ORG number and FREQ
       org<-setNames(as.data.frame(table(DF$GEO,useNA="ifany"),stringsAsFactors=FALSE),c("ORG","FREQ"))
+      ## Check GEOvask function
       geo<-GEOvask(org,filbesk=filbesk,batchdate=batchdate,globs=globs)
 
       ## OBS!! crash here
@@ -1979,11 +1994,16 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
 # }
 
 GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+  ##:ess-bp-start::browser@nil:##
+  browser(expr=is.null(.ESSBP.[["@4@"]]));##:ess-bp-end:##
+
   if (nrow(filbesk)==0){
     geo<-setNames(as.data.frame(geo,stringsAsFactors=FALSE),c("GEO"))
     geo$KBOMK<-geo[,1]
   } else {
     geo$KBOMK<-KBomkod(geo$ORG,type="GEO",filbesk=filbesk,batchdate=batchdate,globs=globs)
+    ## Check coloumn TKNR - what is this???
     if (!is.na(filbesk$TKNR)){
       suppressWarnings(geo$KBOMK[geo$ORG==geo$KBOMK]<-mapvalues( geo$ORG[geo$ORG==geo$KBOMK],globs$TKNR$ORGKODE,globs$TKNR$NYKODE,warn_missing = FALSE))
     }
@@ -2047,9 +2067,12 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
   heltukjent[nchar(ukjent)==2]<-99
   geo$OMK<-mapvalues(geo$OMK,ukjent,heltukjent,warn_missing = FALSE)
 
+  ## Count how many numbers in GEO to set the value in GEOniv
+  ## --------------------------------------------------------
   #Sett GEOniv
   geo$GEOniv<-as.character(NA)
   geo$GEOniv[nchar(geo$OMK)==8]<-"G"
+  ## Check if it's SONER!!
   if (grepl("6",filbesk$SONER)){
     geo$GEOniv[nchar(geo$OMK)==6]<-"S"
   } else {
