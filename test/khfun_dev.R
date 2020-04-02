@@ -139,6 +139,9 @@ globglobs<-list(
   FriskVDir_F="PRODUKTER/KUBER/FRISKVIK_FYLKE/",
   FriskVDir_K="PRODUKTER/KUBER/FRISKVIK_KOMM/",
   FriskVDir_B="PRODUKTER/KUBER/FRISKVIK_BYDEL/",
+  ovpDir_F="PRODUKTER/KUBER/OVP_FYLKE/",
+  ovpVDir_K="PRODUKTER/KUBER/OVP_KOMM/",
+  ovpDir_B="PRODUKTER/KUBER/OVP_BYDEL/",
   TNPDirNy="PRODUKTER/MELLOMPROD/R/TNP/NYESTE",
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
@@ -585,55 +588,55 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     ## -----------------------------------------------------------
     ## i = 1
     ## if(nrow(delfiler)>0){
-      for (i in 1:nrow(delfiler)){
+    for (i in 1:nrow(delfiler)){
 
-        getSti <- globs$path
+      getSti <- globs$path
 
-        ## For testing file path to Original File
-        if (isTRUE(testfil)){getSti <- originalPath}
+      ## For testing file path to Original File
+      if (isTRUE(testfil)){getSti <- originalPath}
 
-        ## ## use original Access DB when not in runtest
-        ## ## this is needed when KHfunction.R is in different folder
-        ## ## Default is KHfunction is in the PRODUKSJON folder
-        ## if (isFALSE(DBtest)) {getSti <- originalPath}
+      ## ## use original Access DB when not in runtest
+      ## ## this is needed when KHfunction.R is in different folder
+      ## ## Default is KHfunction is in the PRODUKSJON folder
+      ## if (isFALSE(DBtest)) {getSti <- originalPath}
 
-        ## read row by row in delfiler
-        filbesk<-delfiler[i,]
-        tm<-proc.time()
-        ## get the path for files
-        filbesk$filn<-paste(getSti,filbesk$FILNAVN,sep="/")
-        ## change slash for path to be standard since loading from Access uses \\ while globs$path
-        ## uses / and create absolute path
-        filbesk$filn<-gsub("\\\\","/",filbesk$filn)
+      ## read row by row in delfiler
+      filbesk<-delfiler[i,]
+      tm<-proc.time()
+      ## get the path for files
+      filbesk$filn<-paste(getSti,filbesk$FILNAVN,sep="/")
+      ## change slash for path to be standard since loading from Access uses \\ while globs$path
+      ## uses / and create absolute path
+      filbesk$filn<-gsub("\\\\","/",filbesk$filn)
 
-        ## This is when AAR input is $y then used DEFAAR from table ORIGINALFILER
-        ##Sett evt default for ?r basert p? aktuelt ?rstall
-        filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
-
-
-        ## Show path for file
-        logger::log_info(paste0("Path: ", filbesk$filn))
-
-        ## CHK 3 : Breakpoint
-        ## ------------------
-
-        ## FUN03
-        ## ------
-        #LagTabell
-        DF<-LagTabellFraFil(filbesk,
-                            FGP,batchdate=batchdate,
-                            diagnose=diagnose,
-                            globs=globs,
-                            versjonert=versjonert,
-                            dumps=dumps)
-        ##Stable delfiler
-        Filgruppe<-rbind.fill(Filgruppe,DF)
+      ## This is when AAR input is $y then used DEFAAR from table ORIGINALFILER
+      ##Sett evt default for ?r basert p? aktuelt ?rstall
+      filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
 
 
-        ##Stopp klokke, skriv tid og feillogg
-        tid<-proc.time()-tm
-        stid<-format(Sys.time(), "%Y-%m-%d %X")
-      }
+      ## Show path for file
+      logger::log_info(paste0("Path: ", filbesk$filn))
+
+      ## CHK 3 : Breakpoint
+      ## ------------------
+
+      ## FUN03
+      ## ------
+      #LagTabell
+      DF<-LagTabellFraFil(filbesk,
+                          FGP,batchdate=batchdate,
+                          diagnose=diagnose,
+                          globs=globs,
+                          versjonert=versjonert,
+                          dumps=dumps)
+      ##Stable delfiler
+      Filgruppe<-rbind.fill(Filgruppe,DF)
+
+
+      ##Stopp klokke, skriv tid og feillogg
+      tid<-proc.time()-tm
+      stid<-format(Sys.time(), "%Y-%m-%d %X")
+    }
     ## } else {
     #M? gi fornuftig tilbakemelding
     ## }
@@ -1995,8 +1998,9 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
 
 GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
-  ##:ess-bp-start::browser@nil:##
-  browser(expr=is.null(.ESSBP.[["@4@"]]));##:ess-bp-end:##
+
+  ## geo - Frequency table for original geo from the file
+  ##
 
   if (nrow(filbesk)==0){
     geo<-setNames(as.data.frame(geo,stringsAsFactors=FALSE),c("GEO"))
@@ -2452,6 +2456,8 @@ LagTabellFraFilNo <-function(id,batchdate=SettKHBatchDate(),y="",globs=FinnGlobs
 FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
                                  globs=FinnGlobs()){
 
+  ## gruppe - Name of FILGRUPPE as it's
+
   logger::log_info("Entering function FinnFilgruppeparametre")
   ## cat("--->> Entering function FinnFilgruppeParametre \n")
 
@@ -2473,7 +2479,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
   ## Check if FILGRUPPE name exists
   ## ----------------------------------
   ## Count how many have similar FILGRUPPE name. This can be avoided by specifying FILGRUPPE column
-  ## in tabel FILGRUPPER as unique or key
+  ## in database tabel FILGRUPPER as unique or key
   FGPfinnes<-as.integer(sqlQuery(globs$dbh,paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='",gruppe,"'",sep=""),as.is=TRUE))
   ok<-0
   resultat<-list()
@@ -2484,7 +2490,8 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
   } else {
     ok<-1
 
-    ## Extract data from FILGRUPPER tabel as list
+    ## Extract data from FILGRUPPER tabel and convert as list
+    ## where 'datef' is current date
     FGP<-as.list(sqlQuery(globs$dbh,paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='",gruppe,"'",
                                           "AND VERSJONFRA<=",datef," AND VERSJONTIL>", datef,"
                                           ",sep=""),as.is=TRUE))
@@ -2503,7 +2510,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
         if (length(alle_aldre)==1){
           amin<-as.numeric(alle_aldre[1])
         } else if (length(alle_aldre)==2){
-          ## OBS! This can be deactivated since input from ALDER_ALLE from FILGRUPPER tabel is used
+          ## split ALDER_ALLE and get min and max
           amin<-as.numeric(alle_aldre[1])
           amax<-as.numeric(alle_aldre[2])
         }
@@ -2523,7 +2530,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
     ## $vals$ANTOBS$miss
     vals<-list()
     for(valf in names(FGP)[grepl("^VAL\\d+navn$",names(FGP))]){
-      val<-gsub("(VAL\\d+)navn","\\1",valf)
+      val<-gsub("(VAL\\d+)navn","\\1",valf) #alternative is gsub("navn", "", valf)
       valn<-ifelse(is.na(FGP[[valf]]) || FGP[[valf]]=="",val,FGP[[valf]])
       valmissf<-paste(val,"miss",sep="")
       valmiss<-ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]]=="","0",FGP[[valmissf]])
@@ -3807,20 +3814,56 @@ LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),ve
 
   moduser<-unlist(str_split(FVdscr$MODUS,""))
 
+
+
+  ## FHP and Oppveksprofile (OVP) folders specification
+  ## -------------------------------------------------
+  profile <- FVdscr$PROFILTYPE
+
+  switch(profile,
+         "FHP" = {
+           setDir_K <- globs$FriskVDir_K
+           setDir_B <- globs$FriskVDir_B
+           setDir_F <- globs$FriskVDir_F
+         },
+         "OVP" = {
+           setDir_K <- globs$ovpDir_K
+           setDir_B <- globs$ovpDir_B
+           setDir_F <- globs$ovpDir_F
+         }
+         )
+
+
   for (modus in moduser){
+
+
     if (modus %in% c("K","F","B")){
       FriskVDir<-""
       GEOfilter<-character(0)
+
       if (modus=="K"){
-        FriskVDir<-globs$FriskVDir_K
+        FriskVDir<-setDir_K
         GEOfilter<-c("K","F","L")
       } else if (modus=="B"){
-        FriskVDir<-globs$FriskVDir_B
+        FriskVDir<-setDir_B
         GEOfilter<-c("B","K","F","L")
       } else if (modus=="F"){
-        FriskVDir<-globs$FriskVDir_F
+        FriskVDir<-setDir_F
         GEOfilter<-c("F","L")
       }
+
+
+      ## ## THIS is the original code
+      ## if (modus=="K"){
+      ##   FriskVDir<-globs$FriskVDir_K
+      ##   GEOfilter<-c("K","F","L")
+      ## } else if (modus=="B"){
+      ##   FriskVDir<-globs$FriskVDir_B
+      ##   GEOfilter<-c("B","K","F","L")
+      ## } else if (modus=="F"){
+      ##   FriskVDir<-globs$FriskVDir_F
+      ##   GEOfilter<-c("F","L")
+      ## }
 
       #FILTRER RADER
       filterA<-"(GEOniv %in% GEOfilter)"
