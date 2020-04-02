@@ -1,0 +1,258 @@
+#+title: KHELSE function
+#+date: 19.03.2020
+
+#+options: ^:nil
+#+OPTIONS: html-postamble:nil
+#+LANGUAGE: no
+
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/styles/readtheorg/css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/styles/readtheorg/css/readtheorg.css"/>
+
+#+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+#+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/readtheorg/js/readtheorg.js"></script>
+
+
+Gjennomgang av funksjoner brukes i KHELSE funksjon. Funksjonene som presenteres her er tilnærmet
+rekkefølgen de blir kalles inn. Funksjoner som har blitt sjekket har tags =##FUN01= etc.
+* SettDefDesignKH
+  En del av =globs=. Henter parametre fra tabell *KH_DELER*. Lager variabler med TYPE = ~INT~ med
+  extention =*.l= og =*.h= for evt. lavest og høyest verdi. Lager en list objekt som følgende:
+
+#+BEGIN_SRC R
+  list(DelKols=DelKols, #uten deling FYLKE og GEO i GEOniv
+       DelKolsF=DelKolsF, #med deling for FYLKE og GEO
+       KolsDel=KolsDel, # motsatte av DelKols
+       DelKolN=DelKolN, #kolonne DelKol med attribute fra DEL
+       DelType=DelType, #kolonne TYPE med attribute fra DEL
+       DelFormat=DelFormat, #kolonne FORMAT med attribute fra DEL
+       UBeting=UBeting,
+       BetingOmk=BetingOmk,
+       BetingF=BetingF,
+       OmkDel=OmkDel,
+       DesignKols=DesignKols, #Kolonne uten TABS
+       DesignKolsF=DesignKolsF, #Kolonne med TABS
+       DesignKolsFA=DesignKolsFA, #Alle kolonne inkludert FYLKE og GEO
+       AggPri=AggPri, #ordered DEL ift. AGGREGERPRI
+       AggVedStand=AggVedStand, #velger only A og K
+       IntervallHull=IntervallHull,
+       AMissAllow=TRUE)
+  #+END_SRC
+
+
+
+* LagFilgruppe
+Hovedfunksjon for å lese raw data og slå sammen dataene til en RDS fil.
+** Argumenter
+- gruppe :
+- batchdate : fra *SettKHBatchDate()*
+- globs : from *FinnGlobs()*
+- diagnose = 0
+- printR = TRUE
+- printCSV = FALSE
+- printSTATA = FALSE
+- versjonert = FALSE
+- dumps = list()
+** Prosess
+Beskrivelse av prosessene:
+- *FinnfilgruppeParametre()* lager *FGP* object
+- *FinnFilBeskGruppe()* lager *filbesk* object
+- Loop alle rader i =filbesk= og lager følgende:
+  + *filn* som er absolutt path til filen
+  + *AAR* hvis det ikke er spesifisert eller skrevet som =<$y>= skal value hentes fra DEFAAR i ORIGINALFILER tabell
+** Output
+
+* FinnFilgruppeParametre
+Setter inn parameter til en filgruppenavn. Access tabell =FILGRUPPER= brukes i denne funksjonen.
+Denne produserer object *FGP* til viderebruk.
+** Argumenter
+- gruppe : Filgruppenavn
+- batch  : fra *SettKHBatchDate()*. Denne lager dagens dato til format "%Y-%m-%d-%H-%M"
+- globs  : fra *FinnGlobs()* function.
+** Output
+** Kommentar
+- Sjekk aktiv filgruppenavn basert på tidsperiode dvs. =VERSJONFRA= og =VERSJONTIL= i Access tabell,
+  men denne informasjon er ikke brukes eller oppdateres. Object =FGPaktiv=.
+- Sjekk hvis det er duplikater filgruppenavn. Denne er unødvendig hvis kolonne =FILGRUPPE= er nøkkel
+  eller unik i Access tabell.
+- Object =amax= for maksimal aldre hentes fra Access tabel *HOVEDPARAMETREg*, men der er det bare en
+  linje som lager default for maks alder. Kan dette gjøres annen sted eller er dette egentlig en ubrukt tabell?
+* FinnFilBeskGruppe
+Henter filnavn og path gjennom informasjon i Access tabell ORIGINALFILER, INNLESING og
+ORGINNLESkobl. Denne funksjonen produserer object *delfiler* til viderebruk.
+** Argumenter
+- gruppe : filgruppenavn
+- batchdate = NULL
+- globs : fra =FinnGlobs()=
+
+SQL spesifikasjonen som brukes:
+
+ #+begin_src R
+     sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+                 FROM INNLESING INNER JOIN
+                 (  ORGINNLESkobl INNER JOIN ORIGINALFILER
+                 ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
+                 ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
+                 AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
+                 WHERE INNLESING.FILGRUPPE='",filgruppe,"'
+                 AND ORIGINALFILER.IBRUKFRA<=",datef,"
+                 AND ORIGINALFILER.IBRUKTIL>", datef,"
+                 AND INNLESING.VERSJONFRA<=",datef,"
+                 AND INNLESING.VERSJONTIL>",datef,sep="")
+ #+end_src
+
+Disse variabler er laget av denne funksjonen:
+
+#+BEGIN_SRC R
+  > names(fb)
+   [1] "KOBLID"      "FILID"       "FILNAVN"     "FORMAT"      "DEFAAR"
+   [6] "ID"          "FILGRUPPE"   "DELID"       "BRUK"        "VERSJONFRA"
+  [11] "VERSJONTIL"  "FORMATgml"   "INNLESARG"   "MANHEADER"   "MULTIHEAD"
+  [16] "KASTKOLS"    "UNDERTABLOK" "FYLLTAB"     "RESHAPEid"   "RESHAPEmeas"
+  [21] "RESHAPEvar"  "RESHAPEval"  "AGGERGER_DF" "RSYNT1"      "RSYNT2"
+  [26] "FEILRAPPORT" "GEO"         "GEOd2"       "GRUNNKRETS"  "TKNR"
+  [31] "SONER"       "AAR"         "KJONN"       "ALDER"       "UTDANN"
+  [36] "SIVST"       "LANDBAK"     "TAB1"        "TAB2"        "TAB3"
+  [41] "VAL1"        "VAL2"        "VAL3"        "ALDERkb"     "KJONNkb"
+  [46] "TAB1kb"      "TAB2kb"      "TAB3kb"      "KOMMENTAR"   "RAPPORT2"
+  [51] "TID"         "PROSESSDATO" "SKALA_VAL1"  "SKALA_VAL2"  "SKALA_VAL3"
+#+END_SRC
+** Output
+* LagTabellFraFil
+** Argumenter
+- filbesk : Object fra =FinnFilBeskGruppe()= function
+- FGP : Object fra =FinnFilgruppeParametre()= function
+- diagnose = diagnose
+- globs = globs
+- versjonert = versjonert
+- dumps = dumps
+** Output
+* LesFil
+Innkalt under *LagTabellFraFil()* function
+** Argumenter
+- filbesk
+- batchdate = batcdate
+- globs = globs
+- dumps = dumps
+** Output
+* FinnFilGruppeFraKoblid
+Valg filgruppenavn i kolonne FILGRUPPE som match =filbesk$KOBLID= fra tabell *ORGINNLESkobl*. Innkalles under
+*LesFil()* i sqlQuery for INSERT i SQL kode med argument =filbesk$KOBLID=.
+** Argumenter
+ - koblid : verdi fra object filbesk$KOBLID
+ - globs  : fra function *FinnGlobs()*
+
+** Output
+En vector av den filgruppenavn til den spesifisert KOBLID eg. =UFORE=.
+* TilFilLogg
+_OBS!_: Denne funksjonen ender opp med CRASH nokså ofte! Innkalles under *LesFil()* for å leser
+Access tabell *INNLES_LOGG* basert på KOBLID og objekt =batchdate=.
+** Argumenter
+ - koblid :
+ - felt :
+ - verdi :
+ - batchdate : from *SettKHBatchDate()* function
+ - globs : fra *FinnGlobs()*
+
+Query som brukes bl.a
+
+#+BEGIN_SRC R
+  sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=",koblid,"AND SV='S'",sep=""))
+
+  upd<-paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=",koblid,",'",batchdate,"', 'S',",FinnFilGruppeFraKoblid(koblid),sep="")
+      sqlQuery(globs$log,upd)
+
+  upd<-paste("UPDATE INNLES_LOGG SET ",felt,"=",verdi," WHERE KOBLID=",koblid," AND SV='S' AND BATCH='",batchdate,"'",sep="")
+#+END_SRC
+
+** Output:
+Legger til ny rad i INNLES_LOGG tabell via INSERT eller oppdatere tabellen via UPDATE.
+* KHCsvread
+Leser inn CSV filer ved bruk =read.csv= eller =data.table::fread=.
+** Argumenter
+ - filn : Absolutt sti til filen
+ - header = FALSE
+ - skip = 0
+ - calClasses = "character"
+ - sep = ";"
+ - quote = "\"" _obs!_ denne bør være '\"'
+ - dec = "."
+ - fill = FALSE
+ - encoding = "unknown"
+ - blank.lines.skip = FALSE
+ - na.strings = c("NA")
+ - brukfread = TRUE
+ - ...
+** Output
+En csv fil med header=FALSE dvs. header i tabellen blir til en ny kolonne. Hvorfor??
+** Kommentar
+Koden for å lese csv med =fread= som produserer =data.frame= kan skrives slik:
+
+#+BEGIN_SRC R
+  fread(DT, data.table = FALSE)
+#+END_SRC
+* cSVmod
+Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
+** Argumenter
+ - DF : data.frame i CSV format fra KHCsvread eller XLS
+ - filbesk :
+ - header = TRUE
+ - skip = 0
+   Hvilke rader som skal uttelates ved lesing
+ - slettRader = integer(0)
+   *obs!* her bør det være =0L=. Denne skal velger rader som skal slettes.
+ - sisteRad = 1
+   Velges hvilken som er siste rader
+ - TomRadSlutt = FALSE Velge hvilken rader som er tommer og subsett data.frame fra rad 1 til raden
+   som den tomme raden.
+ - FjernTommeRader = FALSE
+   Slett tomme rader i hele data.frame
+ - FjernTommeKol = TRUE
+   Slett tomme kolonne
+ - globs = FinnGlobs()
+ - ...
+** Output
+
+** Kommentar
+   Flere argumenter som egentlig gjør nesten det samme oppgavene. Alternativ å finne tomme rader
+   eller kolonne kan brukes =apply= og er nok raskere.
+
+  #+BEGIN_SRC R
+    rnames <- rownames(DF[apply(is.na(DF) | DF == "", 1, all), ]) #for rader
+    knames <- rownames(DF[apply(is.na(DF) | DF == "", 2, all), ]) #for kolonner
+
+    which(rownames(DF) %in% tnames)
+  #+END_SRC
+** Forbedring
+   - Finne ut i INNLESSING tabell hvor mange som har =FjernTommeRader= og =FjernTommeKol=. Sjekk
+   hvordan filen ser ut og tilpasse deretter før ny database lages.
+
+* Generell spørsmål
+  Alle type spørsmål som trenger oppklaring:
+** Variable med =*.l= og =*.h= extention
+   Alle år og aldre er ALLTID intervaller i hele systemet. Dermed brukes alltid AARl/AARh og
+   ALDERl/ALDERh. Dette gjelder selv om det bare dreire seg om enkelte kalenderår (AARl=2020,
+   AARh=2020) eller enkle aldersår (ALDERl=30,ALDERh=30).
+** Hva er =val.f= og =val.a=, og hvordan den brukes?
+   =val.a= og =val.f= er to flagg som alltid går hånd i hånd med hver verdikolonne. Detaljene kan
+   våre ganske kompliserte, men i hovedtrekk:
+
+   ~val.a~ teller opp hvor mange originaltall som har vårt brukt til å lage verdien. Eksempler:
+   Når to kommuner slås sammen for kommuneharmonisering blir det typisk ~val.a=2~. Når tall for
+   5 enkeltaldre slås sammen til en 5 års aldersgruppe blir det ~val.a=5~. De to tilfellen i
+   kombinasjon gir ~val.a=10~
+
+   =val.f= er strengt tatt viktigere. Den angir i hovedtrekk hvorfor tall er NA. Er det fordi tallet
+   mangler originalt, er det fordi det ikke lar seg bergene, er det fordi det anonymisres osv.
+** Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.
+   TYP=0 er de Ordinåre geokodene, TYP=U er geokoder som angir "Uoppgitt" (slik som at 1199 er
+   uopgitt kommune under fylket 11). Dette filteret brukes når det produseres kuber og
+   Firksvik-data, da blir det ikke rapportert tall for U-koder, men disse må våre med fram til da
+   fordi de inngår i summer som lager totaler for høyere geografisk nivå (1199 tall inngår
+   i 11 osv).
+
+** I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data
+   Noen ganger skreves det som =NA= eller =25_=. Når det er =NA= så plukket verdier fra default ie.
+   min og maks alder. Når det er bare =25_= så legges maks alder fra tabell ..
