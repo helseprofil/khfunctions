@@ -6153,7 +6153,13 @@ KHglobs<-FinnGlobs()
 ## ---------------------
 ## Backup filer
 ## ---------------------
-backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), ...){
+
+## Backup filer
+## ---------------
+backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, ...){
+
+  ## force : TRUE hvis man skal arkivere filen uansett ellers
+  ## for KHFunction.R sjekkes det dato filen er lagret først
 
   if (isTRUE(grepl("function", filename))){valgFil <- "fun"}
   if (isTRUE(grepl("KHELSA", filename))){valgFil <- "mdb"}
@@ -6213,6 +6219,7 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), ...){
       ## Fil i BIN som brukes
       FILc<-paste(binpath, filename, sep="/")
 
+      ## Fil i VERSJONSARKIV
       FILv<-paste(binpath_b, arkivFil, sep="/")
 
       if (file.info(FILc)$mtime>file.info(FILv)$mtime){
@@ -6221,8 +6228,14 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), ...){
         file.copy(FILc,FILn)
       } else {
 
-        cat("## --- Filen er ikke arkivet likevel --- ##\n")
+        cat("## --- Filen er ikke nyere enn i akrivet --- ##\n")
 
+      }
+
+      ## Arkiveres uansett
+      if (isTRUE(force)) {
+        FILn <- paste(binpath_b, "/", fil, date, ".R", sep = "")
+        file.copy(FILc, FILn)
       }
     }
   )
