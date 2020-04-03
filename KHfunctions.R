@@ -59,7 +59,8 @@ require(stringr)
 require(intervals)
 require(data.table) #Bruker data.table for rask merge
 require(readxl)
-
+if (!require(fs)) install.package("fs")
+require(fs)
 
 #Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
@@ -91,6 +92,9 @@ globglobs<-list(
   FriskVDir_F="PRODUKTER/KUBER/FRISKVIK_FYLKE/",
   FriskVDir_K="PRODUKTER/KUBER/FRISKVIK_KOMM/",
   FriskVDir_B="PRODUKTER/KUBER/FRISKVIK_BYDEL/",
+  ovpDir_F="PRODUKTER/KUBER/OVP_FYLKE/",
+  ovpDir_K="PRODUKTER/KUBER/OVP_KOMM/",
+  ovpDir_B="PRODUKTER/KUBER/OVP_BYDEL/",
   TNPDirNy="PRODUKTER/MELLOMPROD/R/TNP/NYESTE",
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
@@ -3364,22 +3368,57 @@ LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),ve
   FVdscr<-sqlQuery(globs$dbh,paste("SELECT * FROM FRISKVIK WHERE ID=",id,sep=""),as.is=TRUE)
   
   moduser<-unlist(str_split(FVdscr$MODUS,""))
+
+
+  ## FHP and Oppveksprofile (OVP) folders specification
+  ## -------------------------------------------------
+  profile <- FVdscr$PROFILTYPE
+
+  switch(profile,
+         "FHP" = {
+           setDir_K <- globs$FriskVDir_K
+           setDir_B <- globs$FriskVDir_B
+           setDir_F <- globs$FriskVDir_F
+         },
+         "OVP" = {
+           setDir_K <- globs$ovpDir_K
+           setDir_B <- globs$ovpDir_B
+           setDir_F <- globs$ovpDir_F
+         }
+         )
+
+
   
   for (modus in moduser){
     if (modus %in% c("K","F","B")){
       FriskVDir<-""
       GEOfilter<-character(0)
+
       if (modus=="K"){
-        FriskVDir<-globs$FriskVDir_K
+        FriskVDir<-setDir_K
         GEOfilter<-c("K","F","L")
       } else if (modus=="B"){
-        FriskVDir<-globs$FriskVDir_B
+        FriskVDir<-setDir_B
         GEOfilter<-c("B","K","F","L")
       } else if (modus=="F"){
-        FriskVDir<-globs$FriskVDir_F
+        FriskVDir<-setDir_F
         GEOfilter<-c("F","L")
       }
-                    
+
+
+      ## ## orignal code 
+      ## if (modus=="K"){
+      ##   FriskVDir<-globs$FriskVDir_K
+      ##   GEOfilter<-c("K","F","L")
+      ## } else if (modus=="B"){
+      ##   FriskVDir<-globs$FriskVDir_B
+      ##   GEOfilter<-c("B","K","F","L")
+      ## } else if (modus=="F"){
+      ##   FriskVDir<-globs$FriskVDir_F
+      ##   GEOfilter<-c("F","L")
+      ## }
+
+      
       #FILTRER RADER
       filterA<-"(GEOniv %in% GEOfilter)"
       if (grepl("\\S",FVdscr$ALDER) & FVdscr$ALDER !="-"){
@@ -3431,11 +3470,24 @@ LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),ve
       versjonert=TRUE
       #SKRIV UT
       if (versjonert==TRUE){
-        #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
-        utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
-        cat("FRISKVIK EKSPORT:",utfiln,"\n")
-        write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
-        #write.dta(FRISKVIK,file=utfiln)
+
+        setPath <- paste(globs$path,"/", FriskVDir,aargang,"/csv/", sep = "")
+
+        ## Check path if doesn't exist so create
+        if (!fs::dir_exists(setPath)) fs::dir_create(setPath)
+
+        utfiln <- paste0(setPath, FVdscr$INDIKATOR,"_",batchdate,".csv")
+        cat("-->> FRISKVIK EKSPORT:",utfiln,"\n")
+        data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
+        
+
+        ## BELOW is the original code
+        ## --------------------------
+        ## #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
+        ## utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
+        ## cat("FRISKVIK EKSPORT:",utfiln,"\n")
+        ## write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
+        ## #write.dta(FRISKVIK,file=utfiln)
       }
     } else {
       cat("ADVARSEL!!!!!!!! modus ",modus,"i FRISKVIK støttes ikke\n")
