@@ -143,6 +143,10 @@ Disse variabler er laget av denne funksjonen:
 - versjonert = versjonert
 - dumps = dumps
 ** Output
+** TODO Kommenter [0/0]
+   [ ] Hva skal kolonne *FYLLTAB* brukkes for?
+   [ ] Hvor finner man kolonner *RESHAPEpre* og *RESHAPEpost*?
+   [ ]
 * LesFil
 Innkalt under *LagTabellFraFil()* function
 ** Argumenter

@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="no" xml:lang="no">
 <head>
-<!-- 2020-04-07 tir. 18:20 -->
+<!-- 2020-04-07 tir. 18:33 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>KHELSE function</title>
@@ -252,77 +252,78 @@ for the JavaScript code in this tag.
 <h2>Innhold</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org64e7696">1. SettDefDesignKH</a></li>
-<li><a href="#orgdaa6fa1">2. LagFilgruppe</a>
+<li><a href="#orga65435a">1. SettDefDesignKH</a></li>
+<li><a href="#org682a121">2. LagFilgruppe</a>
 <ul>
-<li><a href="#orgc7bc4db">2.1. Argumenter</a></li>
-<li><a href="#org8cb4131">2.2. Prosess</a></li>
-<li><a href="#org39d1ac4">2.3. Output</a></li>
+<li><a href="#org7b0d88f">2.1. Argumenter</a></li>
+<li><a href="#orgbc6742c">2.2. Prosess</a></li>
+<li><a href="#org0b2332a">2.3. Output</a></li>
 </ul>
 </li>
-<li><a href="#orgda87080">3. FinnFilgruppeParametre</a>
+<li><a href="#orgde6ff5f">3. FinnFilgruppeParametre</a>
 <ul>
-<li><a href="#orge06e7c2">3.1. Argumenter</a></li>
-<li><a href="#org3aa9956">3.2. Output</a></li>
-<li><a href="#orgd3c607b">3.3. Kommentar</a></li>
+<li><a href="#orgd8ccd2b">3.1. Argumenter</a></li>
+<li><a href="#org35393ff">3.2. Output</a></li>
+<li><a href="#org8c48a9c">3.3. Kommentar</a></li>
 </ul>
 </li>
-<li><a href="#org5d1ac40">4. FinnFilBeskGruppe</a>
+<li><a href="#orgfbfb33a">4. FinnFilBeskGruppe</a>
 <ul>
-<li><a href="#org0c72a71">4.1. Argumenter</a></li>
-<li><a href="#org8196c3d">4.2. Output</a></li>
+<li><a href="#org4b593bd">4.1. Argumenter</a></li>
+<li><a href="#orgad5f97b">4.2. Output</a></li>
 </ul>
 </li>
-<li><a href="#org0c75c1b">5. LagTabellFraFil</a>
+<li><a href="#org8509882">5. LagTabellFraFil</a>
 <ul>
-<li><a href="#orgbc4ae38">5.1. Argumenter</a></li>
-<li><a href="#orgb057fe4">5.2. Output</a></li>
+<li><a href="#org5c0c68d">5.1. Argumenter</a></li>
+<li><a href="#org242a098">5.2. Output</a></li>
+<li><a href="#orgfea2f2b">5.3. <span class="todo TODO">TODO</span> Kommenter <code>[0/0]</code></a></li>
 </ul>
 </li>
-<li><a href="#orgad4240b">6. LesFil</a>
+<li><a href="#org235aa50">6. LesFil</a>
 <ul>
-<li><a href="#orgc625c16">6.1. Argumenter</a></li>
-<li><a href="#org4d14daf">6.2. Output</a></li>
+<li><a href="#org84ddd3a">6.1. Argumenter</a></li>
+<li><a href="#orgd7922d1">6.2. Output</a></li>
 </ul>
 </li>
-<li><a href="#orgaf9a058">7. FinnFilGruppeFraKoblid</a>
+<li><a href="#orgfd8f35a">7. FinnFilGruppeFraKoblid</a>
 <ul>
-<li><a href="#orga27f537">7.1. Argumenter</a></li>
-<li><a href="#orge67ebad">7.2. Output</a></li>
+<li><a href="#org5cfd43b">7.1. Argumenter</a></li>
+<li><a href="#org422ea88">7.2. Output</a></li>
 </ul>
 </li>
-<li><a href="#orgf33bbf4">8. TilFilLogg</a>
+<li><a href="#org8fd0ea0">8. TilFilLogg</a>
 <ul>
-<li><a href="#orgacd7514">8.1. Argumenter</a></li>
-<li><a href="#org2fcfa32">8.2. Output:</a></li>
+<li><a href="#orgfca43d2">8.1. Argumenter</a></li>
+<li><a href="#orgbf63e54">8.2. Output:</a></li>
 </ul>
 </li>
-<li><a href="#org0dc4e19">9. KHCsvread</a>
+<li><a href="#org9364a8f">9. KHCsvread</a>
 <ul>
-<li><a href="#org217dcfd">9.1. Argumenter</a></li>
-<li><a href="#orge288197">9.2. Output</a></li>
-<li><a href="#org1aab9a0">9.3. Kommentar</a></li>
+<li><a href="#orgd797073">9.1. Argumenter</a></li>
+<li><a href="#orge586f48">9.2. Output</a></li>
+<li><a href="#org42f99a3">9.3. Kommentar</a></li>
 </ul>
 </li>
-<li><a href="#orgdb242eb">10. cSVmod</a>
+<li><a href="#org13e69d6">10. cSVmod</a>
 <ul>
-<li><a href="#org7f058c7">10.1. Argumenter</a></li>
-<li><a href="#org5a85842">10.2. Output</a></li>
-<li><a href="#orgb3336ec">10.3. Kommentar</a></li>
-<li><a href="#orgfb8d0e7">10.4. Forbedring</a></li>
+<li><a href="#orgd11421b">10.1. Argumenter</a></li>
+<li><a href="#org1177d75">10.2. Output</a></li>
+<li><a href="#org9f416c6">10.3. Kommentar</a></li>
+<li><a href="#org4f754f1">10.4. Forbedring</a></li>
 </ul>
 </li>
-<li><a href="#orged96198">11. Generell spørsmål</a>
+<li><a href="#orgf3670c4">11. Generell spørsmål</a>
 <ul>
-<li><a href="#org27def9a">11.1. Variable med <code>*.l</code> og <code>*.h</code> extention</a></li>
-<li><a href="#orge48adf3">11.2. Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</a></li>
-<li><a href="#org347893a">11.3. Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</a></li>
-<li><a href="#org3c451f8">11.4. I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</a></li>
+<li><a href="#org490cc88">11.1. Variable med <code>*.l</code> og <code>*.h</code> extention</a></li>
+<li><a href="#orgd6651f2">11.2. Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</a></li>
+<li><a href="#org1a4c2e6">11.3. Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</a></li>
+<li><a href="#org8bd585e">11.4. I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</a></li>
 </ul>
 </li>
-<li><a href="#orgc670802">12. Access related spørsmål</a>
+<li><a href="#org0e953ce">12. Access related spørsmål</a>
 <ul>
-<li><a href="#orga7896fc">12.1. FILGRUPPER tabell</a></li>
+<li><a href="#org913a315">12.1. FILGRUPPER tabell</a></li>
 </ul>
 </li>
 </ul>
@@ -332,8 +333,8 @@ for the JavaScript code in this tag.
 Gjennomgang av funksjoner brukes i KHELSE funksjon. Funksjonene som presenteres her er tilnærmet
 rekkefølgen de blir kalles inn. Funksjoner som har blitt sjekket har tags <code>##FUN01</code> etc.
 </p>
-<div id="outline-container-org64e7696" class="outline-2">
-<h2 id="org64e7696"><span class="section-number-2">1</span> SettDefDesignKH</h2>
+<div id="outline-container-orga65435a" class="outline-2">
+<h2 id="orga65435a"><span class="section-number-2">1</span> SettDefDesignKH</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 En del av <code>globs</code>. Henter parametre fra tabell <b>KH_DELER</b>. Lager variabler med TYPE = <code>INT</code> med
@@ -365,15 +366,15 @@ extention <code>*.l</code> og <code>*.h</code> for evt. lavest og høyest verdi.
 
 
 
-<div id="outline-container-orgdaa6fa1" class="outline-2">
-<h2 id="orgdaa6fa1"><span class="section-number-2">2</span> LagFilgruppe</h2>
+<div id="outline-container-org682a121" class="outline-2">
+<h2 id="org682a121"><span class="section-number-2">2</span> LagFilgruppe</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 Hovedfunksjon for å lese raw data og slå sammen dataene til en RDS fil.
 </p>
 </div>
-<div id="outline-container-orgc7bc4db" class="outline-3">
-<h3 id="orgc7bc4db"><span class="section-number-3">2.1</span> Argumenter</h3>
+<div id="outline-container-org7b0d88f" class="outline-3">
+<h3 id="org7b0d88f"><span class="section-number-3">2.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-2-1">
 <ul class="org-ul">
 <li>gruppe :</li>
@@ -388,8 +389,8 @@ Hovedfunksjon for å lese raw data og slå sammen dataene til en RDS fil.
 </ul>
 </div>
 </div>
-<div id="outline-container-org8cb4131" class="outline-3">
-<h3 id="org8cb4131"><span class="section-number-3">2.2</span> Prosess</h3>
+<div id="outline-container-orgbc6742c" class="outline-3">
+<h3 id="orgbc6742c"><span class="section-number-3">2.2</span> Prosess</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Beskrivelse av prosessene:
@@ -405,21 +406,21 @@ Beskrivelse av prosessene:
 </ul>
 </div>
 </div>
-<div id="outline-container-org39d1ac4" class="outline-3">
-<h3 id="org39d1ac4"><span class="section-number-3">2.3</span> Output</h3>
+<div id="outline-container-org0b2332a" class="outline-3">
+<h3 id="org0b2332a"><span class="section-number-3">2.3</span> Output</h3>
 </div>
 </div>
 
-<div id="outline-container-orgda87080" class="outline-2">
-<h2 id="orgda87080"><span class="section-number-2">3</span> FinnFilgruppeParametre</h2>
+<div id="outline-container-orgde6ff5f" class="outline-2">
+<h2 id="orgde6ff5f"><span class="section-number-2">3</span> FinnFilgruppeParametre</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 Setter inn parameter til en filgruppenavn. Access tabell <code>FILGRUPPER</code> brukes i denne funksjonen.
 Denne produserer object <b>FGP</b> til viderebruk.
 </p>
 </div>
-<div id="outline-container-orge06e7c2" class="outline-3">
-<h3 id="orge06e7c2"><span class="section-number-3">3.1</span> Argumenter</h3>
+<div id="outline-container-orgd8ccd2b" class="outline-3">
+<h3 id="orgd8ccd2b"><span class="section-number-3">3.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-3-1">
 <ul class="org-ul">
 <li>gruppe : Filgruppenavn</li>
@@ -428,8 +429,8 @@ Denne produserer object <b>FGP</b> til viderebruk.
 </ul>
 </div>
 </div>
-<div id="outline-container-org3aa9956" class="outline-3">
-<h3 id="org3aa9956"><span class="section-number-3">3.2</span> Output</h3>
+<div id="outline-container-org35393ff" class="outline-3">
+<h3 id="org35393ff"><span class="section-number-3">3.2</span> Output</h3>
 <div class="outline-text-3" id="text-3-2">
 <p>
 En tabell av type <i>list</i> hentet fra tabell <b>FILGRUPPER</b>. I tillegg legges det 3 til dvs. <code>vals</code>,
@@ -449,8 +450,8 @@ $vals$ARBEIDSLEDIGE$sumbar
 </pre>
 </div>
 </div>
-<div id="outline-container-orgd3c607b" class="outline-3">
-<h3 id="orgd3c607b"><span class="section-number-3">3.3</span> Kommentar</h3>
+<div id="outline-container-org8c48a9c" class="outline-3">
+<h3 id="org8c48a9c"><span class="section-number-3">3.3</span> Kommentar</h3>
 <div class="outline-text-3" id="text-3-3">
 <ul class="org-ul">
 <li>Sjekk aktiv filgruppenavn basert på tidsperiode dvs. <code>VERSJONFRA</code> og <code>VERSJONTIL</code> i Access tabell,
@@ -463,16 +464,16 @@ linje som lager default for maks alder. Kan dette gjøres annen sted eller er de
 </div>
 </div>
 </div>
-<div id="outline-container-org5d1ac40" class="outline-2">
-<h2 id="org5d1ac40"><span class="section-number-2">4</span> FinnFilBeskGruppe</h2>
+<div id="outline-container-orgfbfb33a" class="outline-2">
+<h2 id="orgfbfb33a"><span class="section-number-2">4</span> FinnFilBeskGruppe</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 Henter filnavn og path gjennom informasjon i Access tabell ORIGINALFILER, INNLESING og
 ORGINNLESkobl. Denne funksjonen produserer object <b>delfiler</b> til viderebruk.
 </p>
 </div>
-<div id="outline-container-org0c72a71" class="outline-3">
-<h3 id="org0c72a71"><span class="section-number-3">4.1</span> Argumenter</h3>
+<div id="outline-container-org4b593bd" class="outline-3">
+<h3 id="org4b593bd"><span class="section-number-3">4.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-4-1">
 <ul class="org-ul">
 <li>gruppe : filgruppenavn</li>
@@ -520,16 +521,16 @@ Disse variabler er laget av denne funksjonen:
 </div>
 </div>
 </div>
-<div id="outline-container-org8196c3d" class="outline-3">
-<h3 id="org8196c3d"><span class="section-number-3">4.2</span> Output</h3>
+<div id="outline-container-orgad5f97b" class="outline-3">
+<h3 id="orgad5f97b"><span class="section-number-3">4.2</span> Output</h3>
 </div>
 </div>
-<div id="outline-container-org0c75c1b" class="outline-2">
-<h2 id="org0c75c1b"><span class="section-number-2">5</span> LagTabellFraFil</h2>
+<div id="outline-container-org8509882" class="outline-2">
+<h2 id="org8509882"><span class="section-number-2">5</span> LagTabellFraFil</h2>
 <div class="outline-text-2" id="text-5">
 </div>
-<div id="outline-container-orgbc4ae38" class="outline-3">
-<h3 id="orgbc4ae38"><span class="section-number-3">5.1</span> Argumenter</h3>
+<div id="outline-container-org5c0c68d" class="outline-3">
+<h3 id="org5c0c68d"><span class="section-number-3">5.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-5-1">
 <ul class="org-ul">
 <li>filbesk : Object fra <code>FinnFilBeskGruppe()</code> function</li>
@@ -541,19 +542,29 @@ Disse variabler er laget av denne funksjonen:
 </ul>
 </div>
 </div>
-<div id="outline-container-orgb057fe4" class="outline-3">
-<h3 id="orgb057fe4"><span class="section-number-3">5.2</span> Output</h3>
+<div id="outline-container-org242a098" class="outline-3">
+<h3 id="org242a098"><span class="section-number-3">5.2</span> Output</h3>
+</div>
+<div id="outline-container-orgfea2f2b" class="outline-3">
+<h3 id="orgfea2f2b"><span class="section-number-3">5.3</span> <span class="todo TODO">TODO</span> Kommenter <code>[0/0]</code></h3>
+<div class="outline-text-3" id="text-5-3">
+<p>
+[ ] Hva skal kolonne <b>FYLLTAB</b> brukkes for?
+[ ] Hvor finner man kolonner <b>RESHAPEpre</b> og <b>RESHAPEpost</b>?
+[ ]
+</p>
 </div>
 </div>
-<div id="outline-container-orgad4240b" class="outline-2">
-<h2 id="orgad4240b"><span class="section-number-2">6</span> LesFil</h2>
+</div>
+<div id="outline-container-org235aa50" class="outline-2">
+<h2 id="org235aa50"><span class="section-number-2">6</span> LesFil</h2>
 <div class="outline-text-2" id="text-6">
 <p>
 Innkalt under <b>LagTabellFraFil()</b> function
 </p>
 </div>
-<div id="outline-container-orgc625c16" class="outline-3">
-<h3 id="orgc625c16"><span class="section-number-3">6.1</span> Argumenter</h3>
+<div id="outline-container-org84ddd3a" class="outline-3">
+<h3 id="org84ddd3a"><span class="section-number-3">6.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-6-1">
 <ul class="org-ul">
 <li>filbesk</li>
@@ -563,20 +574,20 @@ Innkalt under <b>LagTabellFraFil()</b> function
 </ul>
 </div>
 </div>
-<div id="outline-container-org4d14daf" class="outline-3">
-<h3 id="org4d14daf"><span class="section-number-3">6.2</span> Output</h3>
+<div id="outline-container-orgd7922d1" class="outline-3">
+<h3 id="orgd7922d1"><span class="section-number-3">6.2</span> Output</h3>
 </div>
 </div>
-<div id="outline-container-orgaf9a058" class="outline-2">
-<h2 id="orgaf9a058"><span class="section-number-2">7</span> FinnFilGruppeFraKoblid</h2>
+<div id="outline-container-orgfd8f35a" class="outline-2">
+<h2 id="orgfd8f35a"><span class="section-number-2">7</span> FinnFilGruppeFraKoblid</h2>
 <div class="outline-text-2" id="text-7">
 <p>
 Valg filgruppenavn i kolonne FILGRUPPE som match <code>filbesk$KOBLID</code> fra tabell <b>ORGINNLESkobl</b>. Innkalles under
 <b>LesFil()</b> i sqlQuery for INSERT i SQL kode med argument <code>filbesk$KOBLID</code>.
 </p>
 </div>
-<div id="outline-container-orga27f537" class="outline-3">
-<h3 id="orga27f537"><span class="section-number-3">7.1</span> Argumenter</h3>
+<div id="outline-container-org5cfd43b" class="outline-3">
+<h3 id="org5cfd43b"><span class="section-number-3">7.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-7-1">
 <ul class="org-ul">
 <li>koblid : verdi fra object filbesk$KOBLID</li>
@@ -585,8 +596,8 @@ Valg filgruppenavn i kolonne FILGRUPPE som match <code>filbesk$KOBLID</code> fra
 </div>
 </div>
 
-<div id="outline-container-orge67ebad" class="outline-3">
-<h3 id="orge67ebad"><span class="section-number-3">7.2</span> Output</h3>
+<div id="outline-container-org422ea88" class="outline-3">
+<h3 id="org422ea88"><span class="section-number-3">7.2</span> Output</h3>
 <div class="outline-text-3" id="text-7-2">
 <p>
 En vector av den filgruppenavn til den spesifisert KOBLID eg. <code>UFORE</code>.
@@ -594,16 +605,16 @@ En vector av den filgruppenavn til den spesifisert KOBLID eg. <code>UFORE</code>
 </div>
 </div>
 </div>
-<div id="outline-container-orgf33bbf4" class="outline-2">
-<h2 id="orgf33bbf4"><span class="section-number-2">8</span> TilFilLogg</h2>
+<div id="outline-container-org8fd0ea0" class="outline-2">
+<h2 id="org8fd0ea0"><span class="section-number-2">8</span> TilFilLogg</h2>
 <div class="outline-text-2" id="text-8">
 <p>
 <span class="underline">OBS!</span>: Denne funksjonen ender opp med CRASH nokså ofte! Innkalles under <b>LesFil()</b> for å leser
 Access tabell <b>INNLES_LOGG</b> basert på KOBLID og objekt <code>batchdate</code>.
 </p>
 </div>
-<div id="outline-container-orgacd7514" class="outline-3">
-<h3 id="orgacd7514"><span class="section-number-3">8.1</span> Argumenter</h3>
+<div id="outline-container-orgfca43d2" class="outline-3">
+<h3 id="orgfca43d2"><span class="section-number-3">8.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-8-1">
 <ul class="org-ul">
 <li>koblid :</li>
@@ -629,8 +640,8 @@ upd&lt;-paste("UPDATE INNLES_LOGG SET ",felt,"=",verdi," WHERE KOBLID=",koblid,"
 </div>
 </div>
 
-<div id="outline-container-org2fcfa32" class="outline-3">
-<h3 id="org2fcfa32"><span class="section-number-3">8.2</span> Output:</h3>
+<div id="outline-container-orgbf63e54" class="outline-3">
+<h3 id="orgbf63e54"><span class="section-number-3">8.2</span> Output:</h3>
 <div class="outline-text-3" id="text-8-2">
 <p>
 Legger til ny rad i INNLES_LOGG tabell via INSERT eller oppdatere tabellen via UPDATE.
@@ -638,15 +649,15 @@ Legger til ny rad i INNLES_LOGG tabell via INSERT eller oppdatere tabellen via U
 </div>
 </div>
 </div>
-<div id="outline-container-org0dc4e19" class="outline-2">
-<h2 id="org0dc4e19"><span class="section-number-2">9</span> KHCsvread</h2>
+<div id="outline-container-org9364a8f" class="outline-2">
+<h2 id="org9364a8f"><span class="section-number-2">9</span> KHCsvread</h2>
 <div class="outline-text-2" id="text-9">
 <p>
 Leser inn CSV filer ved bruk <code>read.csv</code> eller <code>data.table::fread</code>.
 </p>
 </div>
-<div id="outline-container-org217dcfd" class="outline-3">
-<h3 id="org217dcfd"><span class="section-number-3">9.1</span> Argumenter</h3>
+<div id="outline-container-orgd797073" class="outline-3">
+<h3 id="orgd797073"><span class="section-number-3">9.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-9-1">
 <ul class="org-ul">
 <li>filn : Absolutt sti til filen</li>
@@ -665,16 +676,16 @@ Leser inn CSV filer ved bruk <code>read.csv</code> eller <code>data.table::fread
 </ul>
 </div>
 </div>
-<div id="outline-container-orge288197" class="outline-3">
-<h3 id="orge288197"><span class="section-number-3">9.2</span> Output</h3>
+<div id="outline-container-orge586f48" class="outline-3">
+<h3 id="orge586f48"><span class="section-number-3">9.2</span> Output</h3>
 <div class="outline-text-3" id="text-9-2">
 <p>
 En csv fil med header=FALSE dvs. header i tabellen blir til en ny kolonne. Hvorfor??
 </p>
 </div>
 </div>
-<div id="outline-container-org1aab9a0" class="outline-3">
-<h3 id="org1aab9a0"><span class="section-number-3">9.3</span> Kommentar</h3>
+<div id="outline-container-org42f99a3" class="outline-3">
+<h3 id="org42f99a3"><span class="section-number-3">9.3</span> Kommentar</h3>
 <div class="outline-text-3" id="text-9-3">
 <p>
 Koden for å lese csv med <code>fread</code> som produserer <code>data.frame</code> kan skrives slik:
@@ -687,15 +698,15 @@ Koden for å lese csv med <code>fread</code> som produserer <code>data.frame</co
 </div>
 </div>
 </div>
-<div id="outline-container-orgdb242eb" class="outline-2">
-<h2 id="orgdb242eb"><span class="section-number-2">10</span> cSVmod</h2>
+<div id="outline-container-org13e69d6" class="outline-2">
+<h2 id="org13e69d6"><span class="section-number-2">10</span> cSVmod</h2>
 <div class="outline-text-2" id="text-10">
 <p>
 Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
 </p>
 </div>
-<div id="outline-container-org7f058c7" class="outline-3">
-<h3 id="org7f058c7"><span class="section-number-3">10.1</span> Argumenter</h3>
+<div id="outline-container-orgd11421b" class="outline-3">
+<h3 id="orgd11421b"><span class="section-number-3">10.1</span> Argumenter</h3>
 <div class="outline-text-3" id="text-10-1">
 <ul class="org-ul">
 <li>DF : data.frame i CSV format fra KHCsvread eller XLS</li>
@@ -718,12 +729,12 @@ Slett tomme kolonne</li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org5a85842" class="outline-3">
-<h3 id="org5a85842"><span class="section-number-3">10.2</span> Output</h3>
+<div id="outline-container-org1177d75" class="outline-3">
+<h3 id="org1177d75"><span class="section-number-3">10.2</span> Output</h3>
 </div>
 
-<div id="outline-container-orgb3336ec" class="outline-3">
-<h3 id="orgb3336ec"><span class="section-number-3">10.3</span> Kommentar</h3>
+<div id="outline-container-org9f416c6" class="outline-3">
+<h3 id="org9f416c6"><span class="section-number-3">10.3</span> Kommentar</h3>
 <div class="outline-text-3" id="text-10-3">
 <p>
 Flere argumenter som egentlig gjør nesten det samme oppgavene. Alternativ å finne tomme rader
@@ -739,8 +750,8 @@ which(rownames(DF) %in% tnames)
 </div>
 </div>
 </div>
-<div id="outline-container-orgfb8d0e7" class="outline-3">
-<h3 id="orgfb8d0e7"><span class="section-number-3">10.4</span> Forbedring</h3>
+<div id="outline-container-org4f754f1" class="outline-3">
+<h3 id="org4f754f1"><span class="section-number-3">10.4</span> Forbedring</h3>
 <div class="outline-text-3" id="text-10-4">
 <ul class="org-ul">
 <li>Finne ut i INNLESSING tabell hvor mange som har <code>FjernTommeRader</code> og <code>FjernTommeKol</code>. Sjekk</li>
@@ -752,15 +763,15 @@ hvordan filen ser ut og tilpasse deretter før ny database lages.
 </div>
 </div>
 
-<div id="outline-container-orged96198" class="outline-2">
-<h2 id="orged96198"><span class="section-number-2">11</span> Generell spørsmål</h2>
+<div id="outline-container-orgf3670c4" class="outline-2">
+<h2 id="orgf3670c4"><span class="section-number-2">11</span> Generell spørsmål</h2>
 <div class="outline-text-2" id="text-11">
 <p>
 Alle type spørsmål som trenger oppklaring:
 </p>
 </div>
-<div id="outline-container-org27def9a" class="outline-3">
-<h3 id="org27def9a"><span class="section-number-3">11.1</span> Variable med <code>*.l</code> og <code>*.h</code> extention</h3>
+<div id="outline-container-org490cc88" class="outline-3">
+<h3 id="org490cc88"><span class="section-number-3">11.1</span> Variable med <code>*.l</code> og <code>*.h</code> extention</h3>
 <div class="outline-text-3" id="text-11-1">
 <p>
 Alle år og aldre er ALLTID intervaller i hele systemet. Dermed brukes alltid AARl/AARh og
@@ -769,8 +780,8 @@ AARh=2020) eller enkle aldersår (ALDERl=30,ALDERh=30).
 </p>
 </div>
 </div>
-<div id="outline-container-orge48adf3" class="outline-3">
-<h3 id="orge48adf3"><span class="section-number-3">11.2</span> Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</h3>
+<div id="outline-container-orgd6651f2" class="outline-3">
+<h3 id="orgd6651f2"><span class="section-number-3">11.2</span> Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</h3>
 <div class="outline-text-3" id="text-11-2">
 <p>
 <code>val.a</code> og <code>val.f</code> er to flagg som alltid går hånd i hånd med hver verdikolonne. Detaljene kan
@@ -790,8 +801,8 @@ mangler originalt, er det fordi det ikke lar seg bergene, er det fordi det anony
 </p>
 </div>
 </div>
-<div id="outline-container-org347893a" class="outline-3">
-<h3 id="org347893a"><span class="section-number-3">11.3</span> Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</h3>
+<div id="outline-container-org1a4c2e6" class="outline-3">
+<h3 id="org1a4c2e6"><span class="section-number-3">11.3</span> Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</h3>
 <div class="outline-text-3" id="text-11-3">
 <p>
 TYP=0 er de Ordinåre geokodene, TYP=U er geokoder som angir "Uoppgitt" (slik som at 1199 er
@@ -803,8 +814,8 @@ i 11 osv).
 </div>
 </div>
 
-<div id="outline-container-org3c451f8" class="outline-3">
-<h3 id="org3c451f8"><span class="section-number-3">11.4</span> I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</h3>
+<div id="outline-container-org8bd585e" class="outline-3">
+<h3 id="org8bd585e"><span class="section-number-3">11.4</span> I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</h3>
 <div class="outline-text-3" id="text-11-4">
 <p>
 Noen ganger skreves det som <code>NA</code> eller <code>25_</code>. Når det er <code>NA</code> så plukket verdier fra default ie.
@@ -813,15 +824,15 @@ min og maks alder. Når det er bare <code>25_</code> så legges maks alder fra t
 </div>
 </div>
 </div>
-<div id="outline-container-orgc670802" class="outline-2">
-<h2 id="orgc670802"><span class="section-number-2">12</span> Access related spørsmål</h2>
+<div id="outline-container-org0e953ce" class="outline-2">
+<h2 id="org0e953ce"><span class="section-number-2">12</span> Access related spørsmål</h2>
 <div class="outline-text-2" id="text-12">
 <p>
 Dette er spørsmål spesifisert til kolonnebruk i Access tabeller.
 </p>
 </div>
-<div id="outline-container-orga7896fc" class="outline-3">
-<h3 id="orga7896fc"><span class="section-number-3">12.1</span> FILGRUPPER tabell</h3>
+<div id="outline-container-org913a315" class="outline-3">
+<h3 id="org913a315"><span class="section-number-3">12.1</span> FILGRUPPER tabell</h3>
 <div class="outline-text-3" id="text-12-1">
 <ul class="org-ul">
 <li>Hva kolonne <b>FILTER1</b>, <b>FILTER2</b> og <b>FILTER3</b> brukes til? Verdien er <code>1</code>.</li>
