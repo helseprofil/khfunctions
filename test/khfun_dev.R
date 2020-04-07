@@ -147,7 +147,7 @@ globglobs<-list(
   BUFFERdir="BIN/BUFFER",
   DUMPdir="RUNTIMEDUMP",
 
-  ## Standard columns
+  ## Define standard columns
   ## -----------------
   kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
   taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
@@ -603,7 +603,8 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
       ## read row by row in delfiler
       filbesk<-delfiler[i,]
       tm<-proc.time()
-      ## get the path for files
+
+      ## Create column 'filn' and paste the path for files
       filbesk$filn<-paste(getSti,filbesk$FILNAVN,sep="/")
       ## change slash for path to be standard since loading from Access uses \\ while globs$path
       ## uses / and create absolute path
@@ -2520,17 +2521,25 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
     }
 
 
+
     ## Gets VAL1 to VAL3 input ie. navn,sumbar and miss
     ## ------------------------------------------------
     ## create 'vals' list which is of values from VAL1,2,3 including alder min and max from
     ## ALDER_ALLE ie. amin and amax
-    ## example for vals list:
-    ## $vals
-    ## $vals$ANTOBS
-    ## $vals$ANTOBS$miss
+
     vals<-list()
+
+
+    ## Loop VAL1,3,3 by:
+    ## get values in VAL1navn eg. ARBEIDSLEDIGE
+    ## Then replace the value to 'navn' which replace VAL1navn to the actual name
+    ## Then get value for sumbar and miss.
+    ## If VAL1sumbar is missing or FALSE then gives value 0
+    ## The same for VAL1miss
     for(valf in names(FGP)[grepl("^VAL\\d+navn$",names(FGP))]){
       val<-gsub("(VAL\\d+)navn","\\1",valf) #alternative is gsub("navn", "", valf)
+
+      ## get the value for VAL1navn, VAL2navn and VAL2navn if exist
       valn<-ifelse(is.na(FGP[[valf]]) || FGP[[valf]]=="",val,FGP[[valf]])
       valmissf<-paste(val,"miss",sep="")
       valmiss<-ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]]=="","0",FGP[[valmissf]])
@@ -2538,8 +2547,14 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
       valsum<-ifelse(is.na(FGP[[valsumf]]) || FGP[[valsumf]]=="","0",FGP[[valsumf]])
       vals[[valn]]<-list(miss=valmiss,sumbar=valsum)
     }
+
+
     resultat<-c(FGP,list(vals=vals,amin=amin,amax=amax))
   }
+
+  ## close connection
+  close(dbh)
+
   return(c(resultat,list(ok=ok)))
 }
 
