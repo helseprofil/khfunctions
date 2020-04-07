@@ -74,8 +74,18 @@ Denne produserer object *FGP* til viderebruk.
 ** Output
 En tabell av type /list/ hentet fra tabell *FILGRUPPER*. I tillegg legges det 3 til dvs. =vals=,
 =amin= og =amax=. De to siste er for alder minimum og maksium hentet fra kolonne =ALDER_ALLE=. List
-=vals= i tillegg inneholder under lister ~$vals$verdi_i_VAL1navn~, ~$vals$verdi_i_VAL1navn$miss~ og
-~$vals$verdi_i_VAL1navn$miss~. Det samme for VAL2 og VAL3.
+=vals= i tillegg inneholder 3 tillegg lister ~$vals$verdi_i_VAL1navn~, ~$vals$verdi_i_VAL1navn$miss~ og
+~$vals$verdi_i_VAL1navn$miss~. Det samme for VAL2 og VAL3. F.eks for filgruppe ARBEIDSLEDIGE så blir det:
+#+begin_example
+  $vals
+  $vals$ARBEIDSLEDIGE
+  $vals$ARBEIDSLEDIGE$miss
+  [1] "0"
+
+  $vals$ARBEIDSLEDIGE$sumbar
+  [1] "1"
+
+#+end_example
 ** Kommentar
 - Sjekk aktiv filgruppenavn basert på tidsperiode dvs. =VERSJONFRA= og =VERSJONTIL= i Access tabell,
   men denne informasjon er ikke brukes eller oppdateres. Object =FGPaktiv=.
