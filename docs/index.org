@@ -256,3 +256,10 @@ Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
 ** I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data
    Noen ganger skreves det som =NA= eller =25_=. Når det er =NA= så plukket verdier fra default ie.
    min og maks alder. Når det er bare =25_= så legges maks alder fra tabell ..
+* Access related spørsmål
+  Dette er spørsmål spesifisert til kolonnebruk i Access tabeller.
+** FILGRUPPER tabell
+   - Hva kolonne *FILTER1*, *FILTER2* og *FILTER3* brukes til? Verdien er =1=.
+   - Kolonne *ALDER_ALLE* har forskjellige verdier bl.a =0_120=, =1_6=, =25_= og ingen verdi? Når
+     ingen verdi blir det satt 0_120 som min og maks alder. Når det skreves bare =25_= skal det får
+     25 som min alder og 120 som maks alder.
