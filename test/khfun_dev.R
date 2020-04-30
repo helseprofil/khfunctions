@@ -568,6 +568,8 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
   #Initier tom tabell
   Filgruppe<-data.frame()
+
+
   if (FGP$ok==1){
     #Rydd gammel logg
     sqlQuery(globs$log,paste("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='",gruppe,"' AND SV='S'",sep=""))
@@ -630,8 +632,12 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
                           globs=globs,
                           versjonert=versjonert,
                           dumps=dumps)
+
+
       ##Stable delfiler
+      ## Emty data.frame 'Filgruppe' was created further above
       Filgruppe<-rbind.fill(Filgruppe,DF)
+
 
 
       ##Stopp klokke, skriv tid og feillogg
@@ -653,8 +659,10 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
       HarDuplikater<-SjekkDuplikater(Filgruppe,batchdate=batchdate,filgruppe=gruppe,versjonert=versjonert,globs=KHglobs)
       sqlQuery(globs$dbh,paste("UPDATE FILGRUPPER SET DUPLIKATER='",HarDuplikater,"' WHERE FILGRUPPE='",gruppe,"'",sep=""))
 
+
       #Sjekk design
       FGd<-FinnDesign(Filgruppe,FGP=FGP)
+
 
       #Er ubalansert?
       subset(FGd$Design,HAR!=1)
@@ -953,7 +961,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
     ## Bind those with <ALLE> to the DF. Could just use cbind()?
     ## Add all the values in <..> to the rows and bind with the DF
-    ##-----------------------------------------------------------
+    ## Alternative with data.table:
+    ## DF[, (DefVCols) := "ALLE"] #if the value for <...> only ALLE
+    ##--------------------------------------------------------------
     #Sett standardverdier (f?r ikke til dette med enklere syntaks n?r det kan v?re tuppel, virker kl?nete)
     DF<-setNames(data.frame(DF,DefV,stringsAsFactors = FALSE),c(names(DF),DefVCols))
 
@@ -964,8 +974,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       ok<-0
     }
 
-    ## !OBS! Obligatory columns... why???
-    ## -------------------------------------
+    ## !OBS! Obligatory columns... why??? - might be the core data in all tables
+    ## ------------------------------------------------------------------------
     #Sjekk at p?krevde kolonner finnes
     oblkols<-c("GEO","AAR","VAL1")
     if (!all(oblkols %in% names(DF))){
@@ -1052,7 +1062,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     if ("GEO" %in% names(DF)){
       ## Create table with ORG number and FREQ
       org<-setNames(as.data.frame(table(DF$GEO,useNA="ifany"),stringsAsFactors=FALSE),c("ORG","FREQ"))
-      ## Check GEOvask function
+
+      ## Check GEOvask function - for recoding GEO and ORG
+      ## Where GEOniv and geo$ORG are derived from
       geo<-GEOvask(org,filbesk=filbesk,batchdate=batchdate,globs=globs)
 
       ## OBS!! crash here
@@ -1071,7 +1083,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
       DF$ALDER<-gsub(" \\Wr\\b"," ?r",DF$ALDER,perl=TRUE)   #Problem med codebook i dbf
 
+      ## similar to data.table style: org <- DF[, .(FREQ=.N), by=ORG]
       org<-setNames(as.data.frame(table(DF$ALDER,useNA="ifany"),stringsAsFactors=FALSE),c("ORG","FREQ"))
+
       alder<-ALDERvask(org,FGP=FGP,filbesk=filbesk,batchdate=batchdate,globs=globs)
 
       #Kast der ALDEr koder til "-" (m? ta det her og ikek generelle under pga intervall)
@@ -1710,7 +1724,7 @@ Xls2R.KH.Gammel<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.stri
   rdbh<-odbcConnectExcel2007(xlsfil)
   #rdbh<-odbcConnectExcel(xlsfil)
   tables<-sqlTables(rdbh)$TABLE_NAME
-  close(rdbh)
+  ## close(rdbh)
 
   tables<-gsub("\'","",tables)
   tables<-gsub("\\$","",tables)  #Something is strange with resepct to $ in R's regexp-syntax, but should work
@@ -2553,7 +2567,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
   }
 
   ## close connection
-  close(dbh)
+  ## close(dbh)
 
   return(c(resultat,list(ok=ok)))
 }
