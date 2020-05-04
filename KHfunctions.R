@@ -6260,9 +6260,11 @@ godkjent <- function(profil = c("FHP", "OVP"),
                      modus = globglobs$KHgeoniv,
                      aar = globglobs$KHaar, ...){
 
-  cat(paste0("\n********\n  Flytt av filer for ", 
-             profil[1], " og geonivå ", modus, " for ",
-             aar, " begynner nå\n********\n" ))
+  
+  bruker <- Sys.info()[["user"]]
+  message("\n********\n  Kopiering av filer for ",
+          profil[1], " og geonivå ", modus, " for ",
+          aar, " begynner nå. Gjennomført av ", bruker, "\n********\n" )
   
   extra <- list(...)
 
@@ -6335,39 +6337,40 @@ godkjent <- function(profil = c("FHP", "OVP"),
   ## Check if folder exists else create
   if (!fs::dir_exists(fileTo)) fs::dir_create(fileTo)
 
-  ## fileComplete <- sapply(fileNames, function(x) file.path(fileFrom, x))
-
+  
+  ## Group files to those that succeed or fail
   fileOK <- list()
   fileKO <- list()
-  
+
   for (i in fileNames){
 
     outFile <- file.path(fileFrom, i)
     inFile <- file.path(fileTo, i)
-    
+
     outMsg <- tryCatch(
     {fs::file_copy(outFile, inFile, overwrite = TRUE)},
     error = function(err) err)
 
     if (inherits(outMsg, "error")){
-      message(paste0("\n--> OPS! Finner ikke filen: ", i, "\n"))
+      message("\n --> OPS! Finner ikke filen: ", i, "\n")
       fileKO[i] <- i
       next
     } else {
-      message(paste0("Kopierer filen: ", i))
+      message("Kopierer filen: ", i)
       fileOK[i] <- i
     }
-    
+
   }
 
-  cat(paste0("\n**********\n", " ", 
-             length(fileOK),
-             " filer ble flyttet til ",
-             fileTo, "\n"))
-  
-  cat(paste0("----------\n", " ",
-             length(fileKO),
-             " filer finnes ikke i ",
-             fileFrom, "\n**********\n"))
+  message("\n**********\n", " ",
+      length(fileOK),
+      " filer ble kopiert til ",
+      fileTo, "\n")
+
+  message("----------\n", " ",
+      length(fileKO),
+      " filer finnes ikke i ",
+      fileFrom, "\n**********\n")
+
 }
 
