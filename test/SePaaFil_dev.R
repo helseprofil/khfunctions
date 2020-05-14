@@ -1,13 +1,16 @@
+## -*- coding: utf-8 -*-
+
 #---------------------------------------------------------------------------------------------
 #NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
 
-## ## Bytt til FALSE for å bruke defpaths i PRODUKSJON
+## ## Bytt til FALSE for Ã¥ bruke defpaths i PRODUKSJON
 
 runtest = TRUE
+makelog = TRUE
 
 if (!require(here)) install.packages("here")
-source(here('test', 'khfun_dev.R'))
+source(here::here('test', 'khfun_dev.R'))
 
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 #BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
@@ -43,7 +46,7 @@ trace("LagFilgruppe", tracer = quote(print(as.list(match.call()))),
 
 ## List of Filgruppenavn to check
 ## ------------------------------
-gpnavn <- c("ELEVUNDER", "ARBLEDIGE")
+gpnavn <- c("ELEVUNDER", "INNVAND", "LESEFERD")
 
 ## Subset file for testing purposes
 gpnavnSub <- c("ELEVUNDER")
@@ -54,10 +57,10 @@ gpnavnSub <- c("ELEVUNDER")
 
 #Dump i innlesingen
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
-LagFilgruppe("ELEVUNDER") #CSV fil
+LagFilgruppe("LESEFERD") #CSV fil
 LagFilgruppe("ELEVUNDER", testfil = TRUE) #CSV fil testfile
 LagFilgruppe(gpnavnSub[1])
-LagFilgruppe(gpnavn[2], testfil = TRUE) #csv
+LagFilgruppe(gpnavn[2]) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
 LagFilgruppe("UTDANN_NH",versjonert=TRUE)
 LagFilgruppe("BRUTTOINNTEKT", testfil = TRUE)
@@ -88,7 +91,7 @@ utFil <- readRDS(file.path(utPath, rdsFil))
 
 
 
-LagKUBE("DROPOUT_TN_tabU")
+LagKUBE("LESEFERD")
 
 k <- LagKUBE("SYSVAK_1",dumps=dumps)
 
