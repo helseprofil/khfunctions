@@ -112,6 +112,18 @@ filDB <- switch(test,
                 "Ja" = "KHELSA_dev.mdb")
 
 
+## Create log for path function use
+if (isFALSE(exists("makelog"))){makelog = FALSE}
+if (isTRUE(makelog)){ logFunction <- data.table(tid = Sys.time(), funksjon = "Start") }
+
+make_log <- function(x){
+  logFile <- data.table(tid = Sys.time(),
+                        funksjon = x)
+  logFunction <- rbindlist(list(logFunction, logFile))
+  assign("logFunction", logFunction, envir = .GlobalEnv)
+}
+
+
 ## BIG TROUBLE!!! Watch out when setting up path. Too many 'setwd()' are used!
 ## Path is specified to where the "STYRING/NameAccessFile.mdb" file is in!
 
@@ -183,6 +195,13 @@ globglobs<-list(
 ##Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
 ##Se tabell KH_DELER
 SettDefDesignKH<-function(globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SettDefDesignKH")
+  }
+
+
   ## Needs only connection to db from globs
   ## --------------------------------------
   Deler<-sqlQuery(globs$dbh,"SELECT * FROM KH_DELER",as.is=TRUE,stringsAsFactors=FALSE)
@@ -258,6 +277,10 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
 
 SettKodeBokGlob<-function(globs=FinnGlobs()){
 
+  if (isTRUE(makelog)){
+    make_log("SettKodeBokGlob")
+  }
+
   ## Merge tabels KH_OMKOD and KH_KODER and rename KH_KODER as in KH_OMKOD for merging. Assign 0 to
   ## 4 to PRI_OMKOD for prioritizing and 0-1 to OBLIG to mean obligatory or not from KH_KODER that
   ## doesn't have these colnames. KH_KODER tabel defines all the values in KH_OMKOD tabel
@@ -303,6 +326,14 @@ SettKodeBokGlob<-function(globs=FinnGlobs()){
 }
 
 SettLegitimeKoder<-function(globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SettLegitimeKoder")
+  }
+
+
+
   Koder<-sqlQuery(globs$dbh,"SELECT * FROM KH_KODER",as.is=TRUE,stringsAsFactors=FALSE)
   KodeL<-list()
   for (del in unique(Koder$DEL)){
@@ -323,6 +354,13 @@ SettLegitimeKoder<-function(globs=FinnGlobs()){
 
 
 SettTotalKoder<-function(globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SettTotalKoder")
+  }
+
+
   Koder<-sqlQuery(globs$dbh,"SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1",as.is=TRUE,stringsAsFactors=FALSE)
   TotKoder<-list()
   for (del in Koder$DEL){
@@ -337,6 +375,12 @@ SettTotalKoder<-function(globs=FinnGlobs()){
 
 
 FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
+
+
+  if (isTRUE(makelog)){
+    make_log("FinnStataExe")
+  }
+
   Exe<-""
   Vers<-0
   i<-1
@@ -355,6 +399,12 @@ FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
 #GAMMEL, UTG?TT
 
 SettKodeBokGn<-function(){
+
+  if (isTRUE(makelog)){
+    make_log("SettKodeBokGn")
+  }
+
+
   GnOmk<-list(
     G=c("G"),
     S=c("S","G"),
@@ -391,6 +441,12 @@ SettKodeBokGn<-function(){
 
 
 SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
+
+  if (isTRUE(makelog)){
+    make_log("SettGlobs")
+  }
+
+
   ##Setter globale parametre
   ##Disse er faste over hver kj?ring og endres normalt bare ved systemoppdatering/-migrering
   ##Merk at globs$dbh ikke lukkes av seg selv, dermed kan det bli rot med gamle slike om FinnGlobs brukes for mye
@@ -511,6 +567,11 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
 
 
 FinnGlobs<-function(){
+
+  if (isTRUE(makelog)){
+    make_log("FinnGlobs")
+  }
+
   ##Hjelperutine, kjekk ? brukes som default. Bruker KHglobs elller setter denne
   globs<-NA
   ## OBS!! KHglobs is created from SePaaFil
@@ -529,6 +590,12 @@ FinnGlobs<-function(){
 ## !OBS! This function is not used!!
 ## ---------------------------------
 ListAlleOriginalFiler<-function(globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("ListAlleOriginalFiler")
+  }
+
   print(sqlQuery(globs$log,"DROP TABLE ALLEFILER"))
   setwd(paste(globs$path,"ORGDATA",sep="/"))
   Filer<-setNames(as.data.frame(list.files(recursive=TRUE),stringsAsFactors=FALSE),c("FILNAVN"))
@@ -552,6 +619,11 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ## OBS! Add tesfil=FALSE for selecting file for testing
 
 LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE, DBtest = FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("LagFilgruppe")
+  }
 
   ## testfil is TRUE when column 'TESTING' is used for selecting the file to be processed
   ## DBtest - FALSE to use test Path for saveRDS.
@@ -777,6 +849,12 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 
 #
 LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate(),globs=FinnGlobs(),printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("LagFlereFilgrupper")
+  }
+
   #SKall rundt LagFilGruppe, lager og lagrer evt til fil
   #Default er ? ta alle grupper, ellers angis ?nsket batch i filgrupper-argumentet
   if (length(filgrupper)==0){
@@ -794,6 +872,10 @@ LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate()
 #
 LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,globs=FinnGlobs(),
                            versjonert=FALSE,echo=TRUE,dumps=list()) {
+
+  if (isTRUE(makelog)){
+    make_log("LagTabellFraFil")
+  }
 
   cat("-->>> Entering function LagTabellFraFil \n")
 
@@ -1357,6 +1439,11 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
 #
 LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=character()) {
+
+  if (isTRUE(makelog)){
+    make_log("LesFil")
+  }
+
   klokke<-proc.time()
   DF<-data.frame()
   ok<-1
@@ -1551,6 +1638,11 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
 #
 KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quote = "\"",dec = ".",fill=FALSE,encoding = "unknown",blank.lines.skip=FALSE,na.strings=c("NA"),brukfread=TRUE,...) {
 
+
+  if (isTRUE(makelog)){
+    make_log("KHCsvread")
+  }
+
   if(!(quote=="\"" && dec=="." && fill==FALSE && encoding == "unknown")){
     brukfread<-FALSE
   }
@@ -1567,6 +1659,12 @@ KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quo
 ## OBS! integer(0) should be 0L
 #
 cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1,TomRadSlutt=FALSE,FjernTommeRader=FALSE,FjernTommeKol=TRUE,globs=FinnGlobs(),...){
+
+
+  if (isTRUE(makelog)){
+    make_log("cSVmod")
+  }
+
   #Ved bruk av undertabeller med titler som ikke st?r i egen kolonne
   #Lager egen kolonne av undertitler som blir ekta TAB
   #Ikke s? veldig elegant, men funker for de f?r tilfellene der dette trengs og som ellers ville trengt h?nds?m
@@ -1695,6 +1793,12 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
 
 #
 LesMultiHead<-function(mhstr){
+
+
+  if (isTRUE(makelog)){
+    make_log("LesMultiHead")
+  }
+
   #Leser parameterstreng for multihead og gj?r om til relevante variable
   #Velger ? kalle p? denne funksjonen ved behov for samme inputstreng heller enn ? porssessere strengen en gang og sende bitene rundt
   #Finn evt angitt separator (trengs bare settes dersom det er snakk om en originalt pastet rad med annen seaprator enn "|"
@@ -1768,6 +1872,12 @@ Xls2R.KH.Gammel<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.stri
 }
 
 Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("NA"),ryddOpp=1,...){
+
+
+  if (isTRUE(makelog)){
+    make_log("Xls2R.KH")
+  }
+
   err<-""
   ok<-1
   DF<-data.frame()
@@ -1824,6 +1934,13 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
 }
 #
 Xls2TmpCsv<-function(xlsfil,sheet,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("Xls2TmpCsv")
+  }
+
+
   #Calls on VB-script that converts sheet in xlsfil to csv
   #Should use tempdir()?
   orig_wd <- getwd()
@@ -1838,6 +1955,12 @@ Xls2TmpCsv<-function(xlsfil,sheet,globs=FinnGlobs()){
 
 #
 ReshapeTab<-function (DELF,filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("ReshapeTab")
+  }
+
   #Reshape av DELF basert p? parametre i filbesk
   ok<-1
   if (!(is.na(filbesk$RESHAPEid) || filbesk$RESHAPEid=='')){
@@ -1894,6 +2017,11 @@ subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=in
 
 
 KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
+
+
+  if (isTRUE(makelog)){
+    make_log("KBomkod")
+  }
 
 
   ## CHK 21
@@ -2013,6 +2141,10 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
 
 GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
+  if (isTRUE(makelog)){
+    make_log("GEOvask")
+  }
+
 
   ## geo - Frequency table for original geo from the file
   ##
@@ -2128,6 +2260,11 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
 
 ALDERvask<-function(alder,filbesk=data.frame(),FGP=list(amin=0,amax=120),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
+
+  if (isTRUE(makelog)){
+    make_log("ALDERvask")
+  }
+
   amax<-FGP$amax
   amin<-FGP$amin
   if (nrow(filbesk)==0){
@@ -2179,6 +2316,12 @@ ALDERvask<-function(alder,filbesk=data.frame(),FGP=list(amin=0,amax=120),batchda
 }
 
 KJONNvask<-function (kjonn,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("KJONNvask")
+  }
+
   if (nrow(filbesk)==0){
     kjonn<-setNames(as.data.frame(kjonn,stringsAsFactors=FALSE),c("KJONN"))
     kjonn$KBOMK<-kjonn[,1]
@@ -2201,6 +2344,12 @@ KJONNvask<-function (kjonn,filbesk=data.frame(),batchdate=SettKHBatchDate(),glob
 }
 
 UTDANNvask<-function (utdann,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("UTDANNvask")
+  }
+
   if (nrow(filbesk)==0){
     utdann<-setNames(as.data.frame(utdann,stringsAsFactors=FALSE),c("UTDANN"))
     utdann$KBOMK<-utdann[,1]
@@ -2225,6 +2374,13 @@ UTDANNvask<-function (utdann,filbesk=data.frame(),batchdate=SettKHBatchDate(),gl
 }
 
 SIVSTvask<-function (sivst,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("SIVSTvask")
+  }
+
+
   if (nrow(filbesk)==0){
     sivst<-setNames(as.data.frame(sivst,stringsAsFactors=FALSE),c("SIVST"))
     sivst$KBOMK<-sivst[,1]
@@ -2251,6 +2407,12 @@ SIVSTvask<-function (sivst,filbesk=data.frame(),batchdate=SettKHBatchDate(),glob
 }
 
 LANDBAKvask<-function (landbak,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("LANDBAKvask")
+  }
+
   if (nrow(filbesk)==0){
     landbak<-setNames(as.data.frame(landbak,stringsAsFactors=FALSE),c("LANDBAK"))
     landbak$KBOMK<-landbak[,1]
@@ -2280,6 +2442,12 @@ LANDBAKvask<-function (landbak,filbesk=data.frame(),batchdate=SettKHBatchDate(),
 }
 
 AARvask<-function (aar,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("AARvask")
+  }
+
   if (nrow(filbesk)==0){
     aar<-setNames(as.data.frame(aar,stringsAsFactors=FALSE),c("AAR"))
     aar$KBOMK<-aar[,1]
@@ -2315,6 +2483,11 @@ SjekkDuplikater<-function(FG,filgruppe,
                           FullResult=FALSE,echo=0,
                           batchdate=SettKHBatchDate(),
                           versjonert=FALSE,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SjekkDuplikater")
+  }
 
   cat("--->> Entering function SjekkDuplikater \n")
 
@@ -2428,10 +2601,21 @@ SjekkDuplikater<-function(FG,filgruppe,
 }
 
 SjekkDuplikaterFG<-function(filgruppe,FullResult=TRUE){
+
+  if (isTRUE(makelog)){
+    make_log("SjekkDuplikaterFG")
+  }
+
   return(SjekkDuplikater(FinnFilT(filgruppe,IDKOLS=TRUE),filgruppe,FullResult=FullResult))
 }
 
 FullDuplikatSjekk<-function(globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("FullDuplikatSjekk")
+  }
+
   FILGRUPPER<-unlist(sqlQuery(globs$dbh,"SELECT DISTINCT FILGRUPPE FROM FILGRUPPER"))
   FGRapport<-c(FILGRUPPE=character(0),ANTdNO=integer(0),fANTV1=integer(0),ANTdNOp=integer(0),fANTV1p=integer(0),ANTdNOg=integer(0),fANTV1g=integer(0))
   for (fgruppe in FILGRUPPER){
@@ -2448,6 +2632,11 @@ FullDuplikatSjekk<-function(globs=FinnGlobs()){
 
 #
 LesFilNo <-function(id,y="",globs=FinnGlobs()){
+
+  if (isTRUE(makelog)){
+    make_log("LesFilNo")
+  }
+
   filbesk<-FinnFilBeskFilid(id,globs=globs)
   print(filbesk$FILNAVN)
   filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
@@ -2461,6 +2650,12 @@ LesFilNo <-function(id,y="",globs=FinnGlobs()){
 
 #
 LagTabellFraFilNo <-function(id,batchdate=SettKHBatchDate(),y="",globs=FinnGlobs(),echo=FALSE){
+
+
+  if (isTRUE(makelog)){
+    make_log("LagTabellFraFilNo")
+  }
+
   filbesk<-FinnFilBeskFilid(id,batchdate=batchdate,globs=globs)
   FGP<-FinnFilgruppeParametre(filbesk$FILGRUPPE,batchdate=batchdate,globs=globs)
   return(LagTabellFraFil(filbesk,FGP=FGP,globs=globs,echo=echo))
@@ -2470,6 +2665,10 @@ LagTabellFraFilNo <-function(id,batchdate=SettKHBatchDate(),y="",globs=FinnGlobs
 #
 FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
                                  globs=FinnGlobs()){
+
+  if (isTRUE(makelog)){
+    make_log("FinnFilgruppeParametre")
+  }
 
   ## gruppe - Name of FILGRUPPE as it's
 
@@ -2580,6 +2779,11 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
 FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
 
 
+  if (isTRUE(makelog)){
+    make_log("FinnFilBeskGruppe")
+  }
+
+
   logger::log_info("--->> Entering function FinnFilBeskGruppe")
   ## cat("--->> Entering function FinnFilBeskGruppe \n")
   #Default er ? finne filbesk gyldige n? (Sys.time)
@@ -2638,6 +2842,12 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
 #
 
 FinnFilBeskFilid<-function(filid,batchdate=NULL,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("FinnFilBeskFilid")
+  }
+
   #Default er ? finne filbesk gyldige n? (Sys.time)
   datef<-format(Sys.time(), "#%Y-%m-%d#")
   #ALternativt kan man finne for en historisk batchdate
@@ -2663,11 +2873,24 @@ FinnFilBeskFilid<-function(filid,batchdate=NULL,globs=FinnGlobs()){
 }
 
 FinnFilGruppeFraKoblid<-function(koblid,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("FinnFilGruppeFraKoblid")
+  }
+
   return(as.character(sqlQuery(globs$dbh,paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=",koblid,sep=""),stringsAsFactors=FALSE)))
 }
 
 #
 TilFilLogg<-function (koblid,felt,verdi,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("TilFilLogg")
+  }
+
+
   #Sjekk om finnes rad for filid, eller lag ny
   if (nrow(sqlQuery(globs$log,paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=",koblid," AND SV='S' AND BATCH='",batchdate,"'",sep="")))==0){
     print("**************Hvorfor er jeg egentlig her?*********************'")
@@ -2691,11 +2914,24 @@ TilFilLogg<-function (koblid,felt,verdi,batchdate=SettKHBatchDate(),globs=FinnGl
 ## OBS! This function crash!!
 #
 SkrivKBLogg<-function(KB,type,filbesk,gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SkrivKBLogg")
+  }
+
+
   # sqlQuery(globs$log,paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=",filbesk$KOBLID," AND TYPE='",type,"' AND SV='S'",sep=""))
   # sqlSave(globs$log,cbind(KOBLID=filbesk$KOBLID,FILGRUPPE=gruppe,FELTTYPE=type, SV="S", KB[,c("ORG","KBOMK","OMK","FREQ","OK")],BATCHDATE=batchdate),"KODEBOK_LOGG",rownames=FALSE,append=TRUE)
 }
 
 SVcloneRecord<-function(dbh,table,koblid){
+
+
+  if (isTRUE(makelog)){
+    make_log("SVcloneRecord")
+  }
+
   design<-names(sqlQuery(dbh,paste("SELECT * FROM ",table," WHERE KOBLID=-1",sep="")))
   felt<-paste(design,collapse=",")
   feltm<-sub("SV","'V' AS SV",felt)
@@ -2714,6 +2950,11 @@ SVcloneRecord<-function(dbh,table,koblid){
 #BUFFER<-SetBuffer(filer=c("NPR","DAAR","BEFOLK","RESEPT"))
 
 SetBuffer<-function(filer=c("BEFOLK"),globs=FinnGlobs()){
+
+  if (isTRUE(makelog)){
+    make_log("SetBuffer")
+  }
+
   BUFFER<-list()
   for (filtag in filer){
     fil<-FinnFilN(filtag,globs=globs)
@@ -2729,6 +2970,11 @@ SetBuffer<-function(filer=c("BEFOLK"),globs=FinnGlobs()){
 
 
 readRDS_KH<-function(file,IDKOLS=FALSE,...){
+
+  if (isTRUE(makelog)){
+    make_log("readRDS_KH")
+  }
+
   FIL<-readRDS(file,...)
   if(IDKOLS==FALSE){
     if ("KOBLID" %in% names(FIL)){FIL$KOBLID<-NULL}
@@ -2738,6 +2984,12 @@ readRDS_KH<-function(file,IDKOLS=FALSE,...){
 }
 
 LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs(),dumps=list()){
+
+
+  if (isTRUE(makelog)){
+    make_log("LagFlereKuber")
+  }
+
   batchdate=SettKHBatchDate()
   loggfile<-paste(globs$path,"/",globs$KubeDir,"LOGG/",batchdate,".txt",sep="")
   sink(loggfile,split=TRUE)
@@ -2749,12 +3001,24 @@ LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs()
 }
 
 LagKubeDatertCsv<-function(KUBEID,dumps=list()){
+
+  if (isTRUE(makelog)){
+    make_log("LagKubeDatertCsv")
+  }
+
   invisible(LagFlereKuber(KUBEID,versjonert=TRUE,csvcopy=TRUE,dumps=dumps))
 }
 
 
 
 KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FILbatch=NA,batchdate=SettKHBatchDate(),GeoHarmDefault=1,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("KlargjorFil")
+  }
+
+
   TilBuffer<-0
   if (!exists("BUFFER")){
     .GlobalEnv$BUFFER<-list()
@@ -2885,6 +3149,12 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
 
 
 SettFilterDesign<-function(KUBEdscr,OrgParts=list(),bruk0=TRUE,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
+
+  if (isTRUE(makelog)){
+    make_log("SettFilterDesign")
+  }
+
+
   Deler<-list()
   for (del in names(globs$DefDesign$DelKolN)){
     #for (del in names(unlist(globs$DefDesign$DelKolN[ORGd$OmkDeler]))){
@@ -2957,6 +3227,12 @@ SettFilterDesign<-function(KUBEdscr,OrgParts=list(),bruk0=TRUE,FGP=list(amin=0,a
 
 
 SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,globs=FinnGlobs()){
+
+
+  if (isTRUE(makelog)){
+    make_log("SettFilInfoKUBE")
+  }
+
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   KUBEdscr<-as.list(sqlQuery(globs$dbh,paste("SELECT * FROM KUBER WHERE KUBE_NAVN='",KUBEid,"' AND VERSJONFRA<=",datef," AND VERSJONTIL>",datef,sep=""),as.is=TRUE))
   if ((is.na(KUBEdscr$TNP) | KUBEdscr$TNP=="")){
@@ -3053,7 +3329,11 @@ SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,gl
 
 
 
+
 LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FALSE,bare_TN=0,drop_TN=0,tmpbryt=0,FullUt=0,csvcopy=FALSE,globs=FinnGlobs(),echo=0,dumps=list()){
+
+
+
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   rapport<-list(KUBE=KUBEid,lagRapport=lagRapport)
 
@@ -3933,11 +4213,14 @@ LagFriskvikIndikator<-function(id,KUBE=data.table(),FGP=list(amin=0,amax=120),ve
         FRISKVIK[,(MissKol2):=NA]
       }
 
+      ## If ALTERNATIV_MALTALL is specified in Access then use it instead of MALTALL
+      ## Delete all the others coloums in FRISKVIK that aren't MALTALL
       if(grepl("\\S",FVdscr$ALTERNATIV_MALTALL)){
         FRISKVIK$MALTALL<-FRISKVIK[[FVdscr$ALTERNATIV_MALTALL]]
         kastkols<-setdiff(globs$FriskvikVals,"MALTALL")
         FRISKVIK[,(kastkols):=NA]
       }
+
 
 
       FRISKVIK<-FRISKVIK[,c(globs$FriskvikTabs,globs$FriskvikVals),with=FALSE]
