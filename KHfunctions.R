@@ -280,18 +280,12 @@ SettTotalKoder<-function(globs=FinnGlobs()){
 
 FinnStataExe <- function(){
 
-  nodename <- Sys.info()["nodename"]
-  citrix <- grepl("^INT", nodename)
-
   stata_bin <- "StataSE-64.exe"
 
-  if (citrix){
-    program_path <- "C:/Program Files/"
-  } else {
-    program_path <- "C:/Program Files (x86)/"
-  }
+  program_path <- c("C:/Program Files/", "C:/Program Files (x86)/")
 
   stata_prog <- grep("Stata", fs::dir_ls(program_path), value = TRUE)
+
   stata_ver <- stringi::stri_extract(stata_prog, regex="\\d{2}$")
   Vers <- max(as.numeric(stata_ver))
 
