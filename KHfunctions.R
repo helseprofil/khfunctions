@@ -281,7 +281,7 @@ SettTotalKoder<-function(globs=FinnGlobs()){
 FinnStataExe <- function(){
 
   nodename <- Sys.info()["nodename"]
-  citrix <- identical(stringi::stri_extract_first(nodename, regex="INT"), "INT")
+  citrix <- grepl("^INT", nodename)
 
   stata_bin <- "StataSE-64.exe"
 
@@ -292,7 +292,7 @@ FinnStataExe <- function(){
   }
 
   stata_prog <- grep("Stata", fs::dir_ls(program_path), value = TRUE)
-  stata_ver <- stringi::stri_extract_last(stata_prog, regex="\\d{2}")
+  stata_ver <- stringi::stri_extract(stata_prog, regex="\\d{2}$")
   Vers <- max(as.numeric(stata_ver))
 
   stata_path <- grep(Vers, stata_prog, value=TRUE)
