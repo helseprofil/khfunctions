@@ -259,21 +259,49 @@ SettTotalKoder<-function(globs=FinnGlobs()){
   return(TotKoder)
 }
 
-FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
-  Exe<-""
-  Vers<-0
-  i<-1
-  while (Exe=="" & i<=length(prior)){
-    tmpExe<-paste(PFpath,"\\Stata",prior[i],"\\StataSE-64.exe",sep="")
-    if (file.exists(tmpExe)){
-      Exe<-tmpExe
-      Vers<-prior[i]
-    }
-    i<-i+1
+
+## FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
+##   Exe<-""
+##   Vers<-0
+##   i<-1
+##   while (Exe=="" & i<=length(prior)){
+##     tmpExe<-paste(PFpath,"\\Stata",prior[i],"\\StataSE-64.exe",sep="")
+##     if (file.exists(tmpExe)){
+##       Exe<-tmpExe
+##       Vers<-prior[i]
+##     }
+##     i<-i+1
+##   }
+##   #Exe<-gsub("\\","\\\\",Exe)
+##   return(list(Exe=Exe,Vers=Vers))
+## }
+
+
+
+FinnStataExe <- function(){
+
+  nodename <- Sys.info()["nodename"]
+  citrix <- identical(stringi::stri_extract_first(nodename, regex="INT"), "INT")
+
+  stata_bin <- "StataSE-64.exe"
+
+  if (citrix){
+    program_path <- "C:/Program Files/"
+  } else {
+    program_path <- "C:/Program Files (x86)/"
   }
-  #Exe<-gsub("\\","\\\\",Exe)
-  return(list(Exe=Exe,Vers=Vers))
+
+  stata_prog <- grep("Stata", fs::dir_ls(program_path), value = TRUE)
+  stata_ver <- stringi::stri_extract_last(stata_prog, regex="\\d{2}")
+  Vers <- max(as.numeric(stata_ver))
+
+  stata_path <- grep(Vers, stata_prog, value=TRUE)
+  Exe <- file.path(stata_path, stata_bin)
+
+  return(list(Exe = Exe, Vers = Vers))
 }
+
+
 
 #GAMMEL, UTGÅTT
 SettKodeBokGn<-function(){
@@ -6251,7 +6279,7 @@ inspak <- function(pkg){
     install.packages(nypkg, dependencies = TRUE)
 }
 
-pkg <- c("RODBC", "DBI", "data.table", "glue", "fs", "logger", "magrittr")
+pkg <- c("RODBC", "DBI", "data.table", "glue", "fs", "logger", "magrittr", "stringi")
 ## sapply(pkg, require, character.only = TRUE)
 inspak(pkg)
 
