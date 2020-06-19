@@ -42,6 +42,14 @@
 
 ##0.2.3.1: Generalisert NaboAno til betinget
 
+## Another way to add packages. If exists then require else install
+list.of.packages <- c("RODBC","foreign","sas7bdat", "XML", "reshape2", "here", "glue", "logger", "zoo",
+                      "plyr","sqldf","stringr","intervals", "data.table","fs","readxl")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org/")
+sapply(list.of.packages, require, character.only = TRUE)
+
 
 
 require(RODBC)  #Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
@@ -114,11 +122,13 @@ filDB <- switch(test,
 
 ## Create log for path function use
 if (isFALSE(exists("makelog"))){makelog = FALSE}
-if (isTRUE(makelog)){ logFunction <- data.table(tid = Sys.time(), funksjon = "Start") }
+if (makelog){ logFunction <- data.table(id = 1, tid = Sys.time(), funksjon = "Start") }
 
 make_log <- function(x){
-  logFile <- data.table(tid = Sys.time(),
-                        funksjon = x)
+  if (isFALSE(exists("logFunction"))){
+    logFunction <- data.table(id = 1, tid = Sys.time(), funksjon = "Start")
+  }
+  logFile <- data.table(id = nrow(logFunction) + 1, tid = Sys.time(), funksjon = x)
   logFunction <- rbindlist(list(logFunction, logFile))
   assign("logFunction", logFunction, envir = .GlobalEnv)
 }
