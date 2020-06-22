@@ -1,8 +1,13 @@
-test <- function(){
+dbtest <- function(test = FALSE){
 
   if (!require(RODBC)) install.packages("RODBC")
   if (!require(data.table)) install.packages("data.table")
-  dbfile <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/KHELSA.mdb"
+
+ if( test){
+   dbfile <- "C:\\enc\\DBtest\\STYRING\\KHELSA_dev2.accdb"
+ } else {
+   dbfile <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/KHELSA.mdb"
+ }
 
   orgTb <- "ORIGINALFILER"
   khcon <- RODBC::odbcConnectAccess2007(dbfile)
@@ -12,7 +17,9 @@ test <- function(){
   head(orgDT)
 }
 
-test()
+dbtest()
+dbtest(TRUE)
+
 
 
 
@@ -44,6 +51,7 @@ sapply(pkg, require, character.only = TRUE)
 
 db_con <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
 MDBPATH <- "C:\\enc\\DBtest\\STYRING\\KHELSA_dev2.accdb"
+MDBPATH <- "C:\\enc\\DBtest\\STYRING\\KHELSA_dev.mdb"
 
 cs <- paste0(db_con, MDBPATH)
 con <- dbConnect(odbc::odbc(), .connection_string = cs)
