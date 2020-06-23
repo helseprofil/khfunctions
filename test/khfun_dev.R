@@ -2693,6 +2693,10 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
     make_log("FinnFilgruppeParametre")
   }
 
+  ## This function will add to the extracted object from table FILGRUPPER the VAL1 til VAL3 values
+  ## and located as $vals, $vals$col_value, $vals$col_value$miss and ...$sumbar.
+  ## amin, amax and ok are also added
+
   ## gruppe - Name of FILGRUPPE as it's
 
   logger::log_info("Entering function FinnFilgruppeparametre")
@@ -2705,13 +2709,16 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
 
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
 
-  ## Check FILGRUPPE name that are active ie. within time period specified
+  ## Check how many FILGRUPPE name that are active ie. within time period specified
   ## !OBS! Check if FGP is active via these variabler which aren't used anymore. VERSJONFRA and TIL
   ## are not updated!
   ## ---------------------------------------
   FGPaktiv<-as.integer(sqlQuery(globs$dbh,paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='",gruppe,"'",
                                                 "AND VERSJONFRA<=",datef," AND VERSJONTIL>", datef,"
                                         ",sep=""),as.is=TRUE))
+
+
+
 
   ## Check if FILGRUPPE name exists
   ## ----------------------------------
@@ -2758,7 +2765,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
 
 
 
-    ## Gets VAL1 to VAL3 input ie. navn,sumbar and miss
+    ## Gets VAL1 to VAL3 input ie. navn,sumbar (if possible to aggregate) and miss
     ## ------------------------------------------------
     ## create 'vals' list which is of values from VAL1,2,3 including alder min and max from
     ## ALDER_ALLE ie. amin and amax
@@ -2776,8 +2783,8 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
       val<-gsub("(VAL\\d+)navn","\\1",valf) #alternative is gsub("navn", "", valf)
 
       ## get the value for VAL1navn, VAL2navn and VAL2navn if exist
-      valn<-ifelse(is.na(FGP[[valf]]) || FGP[[valf]]=="",val,FGP[[valf]])
-      valmissf<-paste(val,"miss",sep="")
+      valn<-ifelse(is.na(FGP[[valf]]) || FGP[[valf]]=="",val,FGP[[valf]]) #create object f.eks VAL1
+      valmissf<-paste(val,"miss",sep="") #add miss to VAL1 to be VAL1miss
       valmiss<-ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]]=="","0",FGP[[valmissf]])
       valsumf<-paste(val,"sumbar",sep="")
       valsum<-ifelse(is.na(FGP[[valsumf]]) || FGP[[valsumf]]=="","0",FGP[[valsumf]])
