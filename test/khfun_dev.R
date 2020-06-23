@@ -103,7 +103,7 @@ originalPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
 
 if(isFALSE(exists("runtest"))) {runtest = FALSE}
 
-if(isTRUE(runtest)) {test = "Ja"} else {test = "Nei"}
+if((runtest)) {test = "Ja"} else {test = "Nei"}
 
 ## Path for Database
 defpaths <- switch(test,
@@ -207,7 +207,7 @@ globglobs<-list(
 SettDefDesignKH<-function(globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettDefDesignKH")
   }
 
@@ -243,14 +243,15 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
       DelKolsF[[del]]<-c(DelKolsF[[del]],unlist(str_split(DelKolE[[del]],",")))
     }
     for (kol in DelKols[[del]]){
+      ## List DelKols of DELnavn with value of DEL (refer KH_DELER table)
       KolsDel[[kol]]<-del
     }
   }
 
-  ## Get DEL for the specified OMKODbet is. U,B,F
-  UBeting<-Deler$DEL[Deler$OMKODbet=="U"]
-  BetingOmk<-Deler$DEL[Deler$OMKODbet=="B"]
-  BetingF<-Deler$DEL[Deler$OMKODbet=="F"]
+  ## Get DEL for the specified OMKODbet is. U,B,F - What this is for?
+  UBeting<-Deler$DEL[Deler$OMKODbet=="U"] #Gn, Y
+  BetingOmk<-Deler$DEL[Deler$OMKODbet=="B"] #A,K,U,S,L
+  BetingF<-Deler$DEL[Deler$OMKODbet=="F"] #T1,T2,T3
   OmkDel<-c(UBeting,BetingOmk) #Not used in the code but returned!
 
   ##IntervallHull<-list(A="DekkInt/TotInt>0.999 | (NTOT>=10 & NHAR/NTOT>0.8) | (TotInt<=20 & DekkInt>=10) | TotInt<=10")
@@ -287,13 +288,14 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
 
 SettKodeBokGlob<-function(globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettKodeBokGlob")
   }
 
   ## Merge tabels KH_OMKOD and KH_KODER and rename KH_KODER as in KH_OMKOD for merging. Assign 0 to
   ## 4 to PRI_OMKOD for prioritizing and 0-1 to OBLIG to mean obligatory or not from KH_KODER that
   ## doesn't have these colnames. KH_KODER tabel defines all the values in KH_OMKOD tabel
+  ## ORGKODE means Original Codes
   OmkodD<-sqlQuery(globs$dbh,"SELECT * FROM KH_OMKOD
                             UNION
                             SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE,
@@ -335,20 +337,20 @@ SettKodeBokGlob<-function(globs=FinnGlobs()){
 
 }
 
+
 SettLegitimeKoder<-function(globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettLegitimeKoder")
   }
-
-
 
   Koder<-sqlQuery(globs$dbh,"SELECT * FROM KH_KODER",as.is=TRUE,stringsAsFactors=FALSE)
   KodeL<-list()
   for (del in unique(Koder$DEL)){
     KodeD<-subset(Koder,DEL==del)
     if (globs$DefDesign$DelType[del]=="INT"){
+      # Year and Age have kode FROM_TO and need to be split ie. 15_60 means from 15 to 60 years old.
       KodeD<-cbind(KodeD,setNames(matrix(as.integer(str_split_fixed(KodeD$KODE,"_",2)),ncol=2),globs$DefDesign$DelKols[[del]]))
     }
     else if (globs$DefDesign$DelFormat[del]=="integer"){
@@ -365,11 +367,11 @@ SettLegitimeKoder<-function(globs=FinnGlobs()){
 
 SettTotalKoder<-function(globs=FinnGlobs()){
 
+  ## Get code where TOTAL is 1 in KH_KODER table and convert to the respective FORMAT
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettTotalKoder")
   }
-
 
   Koder<-sqlQuery(globs$dbh,"SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1",as.is=TRUE,stringsAsFactors=FALSE)
   TotKoder<-list()
@@ -387,7 +389,7 @@ SettTotalKoder<-function(globs=FinnGlobs()){
 FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnStataExe")
   }
 
@@ -410,7 +412,7 @@ FinnStataExe<-function (prior=15:11,PFpath="C:\\Program Files (x86)"){
 
 SettKodeBokGn<-function(){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettKodeBokGn")
   }
 
@@ -452,7 +454,7 @@ SettKodeBokGn<-function(){
 
 SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettGlobs")
   }
 
@@ -535,7 +537,15 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
   ## GEO id, names, valid from/to, GEO level (GEOniv) ie. Land/Fylke/Kommune/S/H/B and TYPE O/U
   GeoKoder<-data.table(sqlQuery(KHOc,"SELECT * from GEOKoder",as.is=TRUE),key=c("GEO"))
+
+  ## Get a vector of all ordinary Geokoder
   UtGeoKoder<-GeoKoder[TYP=="O"]$GEO ## !OBS! what is this?
+  ## TYP=0 er de Ordinære geokodene, TYP=U er
+  ## geokoder som angir "Uoppgitt" (slik som at 1199 er uopgitt kommune under fylket 11). Dette
+  ## filteret brukes når det produseres kuber og Firksvik-data, da blir det ikke rapportert tall for
+  ## U-koder, men disse må være med fram til da fordi de inngår i summer som lager totaler for høyere
+  ## geografisk nivå (1199 tall inngår i 11 osv).
+
   ## Recode for GEO to new GEO_omk. Col HARMstd is just for reference
   KnrHarm<-data.table(sqlQuery(KHOc,"SELECT * from KnrHarm",as.is=TRUE),key=c("GEO"))
   ## Use for data from NAV for GEO recoding based on Tygde offices
@@ -547,11 +557,12 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   ## In cases where raw data doesn't have kommune GEO but include only Bydele GEO. Then to get the
   ## Fylke or Land sum/total, summing up these depends if Bydeler will be treated as Kommune since
   ## it only has Bydeler or raw data has both Bydeler and Kommune GEO i.e Oslo.
+  ## Here a list (KnrHarms) consists of GEO and GEO_omk with added '00' at each end of number
   ##Gjelder ogs? for soner
   KnrHarmS<-lapply(KnrHarm[,c("GEO","GEO_omk"),with=FALSE],function(x){paste(x,"00",sep="")})
   ## Why use 00 when Sone is available in GeoKoder??
 
-
+  ## Combine all the Geo with 00 and without. All Geo are character and NOT numeric
   KnrHarmS<-cbind(as.data.frame(KnrHarmS,stringsAsFactors=FALSE),HARMstd=KnrHarm$HARMstd)
   KnrHarm<-rbind(KnrHarm,KnrHarmS)
   ##M? legge til de som ikke omkodes for ? lette bruk i merge
@@ -559,7 +570,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   ##KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],
   ## KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
 
-  ## GEO for Grunnkrets and period when they are valid
+  ## GEO for Grunnkrets and time period(From-To) when they are valid
   ## --------------------------------------------------
   ##GK til bydel. B?r konsolideres med KnrHarm
   GkBHarm<-data.table(sqlQuery(KHOc,"SELECT * FROM GKBydel2004T",as.is=TRUE),key=c("GK,Bydel2004"))
@@ -572,13 +583,14 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   Stata<-FinnStataExe()
   globs$StataExe<-Stata$Exe
   globs$StataVers<-Stata$Vers
+
   return(c(globs,list(GeoNavn=GeoNavn,GeoKoder=GeoKoder,UtGeoKoder=UtGeoKoder,KnrHarm=KnrHarm,GkBHarm=GkBHarm,TKNR=TKNR,HELSEREG=HELSEREG)))
 }
 
 
 FinnGlobs<-function(){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnGlobs")
   }
 
@@ -602,7 +614,7 @@ FinnGlobs<-function(){
 ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("ListAlleOriginalFiler")
   }
 
@@ -631,7 +643,7 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE, DBtest = FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagFilgruppe")
   }
 
@@ -830,7 +842,7 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     #Datostempel
     sqlQuery(globs$dbh,paste("UPDATE FILGRUPPER SET PRODDATO='",format(Sys.time(), "%Y-%m-%d %X"),"' WHERE FILGRUPPE='",gruppe,"'",sep=""))
 
-    ## CKH 1 : Breakpoint
+    ## CHK 1 : Breakpoint
 
     #SKRIV RESULTAT
     path<-globs$path
@@ -857,11 +869,12 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
 }
 
 
+
 #
 LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate(),globs=FinnGlobs(),printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagFlereFilgrupper")
   }
 
@@ -883,7 +896,7 @@ LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate()
 LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,globs=FinnGlobs(),
                            versjonert=FALSE,echo=TRUE,dumps=list()) {
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagTabellFraFil")
   }
 
@@ -1450,7 +1463,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 #
 LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=character()) {
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LesFil")
   }
 
@@ -1649,7 +1662,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
 KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quote = "\"",dec = ".",fill=FALSE,encoding = "unknown",blank.lines.skip=FALSE,na.strings=c("NA"),brukfread=TRUE,...) {
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("KHCsvread")
   }
 
@@ -1671,7 +1684,7 @@ KHCsvread<-function (filn,header=FALSE,skip=0,colClasses="character",sep=";",quo
 cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1,TomRadSlutt=FALSE,FjernTommeRader=FALSE,FjernTommeKol=TRUE,globs=FinnGlobs(),...){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("cSVmod")
   }
 
@@ -1805,7 +1818,7 @@ cSVmod<-function(DF,filbesk,header=TRUE,skip=0,slettRader=integer(0),sisteRad=-1
 LesMultiHead<-function(mhstr){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LesMultiHead")
   }
 
@@ -1884,7 +1897,7 @@ Xls2R.KH.Gammel<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.stri
 Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("NA"),ryddOpp=1,...){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("Xls2R.KH")
   }
 
@@ -1946,7 +1959,7 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
 Xls2TmpCsv<-function(xlsfil,sheet,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("Xls2TmpCsv")
   }
 
@@ -1967,7 +1980,7 @@ Xls2TmpCsv<-function(xlsfil,sheet,globs=FinnGlobs()){
 ReshapeTab<-function (DELF,filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("ReshapeTab")
   }
 
@@ -2029,7 +2042,7 @@ subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=in
 KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("KBomkod")
   }
 
@@ -2151,7 +2164,7 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
 
 GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("GEOvask")
   }
 
@@ -2271,7 +2284,7 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
 ALDERvask<-function(alder,filbesk=data.frame(),FGP=list(amin=0,amax=120),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("ALDERvask")
   }
 
@@ -2328,7 +2341,7 @@ ALDERvask<-function(alder,filbesk=data.frame(),FGP=list(amin=0,amax=120),batchda
 KJONNvask<-function (kjonn,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("KJONNvask")
   }
 
@@ -2356,7 +2369,7 @@ KJONNvask<-function (kjonn,filbesk=data.frame(),batchdate=SettKHBatchDate(),glob
 UTDANNvask<-function (utdann,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("UTDANNvask")
   }
 
@@ -2386,7 +2399,7 @@ UTDANNvask<-function (utdann,filbesk=data.frame(),batchdate=SettKHBatchDate(),gl
 SIVSTvask<-function (sivst,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SIVSTvask")
   }
 
@@ -2419,7 +2432,7 @@ SIVSTvask<-function (sivst,filbesk=data.frame(),batchdate=SettKHBatchDate(),glob
 LANDBAKvask<-function (landbak,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs(),regexp=FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LANDBAKvask")
   }
 
@@ -2454,7 +2467,7 @@ LANDBAKvask<-function (landbak,filbesk=data.frame(),batchdate=SettKHBatchDate(),
 AARvask<-function (aar,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("AARvask")
   }
 
@@ -2495,7 +2508,7 @@ SjekkDuplikater<-function(FG,filgruppe,
                           versjonert=FALSE,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SjekkDuplikater")
   }
 
@@ -2612,7 +2625,7 @@ SjekkDuplikater<-function(FG,filgruppe,
 
 SjekkDuplikaterFG<-function(filgruppe,FullResult=TRUE){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SjekkDuplikaterFG")
   }
 
@@ -2622,7 +2635,7 @@ SjekkDuplikaterFG<-function(filgruppe,FullResult=TRUE){
 FullDuplikatSjekk<-function(globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FullDuplikatSjekk")
   }
 
@@ -2643,7 +2656,7 @@ FullDuplikatSjekk<-function(globs=FinnGlobs()){
 #
 LesFilNo <-function(id,y="",globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LesFilNo")
   }
 
@@ -2662,7 +2675,7 @@ LesFilNo <-function(id,y="",globs=FinnGlobs()){
 LagTabellFraFilNo <-function(id,batchdate=SettKHBatchDate(),y="",globs=FinnGlobs(),echo=FALSE){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagTabellFraFilNo")
   }
 
@@ -2676,7 +2689,7 @@ LagTabellFraFilNo <-function(id,batchdate=SettKHBatchDate(),y="",globs=FinnGlobs
 FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
                                  globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnFilgruppeParametre")
   }
 
@@ -2789,7 +2802,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),
 FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnFilBeskGruppe")
   }
 
@@ -2854,7 +2867,7 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
 FinnFilBeskFilid<-function(filid,batchdate=NULL,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnFilBeskFilid")
   }
 
@@ -2885,7 +2898,7 @@ FinnFilBeskFilid<-function(filid,batchdate=NULL,globs=FinnGlobs()){
 FinnFilGruppeFraKoblid<-function(koblid,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("FinnFilGruppeFraKoblid")
   }
 
@@ -2896,7 +2909,7 @@ FinnFilGruppeFraKoblid<-function(koblid,globs=FinnGlobs()){
 TilFilLogg<-function (koblid,felt,verdi,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("TilFilLogg")
   }
 
@@ -2926,7 +2939,7 @@ TilFilLogg<-function (koblid,felt,verdi,batchdate=SettKHBatchDate(),globs=FinnGl
 SkrivKBLogg<-function(KB,type,filbesk,gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SkrivKBLogg")
   }
 
@@ -2938,7 +2951,7 @@ SkrivKBLogg<-function(KB,type,filbesk,gruppe,batchdate=SettKHBatchDate(),globs=F
 SVcloneRecord<-function(dbh,table,koblid){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SVcloneRecord")
   }
 
@@ -2961,7 +2974,7 @@ SVcloneRecord<-function(dbh,table,koblid){
 
 SetBuffer<-function(filer=c("BEFOLK"),globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SetBuffer")
   }
 
@@ -2981,7 +2994,7 @@ SetBuffer<-function(filer=c("BEFOLK"),globs=FinnGlobs()){
 
 readRDS_KH<-function(file,IDKOLS=FALSE,...){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("readRDS_KH")
   }
 
@@ -2996,7 +3009,7 @@ readRDS_KH<-function(file,IDKOLS=FALSE,...){
 LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs(),dumps=list()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagFlereKuber")
   }
 
@@ -3012,7 +3025,7 @@ LagFlereKuber<-function(KUBEidA,versjonert=FALSE,csvcopy=FALSE,globs=FinnGlobs()
 
 LagKubeDatertCsv<-function(KUBEID,dumps=list()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("LagKubeDatertCsv")
   }
 
@@ -3024,7 +3037,7 @@ LagKubeDatertCsv<-function(KUBEID,dumps=list()){
 KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FILbatch=NA,batchdate=SettKHBatchDate(),GeoHarmDefault=1,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("KlargjorFil")
   }
 
@@ -3160,7 +3173,7 @@ KlargjorFil<-function(FilVers,TabFSub="",rolle="",KUBEid="",versjonert=FALSE,FIL
 
 SettFilterDesign<-function(KUBEdscr,OrgParts=list(),bruk0=TRUE,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettFilterDesign")
   }
 
@@ -3239,7 +3252,7 @@ SettFilterDesign<-function(KUBEdscr,OrgParts=list(),bruk0=TRUE,FGP=list(amin=0,a
 SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,globs=FinnGlobs()){
 
 
-  if (isTRUE(makelog)){
+  if (makelog){
     make_log("SettFilInfoKUBE")
   }
 
@@ -6922,7 +6935,7 @@ KHglobs<-FinnGlobs()
 
 ## TEST
 testmsg <- "#============================#
-#---[ OBS!! Testing pÃ¥gÃ¥r ]--#
+#---[ OBS!! Testing mode er aktivert ]--#
 #============================#
 "
-if (isTRUE(runtest)){cat(testmsg)}
+if (runtest) cat(testmsg)
