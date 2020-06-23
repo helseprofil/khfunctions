@@ -22,6 +22,10 @@ dbtest(TRUE)
 
 
 
+## Check ODBC
+odbc::odbcListDrivers()
+
+
 
 ## TEST
 library(RODBC)
