@@ -561,8 +561,11 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   ##Gjelder ogs? for soner
   KnrHarmS<-lapply(KnrHarm[,c("GEO","GEO_omk"),with=FALSE],function(x){paste(x,"00",sep="")})
   ## Why use 00 when Sone is available in GeoKoder??
-
+##:ess-bp-start::browser@nil:##
+browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
+  
   ## Combine all the Geo with 00 and without. All Geo are character and NOT numeric
+  ## create a data.frame with columns GEO,GEO_omk, HARMstd where all GEO and GEO_omk have 00 at the end
   KnrHarmS<-cbind(as.data.frame(KnrHarmS,stringsAsFactors=FALSE),HARMstd=KnrHarm$HARMstd)
   KnrHarm<-rbind(KnrHarm,KnrHarmS)
   ##M? legge til de som ikke omkodes for ? lette bruk i merge
