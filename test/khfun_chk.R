@@ -68,8 +68,8 @@ fwrite(dt, paste(rawPath, "testPrikk.csv", sep = "\\"), sep = ";")
 ## Extract Original files with file types
 ## --------------------------------------
 
-dbfile <- "c:/enc/DBtest/STYRING/KHELSA_dev.mdb"
-
+## dbfile <- "c:/enc/DBtest/STYRING/KHELSA_dev.mdb"
+dbfile <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/KHELSA.mdb"
 
 library(RODBC)
 library(glue)
@@ -100,12 +100,12 @@ kobDT[, id := paste(FILID, FILGRUPPE, DELID, sep = "_")]
 kobDT[duplicated(id), .N]
 kobDT[duplicated(id), ] ## only missing has duplicated
 
+setkeyv(kobDT, c("FILID", "FILGRUPPE", "DELID"))
+kobDT[, double  := .N > 1, by = key(kobDT)]
+kobDT[double == 1, ]
+
 
 innCols <- c("FILGRUPPE", "DELID", "RSYNT1")## Select specific
-
-
-
-
 
 
 
