@@ -53,3 +53,14 @@ dim(dt)
 dt
 summary(dt)
 dt[level == 1, ]
+
+
+## EXCEL File for LesFil
+## ---------------------
+filgruppe <- "RFU_SIRUS_NH_ROYK_UTDANN"
+DT <- readRDS("C:\\enc\\DBtest\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\NYESTE\\RFU_SIRUS_NH_ROYK_UTDANN.rds")
+setDT(DT)
+DT[, .N, by = FYLKE]
+DT[, .N, by = GEO]
+
+filbesk <- FinnFilBeskGruppe(filgruppe = filgruppe)

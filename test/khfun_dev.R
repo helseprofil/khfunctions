@@ -561,12 +561,12 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   ##Gjelder ogs? for soner
   KnrHarmS<-lapply(KnrHarm[,c("GEO","GEO_omk"),with=FALSE],function(x){paste(x,"00",sep="")})
   ## Why use 00 when Sone is available in GeoKoder??
-##:ess-bp-start::browser@nil:##
-browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
   
   ## Combine all the Geo with 00 and without. All Geo are character and NOT numeric
   ## create a data.frame with columns GEO,GEO_omk, HARMstd where all GEO and GEO_omk have 00 at the end
   KnrHarmS<-cbind(as.data.frame(KnrHarmS,stringsAsFactors=FALSE),HARMstd=KnrHarm$HARMstd)
+
+  ## Merge the df ended with 00 and without
   KnrHarm<-rbind(KnrHarm,KnrHarmS)
   ##M? legge til de som ikke omkodes for ? lette bruk i merge
 
@@ -1479,13 +1479,17 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
   ## Add extra arguments for read csv..xls eg. sheet etc.
   opt<-filbesk$INNLESARG
 
-
+  ##:ess-bp-start::browser@nil:##
+browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
+  
 
   ## use FinnFilGruppeFraKoblid() function to get filgruppenavn
 
-  #Initier log
-  sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=",filbesk$KOBLID,"AND SV='S'",sep=""))
-  sqlQuery(globs$log,paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =",filbesk$KOBLID,",'",batchdate,"', 'S','",FinnFilGruppeFraKoblid(filbesk$KOBLID),"'",sep=""))
+  ## This logging is commented for testing purposes ONLY
+  ## --------------------------------------------------
+  ## #Initier log
+  ## sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=",filbesk$KOBLID,"AND SV='S'",sep=""))
+  ## sqlQuery(globs$log,paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =",filbesk$KOBLID,",'",batchdate,"', 'S','",FinnFilGruppeFraKoblid(filbesk$KOBLID),"'",sep=""))
 
   #Sjekk om fil eksisterer
   ## Should use file.exists(filn)
@@ -1511,6 +1515,12 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
       if (format=='XLS' || format =='XLSX'){
         expr<-paste("Xls2R.KH(filn",ifelse(is.na(opt),"",paste(",",opt,sep="")),",globs=globs)",sep="")
         xls<-eval(parse(text=expr))
+
+        ## ## Alternative ##
+        ## ark <- ifelse(is.na(opt), "", gsub("ark=", "", opt))
+        ## xls <- Xls2R.KH(filn, ark, globs = globs)
+        ## ##--------------
+        
         DF<-xls$DF
         ok<-xls$ok
         innleserr<-xls$err
@@ -1904,6 +1914,9 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
     make_log("Xls2R.KH")
   }
 
+  ##:ess-bp-start::browser@nil:##
+browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
+  
   err<-""
   ok<-1
   DF<-data.frame()
@@ -1912,12 +1925,19 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
   #rdbh<-odbcConnectExcel(xlsfil)
   #tables<-sqlTables(rdbh)$TABLE_NAME
   #close(rdbh)
-
+  
   ## Get extra arguments from ...
   ## -----------------------------
   arg <- list(...)
 
+  ## Get sheetsname
   tables<-excel_sheets(xlsfil)
+
+  ## ## Alternative
+  ## ##--------------
+  ## xwb <- openxlsx::loadWorkbook(xlsfil)
+  ## tables <- openxlsx::sheets(xwb)
+  
 
   tables<-gsub("\'","",tables)
   tables<-gsub("\\$","",tables)  #Something is strange with resepct to $ in R's regexp-syntax, but should work
@@ -1944,6 +1964,11 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
     }
 
     INNLES<-try(as.data.frame(read_excel(xlsfil,sheet=ark,col_names=FALSE,col_types="text",skip=skiprad,na=na.strings)))
+
+    ## ## Alternative
+    ## INNLES <- openxlsx::read.xlsx(xwb) #much faster!
+    ## ## Here tryCatch() can be use at once
+
     if(class(INNLES)=="try-error"){
       err<-INNLES
       ok<-0

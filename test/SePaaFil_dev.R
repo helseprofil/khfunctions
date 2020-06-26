@@ -49,7 +49,7 @@ trace("LagFilgruppe", tracer = quote(print(as.list(match.call()))),
 gpnavn <- c("ELEVUNDER", "INNVAND", "LESEFERD")
 
 ## Subset file for testing purposes
-gpnavnSub <- c("ELEVUNDER")
+gpnavnSub <- c("ELEVUNDER", "SYKEFRAV", "BEFOLK_STATBANK", "RFU_SIRUS_NH_ROYK_UTDANN")
 
 ## notes:
 ## ELEVUNDER is tested with PRIKKET
@@ -59,7 +59,7 @@ gpnavnSub <- c("ELEVUNDER")
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
 LagFilgruppe("LESEFERD") #CSV fil
 LagFilgruppe("ELEVUNDER", testfil = TRUE) #CSV fil testfile
-LagFilgruppe(gpnavnSub[1])
+LagFilgruppe(gpnavnSub[4], testfil = TRUE)
 LagFilgruppe(gpnavn[2]) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
 LagFilgruppe("UTDANN_NH",versjonert=TRUE)
