@@ -1,4 +1,4 @@
-fylkeCode;code;parentCode;level;name;shortName;notes;validFrom;validTo
+fylkeCode;kommuneCode;parentCode;level;name;shortName;notes;validFrom;validTo
 3;301;;1;Oslo;;;;
 11;1101;;1;Eigersund;;;;
 11;1103;;1;Stavanger;;;;

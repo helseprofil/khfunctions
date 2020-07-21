@@ -1,4 +1,4 @@
-kommuneCode;code;parentCode;level;name;shortName;notes;validFrom;validTo
+kommuneCode;grunnkretsCode;parentCode;level;name;shortName;notes;validFrom;validTo
 301;3010100;;1;Sentrum 1;;;;
 301;3010101;3010100;2;Sentrum 1  - Rode 1;;;;
 301;3010102;3010100;2;Sentrum 1  - Rode 2;;;;

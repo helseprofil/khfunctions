@@ -1,4 +1,4 @@
-kommuneCode;code;parentCode;level;name;shortName;notes;validFrom;validTo
+kommuneCode;bydelCode;parentCode;level;name;shortName;notes;validFrom;validTo
 301;30101;;1;Gamle Oslo;;;;
 301;30102;;1;Grünerløkka;;;;
 301;30103;;1;Sagene;;;;
