@@ -14,7 +14,7 @@ dim(fylke)
 oldName <- c("code", "name")
 newName <- c("fylkeCode", "fylkeName")
 setnames(fylke, oldName, newName)
-fylke[, year := 2020]
+fylke[, border := 2020]
 openxlsx::write.xlsx(fylke, "fylke.xlsx", colNames = TRUE)
 
 
@@ -25,7 +25,7 @@ kommune[, fylkeCode := as.numeric(gsub("\\d{2}$", "", code))]
 setcolorder(kommune, c(9, 1:8))
 newName <- c("kommuneCode", "kommuneName")
 setnames(kommune, oldName, newName)
-kommune[, year := 2020]
+kommune[, border := 2020]
 dim(kommune)
 ## fwrite(kommune, "ssb_kommune02.csv", sep = ";")
 ## write.csv2(kommune, "ssb_kommune03.csv", row.names = FALSE, fileEncoding = "native.enc")
@@ -38,7 +38,7 @@ dim(bydel)
 setcolorder(bydel, c(9, 1:8))
 newName <- c("bydelCode", "bydelName")
 setnames(bydel, oldName, newName)
-bydel[, year := 2020]
+bydel[, border := 2020]
 ## fwrite(bydel, "ssb_bydels02.csv", sep = ";")
 ## write.csv2(bydel, "ssb_bydels03.csv", row.names = FALSE, fileEncoding = "Latin1")
 write.xlsx(bydel, "ssb_bydel.xlsx", colNames = TRUE)
@@ -55,7 +55,7 @@ setnames(grunnkrets, oldName, newName)
 grunnkrets[, kommuneCode := 9999][, grunnkretsName := "Uoppgitt kommune"]
 ## setcolorder(grunnkrets, c(10, 9, 1:8))
 setcolorder(grunnkrets, c(9, 1:8))
-grunnkrets[, year := 2020]
+grunnkrets[, border := 2020]
 ## fwrite(grunnkrets, "ssb_grunnkrets02.csv", sep = ";")
 ## write.csv2(grunnkrets, "ssb_grunnkrets03.csv", row.names = FALSE, fileEncoding = "native.enc")
 write.xlsx(grunnkrets, "ssb_grunnkrets.xlsx", colNames = TRUE)
