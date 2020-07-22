@@ -9,6 +9,9 @@ getOption("encoding")
 ## gives consequence when inporting to ACCESS or Excel
 ## or uses openxlsx package to create xlsx file
 
+## ---------
+## 2020 GEO
+## ----------
 fylke <- fread("ssb_fylke.csv", fill = TRUE)
 dim(fylke)
 oldName <- c("code", "name")
@@ -76,3 +79,78 @@ grunnkrets[name %like% "Tysfjord", ]
 
 ## Trouble with encoding in Windows and workaround is to open csv in Excel
 ## then save.as Excel file before importing the Excel file in Access.
+
+
+## -----------
+## 2019 GEO
+## -----------
+
+## digit - how many digits from last to be excluded
+## level - granularity level ie. fylke, kommune etc
+## year - year the merging is valid for
+## oldName - varname to be changed
+## newName - variablename to change to
+## xlfile - to name the exported Excel file
+
+read_ssb <- function(file, digit, level, year, oldName, newName, xlfile){
+
+  if (missing(oldName)) oldName <- c("code", "name")
+
+  if (missing(digit)) digit <- 2
+  outDigit <- paste0("\\d{", digit, "}$")
+
+  if (missing(xlfile)) {
+    fileName <- sub("\\..*", "", file)
+    xlfile <- paste0(fileName, ".xlsx")
+  }
+
+  if (missing(newName)){
+    alln <- c('Code','Name')
+    newName <- sapply(alln, function(x) paste0(level, x))
+  }
+
+  dt <- data.table::fread(file, fill = TRUE)
+
+  upCode <- switch(level,
+                   "fylke" = "fylkeCode",
+                   "kommune" = "fylkeCode",
+                   "bydel" = "kommuneCode",
+                   "grunnkrets" = "kommuneCode"
+                   )
+
+  dt[, (upCode) := as.numeric(sub(outDigit, "", code))]
+
+  setcolorder(dt, c(9, 1:8))
+  setnames(dt, oldName, newName)
+  dt[, border := year]
+
+  dupName <- duplicated(names(dt))
+  if (sum(dupName) != 0) {
+    indCol <- which(dupName == TRUE)
+    dt[, (indCol) := NULL]
+  }
+
+  openxlsx::write.xlsx(dt, xlfile, colNames = TRUE)
+
+}
+
+
+
+## Fylke
+read_ssb(file = "ssb_fylke2019.csv",
+         level = "fylke",
+         digit = 0,
+         year = 2019
+         )
+
+read_ssb(file = "ssb_kommune2019.csv",
+         level = "kommune",
+         year = 2019)
+
+read_ssb(file = "ssb_grunnkrets2019.csv",
+         level = "grunnkrets",
+         year = 2019)
+
+read_ssb(file = "ssb_bydel2019.csv",
+         level = "bydel",
+         year = 2019)
