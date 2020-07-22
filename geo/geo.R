@@ -11,17 +11,23 @@ getOption("encoding")
 
 fylke <- fread("ssb_fylke.csv", fill = TRUE)
 dim(fylke)
-setnames(fylke, "code", "fylkeCode")
+oldName <- c("code", "name")
+newName <- c("fylkeCode", "fylkeName")
+setnames(fylke, oldName, newName)
+fylke[, year := 2020]
 openxlsx::write.xlsx(fylke, "fylke.xlsx", colNames = TRUE)
+
 
 ## Kommune
 kommune <- fread("ssb_kommune.csv", fill = TRUE)
 kommune[, fylkeCode := as.numeric(gsub("\\d{2}$", "", code))]
 ## or stri_extract_first_regex(5644, '\\d{2}')
 setcolorder(kommune, c(9, 1:8))
-setnames(kommune, "code", "kommuneCode")
+newName <- c("kommuneCode", "kommuneName")
+setnames(kommune, oldName, newName)
+kommune[, year := 2020]
 dim(kommune)
-fwrite(kommune, "ssb_kommune02.csv", sep = ";")
+## fwrite(kommune, "ssb_kommune02.csv", sep = ";")
 ## write.csv2(kommune, "ssb_kommune03.csv", row.names = FALSE, fileEncoding = "native.enc")
 write.xlsx(kommune, "ssb_kommune.xlsx", colNames = TRUE)
 
@@ -30,8 +36,10 @@ bydel <- fread("ssb_bydels.csv", fill = TRUE)
 bydel[, kommuneCode := as.numeric(gsub("\\d{2}$", "", code))]
 dim(bydel)
 setcolorder(bydel, c(9, 1:8))
-setnames(bydel, "code", "bydelCode")
-fwrite(bydel, "ssb_bydels02.csv", sep = ";")
+newName <- c("bydelCode", "bydelName")
+setnames(bydel, oldName, newName)
+bydel[, year := 2020]
+## fwrite(bydel, "ssb_bydels02.csv", sep = ";")
 ## write.csv2(bydel, "ssb_bydels03.csv", row.names = FALSE, fileEncoding = "Latin1")
 write.xlsx(bydel, "ssb_bydel.xlsx", colNames = TRUE)
 
@@ -39,12 +47,19 @@ write.xlsx(bydel, "ssb_bydel.xlsx", colNames = TRUE)
 ## Grunnkrets
 grunnkrets <- fread("ssb_grunnkrets.csv", fill = TRUE)
 grunnkrets[, kommuneCode := as.numeric(gsub("\\d{4}$", "", code))]
+## grunnkrets[, fylkeCode := as.numeric(gsub("\\d{2}$", "", kommuneCode))]
 dim(grunnkrets)
+newName <- c("grunnkretsCode", "grunnkretsName")
+setnames(grunnkrets, oldName, newName)
+## not included in the SSB data
+grunnkrets[, kommuneCode := 9999][, grunnkretsName := "Uoppgitt kommune"]
+## setcolorder(grunnkrets, c(10, 9, 1:8))
 setcolorder(grunnkrets, c(9, 1:8))
-setnames(grunnkrets, "code", "grunnkretsCode")
-fwrite(grunnkrets, "ssb_grunnkrets02.csv", sep = ";")
+grunnkrets[, year := 2020]
+## fwrite(grunnkrets, "ssb_grunnkrets02.csv", sep = ";")
 ## write.csv2(grunnkrets, "ssb_grunnkrets03.csv", row.names = FALSE, fileEncoding = "native.enc")
 write.xlsx(grunnkrets, "ssb_grunnkrets.xlsx", colNames = TRUE)
+
 
 
 ## Kommune fra grunnkrets som ikke finnes i Kommune tabell
