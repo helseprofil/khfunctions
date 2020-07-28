@@ -154,3 +154,27 @@ read_ssb(file = "ssb_grunnkrets2019.csv",
 read_ssb(file = "ssb_bydel2019.csv",
          level = "bydel",
          year = 2019)
+
+
+## Read Access DB
+## --------------
+dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
+dbName <- "geo_levels.accdb"
+
+
+## With odbc and DBI
+pkg <- c("odbc", "DBI")
+sapply(pkg, require, character.only = TRUE)
+
+dbCon <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
+dbFile <- paste(dbPath, dbName, sep = "/")
+
+cs <- paste0(dbCon, dbFile)
+con <- dbConnect(odbc::odbc(), .connection_string = cs)
+
+dbListTables(con)
+dbListTables(con, table_name = "tbl%") #all that start with tbl
+
+geoBasic <- dbReadTable(con, "tblFylke2020")
+## Encoding(geoBasic$fylkeName)
+Encoding(geoBasic$fylkeName) <- "Latin1"
