@@ -156,10 +156,12 @@ read_ssb(file = "ssb_bydel2019.csv",
          year = 2019)
 
 
+
 ## Read Access DB
 ## --------------
 dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
 dbName <- "geo_levels.accdb"
+
 
 
 ## With odbc and DBI
@@ -174,7 +176,45 @@ con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
 dbListTables(con)
 dbListTables(con, table_name = "tbl%") #all that start with tbl
+dbListTables(con, table_name = "%2020") #all end with 2020
 
 geoBasic <- dbReadTable(con, "tblFylke2020")
 ## Encoding(geoBasic$fylkeName)
 Encoding(geoBasic$fylkeName) <- "Latin1"
+
+
+tblNames <- c("tblFylke2020", "tblFylke2019")
+tblList <- lapply(tblNames, function(x) dbReadTable(con, x))
+names(tblList) = tblNames
+lapply(tblList, data.table::setDT)
+
+tblFylke2020 <- tblList[[1]]
+tblFylke2019 <- tblList[[2]]
+
+codeList <- tblFylke2020[["fylkeCode"]]
+tblFylke2019b <- tblFylke2019[!(fylkeCode %in% codeList), ]
+
+tblFylke <- data.table::rbindlist(list(tblFylke2020, tblFylke2019b))
+
+keepNames <- c("fylkeCode", "fylkeName", "border")
+delNames <- setdiff(names(tblFylke), keepNames)
+## tblFylke[, ..keepNames]
+
+## set(tblFylke,, keepNames, NULL)
+tblFylke[, (delNames) := NULL] 
+tblFylke[, geo := "fylke"]
+newNames <- c("code", "names")
+setnames(tblFylke, keepNames[1:2], newNames)
+
+Encoding(tblFylke$names) <- "latin1"
+
+
+
+
+read_tbl <- function(tbl1, tbl2, conn){
+
+  
+  
+
+}
+
