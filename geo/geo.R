@@ -230,6 +230,7 @@ Encoding(tblAll$name) <- "latin1"
 ## Function to join tables
 ## ---------------------------
 ## connection and database names should be specified first before running the function
+
 dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
 dbName <- "geo_ssb.accdb"
 
@@ -280,6 +281,9 @@ read_tbl <- function(granularity, conn = con, year = c(2019, 2020)){
 }
 
 
+## OBS! Grunnkrets csv file has problem with encoding when exported to Access!
+## Alternative is to save the csv file to .xlsx before importing to Access
+
 norge <- data.table::data.table(code = 0, name = "norge", border = 2020, granularity = "norge")
 fylke <- read_tbl("fylke")
 kommune <- read_tbl("kommune")
@@ -296,3 +300,5 @@ DT <- dbWriteTable(con, "tblGeo", geo, batch_rows = 1, overwrite = TRUE)
 ## Or append to exisiting table
 options(odbc.batch_rows = 1)
 dbAppendTable(con, "geo", geo)
+
+dbDisconnect(con)
