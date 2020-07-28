@@ -3,6 +3,7 @@
 library(data.table)
 
 rdsPath <- normalizePath("F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\DATERT", "/")
+rdsNew <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE"
 
 show_rds <- function(rdsPath, rdsFile){
 
@@ -23,3 +24,5 @@ show_rds(rdsPath, "BEF_INNV_NORSKFODT_2020-06-30-11-59.rds")
 
 dd <- show_rds(rdsPath, "ELEVUNDER_2020-07-01-16-14.rds")
 str(dd$subset)
+
+show_rds(rdsNew, "ELEVUNDER.rds")
