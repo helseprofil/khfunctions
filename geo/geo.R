@@ -177,19 +177,27 @@ dbFile <- paste(dbPath, dbName, sep = "/")
 cs <- paste0(dbCon, dbFile)
 con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
-
+dbGetInfo(con)
 dbListTables(con)
 dbListTables(con, table_name = "tbl%") #all that start with tbl
 dbListTables(con, table_name = "%2020") #all end with 2020
 
 geoBasic <- dbReadTable(con, "tblFylke2020")
+
 ## Encoding(geoBasic$fylkeName)
 Encoding(geoBasic$fylkeName) <- "Latin1"
 
-
-
 tblNames <- dbListTables(con, table_name = "tblfylke%")
 ## tblNames <- c("tblFylke2019", "tblFylke2020")
+
+## list column names
+dbListFields(con, tblNames[1])
+res <- dbSendQuery(con, "SELECT code, name FROM tblFylke2020")
+df <- dbFetch(res)
+df
+
+
+
 
 tblList <- lapply(tblNames, function(x) dbReadTable(con, x))
 names(tblList) = tblNames
