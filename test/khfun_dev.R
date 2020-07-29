@@ -641,17 +641,15 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##         Gir ferdige stablede filer i \\StablaFilGrupper
 ##########################################################
 
-## OBS! Add tesfil=FALSE for selecting file for testing
+## OBS! Add tesfil=TRUE for selecting file for testing
+## testfil is TRUE when column 'TESTING' is used for selecting the file to be processed
 
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE, DBtest = FALSE){
+LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list(),testfil = FALSE){
 
 
   if (makelog){
     make_log("LagFilgruppe")
   }
-
-  ## testfil is TRUE when column 'TESTING' is used for selecting the file to be processed
-  ## DBtest - FALSE to use test Path for saveRDS.
 
   ##Essensielt bare loop over alle delfiler/orignalfiler
   ##For hver orignalfil kj?res LagTabellFraFil
@@ -1479,8 +1477,6 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
   ## Add extra arguments for read csv..xls eg. sheet etc.
   opt<-filbesk$INNLESARG
 
-  ##:ess-bp-start::browser@nil:##
-browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
   
 
   ## use FinnFilGruppeFraKoblid() function to get filgruppenavn
@@ -1914,8 +1910,6 @@ Xls2R.KH<-function(xlsfil,ark="",globs=FinnGlobs(),brukfread=TRUE,na.strings=c("
     make_log("Xls2R.KH")
   }
 
-  ##:ess-bp-start::browser@nil:##
-browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
   
   err<-""
   ok<-1
@@ -2841,7 +2835,7 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
     make_log("FinnFilBeskGruppe")
   }
 
-
+  
   logger::log_info("--->> Entering function FinnFilBeskGruppe")
   ## cat("--->> Entering function FinnFilBeskGruppe \n")
   #Default er ? finne filbesk gyldige n? (Sys.time)
@@ -2869,12 +2863,13 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), ...){
               ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
               AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
               WHERE INNLESING.FILGRUPPE='",filgruppe,"'
-              AND TESTING = 1
+              AND ORIGINALFILER.TESTING = '1'
               AND ORIGINALFILER.IBRUKFRA<=",datef,"
               AND ORIGINALFILER.IBRUKTIL>", datef,"
               AND INNLESING.VERSJONFRA<=",datef,"
-              AND INNLESING.VERSJONTIL>",datef,sep=""
-              )
+              AND INNLESING.VERSJONTIL>",datef,sep="")
+    
+    
   } else {
 
     sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*

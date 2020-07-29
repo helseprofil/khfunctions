@@ -62,5 +62,38 @@ DT <- readRDS("C:\\enc\\DBtest\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\NYESTE\\RFU
 setDT(DT)
 DT[, .N, by = FYLKE]
 DT[, .N, by = GEO]
+names(DT)
+DT
 
 filbesk <- FinnFilBeskGruppe(filgruppe = filgruppe)
+
+
+## Explore RDS files
+## -----------------
+
+rdsPath <-normalizePath(
+  "F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\DATERT","/")
+
+rdsFile <- c("ABORT_NH_2020-03-09-09-12.rds", #1
+             "ARBLEDIGE_2020-03-25-18-08.rds", #2
+             "BARNEHAGE_KVALITET_2020-06-18-15-47.rds", #3
+             "ELEVUNDER_NH_2020-03-16-16-36.rds", #4
+             "ELEVUNDER_2020-07-23-15-44.rds") #5
+
+
+## Check file
+valgF <- paste(rdsPath, rdsFile[5], sep = "/")
+
+dt <- readRDS(valgF)
+data.table::setDT(dt)
+names(dt)
+dt
+
+summary(dt)
+dname <- names(dt)
+dt[, .N, get(dname[1])]
+
+for (j in dname) {
+  print(j)
+  print(dt[, .N, keyby = j])
+ }
