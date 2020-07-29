@@ -117,7 +117,7 @@ defpaths <- switch(test,
 ## Database filename
 filDB <- switch(test,
                 "Nei" = "KHELSA.mdb",
-                "Ja" = "KHELSA_dev.mdb")
+                "Ja" = "KHELSA_dev.accdb")
 
 
 ## Create log for path function use
