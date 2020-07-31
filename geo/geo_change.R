@@ -68,6 +68,12 @@ grunnkretsChg <- merge_geo(
 )
 
 
+## Merge all to a table as lookup-tbl
+## -----------------------------------
+
+tblComplete <- rbindlist(list(fylkeChg, kommuneChg, grunnkretsChg))
+keepCols <- c("geo2020", "geo2019", "name")
+tblComplete[, setdiff(names(tblComplete), keepCols) := NULL]
 
 ## -----------------
 ## Connect to DB
@@ -87,11 +93,12 @@ cs <- paste0(dbCon, dbFile)
 con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
 
+
 ## Write table to Access
 dbWriteTable(con, "tblFylkeChg2020", fylkeChg, batch_rows = 1, overwrite = TRUE)
 dbWriteTable(con, "tblKommuneChg2020", kommuneChg, batch_rows = 1, overwrite = TRUE)
 dbWriteTable(con, "tblGrunnkretsChg2020", grunnkretsChg, batch_rows = 1, overwrite = TRUE)
-
+dbWriteTable(con, "tblGeoChange", tblComplete, batch_rows = 1, overwrite = TRUE)
 
 ## Or append to exisiting table
 options(odbc.batch_rows = 1)
