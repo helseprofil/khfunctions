@@ -44,7 +44,7 @@ merge_geo <- function(geo_new, geo_chg, file_path){
   ## Merge
   DT <- xlTbl[dt, on = c(geo2020 = "code")]
 
-  return(DT)
+ return(DT)
 
 }
 
@@ -66,6 +66,49 @@ grunnkretsChg <- merge_geo(
   geo_chg = "grunnkrets_change_ssb.xlsx",
   file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo"
 )
+
+
+
+## -----------------
+## Connect to DB
+## -----------------
+
+dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
+dbName <- "geo_ssb.accdb"
+
+## With odbc and DBI
+pkg <- c("odbc", "DBI")
+sapply(pkg, require, character.only = TRUE)
+
+dbCon <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
+dbFile <- paste(dbPath, dbName, sep = "/")
+
+cs <- paste0(dbCon, dbFile)
+con <- dbConnect(odbc::odbc(), .connection_string = cs)
+
+
+## Write table to Access
+dbWriteTable(con, "tblFylkeChg2020", fylkeChg, batch_rows = 1, overwrite = TRUE)
+dbWriteTable(con, "tblKommuneChg2020", kommuneChg, batch_rows = 1, overwrite = TRUE)
+dbWriteTable(con, "tblGrunnkretsChg2020", grunnkretsChg, batch_rows = 1, overwrite = TRUE)
+
+
+## Or append to exisiting table
+options(odbc.batch_rows = 1)
+dbAppendTable(con, "geo", geo)
+
+dbDisconnect(con)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
