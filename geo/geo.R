@@ -302,11 +302,62 @@ geo <- data.table::rbindlist(list(norge, fylke, kommune, grunnkrets, bydel))
 
 geo[, .N, by = granularity]
 
+## Create all granularity level
+## ----------------------------
+
+geo[granularity == "fylke", fylke := code]
+
+geo[granularity == "kommune", kommune := code]
+geo[granularity == "kommune", fylke := gsub("\\d{2}$", "", kommune)]
+
+geo[granularity == "bydel", bydel := code]
+geo[granularity == "bydel", fylke := gsub("\\d{4}$", "", code)]
+geo[granularity == "bydel", kommune := gsub("\\d{2}$", "", code)]
+
+geo[granularity == "grunnkrets", grunnkrets := code]
+geo[granularity == "grunnkrets", fylke := gsub("\\d{6}$", "", code)]
+geo[granularity == "grunnkrets", kommune := gsub("\\d{4}$", "", code)]
+
+
 ## Write table to Access
-DT <- dbWriteTable(con, "tblGeo", geo, batch_rows = 1, overwrite = TRUE)
+dbWriteTable(con, "tblGeo", geo, batch_rows = 1, overwrite = TRUE)
 
 ## Or append to exisiting table
 options(odbc.batch_rows = 1)
 dbAppendTable(con, "geo", geo)
 
 dbDisconnect(con)
+
+
+
+### -------------
+## DRAFT
+##---------------
+## make sample of 5 of each granularity
+dd <- geo[sample(.N), c(.SD[1:5],.N), by=granularity]
+
+dd[granularity == "fylke", fylke := code]
+
+dd[granularity == "kommune", kommune := code]
+dd[granularity == "kommune", fylke := gsub("\\d{2}$", "", kommune)]
+
+dd[granularity == "bydel", bydel := code]
+dd[granularity == "bydel", fylke := gsub("\\d{4}$", "", code)]
+dd[granularity == "bydel", kommune := gsub("\\d{2}$", "", code)]
+
+## ## - Doesn't work with magrittr or chaining
+## dd[granularity == "grunnkrets", grunnkrets := code] %>%
+##   .[, fylke := gsub("\\d{6}$", "", code)] %>%
+##   .[, kommune := gsub("\\d{4}$", "", code)]
+
+## dd[granularity == "grunnkrets", grunnkrets := code][
+##   , fylke := gsub("\\d{6}$", "", code)][
+##   , kommune := gsub("\\d{4}$", "", code)]
+
+dd[granularity == "grunnkrets", grunnkrets := code]
+dd[granularity == "grunnkrets", fylke := gsub("\\d{6}$", "", code)]
+dd[granularity == "grunnkrets", kommune := gsub("\\d{4}$", "", code)]
+
+
+library(stringi)
+dd[granularity == "kommune", kommune := code][, fylke := stri_extract_last_regex(code, "\\d{2}")]
