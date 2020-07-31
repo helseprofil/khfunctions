@@ -15,10 +15,41 @@ con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
 ## RDS file Path
 rdsPath <- normalizePath("C:\\enc\\DBtest\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\NYESTE", "/")
+## Source Path
+srcPath <- normalizePath("F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\ORGDATA\\UDIR\\ELEVUNDER\\ORG\\2017", "/")
 
-rdsFile <- paste(rdsPath, "ELEVUNDER.rds", sep = "/")
+show_rds <- function(rdsPath, srcPath, rdsFile, srcFile){
 
-dt <- readRDS(rdsFile)
+  fileName <- file.path(rdsPath, rdsFile)
+  dt <- readRDS(fileName)
+  dtNames <- names(dt)
+  data.table::setDT(dt)
+  rowSelect <- sample(1:nrow(dt), 5)
+  subdt <- dt[rowSelect, ]
+  geo <- unique(dt$GEOniv)
+
+  ## source file
+  fileExt <- tools::file_ext(srcFile)
+  srcName <- file.path(srcPath, srcFile)
+  srcDT <- switch(fileExt,
+                  "csv" = {data.table::fread(srcName)},
+                  "xlsx" = {readxl::read_excel(srcName)},
+                  {readxl::read_excel(srcName)} #default
+                  )
+
+  list(colnames = dtNames, geo = geo, dt = dt, src = srcDT)
+}
+
+filNames <- c("ELEVUNDER.rds", "INNTULIKHET.rds")
+srcName <- "Elev_2015.csv"
+
+## ELEVUNDER
+DT <- show_rds(rdsPath,
+               srcPath,
+               rdsFile = "ELEVUNDER.rds",
+               srcFile = "Elev_2015.csv")
+
+dt <- DT$dt
 setDT(dt)
 names(dt)
 dt
@@ -31,7 +62,9 @@ for (j in dname) {
  }
 
 dt[GEO == "0101", ]
-
+dt[GEO == "0", ]
+dt[GEO == "1014", ]
+dt[GEO == "1804", ] #Bodo
 
 ## Source File
 srcPath <- "F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\ORGDATA\\UDIR\\ELEVUNDER\\ORG\\2017"
@@ -40,4 +73,12 @@ srcFile <- paste(srcPath, srcName, sep = "\\")
 
 DT <- fread(srcFile)
 names(DT)
+DT[GeografiId == "1014"]
 DT[GeografiId == "0101", ]
+DT[GeografiId == "1804", ] #Bodø
+
+## Spørsmål - Hvordan får man tallet til TOTANT
+
+
+## - INNTULIKHET
+DT <- show_rds(rdsPath, "INNTULIKHET.rds")
