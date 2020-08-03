@@ -25,6 +25,7 @@ merge_geo <- function(geo_new, geo_chg, year, type, file_path = NULL){
     fileNew <- geo_new
   }
 
+
   ## Geo change
   xlTbl <- readxl::read_excel(fileChg)
   names(xlTbl) <- c("new", "old")
@@ -74,22 +75,104 @@ file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo\\kommune"
 
 ## Select files
 select_ssb <- function(grep.file, grep.change, file.path){
-  komfil <- fs::dir_ls(file.path)
-  filInd <- grep(grep.file, komfil, ignore.case = TRUE)
-  chgInd <- grep(grep.change, komfil[filInd])
-  chgFil <- komfil[filInd][chgInd]
-  komList <- komfil[filInd][-chgInd]
-  list(chgfile = chgFil, komfile = komList)
+  files <- fs::dir_ls(file.path)
+  filInd <- grep(grep.file, files, ignore.case = TRUE)
+  chgInd <- grep(grep.change, files[filInd])
+  chgFil <- files[filInd][chgInd]
+  codeList <- files[filInd][-chgInd]
+  list(chgfile = chgFil, allfile = codeList)
 }
 
+## Find geo codes that have changed more than once
+## -----------------------------------------------
+## Check if current codes in previous year is.element in previous codes of current year
+## showing that the codes have changed again since previous change
+
+check_element <- function(filenew, filepre){
+
+  DT <- filenew[["DT"]]
+  dt <- filepre[["DT"]]
+  vecNew <- DT$prev
+  vecOld <- dt[!is.na(year), curr]
+  chg <- is.element(vecOld, vecNew)
+  sumChg <- sum(chg)
+  vecChg <- vecOld[chg]
+
+  list(total = sumChg, chg = vecChg)
+}
+
+
+## Merge changes of geo codes from previous change ie. code that have changed in 2018
+## and have new changes in 2020. Then get the previous codes in 2018 from previous code columns
+##
+## 30240317 (in 2020) from 2190317 (2019) but was 2190314 (2018)
+
+## raw - if using an exsiting join_change table
+join_change <- function(newfile, prevfile, raw = TRUE){
+  
+  if (raw){
+    elMix <- check_element(newfile, prevfile)
+  } else {
+    vecNew <- newfile[["DT"]]$prev
+    indelm <- is.element(vecNew, prevfile[["curr"]])
+    elMix <- data.table(chg = vecNew[indelm])
+  }
+
+  
+  dtNew <- newfile[["DT"]]
+  altNew <- dtNew[prev  %in% elMix$chg, ]
+
+  if (raw){
+    dtPre <- prevfile[["DT"]]
+    altPre <- dtPre[curr  %in% elMix$chg, ]
+  } else {
+   altPre <- prevfile
+  }
+
+  allFile <- merge(altNew, altPre,
+                   by.x = "prev", by.y = "curr",
+                   all = TRUE)
+
+  keepCols <- c("curr", "currName.x", "prev.y", "prevName.y", "year.y")
+  newName <- c("currName", "prev", "prevName", "year")
+
+  allFile[, setdiff(names(allFile), keepCols) := NULL]
+  setnames(allFile, keepCols[-1], newName)
+
+  return(allFile[])
+}
+
+
+## -----------------
+## Connect to DB
+## -----------------
+
+dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
+dbName <- "geo_ssb.accdb"
+
+## With odbc and DBI
+pkg <- c("odbc", "DBI")
+sapply(pkg, require, character.only = TRUE)
+
+dbCon <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
+dbFile <- paste(dbPath, dbName, sep = "/")
+
+cs <- paste0(dbCon, dbFile)
+con <- dbConnect(odbc::odbc(), .connection_string = cs)
+
+
+
+## -----------------
 ## Kommune endringer
+## -----------------
+
 kom2017 <- select_ssb(grep.file = "jan2017",
                       grep.change = "change",
                       file.path = file_path
                       )
 
 komChg2017 <- merge_geo(
-  geo_new = kom2017$komfile,
+  geo_new = kom2017$allfile,
   geo_chg = kom2017$chgfile,
   year = 2017,
   type = "kommune"
@@ -101,7 +184,7 @@ kom2018 <- select_ssb(grep.file = "jan2018",
                       )
 
 komChg2018 <- merge_geo(
-  geo_new = kom2018$komfile,
+  geo_new = kom2018$allfile,
   geo_chg = kom2018$chgfile,
   year = 2018,
   type = "kommune"
@@ -113,7 +196,7 @@ kom2019 <- select_ssb(grep.file = "jan2019",
                       )
 
 komChg2019 <- merge_geo(
-  geo_new = kom2019$komfile,
+  geo_new = kom2019$allfile,
   geo_chg = kom2019$chgfile,
   year = 2019,
   type = "kommune"
@@ -126,7 +209,7 @@ kom2020 <- select_ssb(grep.file = "jan2020",
                       )
 
 komChg2020 <- merge_geo(
-  geo_new = kom2020$komfile,
+  geo_new = kom2020$allfile,
   geo_chg = kom2020$chgfile,
   year = 2020,
   type = "kommune"
@@ -162,16 +245,6 @@ grunnkretsChg2020$prev[chgInd2020]
 ## Get all old geo codes for Grunnkrets
 ## --------------------------------------
 file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo\\grunnkrets"
-
-## Select files
-select_ssb <- function(grep.file, grep.change, file.path){
-  grunnkretsfil <- fs::dir_ls(file.path)
-  filInd <- grep(grep.file, grunnkretsfil, ignore.case = TRUE)
-  chgInd <- grep(grep.change, grunnkretsfil[filInd])
-  chgFil <- grunnkretsfil[filInd][chgInd]
-  grunnkretsList <- grunnkretsfil[filInd][-chgInd]
-  list(chgfile = chgFil, allfile = grunnkretsList)
-}
 
 ## Grunnkrets endringer
 grunnkrets2016 <- select_ssb(grep.file = "jan2016",
@@ -244,48 +317,40 @@ grunnkretsChg2020 <- merge_geo(
 ## Check if current codes in previous year is.element in previous codes of current year
 ## showing that the codes have changed again since previous change
 
-check_element <- function(filenew, filepre){
-
-  DT <- filenew[["DT"]]
-  dt <- filepre[["DT"]]
-  vecNew <- DT$prev
-  vecOld <- dt[!is.na(year), curr]
-  chg <- is.element(vecOld, vecNew)
-  sumChg <- sum(chg)
-  vecChg <- vecOld[chg]
-
-  list(total = sumChg, chg = vecChg)
-}
-
-
 elem2017 <- check_element(grunnkretsChg2017, grunnkretsChg2016)
 elem2018 <- check_element(grunnkretsChg2018, grunnkretsChg2017)
 elem2019 <- check_element(grunnkretsChg2019, grunnkretsChg2018)
 elem2020 <- check_element(grunnkretsChg2020, grunnkretsChg2019)
 
+## check all previous changes
+chg2018_2017 <- join_change(grunnkretsChg2018, grunnkretsChg2017)
+chg2019_2017 <- join_change(grunnkretsChg2019, grunnkretsChg2017)
+chg2019_2018 <- join_change(grunnkretsChg2019, grunnkretsChg2018)
 
-(newChg <- grunnkretsChg2018$DT$prev[elem2018$chg])
+## add all the changes to the current geo ie. 2020
+chg2020_1817 <- join_change(grunnkretsChg2020, chg2018_2017, raw = FALSE)
+chg2020_2016 <- join_change(grunnkretsChg2020, grunnkretsChg2016)
+chg2020_2017 <- join_change(grunnkretsChg2020, grunnkretsChg2017)
+chg2020_2018 <- join_change(grunnkretsChg2020, grunnkretsChg2018)
+chg2020_2019 <- join_change(grunnkretsChg2020, grunnkretsChg2019)
 
+## Merge all changes datasets ie. Excel files and changes from previous current i.e alt2019_2020
+## This file only consist grunnkrets that have changed codes
+grunDT <- rbindlist(list(
+  chg2020_1817,
+  chg2020_2016,
+  chg2020_2017,
+  chg2020_2018,
+  chg2020_2019
+))
 
-new2018 <- read_excel(paste(file_path, "grunnkrets_change_ssb_jan2018.xlsx", sep = "/"))
-setDT(new2018)
-new2018[]
+## Merge to current Geo ie. 2020
 
+grunGEO <- rbindlist(list(grunnkretsChg2020$DT, grunDT), fill = TRUE)
+setkeyv(grunGEO, "curr")
 
-
-chgInd2019 <- is.element(grunnkretsChg2019$prev, grunnkretsChg2018$curr[!is.na(grunnkretsChg2018$year)])
-sum(chgInd2019)
-grunnkretsChg2019$prev[chgInd2019]
-
-chgInd2020 <- is.element(grunnkretsChg2020$prev, grunnkretsChg2019$curr[!is.na(grunnkretsChg2019$year)])
-sum(chgInd2020)
-grunnkretsChg2020$prev[chgInd2020]
-
-
-
-
-
-
+grunGEO[duplicated(curr) | duplicated(curr, fromLast = TRUE), ]
+dbWriteTable(con, "tblGrunnkretsChange", grunGEO, batch_rows = 1, overwrite = TRUE)
 
 
 
@@ -406,3 +471,23 @@ f2020 <- fread(f2020file, fill = TRUE)
 f2020[, setdiff(names(f2020), c("code", "name")) := NULL]
 
 tblAlle <- xlTbl[f2020, on = c(curr = "code")]
+
+
+
+## Join changes
+elem2020
+(newChg <- grunnkretsChg2020$DT[prev  %in% elem2020$chg, ])
+newChg
+## Inspect raw data 2018
+raw2020 <- read_excel(grunnkretsChg2020$fileChg)
+
+## Extract codes that have several alterations and carry forward
+## the previous codes from 2019 ie. previous.y column to 2020
+alt2019 <- grunnkretsChg2019$DT[curr  %in% elem2020$chg, ]
+alt2020 <- grunnkretsChg2020$DT[prev  %in% elem2020$chg, ]
+
+alt2019_2020 <- merge(alt2020, alt2019, by.x = "prev", by.y = "curr", all = TRUE)
+## keep only the current in 2020 and previous column in 2019
+alt2019_2020[, setdiff(names(alt2019_2020), c("curr", "currName.x", "prev.y", "year.y", "prevName.y")) := NULL]
+setnames(alt2019_2020, c("currName.x", "prev.y","prevName.y", "year.y"), c("currName", "prev", "prevName", "year"))
+
