@@ -250,9 +250,9 @@ check_element <- function(filenew, filepre){
   dt <- filepre[["DT"]]
   vecNew <- DT$prev
   vecOld <- dt[!is.na(year), curr]
-  chg <- is.element(vecNew, vecOld)
+  chg <- is.element(vecOld, vecNew)
   sumChg <- sum(chg)
-  vecChg <- vecNew[chg]
+  vecChg <- vecOld[chg]
 
   list(total = sumChg, chg = vecChg)
 }
@@ -264,7 +264,7 @@ elem2019 <- check_element(grunnkretsChg2019, grunnkretsChg2018)
 elem2020 <- check_element(grunnkretsChg2020, grunnkretsChg2019)
 
 
-(newChg <- grunnkretsChg2018$[elem2018$chg])
+(newChg <- grunnkretsChg2018$DT$prev[elem2018$chg])
 
 
 new2018 <- read_excel(paste(file_path, "grunnkrets_change_ssb_jan2018.xlsx", sep = "/"))
