@@ -73,12 +73,14 @@ merge_geo <- function(geo_new, geo_chg, year, type, file_path = NULL){
 }
 
 
+## Get all old geo codes
 ## --------------------------------------
-## Get all old geo codes for Kommune
-## --------------------------------------
-file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo\\kommune"
+## Select files with regex
+## grep.file - Get downloaded CSV file from SSB. File should ended with month and year f.eks
+## ..jan2019.csv. Regular expression will read "jan2019"
+## grep.change - Get the changes file in xlsx copy/paste from SSB and file name should has the word
+## "change". Regexp will find word "change"
 
-## Select files
 select_ssb <- function(grep.file, grep.change, file.path){
   files <- fs::dir_ls(file.path)
   filInd <- grep(grep.file, files, ignore.case = TRUE)
@@ -147,29 +149,61 @@ join_change <- function(newfile, prevfile, raw = TRUE){
   return(allFile[])
 }
 
+## Convert raw CSV files to R
+## --------------------------
+## file - The output after running select_ssb()
+## type - Data type ie. kommune, fylke, grunnkrets etc
+convert_file <- function(file, type = NULL){
+
+  allFiles <- file[["allfile"]]
+  for (i in 1:length(allFiles)){
+    file <- allFiles[i]
+    fnum <- paste0(type, "0", i)
+    dt <- data.table::fread(file, fill = TRUE)
+    cols <- c("parentCode", "shortName", "validFrom", "validTo")
+    for (j in cols) set(dt, j = j, value = as.numeric(dt[[j]]))
+    DT <- list(file = file, dt = dt)
+    assign(fnum, DT, env = .GlobalEnv)  
+  }
+}
+
 
 ## -----------------
 ## Connect to DB
 ## -----------------
+connect_db <- function(on = TRUE){
 
-dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
-dbName <- "geo_ssb.accdb"
+  if (on){
+    dbPath <- normalizePath("C:\\Users\\ybka\\Folkehelseinstituttet\\Folkehelseprofiler - Data mining\\geo_level", winslash = "/")
+    dbName <- "geo_ssb.accdb"
 
-## With odbc and DBI
-pkg <- c("odbc", "DBI")
-sapply(pkg, require, character.only = TRUE)
+    ## With odbc and DBI
+    pkg <- c("odbc", "DBI")
+    sapply(pkg, require, character.only = TRUE)
 
-dbCon <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
-dbFile <- paste(dbPath, dbName, sep = "/")
+    dbCon <- "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq="
+    dbFile <- paste(dbPath, dbName, sep = "/")
 
-cs <- paste0(dbCon, dbFile)
-con <- dbConnect(odbc::odbc(), .connection_string = cs)
+    cs <- paste0(dbCon, dbFile)
+    con <- dbConnect(odbc::odbc(), .connection_string = cs)
+  } else { 
+    dbDisconnect(con)
+  }
+
+}
+
+
+## -----------------
+## Fylke
+## -----------------
 
 
 
 ## -----------------
 ## Kommune endringer
 ## -----------------
+
+file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo\\kommune"
 
 kom2017 <- select_ssb(grep.file = "jan2017",
                       grep.change = "change",
@@ -224,24 +258,39 @@ komChg2020 <- merge_geo(
 ## -----------------------------------------------
 ## Check if current codes in previous year is.element in previous codes of current year
 
-chgInd2018 <- is.element(komChg2018$prev, komChg2017$curr[!is.na(komChg2016$year)])
-sum(chgInd2018)
-komChg2018$prev[chgInd2018]
+join_change(newfile = komChg2018, prevfile = komChg2017) #no changes
+join_change(newfile = komChg2019, prevfile = komChg2017) #no changes
+join_change(newfile = komChg2019, prevfile = komChg2018) #no changes
+(kom2020_2017 <- join_change(newfile = komChg2020, prevfile = komChg2017)) # 3 changes
+(kom2020_2018 <- join_change(newfile = komChg2020, prevfile = komChg2018)) # 26 changes
+(kom2020_2019 <- join_change(newfile = komChg2020, prevfile = komChg2019)) # no changes
 
-chgInd2019 <- is.element(komChg2019$prev, grunnkretsChg2018$curr[!is.na(grunnkretsChg2018$year)])
-sum(chgInd2019)
-grunnkretsChg2019$prev[chgInd2019]
+## Merge all kommune that have changes since 2017
+komDT <- rbindlist(list(kom2020_2017,
+                         kom2020_2018))
 
-chgInd2020 <- is.element(grunnkretsChg2020$prev, grunnkretsChg2019$curr[!is.na(grunnkretsChg2019$year)])
-sum(chgInd2020)
-grunnkretsChg2020$prev[chgInd2020]
+## Merge to current Geo ie. 2020
+komGEO <- rbindlist(list(komChg2020$DT, komDT), fill = TRUE)
+setkeyv(komGEO, "code")
 
+komGEO[duplicated(code) | duplicated(code, fromLast = TRUE), ]
+dbWriteTable(con, "tblKommuneChange", komGEO, batch_rows = 1, overwrite = TRUE)
 
-## Merge all the changes files when previous code changes have been handled
+dbDisconnect(con)
 
+## Get all kommune CSV files
+komFiles <- select_ssb("kommune", "change", file_path)
 
+convert_file(komFiles, "kommune")
 
+connect_db()
+## kommune 2017 - two changes in Jan and Apr. Changes in April is used here
+kommune02
+dbWriteTable(con, "tblKommune2017", kommune02$dt, batch_rows = 1, overwrite = TRUE)
 
+## kommune 2018
+kommune06
+dbWriteTable(con, "tblKommune2018", kommune06$dt, batch_rows = 1, overwrite = TRUE)
 
 
 
@@ -356,10 +405,19 @@ setkeyv(grunGEO, "code")
 grunGEO[duplicated(code) | duplicated(code, fromLast = TRUE), ]
 dbWriteTable(con, "tblGrunnkretsChange", grunGEO, batch_rows = 1, overwrite = TRUE)
 
+dbDisconnect(con)
 
 
+## Convert all CSV file to R
+grunnFiles <- select_ssb("grunnkrets", "change", file_path)
 
+convert_file(grunnFiles, type = "grunn")
 
+connect_db()
+## Send grunnkrets files to Access
+dbWriteTable(con, "tblGrunnkrets2016", grunn01$dt, batch_rows = 1, overwrite = TRUE)
+dbWriteTable(con, "tblGrunnkrets2017", grunn02$dt, batch_rows = 1, overwrite = TRUE)
+dbWriteTable(con, "tblGrunnkrets2018", grunn03$dt, batch_rows = 1, overwrite = TRUE)
 
 
 
