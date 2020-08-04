@@ -17,12 +17,12 @@ merge_geo <- function(geo_new, geo_chg, year, type, file_path = NULL){
   ## Files
   if (!is.null(file_path)){
     filePath <- normalizePath(file_path, winslash = "/")
-    fileChg <- file.path(filePath, geo_chg) #geo Change
 
     fileNew <- file.path(filePath, geo_new) #geo New
-  } else {
-    fileChg <- geo_chg
+    fileChg <- file.path(filePath, geo_chg) #geo Change
+} else {
     fileNew <- geo_new
+    fileChg <- geo_chg
   }
 
 
@@ -55,13 +55,18 @@ merge_geo <- function(geo_new, geo_chg, year, type, file_path = NULL){
   }
 
   xlTbl[, c("new", "old") := NULL]
+  mainCols <- c("code", "name")
 
   ## New geo
   dt <- data.table::fread(fileNew, fill = TRUE)
-  dt[, setdiff(names(dt), c("code", "name")) := NULL] #keep only Code and Name
-
+  dt[, setdiff(names(dt), mainCols) := NULL] #keep only Code and Name
+  
   ## Merge
   DT <- xlTbl[dt, on = c(curr = "code")]
+  DT[, currName := NULL]
+  setnames(DT, "curr", "code")
+  otherCols <- setdiff(names(DT), mainCols)
+  setcolorder(DT, c(mainCols, otherCols))
 
   list(DT = DT, xl = xlTbl, fileChg = fileChg, fileNew = fileNew)
 
@@ -93,7 +98,7 @@ check_element <- function(filenew, filepre){
   DT <- filenew[["DT"]]
   dt <- filepre[["DT"]]
   vecNew <- DT$prev
-  vecOld <- dt[!is.na(year), curr]
+  vecOld <- dt[!is.na(year), code]
   chg <- is.element(vecOld, vecNew)
   sumChg <- sum(chg)
   vecChg <- vecOld[chg]
@@ -114,7 +119,7 @@ join_change <- function(newfile, prevfile, raw = TRUE){
     elMix <- check_element(newfile, prevfile)
   } else {
     vecNew <- newfile[["DT"]]$prev
-    indelm <- is.element(vecNew, prevfile[["curr"]])
+    indelm <- is.element(vecNew, prevfile[["code"]])
     elMix <- data.table(chg = vecNew[indelm])
   }
 
@@ -124,17 +129,17 @@ join_change <- function(newfile, prevfile, raw = TRUE){
 
   if (raw){
     dtPre <- prevfile[["DT"]]
-    altPre <- dtPre[curr  %in% elMix$chg, ]
+    altPre <- dtPre[code  %in% elMix$chg, ]
   } else {
    altPre <- prevfile
   }
-
+  
   allFile <- merge(altNew, altPre,
-                   by.x = "prev", by.y = "curr",
+                   by.x = "prev", by.y = "code",
                    all = TRUE)
 
-  keepCols <- c("curr", "currName.x", "prev.y", "prevName.y", "year.y")
-  newName <- c("currName", "prev", "prevName", "year")
+  keepCols <- c("code", "name.x", "prev.y", "prevName.y", "year.y")
+  newName <- c("name", "prev", "prevName", "year")
 
   allFile[, setdiff(names(allFile), keepCols) := NULL]
   setnames(allFile, keepCols[-1], newName)
@@ -345,11 +350,10 @@ grunDT <- rbindlist(list(
 ))
 
 ## Merge to current Geo ie. 2020
-
 grunGEO <- rbindlist(list(grunnkretsChg2020$DT, grunDT), fill = TRUE)
-setkeyv(grunGEO, "curr")
+setkeyv(grunGEO, "code")
 
-grunGEO[duplicated(curr) | duplicated(curr, fromLast = TRUE), ]
+grunGEO[duplicated(code) | duplicated(code, fromLast = TRUE), ]
 dbWriteTable(con, "tblGrunnkretsChange", grunGEO, batch_rows = 1, overwrite = TRUE)
 
 
