@@ -381,6 +381,41 @@ komChg2020 <- merge_geo(
   type = "kommune"
 )
 
+
+create_table <- function(files){
+  
+  if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
+  
+  dt <- list()
+  for (i in seq_len(length(files) - 1)){
+
+    preFile <- length(files) - i
+
+    begin <- 1
+
+    while (begin < length(files)){
+      selFile <- begin + 1
+      newfile <- files[[i]]
+      
+      d <- join_change(newfile = files[[selFile]],
+                       prevfile = files[[i]])
+
+      dt[[paste0("file_", format(Sys.time(), "%Y%m%H%M%S"))]] <- d
+
+      begin = begin + 1
+    }
+
+  }
+
+  DT <- rbindlist(dt)
+
+  return(DT)
+}
+
+
+create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
+
+
 ## Find geo codes that have multiple changes
 ## -----------------------------------------------
 ## Check for multiple changes
