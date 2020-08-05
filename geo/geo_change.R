@@ -29,10 +29,11 @@ merge_geo <- function(geo_new,
 
     fileNew <- file.path(filePath, geo_new) #geo New
     fileChg <- file.path(filePath, geo_chg) #geo Change
-} else {
+  } else {
     fileNew <- geo_new
     fileChg <- geo_chg
   }
+
   
   ## Geo change
   ## Use Excel for changes file
@@ -72,10 +73,6 @@ merge_geo <- function(geo_new,
 
   xlTbl[, c("new", "old") := NULL]
   
-  else {
-    setnames(xlTbl, c("code", "name"), c("curr", "currName"))
-  }
-
   mainCols <- c("code", "name")
   
   ## New geo
@@ -386,34 +383,32 @@ create_table <- function(files){
   
   if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
   
-  dt <- list()
-  for (i in seq_len(length(files) - 1)){
+  fileMx  <- length(files)
+  ind <- CJ(1:fileMx, 1:fileMx)
+  indSel <- ind[V1 != V2, ][V1 < fileMx, ][V1 < V2, ]
+  
+  ## create empty list
+  dt <- vector(mode = "list", length = nrow(indSel))
 
-    preFile <- length(files) - i
+  for (i in seq_len(nrow(indSel))){
 
-    begin <- 1
+    newFile <- indSel[[2]][i]
+    preFile <- indSel[[1]][i]
 
-    while (begin < length(files)){
-      selFile <- begin + 1
-      newfile <- files[[i]]
-      
-      d <- join_change(newfile = files[[selFile]],
-                       prevfile = files[[i]])
-
-      dt[[paste0("file_", format(Sys.time(), "%Y%m%H%M%S"))]] <- d
-
-      begin = begin + 1
-    }
-
+    d <- join_change(newfile = files[[newFile]],
+                     prevfile = files[[preFile]])
+    
+    dt[[i]] <- d
+    
   }
 
   DT <- rbindlist(dt)
 
-  return(DT)
+  return(DT[])
 }
 
 
-create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
+DT <- create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
 
 
 ## Find geo codes that have multiple changes
