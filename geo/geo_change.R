@@ -254,7 +254,8 @@ convert_file <- function(file, type = NULL){
 ## allDT for all files with changes
 ## changeDT for codes that changes either multiple or once up to recent year
 
-## files - List files after running merge_geo()
+## files - List object of files from oldest to recent year. The files are the products of
+## merge_geo() function.
 create_table <- function(files){
   
   if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
@@ -305,9 +306,9 @@ create_table <- function(files){
   ## Merge all changes ie. multiple and change once
   changeDT <- rbindlist(list(joinDT, currDT))
 
-  ## check duplicate for find_change.
+  ## check duplicate for find_change() function.
   ## should have no duplicate
-  dup_find <- changeDT[duplicated(prev), ]
+  dup_find <- changeDT[duplicated(prev) | duplicated(prev, fromLast = TRUE), ]
 
   ## Merge everything to current Kommune list
   ## ---------------------------------------
@@ -385,6 +386,7 @@ join_change(fylkeChg2020, fylkeChg2018)
 find_change(fylkeChg2020, fylkeChg2018)
 fylkeChange2020_2018 <- merge_change(fylkeChg2020, fylkeChg2018)
 
+fDT <- create_table(list(fylkeChg2018, fylkeChg2020))
 
 ## Create table to DB
 connect_db(write = TRUE,
@@ -452,7 +454,7 @@ komChg2020 <- merge_geo(
 )
 
 
-DT <- create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
+kommuneDT <- create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
 
 
 ## Find geo codes that have multiple changes
@@ -598,6 +600,13 @@ grunnkretsChg2020 <- merge_geo(
   type = "grunnkrets"
 )
 
+
+## CREATE table for changes
+gDT <- create_table(list(grunnkretsChg2016,
+                         grunnkretsChg2017,
+                         grunnkretsChg2018,
+                         grunnkretsChg2019,
+                         grunnkretsChg2020))
 
 
 ## Find geo codes that have changed more than once
@@ -806,6 +815,8 @@ newChg <- data.table(newname = sapply(c(5, 7, 7), function(x) paste0(x, " - new_
 ## Merge current files and code changes
 fileChgPre <- merge_geo(testPre, preChg, year = 2019, raw = FALSE)
 fileChgNew <- merge_geo(testNew, newChg, year = 2020, raw = FALSE)
+
+testDT <- create_table(list(fileChgPre, fileChgNew))
 
 ## Codes with multiple changes
 join_change(fileChgNew, fileChgPre)
