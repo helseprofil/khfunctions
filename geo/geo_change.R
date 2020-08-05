@@ -247,6 +247,79 @@ convert_file <- function(file, type = NULL){
   }
 }
 
+## Create table with changes 
+##--------------------------
+## This produces:
+## find_dup = Duplicated codes that shouldn't be there
+## allDT for all files with changes
+## changeDT for codes that changes either multiple or once up to recent year
+
+## files - List files after running merge_geo()
+create_table <- function(files){
+  
+  if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
+  
+  fileMx  <- length(files)
+  ind <- CJ(1:fileMx, 1:fileMx)
+  indSel <- ind[V1 != V2, ][V1 < fileMx, ][V1 < V2, ]
+  
+  ## create empty list for multiple changes
+  join_dt <- vector(mode = "list", length = nrow(indSel))
+
+  for (i in seq_len(nrow(indSel))){
+
+    newFile <- indSel[[2]][i]
+    preFile <- indSel[[1]][i]
+
+    d <- join_change(newfile = files[[newFile]],
+                     prevfile = files[[preFile]])
+    
+    join_dt[[i]] <- d
+    
+  }
+
+  joinDT <- rbindlist(join_dt)
+
+  ## Change once
+  indChg <- ind[V1 - V2 == 1, ]
+
+  chg_dt <- vector(mode = "list", length = nrow(indChg))
+
+  for (i in seq_len(nrow(indChg))){
+
+    newFile <- indChg[[1]][i]
+    preFile <- indChg[[2]][i]
+
+    d <- find_change(newfile = files[[newFile]],
+                     prefile = files[[preFile]])
+
+    chg_dt[[i]] <- d
+  }
+
+  chgDT <- rbindlist(chg_dt)
+  
+  ## Keep only those with valid codes for recent year
+  recentCodes <- unique(files[[fileMx]]$DT$code)
+  currDT <- chgDT[code  %in% recentCodes, ]
+ 
+  ## Merge all changes ie. multiple and change once
+  changeDT <- rbindlist(list(joinDT, currDT))
+
+  ## check duplicate for find_change.
+  ## should have no duplicate
+  dup_find <- changeDT[duplicated(prev), ]
+
+  ## Merge everything to current Kommune list
+  ## ---------------------------------------
+  dupCodes <- unique(changeDT$code)## codes that are allready in the changes table
+  otherDT <- files[[fileMx]]$DT[!(code  %in% dupCodes), ] #keep only code that aren't in the changes table
+  geoDT <- rbindlist(list(otherDT, changeDT), fill = TRUE)
+  setkey(geoDT, code)
+
+  list(dup_find = dup_find, changeDT = changeDT, allDT = geoDT)
+}
+
+
 
 ## -----------------
 ## Connect to DB
@@ -379,35 +452,6 @@ komChg2020 <- merge_geo(
 )
 
 
-create_table <- function(files){
-  
-  if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
-  
-  fileMx  <- length(files)
-  ind <- CJ(1:fileMx, 1:fileMx)
-  indSel <- ind[V1 != V2, ][V1 < fileMx, ][V1 < V2, ]
-  
-  ## create empty list
-  dt <- vector(mode = "list", length = nrow(indSel))
-
-  for (i in seq_len(nrow(indSel))){
-
-    newFile <- indSel[[2]][i]
-    preFile <- indSel[[1]][i]
-
-    d <- join_change(newfile = files[[newFile]],
-                     prevfile = files[[preFile]])
-    
-    dt[[i]] <- d
-    
-  }
-
-  DT <- rbindlist(dt)
-
-  return(DT[])
-}
-
-
 DT <- create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
 
 
@@ -443,8 +487,8 @@ tblChanges[duplicated(prev), ]
 
 
 ## keep only those code that still valid in the current year ie. 2020
-changeCodes <- unique(komChg2020$DT[["code"]])
-validCurr <- tblChanges[code  %in% currentCodes, ]
+recentCodes <- unique(komChg2020$DT[["code"]])
+validCurr <- tblChanges[code  %in% recentCodes, ]
 
 ## Merge all kommune that have changes since 2017
 komDT <- rbindlist(list(validCurr,
