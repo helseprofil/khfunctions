@@ -193,13 +193,23 @@ find_change <- function(newfile, prefile, raw = TRUE){
   }
   
   DT <- dt2[dt1, on = "code"]
-  DT[, prevName := name]
-  DT[, name := i.name]
-  cols <- grep("^i.", names(DT))
-  DT[, (cols) := NULL]
-  DTout <- DT[!is.na(prev), ][]
 
-  return(DTout[])
+  colN <- names(dt1)[-1]
+  for (j in colN){
+    coli <- paste0("i.", j)
+    DT[is.na(get(coli)), (coli) := get(j)]
+  }
+
+  DT[, (colN) := NULL]
+  setnames(DT, names(DT)[-1], colN)
+  
+  ## DT[, prevName := name]
+  ## DT[, name := i.name]
+  ## cols <- grep("^i.", names(DT))
+  ## DT[, (cols) := NULL]
+  ## DTout <- DT[!is.na(prev), ][]
+
+  return(DT[])
 }
 
 
@@ -801,43 +811,55 @@ setnames(alt2019_2020, c("currName.x", "prev.y","prevName.y", "year.y"), c("curr
 ## ---------
 ## TESTING
 ## -----------
-testPre <- data.table(code = 1:5, name = sapply(1:5, function(x) paste0("pre_", letters[x], x)))
-preChg <- data.table(newname = sapply(c(3, 3, 4, 4), function(x) paste0(x, " - pre_", letters[x])),
-                     prename = sapply(c(9:12), function(x) paste0(x, " - pre_00", letters[x])))
+preDT <- data.table(code = c(1:2, 9:12), name = sapply(c(1:2, 9:12), function(x) paste0("pre", letters[x])))
+preChg <- data.table(newname = sapply(c(2, 9), function(x) paste0(x, " - pre", letters[x])),
+                     prename = sapply(c(15:16), function(x) paste0(x, " - zz", letters[x])))
 
-testNew <- data.table(code = c(3, 5:8), name = sapply(c(3, 5:8),
-                                                         function(x) paste0("new_",letters[x], x)))
+postDT <- data.table(code = 1:5, name = sapply(1:5, function(x) paste0("post", letters[x])))
+postChg <- data.table(newname = sapply(c(3, 3, 4, 4), function(x) paste0(x, " - post", letters[x])),
+                     prename = sapply(c(9:12), function(x) paste0(x, " - pre", letters[x])))
+
+newDT <- data.table(code = c(3, 5:8), name = sapply(c(3, 5:8),
+                                                         function(x) paste0("new_",letters[x])))
+newDT[code == 3, name := "postc"]
 newChg <- data.table(newname = sapply(c(5, 7, 7), function(x) paste0(x, " - new_", letters[x])), 
-                     prename = sapply(c(4, 1, 2), function(x) paste0(x, " - pre_", letters[x])))
+                     prename = sapply(c(4, 1, 2), function(x) paste0(x, " - post", letters[x])))
 
 ## Detecting changes process
 ## ----------------------------
 ## Merge current files and code changes
-fileChgPre <- merge_geo(testPre, preChg, year = 2019, raw = FALSE)
-fileChgNew <- merge_geo(testNew, newChg, year = 2020, raw = FALSE)
+ChgPre <- merge_geo(preDT, preChg, year = 2018, raw = FALSE)
+ChgPost <- merge_geo(postDT, postChg, year = 2019, raw = FALSE)
+ChgNew <- merge_geo(newDT, newChg, year = 2020, raw = FALSE)
 
-testDT <- create_table(list(fileChgPre, fileChgNew))
+allDT <- create_table(list(ChgPre, ChgPost, ChgNew))
 
 ## Codes with multiple changes
-join_change(fileChgNew, fileChgPre)
-multiChange <- join_change(fileChgNew, fileChgPre)
+join_change(ChgPost, ChgPre)
+join_change(ChgNew, ChgPre)
+join_change(ChgNew, ChgPost)
+
+multiChange <- join_change(ChgNew, ChgPost)
+
 ## View code that change once
-find_change(fileChgNew, fileChgPre)
-findChange <- find_change(fileChgNew, fileChgPre)
+find_change(ChgNew, ChgPost)
+find_change(ChgPost, ChgPre)
+
+findChange <- find_change(ChgNew, ChgPost)
 ## setnames(ddFind, c("code", "name"), c("curr", "currName"))
 
 
 ## Include the change from find_change() to the current newfile
-withChange <- merge_change(fileChgNew, fileChgPre)
+withChange <- merge_change(ChgNew, ChgPost)
 
-allWithChange <- rbindlist(list(fileChgNew$DT,
+allWithChange <- rbindlist(list(ChgNew$DT,
                                 withChange,
                                 multiChange))
 
 allOnlyChange <- rbindlist(list(findChange,
                                 multiChange))
 
-allDT <- rbindlist(list(fileChgNew$DT,
+allDT <- rbindlist(list(ChgNew$DT,
                         allOnlyChange))
 
 setkey(allChange, code, prev)
