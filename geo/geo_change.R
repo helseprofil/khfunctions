@@ -16,7 +16,7 @@ sapply(pkg, require, character.only = TRUE)
 ## raw - if TRUE then use Excel and CSV file for change in codes ie. copy/paste from SSB "Endringer"
 ## tab
 
-merge_geo <- function(geo_new,
+add_change <- function(geo_new,
                       geo_chg,
                       year,
                       type = "land",
@@ -141,7 +141,7 @@ check_element <- function(filenew, filepre){
 ## and again have new changes in 2020. Then get the previous codes in 2018 from previous code columns
 ##
 ## 30240317 (in 2020) from 2190317 (2019) but was 2190314 (2018)
-## raw - if using an exsiting merge_multi() instead of merge_geo() table then raw = FALSE
+## raw - if using an exsiting merge_multi() instead of add_change() table then raw = FALSE
 merge_multi <- function(newfile, prevfile, raw = TRUE){
   
   if (raw){
@@ -179,8 +179,8 @@ merge_multi <- function(newfile, prevfile, raw = TRUE){
 }
 
 ## Find code changes from previous year eg. code 2020 vs 2019 or code 2019 vs 2018
-## newfile - ealier year for file produced by merge_geo()
-## prefile - previous year for file output from merge_geo()
+## newfile - ealier year for file produced by add_change()
+## prefile - previous year for file output from add_change()
 ## raw - if FALSE then use exisiting table for prefile
 find_change <- function(newfile, prefile, raw = TRUE){
   
@@ -265,8 +265,8 @@ convert_file <- function(file, type = NULL){
 ## changeDT for codes that changes either multiple or once up to recent year
 
 ## files - List object of files from oldest to recent year. The files are the products of
-## merge_geo() function.
-merge_change <- function(files){
+## add_change() function.
+merge_geo <- function(files){
   
   if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
   
@@ -409,7 +409,7 @@ fylke2018 <- select_ssb(grep.file = "jan2018",
                         grep.change = "change",
                         file.path = file_path)
 
-fylkeChg2018 <- merge_geo(geo_new = fylke2018$allfile,
+fylkeChg2018 <- add_change(geo_new = fylke2018$allfile,
                           geo_chg = fylke2018$chgfile,
                           year = 2018,
                           type = "fylke")
@@ -418,7 +418,7 @@ fylke2020 <- select_ssb(grep.file = "jan2020",
                         grep.change = "change",
                         file.path = file_path)
 
-fylkeChg2020 <- merge_geo(geo_new = fylke2020$allfile,
+fylkeChg2020 <- add_change(geo_new = fylke2020$allfile,
                           geo_chg = fylke2020$chgfile,
                           year = 2020,
                           type = "fylke")
@@ -434,7 +434,7 @@ show_change(fylkeChg2020, fylkeChg2018, all = TRUE)
 fylkeChange2020_2018 <- show_change(fylkeChg2020, fylkeChg2018)
 
 
-fylkeDT <- merge_change(list(fylkeChg2018, fylkeChg2020))
+fylkeDT <- merge_geo(list(fylkeChg2018, fylkeChg2020))
 connect_db(, write = TRUE, tblname = "tblFylkeChange", obj = fylkeDT$chgDT)
 
 
@@ -460,7 +460,7 @@ kom2017 <- select_ssb(grep.file = "jan2017",
                       file.path = file_path
                       )
 
-komChg2017 <- merge_geo(
+komChg2017 <- add_change(
   geo_new = kom2017$allfile,
   geo_chg = kom2017$chgfile,
   year = 2017,
@@ -472,7 +472,7 @@ kom2018 <- select_ssb(grep.file = "jan2018",
                       file.path = file_path
                       )
 
-komChg2018 <- merge_geo(
+komChg2018 <- add_change(
   geo_new = kom2018$allfile,
   geo_chg = kom2018$chgfile,
   year = 2018,
@@ -484,7 +484,7 @@ kom2019 <- select_ssb(grep.file = "jan2019",
                       file.path = file_path
                       )
 
-komChg2019 <- merge_geo(
+komChg2019 <- add_change(
   geo_new = kom2019$allfile,
   geo_chg = kom2019$chgfile,
   year = 2019,
@@ -497,7 +497,7 @@ kom2020 <- select_ssb(grep.file = "jan2020",
                       file.path = file_path
                       )
 
-komChg2020 <- merge_geo(
+komChg2020 <- add_change(
   geo_new = kom2020$allfile,
   geo_chg = kom2020$chgfile,
   year = 2020,
@@ -505,7 +505,7 @@ komChg2020 <- merge_geo(
 )
 
 
-kommuneDT <- merge_change(list(komChg2017, komChg2018, komChg2019, komChg2020))
+kommuneDT <- merge_geo(list(komChg2017, komChg2018, komChg2019, komChg2020))
 connect_db(, write = TRUE, tblname = "tblKommuneChange", obj = kommuneDT$chgDT)
 
 
@@ -597,7 +597,7 @@ grunnkrets2016 <- select_ssb(grep.file = "jan2016",
                       file.path = file_path
                       )
 
-grunnkretsChg2016 <- merge_geo(
+grunnkretsChg2016 <- add_change(
   geo_new = grunnkrets2016$allfile,
   geo_chg = grunnkrets2016$chgfile,
   year = 2016,
@@ -611,7 +611,7 @@ grunnkrets2017 <- select_ssb(grep.file = "jan2017",
                       file.path = file_path
                       )
 
-grunnkretsChg2017 <- merge_geo(
+grunnkretsChg2017 <- add_change(
   geo_new = grunnkrets2017$allfile,
   geo_chg = grunnkrets2017$chgfile,
   year = 2017,
@@ -623,7 +623,7 @@ grunnkrets2018 <- select_ssb(grep.file = "jan2018",
                       file.path = file_path
                       )
 
-grunnkretsChg2018 <- merge_geo(
+grunnkretsChg2018 <- add_change(
   geo_new = grunnkrets2018$allfile,
   geo_chg = grunnkrets2018$chgfile,
   year = 2018,
@@ -635,7 +635,7 @@ grunnkrets2019 <- select_ssb(grep.file = "jan2019",
                       file.path = file_path
                       )
 
-grunnkretsChg2019 <- merge_geo(
+grunnkretsChg2019 <- add_change(
   geo_new = grunnkrets2019$allfile,
   geo_chg = grunnkrets2019$chgfile,
   year = 2019,
@@ -648,7 +648,7 @@ grunnkrets2020 <- select_ssb(grep.file = "jan2020",
                       file.path = file_path
                       )
 
-grunnkretsChg2020 <- merge_geo(
+grunnkretsChg2020 <- add_change(
   geo_new = grunnkrets2020$allfile,
   geo_chg = grunnkrets2020$chgfile,
   year = 2020,
@@ -657,7 +657,7 @@ grunnkretsChg2020 <- merge_geo(
 
 
 ## CREATE table for changes
-gDT <- merge_change(list(grunnkretsChg2016,
+gDT <- merge_geo(list(grunnkretsChg2016,
                          grunnkretsChg2017,
                          grunnkretsChg2018,
                          grunnkretsChg2019,
@@ -731,19 +731,19 @@ dbWriteTable(con, "tblGrunnkrets2018", grunn03$dt, batch_rows = 1, overwrite = T
 
 ### ------
 
-fylkeChg <- merge_geo(
+fylkeChg <- add_change(
   geo_new = "ssb_fylke.csv",
   geo_chg = "fylke_change_ssb.xlsx",
   file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo"
 )
 
-grunnkretsmuneChg <- merge_geo(
+grunnkretsmuneChg <- add_change(
   geo_new = "ssb_kommune.csv",
   geo_chg = "kommune_change_ssb.xlsx",
   file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo"
 )
 
-grunnkretsChg <- merge_geo(
+grunnkretsChg <- add_change(
   geo_new = "ssb_grunnkrets.csv",
   geo_chg = "grunnkrets_change_ssb.xlsx",
   file_path = "C:\\Users\\ybka\\Documents\\GitFH\\khfunction\\geo"
@@ -884,12 +884,12 @@ newChg <- data.table(newname = sapply(c(5, 7, 7), function(x) paste0(x, " - new_
 ## Detecting changes process
 ## ----------------------------
 ## Merge current files and code changes
-ChgEra <- merge_geo(eraDT, eraChg, year = 2017, raw = FALSE)
-ChgPre <- merge_geo(preDT, preChg, year = 2018, raw = FALSE)
-ChgPost <- merge_geo(postDT, postChg, year = 2019, raw = FALSE)
-ChgNew <- merge_geo(newDT, newChg, year = 2020, raw = FALSE)
+ChgEra <- add_change(eraDT, eraChg, year = 2017, raw = FALSE)
+ChgPre <- add_change(preDT, preChg, year = 2018, raw = FALSE)
+ChgPost <- add_change(postDT, postChg, year = 2019, raw = FALSE)
+ChgNew <- add_change(newDT, newChg, year = 2020, raw = FALSE)
 
-allDT <- merge_change(list(ChgEra, ChgPre, ChgPost, ChgNew))
+allDT <- merge_geo(list(ChgEra, ChgPre, ChgPost, ChgNew))
 
 ## Codes with multiple changes
 merge_multi(ChgPre, ChgEra)
