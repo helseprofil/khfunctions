@@ -141,8 +141,8 @@ check_element <- function(filenew, filepre){
 ## and again have new changes in 2020. Then get the previous codes in 2018 from previous code columns
 ##
 ## 30240317 (in 2020) from 2190317 (2019) but was 2190314 (2018)
-## raw - if using an exsiting join_change() instead of merge_geo() table then raw = FALSE
-join_change <- function(newfile, prevfile, raw = TRUE){
+## raw - if using an exsiting merge_multi() instead of merge_geo() table then raw = FALSE
+merge_multi <- function(newfile, prevfile, raw = TRUE){
   
   if (raw){
     elMix <- check_element(newfile, prevfile)
@@ -215,7 +215,7 @@ find_change <- function(newfile, prefile, raw = TRUE){
 
 ## merge the code changes from previous file (prefile) to the recent file (newfile)
 ## all - if FALSE then keep only codes that have changes else keep everything
-merge_change <- function(newfile, prefile, all = FALSE, ...){
+show_change <- function(newfile, prefile, all = FALSE, ...){
 
   dt <- find_change(newfile, prefile, ...)
   codePre <- unique(dt$code)
@@ -266,7 +266,7 @@ convert_file <- function(file, type = NULL){
 
 ## files - List object of files from oldest to recent year. The files are the products of
 ## merge_geo() function.
-create_table <- function(files){
+merge_change <- function(files){
   
   if (inherits(files, "list") == 0) stop("'files' should be a list", call. = FALSE)
   
@@ -282,7 +282,7 @@ create_table <- function(files){
     newFile <- indSel[[2]][i]
     preFile <- indSel[[1]][i]
 
-    d <- join_change(newfile = files[[newFile]],
+    d <- merge_multi(newfile = files[[newFile]],
                      prevfile = files[[preFile]])
     
     join_dt[[i]] <- d
@@ -316,18 +316,53 @@ create_table <- function(files){
   ## Merge all changes ie. multiple and change once
   changeDT <- rbindlist(list(joinDT, currDT))
 
-  ## check duplicate for find_change() function.
-  ## should have no duplicate
-  dup_find <- changeDT[duplicated(prev) | duplicated(prev, fromLast = TRUE), ]
+  ## Clean up duplicated lines and delete codes that have not changed
+  ## if duplicated lines exists
+  indX <- changeDT[, .I[duplicated(changeDT)]]
 
-  ## Merge everything to current Kommune list
+  if (sum(indX > 0)){
+    dtx <- changeDT[-(indX)]
+    dtz <- dtx[!is.na(prev), ]
+    
+    ## check duplicate for find_change() function.
+    ## and keep only those that are in newest geo due to multiple changes
+    dupInx <- dtz[, .I[(duplicated(prev) | duplicated(prev, fromLast = TRUE))]]
+    ## split to 2 DT with and without duplicated 'prev'
+    uniDT <- dtz[-dupInx]
+    dupDT <- dtz[dupInx]
+    
+    ## Clean duplicated code if codes aren't in newest geo
+    dupCodes <- unique(dupDT$code)
+    keepInd <- is.element(dupCodes, recentCodes)
+    keepCodes <- dupCodes[keepInd]
+    dupUni <- dupDT[code %in% keepCodes, ]
+
+    ## Merge back to the other DT without duplicated previous codes
+    CDT <- rbindlist(list(uniDT, dupUni))
+    setkey(CDT, code)
+  } else {
+    CDT <- changeDT
+    dupDT <- 0
+  }
+
+  ## Merge everything to recent geo list
   ## ---------------------------------------
-  dupCodes <- unique(changeDT$code)## codes that are allready in the changes table
-  otherDT <- files[[fileMx]]$DT[!(code  %in% dupCodes), ] #keep only code that aren't in the changes table
-  geoDT <- rbindlist(list(otherDT, changeDT), fill = TRUE)
-  setkey(geoDT, code)
+  dupCodesChg <- unique(CDT$code)## codes that are allready in the changes table
+  ## keep only codes in recent geo list that aren't in the changes table
+  otherDT <- files[[fileMx]]$DT[!(code  %in% dupCodesChg), ] 
+  geoDT <- rbindlist(list(otherDT, CDT), fill = TRUE)
+  setkey(geoDT, code, year)
 
-  list(dup_find = dup_find, changeDT = changeDT, allDT = geoDT)
+  ## Recode mulitple codes that haven't been converted to recent geo code
+  eks <- setdiff(geoDT$code, recentCodes) #get codes that aren't in recent geo
+
+  for (i in eks){
+    currGeo <- geoDT[prev == i, ][["code"]]
+    geoDT[code == i, code := currGeo]
+  }
+
+  setkey(geoDT, code, year)
+  list(dupDT = dupDT, chgDT = CDT, allDT = geoDT)
 }
 
 
@@ -391,12 +426,18 @@ fylkeChg2020 <- merge_geo(geo_new = fylke2020$allfile,
 ## Find all the changes in codes
 ## ---------------------------------
 ## Include previous changes from "Endringer" file if exist
-join_change(fylkeChg2020, fylkeChg2018)
+merge_multi(fylkeChg2020, fylkeChg2018)
 ## Include previous changes from raw CSV data
 find_change(fylkeChg2020, fylkeChg2018)
-fylkeChange2020_2018 <- merge_change(fylkeChg2020, fylkeChg2018)
+show_change(fylkeChg2020, fylkeChg2018, all = TRUE)
 
-fDT <- create_table(list(fylkeChg2018, fylkeChg2020))
+fylkeChange2020_2018 <- show_change(fylkeChg2020, fylkeChg2018)
+
+
+fylkeDT <- merge_change(list(fylkeChg2018, fylkeChg2020))
+connect_db(, write = TRUE, tblname = "tblFylkeChange", obj = fylkeDT$chgDT)
+
+
 
 ## Create table to DB
 connect_db(write = TRUE,
@@ -464,21 +505,25 @@ komChg2020 <- merge_geo(
 )
 
 
-kommuneDT <- create_table(list(komChg2017, komChg2018, komChg2019, komChg2020))
+kommuneDT <- merge_change(list(komChg2017, komChg2018, komChg2019, komChg2020))
+connect_db(, write = TRUE, tblname = "tblKommuneChange", obj = kommuneDT$chgDT)
+
 
 
 ## Find geo codes that have multiple changes
 ## -----------------------------------------------
 ## Check for multiple changes
-join_change(newfile = komChg2018, prevfile = komChg2017) #no changes
-join_change(newfile = komChg2019, prevfile = komChg2017) #no changes
-join_change(newfile = komChg2020, prevfile = komChg2017) # 4
-join_change(newfile = komChg2019, prevfile = komChg2018) #no changes
-join_change(newfile = komChg2020, prevfile = komChg2018) # 49
-join_change(newfile = komChg2020, prevfile = komChg2019) #no changes
+merge_multi(newfile = komChg2018, prevfile = komChg2017) #no changes
+merge_multi(newfile = komChg2019, prevfile = komChg2017) #no changes
+merge_multi(newfile = komChg2020, prevfile = komChg2017) # 4
+merge_multi(newfile = komChg2019, prevfile = komChg2018) #no changes
+merge_multi(newfile = komChg2020, prevfile = komChg2018) # 49
+merge_multi(newfile = komChg2020, prevfile = komChg2019) #no changes
 
-komJoin2020_2017 <- join_change(newfile = komChg2020, prevfile = komChg2017) # 4
-komJoin2020_2018 <- join_change(newfile = komChg2020, prevfile = komChg2018) # 49
+show_change(newfile = komChg2020, prevfile = komChg2019) #no changes
+
+komJoin2020_2017 <- merge_multi(newfile = komChg2020, prevfile = komChg2017) # 4
+komJoin2020_2018 <- merge_multi(newfile = komChg2020, prevfile = komChg2018) # 49
 
 ## merge all with multiple changes
 komMulti <- rbindlist(list(komJoin2020_2017,
@@ -612,11 +657,14 @@ grunnkretsChg2020 <- merge_geo(
 
 
 ## CREATE table for changes
-gDT <- create_table(list(grunnkretsChg2016,
+gDT <- merge_change(list(grunnkretsChg2016,
                          grunnkretsChg2017,
                          grunnkretsChg2018,
                          grunnkretsChg2019,
                          grunnkretsChg2020))
+
+
+connect_db(, write = TRUE, tblname = "tblGrunnkretsChange", obj = gDT$chgDT)
 
 
 ## Find geo codes that have changed more than once
@@ -630,17 +678,17 @@ elem2019 <- check_element(grunnkretsChg2019, grunnkretsChg2018)
 elem2020 <- check_element(grunnkretsChg2020, grunnkretsChg2019)
 
 ## check all previous changes
-(chg2017_2016 <- join_change(grunnkretsChg2017, grunnkretsChg2016)) #no changes
-(chg2018_2017 <- join_change(grunnkretsChg2018, grunnkretsChg2017)) # 7 
-(chg2019_2018 <- join_change(grunnkretsChg2019, grunnkretsChg2018)) #no changes
-(chg2020_2019 <- join_change(grunnkretsChg2020, grunnkretsChg2019)) # 24
+(chg2017_2016 <- merge_multi(grunnkretsChg2017, grunnkretsChg2016)) #no changes
+(chg2018_2017 <- merge_multi(grunnkretsChg2018, grunnkretsChg2017)) # 7 
+(chg2019_2018 <- merge_multi(grunnkretsChg2019, grunnkretsChg2018)) #no changes
+(chg2020_2019 <- merge_multi(grunnkretsChg2020, grunnkretsChg2019)) # 24
 
 ## ## add all the changes to the current geo ie. 2020
-## chg2020_1817 <- join_change(grunnkretsChg2020, chg2018_2017, raw = FALSE)
-## chg2020_2016 <- join_change(grunnkretsChg2020, grunnkretsChg2016)
-## chg2020_2017 <- join_change(grunnkretsChg2020, grunnkretsChg2017)
-## chg2020_2018 <- join_change(grunnkretsChg2020, grunnkretsChg2018)
-## chg2020_2019 <- join_change(grunnkretsChg2020, grunnkretsChg2019)
+## chg2020_1817 <- merge_multi(grunnkretsChg2020, chg2018_2017, raw = FALSE)
+## chg2020_2016 <- merge_multi(grunnkretsChg2020, grunnkretsChg2016)
+## chg2020_2017 <- merge_multi(grunnkretsChg2020, grunnkretsChg2017)
+## chg2020_2018 <- merge_multi(grunnkretsChg2020, grunnkretsChg2018)
+## chg2020_2019 <- merge_multi(grunnkretsChg2020, grunnkretsChg2019)
 
 ## Merge all changes datasets ie. Excel files and changes from previous current i.e alt2019_2020
 ## This file only consist grunnkrets that have changed codes
@@ -811,35 +859,55 @@ setnames(alt2019_2020, c("currName.x", "prev.y","prevName.y", "year.y"), c("curr
 ## ---------
 ## TESTING
 ## -----------
-preDT <- data.table(code = c(1:2, 9:12), name = sapply(c(1:2, 9:12), function(x) paste0("pre", letters[x])))
+eraDT <- data.table(code = c(6, 12, 15:16), name = sapply(c(6, 12, 15:16), function(x) paste0("zz", letters[x])))
+eraChg <- data.table(newname = sapply(c(6, 15, 15), function(x) paste0(x, " - zz", letters[x])),
+                     prename = sapply(c(20, 25, 30), function(x) paste0(x, " - old", letters[x])))
+
+preDT <- data.table(code = c(1:2, 6, 9:12), name = sapply(c(1:2, 6, 9:12), function(x) paste0("pre", letters[x])))
 preChg <- data.table(newname = sapply(c(2, 9), function(x) paste0(x, " - pre", letters[x])),
                      prename = sapply(c(15:16), function(x) paste0(x, " - zz", letters[x])))
+preDT[code == 6, name := "zzf"]
 
-postDT <- data.table(code = 1:5, name = sapply(1:5, function(x) paste0("post", letters[x])))
+postDT <- data.table(code = c(1:4, 6), name = sapply(c(1:4, 6), function(x) paste0("post", letters[x])))
 postChg <- data.table(newname = sapply(c(3, 3, 4, 4), function(x) paste0(x, " - post", letters[x])),
                      prename = sapply(c(9:12), function(x) paste0(x, " - pre", letters[x])))
+newDT[code == 6, name := "zzf"]
 
 newDT <- data.table(code = c(3, 5:8), name = sapply(c(3, 5:8),
                                                          function(x) paste0("new_",letters[x])))
 newDT[code == 3, name := "postc"]
+newDT[code == 6, name := "zzf"]
 newChg <- data.table(newname = sapply(c(5, 7, 7), function(x) paste0(x, " - new_", letters[x])), 
                      prename = sapply(c(4, 1, 2), function(x) paste0(x, " - post", letters[x])))
+
 
 ## Detecting changes process
 ## ----------------------------
 ## Merge current files and code changes
+ChgEra <- merge_geo(eraDT, eraChg, year = 2017, raw = FALSE)
 ChgPre <- merge_geo(preDT, preChg, year = 2018, raw = FALSE)
 ChgPost <- merge_geo(postDT, postChg, year = 2019, raw = FALSE)
 ChgNew <- merge_geo(newDT, newChg, year = 2020, raw = FALSE)
 
-allDT <- create_table(list(ChgPre, ChgPost, ChgNew))
+allDT <- merge_change(list(ChgEra, ChgPre, ChgPost, ChgNew))
 
 ## Codes with multiple changes
-join_change(ChgPost, ChgPre)
-join_change(ChgNew, ChgPre)
-join_change(ChgNew, ChgPost)
+merge_multi(ChgPre, ChgEra)
+merge_multi(ChgPost, ChgEra)
+merge_multi(ChgNew, ChgEra)
 
-multiChange <- join_change(ChgNew, ChgPost)
+merge_multi(ChgPost, ChgPre)
+merge_multi(ChgNew, ChgPre)
+
+merge_multi(ChgNew, ChgPost)
+
+
+multiChange <- merge_multi(ChgNew, ChgPost)
+
+
+
+
+
 
 ## View code that change once
 find_change(ChgNew, ChgPost)
@@ -850,7 +918,7 @@ findChange <- find_change(ChgNew, ChgPost)
 
 
 ## Include the change from find_change() to the current newfile
-withChange <- merge_change(ChgNew, ChgPost)
+withChange <- show_change(ChgNew, ChgPost)
 
 allWithChange <- rbindlist(list(ChgNew$DT,
                                 withChange,
