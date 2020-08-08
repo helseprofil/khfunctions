@@ -4,26 +4,33 @@
 library(data.table)
 library(stringi)
 library(openxlsx)
+library(fs)
+library(here)
 
 getOption("encoding")
 ## obs! write.csv2 uses NA for missing while fwrite uses NULL
 ## gives consequence when inporting to ACCESS or Excel
 ## or uses openxlsx package to create xlsx file
 
+## calling here inside "../dir1/geo" will have root at "../dir1"
+getwd() #c:/Users/ybka/Documents/GitFH/khfunction/geo
+testdir <- here("geo", "test")
+
 ## ---------
 ## 2020 GEO
 ## ----------
-fylke <- fread("ssb_fylke.csv", fill = TRUE)
+fylke <- fread(here("geo", "fylke", "ssb_fylke_jan2020.csv"), fill = TRUE)
 dim(fylke)
 oldName <- c("code", "name")
 newName <- c("fylkeCode", "fylkeName")
 setnames(fylke, oldName, newName)
 fylke[, border := 2020]
-openxlsx::write.xlsx(fylke, "fylke.xlsx", colNames = TRUE)
+openxlsx::write.xlsx(fylke, file.path(testdir, "fylke_jan2020.xlsx"), colNames = TRUE)
 
 
 ## Kommune
-kommune <- fread("ssb_kommune.csv", fill = TRUE)
+kommune <- fread(here("geo", "kommune", "ssb_kommune_jan2020.csv"), fill = TRUE)
+## give fylkeCode to kommune
 kommune[, fylkeCode := as.numeric(gsub("\\d{2}$", "", code))]
 ## or stri_extract_first_regex(5644, '\\d{2}')
 setcolorder(kommune, c(9, 1:8))
@@ -33,23 +40,65 @@ kommune[, border := 2020]
 dim(kommune)
 ## fwrite(kommune, "ssb_kommune02.csv", sep = ";")
 ## write.csv2(kommune, "ssb_kommune03.csv", row.names = FALSE, fileEncoding = "native.enc")
-write.xlsx(kommune, "ssb_kommune.xlsx", colNames = TRUE)
+write.xlsx(kommune, file.path(testdir, "ssb_kommune_jan2020.xlsx"), colNames = TRUE)
 
 ## Bydels
-bydel <- fread("ssb_bydels.csv", fill = TRUE)
+bydel <- fread(here("geo", "bydel", "ssb_bydel_jan2020.csv"), fill = TRUE)
+bydel2018 <- fread(here("geo", "bydel", "ssb_bydel_jan2018.csv"), fill = TRUE)
+bydel2004 <- fread(here("geo", "bydel", "ssb_bydel_jan2004.csv"), fill = TRUE)
+
+## merge bydel
+by2020 <- copy(bydel)
+by2020[, year := 2020]
+by2018 <- copy(bydel2018)
+by2018[, year := 2018]
+by2004 <- copy(bydel2004)
+setdiff(by2020$code, by2018$code)
+setdiff(by2018$code, by2004$code)
+
+by2018[by2020, on = "name"]
+merge(by2020, by2018, by = "name", all = TRUE, fill = TRUE)
+by2004[by2018, on = "name"]
+
+
+codeChg <- setdiff(by2020$code, by2018$code)
+by2018V2 <- copy(by2018)
+by2020V2 <- copy(by2020)
+## merge by reference ie. 2018 to 2020 data
+by2020V2[by2018V2, on = "name", `:=`(precode = i.code, preyr = i.year)]
+## Filter those names that have changed codes
+chg2020 <- by2020V2[code %in% codeChg, ]
+chg2020[, `:=`(new = paste(code, name, sep = " - "),
+               prev = paste(precode, name, sep = " - "))]
+
+colDel <- setdiff(names(chg2020), c("new", "prev"))
+chg2020[, (colDel) := NULL]
+
+
+
+## Steps for merge_name()
+## Create year for the respective dataset eg. bydel2020[,year := 2020]
+## starts with olderst 3vs2, 2vs1 to track the changes
+## To create the "change" file like those from SSB
+## change file has two columns for new and old
+## eg. merge code + name and precode name
+
+
+
 bydel[, kommuneCode := as.numeric(gsub("\\d{2}$", "", code))]
 dim(bydel)
+bydel[, .N, by = .(kommuneCode)]
 setcolorder(bydel, c(9, 1:8))
 newName <- c("bydelCode", "bydelName")
 setnames(bydel, oldName, newName)
 bydel[, border := 2020]
 ## fwrite(bydel, "ssb_bydels02.csv", sep = ";")
 ## write.csv2(bydel, "ssb_bydels03.csv", row.names = FALSE, fileEncoding = "Latin1")
-write.xlsx(bydel, "ssb_bydel.xlsx", colNames = TRUE)
+write.xlsx(bydel, file.path(testdir, "ssb_bydel_jan2020.xlsx"), colNames = TRUE)
 
 
 ## Grunnkrets
-grunnkrets <- fread("ssb_grunnkrets.csv", fill = TRUE)
+grunnkrets <- fread(here("geo", "grunnkrets", "ssb_grunnkrets_jan2020.csv"), fill = TRUE)
 grunnkrets[, kommuneCode := as.numeric(gsub("\\d{4}$", "", code))]
 ## grunnkrets[, fylkeCode := as.numeric(gsub("\\d{2}$", "", kommuneCode))]
 dim(grunnkrets)
@@ -62,7 +111,7 @@ setcolorder(grunnkrets, c(9, 1:8))
 grunnkrets[, border := 2020]
 ## fwrite(grunnkrets, "ssb_grunnkrets02.csv", sep = ";")
 ## write.csv2(grunnkrets, "ssb_grunnkrets03.csv", row.names = FALSE, fileEncoding = "native.enc")
-write.xlsx(grunnkrets, "ssb_grunnkrets.xlsx", colNames = TRUE)
+write.xlsx(grunnkrets, file.path(testdir, "ssb_grunnkrets_jan2020.xlsx"), colNames = TRUE)
 
 
 
