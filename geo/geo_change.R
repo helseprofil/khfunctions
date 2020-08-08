@@ -244,11 +244,11 @@ show_change <- function(newfile, prefile, all = FALSE, ...){
 ## file - The output after running select_ssb()
 ## type - Data type ie. kommune, fylke, grunnkrets etc
 convert_file <- function(file, type = NULL){
-
+  
   allFiles <- file[["allfile"]]
   for (i in 1:length(allFiles)){
     file <- allFiles[i]
-    fnum <- paste0(type, "0", i)
+    fnum <- paste0(type, "_0", i)
     dt <- data.table::fread(file, fill = TRUE)
     cols <- c("parentCode", "shortName", "validFrom", "validTo")
     for (j in cols) set(dt, j = j, value = as.numeric(dt[[j]]))
@@ -256,6 +256,7 @@ convert_file <- function(file, type = NULL){
     assign(fnum, DT, env = .GlobalEnv)  
   }
 }
+
 
 ## Create table with changes 
 ##--------------------------
