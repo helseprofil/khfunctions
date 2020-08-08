@@ -74,14 +74,97 @@ chg2020[, `:=`(new = paste(code, name, sep = " - "),
 colDel <- setdiff(names(chg2020), c("new", "prev"))
 chg2020[, (colDel) := NULL]
 
-
-
 ## Steps for merge_name()
 ## Create year for the respective dataset eg. bydel2020[,year := 2020]
 ## starts with olderst 3vs2, 2vs1 to track the changes
 ## To create the "change" file like those from SSB
 ## change file has two columns for new and old
 ## eg. merge code + name and precode name
+files <- c("file1", "file2", "file3")
+years <- c(2018, 2019, 2020)
+length(files)
+years <- c(years, 2017)
+years
+
+## Cross table to select files for comparison
+cj <- CJ(1:3, 1:3)
+cj[V2 - V1 == 1, ]
+
+
+folder.path = here("geo", "bydel")
+des.path = here("geo", "test")
+files = c("ssb_bydel_jan2004.csv", "ssb_bydel_jan2018.csv", "ssb_bydel_jan2020.csv")
+years = c(2004, 2018, 2020)
+type = "bydel"
+save = "xlsx"
+
+
+make_change(files = files, years = years, type = type, folder.path, save, des.path)
+
+make_change <- function(files, years, type, folder.path, save = c("no", "xls", "csv"), des.path){
+
+  if (missing(save)) save = "no"
+  xl <- grepl("xl", save, ignore.case = TRUE)
+  if (xl) save = "xls"
+  save = tolower(save)
+
+  nFiles <- length(files)
+  nYears <- length(years)
+
+  nChk <- identical(nFiles, nYears)
+  if (isFALSE(nChk)) stop("Number of files and years are not equal!")
+  
+  cjtbl <- CJ(1:nFiles, 1:nYears)
+  reftbl <- cjtbl[V2 - V1 == 1, ]
+
+  ## Make empty list for memory allocation
+  listDT <- vector(mode = "list", length = nrow(reftbl))
+  
+  for (i in seq_len(nrow(reftbl))){
+
+    newRef <- reftbl[[2]][i]
+    preRef <- reftbl[[1]][i]
+
+    newFile <- file.path(folder.path, files[newRef])
+    preFile <- file.path(folder.path, files[preRef])
+    
+    newdt <- data.table::fread(newFile, fill = TRUE)
+    predt <- data.table::fread(preFile, fill = TRUE)
+
+    newdt[, year := years[newRef]]
+    predt[, year := years[preRef]]
+
+    ## Find codes that have changed
+    codeChg <- setdiff(newdt$code, predt$code)
+
+    ## merge by reference ie. 2018 to 2020 data
+    newdt[predt, on = "name", `:=`(precode = i.code, preyr = i.year)]
+    
+    ## Filter those names that have changed codes
+    newCol <- paste0("jan", years[newRef])
+    preCol <- paste0("jan", years[preRef])
+    chgDT <- newdt[code %in% codeChg, ]
+    
+    chgDT[, (newCol) := paste(code, name, sep = " - ")]
+    chgDT[, (preCol) := paste(precode, name, sep = " - ")]
+    
+    colDel <- setdiff(names(chgDT), c(newCol, preCol))
+    chgDT[, (colDel) := NULL]
+
+    tempName <- paste0(type, "_change_", newCol, ".xlsx")
+    fileName <- file.path(des.path, tempName)
+
+    if (save == "no"){
+      listDT[[i]] <- chgDT
+    } else {
+      openxlsx::write.xlsx(chgDT, fileName)
+    }
+  }
+
+  allDT <- rbindlist(listDT)
+}
+
+
 
 
 
