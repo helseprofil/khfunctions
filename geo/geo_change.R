@@ -969,3 +969,14 @@ setkey(allChange, code, prev)
 allChange  
 
 
+
+#### ---------
+## Create data for change table
+## ---------
+
+newD <- data.table(code = c(3, 5:9), name = c("new3", "old4", "new", "new2",
+                                              "new", "old10"))
+oldD <- data.table(code = c(4, 1, 2, 10), name = c("old4", "old1", "old2", "old10"))
+
+fwrite(newD, "~/Git-work/draft/geo/data/new_bydel.csv")
+fwrite(oldD, "~/Git-work/draft/geo/data/old_bydel.csv")
