@@ -863,8 +863,9 @@ setnames(alt2019_2020, c("currName.x", "prev.y","prevName.y", "year.y"), c("curr
 eraDT <- data.table(code = c(6, 12, 15:16), name = sapply(c(6, 12, 15:16), function(x) paste0("zz", letters[x])))
 eraChg <- data.table(newname = sapply(c(6, 15, 15), function(x) paste0(x, " - zz", letters[x])),
                      prename = sapply(c(20, 25, 30), function(x) paste0(x, " - old", letters[x])))
-preDT[code == 6, name := "must_exist"]
-preDT[code == 12, name := "era_pre"]
+eraDT[code == 6, name := "must_exist"]
+eraDT[code == 12, name := "era_pre"]
+
 
 preDT <- data.table(code = c(1:2, 6, 9:12), name = sapply(c(1:2, 6, 9:12), function(x) paste0("pre", letters[x])))
 preChg <- data.table(newname = sapply(c(2, 9), function(x) paste0(x, " - pre", letters[x])),
@@ -872,12 +873,14 @@ preChg <- data.table(newname = sapply(c(2, 9), function(x) paste0(x, " - pre", l
 preDT[code == 6, name := "must_exist"]
 preDT[code == 12, name := "era_pre"]
 
+
 postDT <- data.table(code = c(1:4, 6), name = sapply(c(1:4, 6), function(x) paste0("post", letters[x])))
 postChg <- data.table(newname = sapply(c(3, 3, 4, 4), function(x) paste0(x, " - post", letters[x])),
                      prename = sapply(c(9:12), function(x) paste0(x, " - pre", letters[x])))
 postDT[code == 3, name := "post_new"]
 postDT[code == 6, name := "must_exist"]
-postChg[ == 12, name := "era_pre"]
+postChg[prename == 12, name := "era_pre"]
+
 
 newDT <- data.table(code = c(3, 5:8), name = sapply(c(3, 5:8),
                                                          function(x) paste0("new_",letters[x])))
