@@ -883,8 +883,8 @@ preChg <- data.table(newname = c("2 - preb",
                      prename = c("15 - era_newo",
                                  "16 - era_newp"))
 
-fwrite(eraDT, "file_jan2018.csv", sep = ";")
-write_xlsx(eraChg, "file_change_jan2018.xlsx")
+fwrite(preDT, "file_jan2018.csv", sep = ";")
+write_xlsx(preChg, "file_change_jan2018.xlsx")
 
 
 
@@ -899,8 +899,8 @@ postChg <- data.table(newname = c("3 - post_newc",
                                   "11 - prek",
                                   "12 - era_newl"))
 
-fwrite(eraDT, "file_jan2019.csv", sep = ";")
-write_xlsx(eraChg, "file_change_jan2019.xlsx")
+fwrite(postDT, "file_jan2019.csv", sep = ";")
+write_xlsx(postChg, "file_change_jan2019.xlsx")
 
 
 
@@ -916,8 +916,8 @@ newChg <- data.table(newname = c("5 - new_e",
                                  "1 - post_newa",
                                  "2 - post_newb"))
 
-fwrite(eraDT, "file_jan2020.csv", sep = ";")
-write_xlsx(eraChg, "file_change_jan2020.xlsx")
+fwrite(newDT, "file_jan2020.csv", sep = ";")
+write_xlsx(newChg, "file_change_jan2020.xlsx")
 
 
 
