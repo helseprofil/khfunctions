@@ -46,7 +46,7 @@ trace("LagFilgruppe", tracer = quote(print(as.list(match.call()))),
 
 ## List of Filgruppenavn to check
 ## ------------------------------
-gpnavn <- c("ELEVUNDER", "INNVAND", "LESEFERD")
+gpnavn <- c("ELEVUNDER", "INNVAND", "LESEFERD", "INNTULIKHET")
 
 ## Subset file for testing purposes
 gpnavnSub <- c("ELEVUNDER", "SYKEFRAV", "BEFOLK_STATBANK", "RFU_SIRUS_NH_ROYK_UTDANN")
@@ -60,7 +60,7 @@ gpnavnSub <- c("ELEVUNDER", "SYKEFRAV", "BEFOLK_STATBANK", "RFU_SIRUS_NH_ROYK_UT
 LagFilgruppe("LESEFERD") #CSV fil
 LagFilgruppe("ELEVUNDER", testfil = TRUE) #CSV fil testfile
 LagFilgruppe(gpnavnSub[4], testfil = TRUE)
-LagFilgruppe(gpnavn[2]) #csv
+LagFilgruppe(gpnavn[4], testfil = TRUE) #csv
 LagFilgruppe("LAVINNT_1G", testfil = T)
 LagFilgruppe("UTDANN_NH",versjonert=TRUE)
 LagFilgruppe("BRUTTOINNTEKT", testfil = TRUE)

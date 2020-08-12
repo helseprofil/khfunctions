@@ -99,9 +99,9 @@ type = "bydel"
 save = "xlsx"
 
 
-make_change(files = files, years = years, type = type, folder.path, save, des.path)
+get_change(files = files, years = years, type = type, folder.path, save, des.path)
 
-make_change <- function(files, years, type, folder.path, save = c("no", "xls", "csv"), des.path){
+get_change <- function(files, years, type, folder.path, save = c("no", "xls", "csv"), des.path){
 
   if (missing(save)) save = "no"
   xl <- grepl("xl", save, ignore.case = TRUE)
@@ -213,6 +213,53 @@ grunnkrets[name %like% "Tysfjord", ]
 ## Trouble with encoding in Windows and workaround is to open csv in Excel
 ## then save.as Excel file before importing the Excel file in Access.
 
+## Cast to all granularity type
+## ----------------------------
+getwd()
+file = "ssb_fylke_jan2020.csv"
+folder.path = here("geo", "fylke")
+type = "fylke"
+year = 2020
+keep.col = c("code", "name")
+
+geo = "GEO"
+
+cast_geo <- function(file, type, year, folder.path, keep.col = c("code", "name")){
+
+  fName <- file.path(folder.path, file)
+  dt <- data.table::fread(fName, fill = TRUE)
+
+  outCol <- setdiff(names(dt), keep.col)
+  dt[, (outCol) := NULL]
+
+  dt[, `:=`(border = year, geo = type)]
+
+  if (type != "fylke"){
+    ## Create reference tables
+    kommune <- data.table(v1 = "fylke", v2 = 2)
+    bydel <- data.table(v1 = c("kommune", "fylke"), v2 = c(2, 4))
+    grunnkrets <- data.table(v1 = c("kommune", "fylke"), v2 = c(4, 6))
+    refTab <- list(kommune = kommune, bydel = bydel, grunnkrets = grunnkrets)
+
+    numRow <- nrow(refTab[[type]])
+
+    for (i in seq_len(numRow)){
+
+      colName <- refTab[[type]]$v1[i]
+      numD <- refTab[[type]]$v2[i]
+      subDigit <- paste0("\\d{", numD, "}$")
+
+      dt[, (colName) := as.numeric(gsub(subDigit, "", code))]
+      
+    }
+  }
+  
+  return(dt[])
+}
+
+
+DT <- cast_geo(file = file, type = type, year = year, folder.path = folder.path)
+
 
 ## -----------
 ## 2019 GEO
@@ -226,7 +273,7 @@ grunnkrets[name %like% "Tysfjord", ]
 ## xlfile - to name the exported Excel file
 
 read_ssb <- function(file, digit, level, year, oldName, newName, xlfile){
-
+  
   if (missing(oldName)) oldName <- c("code", "name")
 
   if (missing(digit)) digit <- 2
@@ -284,15 +331,17 @@ read_ssb(file = "ssb_grunnkrets2019.csv",
          level = "grunnkrets",
          year = 2019)
 
+read_ssb(file = "ssb_grunnkrets_jan2020.csv",
+         level = "grunnkrets",
+         year = 2020)
+
 read_ssb(file = "ssb_bydel2019.csv",
          level = "bydel",
          year = 2019)
 
-
-
-
-
-
+read_ssb(file = "ssb_bydel_jan2020.csv",
+         level = "bydel",
+         year = 2020)
 
 ## Read Access DB
 ## --------------
@@ -384,39 +433,67 @@ dbFile <- paste(dbPath, dbName, sep = "/")
 cs <- paste0(dbCon, dbFile)
 con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
+## Test
+## ----
+granularity = "kommune"
+conn = con
+## ---------
 
-read_tbl <- function(granularity, conn = con, year = c(2019, 2020)){
+## Read tables in Access DB to track changes
+## But this is already handled in norgeo::merge_geo()
+## So this draft can be deleted!
+read_tbl <- function(granularity, conn = con){
 
+  ## get list of tables for the specified granularity
   tbl <- paste0("tbl", granularity, "%")
-  tblNames <- DBI::dbListTables(conn, table_name = tbl)
+  tblAll <- DBI::dbListTables(conn, table_name = tbl)
+
+  ## exclude when table names has a word "change"
+  indC <- grep("change", tblAll, ignore.case = TRUE)
+  tblNames <- tblAll[-indC]
+
+  ## get years for all files
+  tblYear <- gsub("[^0-9]", "", tblNames)
   
   tblList <- lapply(tblNames, function(x) DBI::dbReadTable(conn, x))
   names(tblList) = tblNames
   lapply(tblList, data.table::setDT)
 
+  for (i in seq_len(length(tblList))){
+
+    tblList[[i]]$border <- tblYear[i]
+    
+  }
+
+  ## Add border to where the code belongs to
   tblList[[1]]$border <- year[1]
   tblList[[2]]$border <- year[2]
 
   tbl2020 <- tblList[[2]]
   tbl2019 <- tblList[[1]]
 
+  ## get all the new code to be compared to the older codelist
   codeList <- tbl2020[["code"]]
+  ## keep only previous codes that doesn't exist in the newest codelist
   tbl2019b <- tbl2019[!(code %in% codeList), ]
 
-  tblAll <- data.table::rbindlist(list(tbl2020, tbl2019b))
+  ## merge new codes and codes that only exist in the previous code
+  ## so there aren't duplicated since the same code are carried forward
+  ## to the new codes list
+  tblDT <- data.table::rbindlist(list(tbl2020, tbl2019b))
 
   keepNames <- c("code", "name", "border")
   delNames <- base::setdiff(names(tblList[[1]]), keepNames)
   ## tblFylke[, ..keepNames]
 
   ## set(tblFylke,, keepNames, NULL)
-  tblAll[, (delNames) := NULL] 
-  tblAll[, code := as.numeric(code)]
-  tblAll[, granularity := granularity]
+  tblDT[, (delNames) := NULL] 
+  tblDT[, code := as.numeric(code)]
+  tblDT[, granularity := granularity]
   
-  Encoding(tblAll$name) <- "latin1"
+  Encoding(tblDT$name) <- "latin1"
   
-  return(tblAll)
+  return(tblDT)
 
 }
 

@@ -15,7 +15,7 @@ show_rds <- function(rdsPath, rdsFile){
   subdt <- dt[rowSelect, ]
   geo <- unique(dt$GEOniv)
 
-  list(colnames = dtNames, geo = geo, subset = subdt)
+  list(colnames = dtNames, geo = geo, dt = dt)
 }
 
 show_rds(rdsPath, "ELEVUNDER_2020-07-01-16-14.rds")
@@ -25,4 +25,11 @@ show_rds(rdsPath, "BEF_INNV_NORSKFODT_2020-06-30-11-59.rds")
 dd <- show_rds(rdsPath, "ELEVUNDER_2020-07-01-16-14.rds")
 str(dd$subset)
 
-show_rds(rdsNew, "ELEVUNDER.rds")
+dt <- show_rds(rdsNew, "ELEVUNDER.rds")
+## gamle Moss kommunekode 0104 og nykode 3002 - ikke finnes
+dt$dt[GEO %like% "3002", ]
+dt$dt[GEO %like% "^300", ]
+dt$dt[nchar(GEO) == 4 & GEO %in%  grep("^30", GEO, value = TRUE), ]
+
+
+show_rds(rdsNew, "INNTULIKHET.rds")

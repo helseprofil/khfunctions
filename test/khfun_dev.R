@@ -930,7 +930,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
   #   }
   #cat("\nETTER INNLES\n#############################\n")
 
-
+  
 
   if (ok==1){
 
@@ -939,6 +939,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     #NB: for oversiktelighet i parameterfila gj?res dette b?de f?r og etter reshape
     #Dvs: kolonnenavn generert i reshape tillates ? avvike fra standardnavn, disse endres etterp?
     #Valdiering skjer ved siste endring
+
+    ## This is the standard columns
     kolorgs<-globs$kolorgs
     #Finn kolonner spesifisert i filbesk
     ## Get coloums that exist in filbesk except those with <..> from INNLESING tabel
@@ -1072,7 +1074,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ##--------------------------------------------------------------
     #Sett standardverdier (f?r ikke til dette med enklere syntaks n?r det kan v?re tuppel, virker kl?nete)
     DF<-setNames(data.frame(DF,DefV,stringsAsFactors = FALSE),c(names(DF),DefVCols))
-
+    
     #Sjekk for ikke-eksisterende/feilskrevet
     colerr<-""
     if (!all(names(HarCols) %in% names(DF))){
@@ -1302,7 +1304,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ## -------------------
     ## gives "" for NA in c("VAL1","VAL2","VAL3") - don't know what is the reason
 
-
+    
     #VASK VERDIER. Litt annen prosess, bruker KB, men tabulerer bare ikke-numeriske.
     #Setter numerisk, med flagg for type NA
     for (val in c("VAL1","VAL2","VAL3")){
@@ -1316,7 +1318,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
 
         DF[is.na(DF[,val]),val]<-""
 
-
+        
         valKB<-KBomkod(DF[,val],type=val,valsubs=TRUE,filbesk=filbesk,batchdate=batchdate,globs=globs)
         valKBut<-valKB$subsant
 
@@ -2061,6 +2063,10 @@ ReshapeTab<-function (DELF,filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()
 subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=integer(0),OK=integer(0))
 
 
+## org - is vector extracted from selected columns in DF from where the function is called from eg.
+## GEO, VAL1 etc
+## type - data type for omkoding eg. GEO, SIVST, UTDANN etc
+## valsubs - if it's using regext with sub() function
 KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
 
 
@@ -2090,6 +2096,7 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
   kbok<-sqlQuery(globs$dbh,sql,as.is=TRUE)
   kbok[is.na(kbok)]<-""
 
+  
   ## Create empty data.frame.
   subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=integer(0),OK=integer(0))
   if (nrow(kbok)>0){
@@ -2101,7 +2108,7 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
     while (i<=nrow(KBsubs)){
       KBsub<-KBsubs[i,]
 
-      if (valsubs==TRUE){ #OBS! what is valsubs??
+      if (valsubs==TRUE){ #OBS! what is valsubs?? Just to show regexp with sub() exists
         subsant<-rbind(subsant,data.frame(ORG=KBsub$ORGKODE,KBOMK=paste("<",KBsub$NYKODE,">",sep=""),OMK=paste("<",KBsub$NYKODE,">",sep=""),FREQ=length(grepl(KBsub$ORGKODE,omk,perl=TRUE)),OK=1))
       }
       #omk<-sub(eval(parse(text=KBsub$ORGKODE)),eval(parse(text=KBsub$NYKODE)),omk)
@@ -2127,6 +2134,7 @@ KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs(
     }
   }
 
+  
   if (valsubs==FALSE){
     return(omk)
   } else {
@@ -2190,7 +2198,7 @@ GEOvask<-function (geo,filbesk=data.frame(),batchdate=SettKHBatchDate(),globs=Fi
     make_log("GEOvask")
   }
 
-
+  
   ## geo - Frequency table for original geo from the file
   ##
 

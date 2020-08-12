@@ -15,8 +15,6 @@ con <- dbConnect(odbc::odbc(), .connection_string = cs)
 
 ## RDS file Path
 rdsPath <- normalizePath("C:\\enc\\DBtest\\PRODUKTER\\MELLOMPROD\\R\\STABLAORG\\NYESTE", "/")
-## Source Path
-srcPath <- normalizePath("F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\ORGDATA\\UDIR\\ELEVUNDER\\ORG\\2017", "/")
 
 show_rds <- function(rdsPath, srcPath, rdsFile, srcFile, rds.only = FALSE){
 
@@ -45,9 +43,13 @@ show_rds <- function(rdsPath, srcPath, rdsFile, srcFile, rds.only = FALSE){
 }
 
 filNames <- c("ELEVUNDER.rds", "INNTULIKHET.rds")
-srcName <- "Elev_2015.csv"
+
 
 ## ELEVUNDER
+## Source Path
+srcPath <- normalizePath("F:\\Prosjekter\\Kommunehelsa\\PRODUKSJON\\ORGDATA\\UDIR\\ELEVUNDER\\ORG\\2017", "/")
+srcName <- "Elev_2015.csv"
+
 show_rds(rdsPath, rdsFile = "ELEVUNDER.rds", rds.only = TRUE)
 elvDT <- show_rds(rdsPath,
                srcPath,
@@ -58,6 +60,7 @@ dt <- elvDT$dt
 setDT(dt)
 names(dt)
 dt
+dd <- elvDT$src
 
 ## summary(dt)
 dname <- names(dt)
@@ -89,6 +92,9 @@ DT <- show_rds(rdsPath,
                srcPath,
                "INNTULIKHET.rds",
                "18p9010byd_2009.csv")
+DT
+show_rds(rdsPath, rdsFile = "INNTULIKHET.rds", rds.only = TRUE)
+
 
 
 ## source
