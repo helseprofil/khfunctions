@@ -864,7 +864,8 @@ setwd("C:/geo_files/test_data")
 library(data.table)
 library(writexl)
 
-eraDT <- data.table(code = c(6, 12, 15:16), name = sapply(c(6, 12, 15:16), function(x) paste0("era_new", letters[x])))
+eraDT <- data.table(code = c(6, 12, 15:16, 21), name = sapply(c(6, 12, 15:16, 21),
+                                                              function(x) paste0("era_new", letters[x])))
 eraChg <- data.table(newname = sapply(c(6, 15, 15), function(x) paste0(x, " - era_new", letters[x])),
                      prename = sapply(c(20, 25, 30), function(x) paste0(x, " - old_V", letters[x - 5])))
 eraDT[code == 6, name := "must_exist"]
@@ -878,9 +879,13 @@ write_xlsx(eraChg, "file_change_jan2017.xlsx")
 preDT <- data.table(code = c(1:2, 6, 9:12), name = sapply(c(1:2, 6, 9:12), function(x) paste0("pre", letters[x])))
 preDT[code == 6, name := "must_exist"]
 preDT[code == 12, name := "era_newl"]
-preChg <- data.table(newname = c("2 - preb",
+preChg <- data.table(newname = c("1 - prea",
+                                 "10 - prej", 
+                                 "2 - preb",
                                  "9 - prei"),
-                     prename = c("15 - era_newo",
+                     prename = c("21 - era_newu",
+                                 "21 - era_newu",
+                                 "15 - era_newo",
                                  "16 - era_newp"))
 
 fwrite(preDT, "file_jan2018.csv", sep = ";")
@@ -888,8 +893,9 @@ write_xlsx(preChg, "file_change_jan2018.xlsx")
 
 
 
-postDT <- data.table(code = c(1:4, 6), name = sapply(c(1:4, 6), function(x) paste0("post_new", letters[x])))
+postDT <- data.table(code = c(1:4, 6, 50), name = sapply(c(1:4, 6, 50), function(x) paste0("post_new", letters[x])))
 postDT[code == 6, name := "must_exist"]
+postDT[code == 50, name := "no_change"]
 postChg <- data.table(newname = c("3 - post_newc",
                                   "3 - post_newc",
                                   "4 - post_newd",
@@ -904,16 +910,20 @@ write_xlsx(postChg, "file_change_jan2019.xlsx")
 
 
 
-newDT <- data.table(code = c(3, 5:8), name = sapply(c(3, 5:8),
-                                                         function(x) paste0("new_",letters[x])))
+newDT <- data.table(code = c(3, 5:8, 17, 18, 50),
+                    name = sapply(c(3, 5:8, 17, 18, 50),
+                                  function(x) paste0("new_",letters[x])))
 newDT[code == 3, name := "post_newc"]
 newDT[code == 6, name := "must_exist"]
+newDT[code == 50, name := "no_change"]
 
 newChg <- data.table(newname = c("5 - new_e",
                                  "7 - new_g",
-                                 "7 - new_g"),
+                                 "17 - new_q",
+                                 "18 - new_r"),
                      prename = c("4 - post_newd",
                                  "1 - post_newa",
+                                 "2 - post_newb",
                                  "2 - post_newb"))
 
 fwrite(newDT, "file_jan2020.csv", sep = ";")
