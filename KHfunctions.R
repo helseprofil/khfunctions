@@ -47,6 +47,7 @@
 
 
 require(RODBC)  #Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
+require(DBI)
 require(foreign) #Brukes ved lesing av SPSS, dBF
 #require(gdata)  #Brukes ved lesing av xls/xlsx filer
 require(sas7bdat) #brukes ved lesing av SAS filer
@@ -59,7 +60,6 @@ require(stringr)
 require(intervals)
 require(data.table) #Bruker data.table for rask merge
 require(readxl)
-if (!require(fs)) install.package("fs")
 require(fs)
 
 #Brukte pather under utvikling (NB: prioritert rekkefølge under)
@@ -76,7 +76,7 @@ defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
 ############################################## ----
 globglobs<-list(
   HOVEDmodus="NH",
-  KHaargang=2020,
+  KHaargang=2021,
   KHgeoniv="K",
   KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
@@ -1546,10 +1546,11 @@ ReshapeTab<-function (DELF,filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs()
   if(all(idvars %in% names(DELF)) & (is.null(mevars) | all(mevars %in% names(DELF)))){  
     DELF[,idvars]<-sapply(DELF[,idvars],as.character)  #Må være av samme type for at ikke reshape skal kræsje  
     if (!is.null(mevars)){
-      DELF<-melt(DELF,id.vars=idvars,measure.vars=mevars,variable.name=varname,value.name=valname,na.rm=FALSE)      
+      DELF<-data.table::melt(as.data.table(DELF),id.vars=idvars,measure.vars=mevars,variable.name=varname,value.name=valname,na.rm=FALSE)      
     } else {
-      DELF<-melt(DELF,id.vars=idvars,variable.name=varname,value.name=valname,na.rm=FALSE)
+      DELF<-data.table::melt(as.data.table(DELF),id.vars=idvars,variable.name=varname,value.name=valname,na.rm=FALSE)
     }
+    data.table::setDF(DELF)
     DELF[,varname]<-as.character(DELF[,varname])   #Kan ha blitt factor, og det gir krøll senere
   } else {
     rshperr<-""
@@ -6186,8 +6187,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
   if (isTRUE(grepl("function", filename))){valgFil <- "fun"}
   if (isTRUE(grepl("KHELSA", filename))){valgFil <- "mdb"}
 
-  if (!require(RODBC)) {install.packages("RODBC")}
-  require(RODBC)
+  ## if (!require(RODBC)) {install.packages("RODBC")}
+  ## require(RODBC)
   date<-format(Sys.time(), "%Y%m%d%H%M")
 
   switch(
@@ -6203,8 +6204,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
       KHcFN<-paste(styrpath, filename, sep="/")
       KHvFN<-paste(styrpath_b,sort(styrvfiles[grepl("^KHELSA\\d+.mdb$",styrvfiles)],decreasing=TRUE)[1],sep="/")
 
-      khc<-odbcConnectAccess2007(KHcFN)
-      khv<-odbcConnectAccess2007(KHvFN)
+      khc<-RODBC::odbcConnectAccess2007(KHcFN)
+      khv<-RODBC::odbcConnectAccess2007(KHvFN)
 
 
       nytt<-0
@@ -6267,15 +6268,15 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
 ###############################
 ## GODKJENT MAPPE
 ###############################
-inspak <- function(pkg){
-  nypkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-  if (length(nypkg))
-    install.packages(nypkg, dependencies = TRUE)
-}
+## inspak <- function(pkg){
+##   nypkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+##   if (length(nypkg))
+##     install.packages(nypkg, dependencies = TRUE)
+## }
 
-pkg <- c("RODBC", "DBI", "data.table", "glue", "fs", "logger", "magrittr", "stringi")
+## pkg <- c("RODBC", "DBI", "data.table", "glue", "fs", "logger", "magrittr", "stringi")
 ## sapply(pkg, require, character.only = TRUE)
-inspak(pkg)
+## ## inspak(pkg)
 
 
 godkjent <- function(profil = c("FHP", "OVP"),
