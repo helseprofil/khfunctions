@@ -1,5 +1,5 @@
 # khfunction
-Hjernen til data prosessering for helseprofilene
+Hjernen til data prosessering for helseprofilene ie. FHP og OVP
 
 Mappe `hist` er en samlig av tilfeldige utvalgte historiske filer for **khfunction** 
 
