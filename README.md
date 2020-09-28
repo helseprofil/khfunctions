@@ -1,5 +1,5 @@
 # khfunction
-Hjernen til data prosessering for folkehelseprofilene
+Hjernen til data prosessering for helseprofilene
 
 Mappe `hist` er en samlig av tilfeldige utvalgte historiske filer for **khfunction** 
 
