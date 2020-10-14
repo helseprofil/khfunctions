@@ -1,9 +1,0 @@
-#+Title: Explore KHfunction
-#+Subtitle: Steg 01
-
-* Load functions
-
-#+BEGIN_SRC R :results output
-  source("khfun_dev.R")
-  globs <- SettGlobs()
-  #+END_SRC
