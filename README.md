@@ -1,4 +1,7 @@
 # KHfunction.R
+
+Dette branch dvs. `hist` inneholder historiske filer
+
 Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er ikke inkludert her.
 
 Mappe `hist` er en samlig av tilfeldige utvalgte historiske filer for **khfunction** 
