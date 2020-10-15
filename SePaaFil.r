@@ -4,7 +4,9 @@ rm(list = ls())
 #source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20190927.r')
 #source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20190927_HREG81-84.r')
 #source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20191219.r')  #krever gamle pakker
-source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20200103.r')  #krever nye pakker
+## source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20200103.r')  #krever nye pakker
+
+source("KHfunctions.R")
 
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 #BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
@@ -88,7 +90,7 @@ kube2filnavn<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/KUBER/NORGESHELSA
 TmpRutineSammenlignKHkuber(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs)
 
 #---------------------------------------------------------------------------------------------
-BUFFERbatch  !!!!!!!
+## BUFFERbatch  !!!!!!!
 
 BUFFER[["BEF_GKu"]]<-FinnFilT("BEF_GK_Tu")
 
