@@ -52,7 +52,7 @@ require(foreign) #Brukes ved lesing av SPSS, dBF
 #require(gdata)  #Brukes ved lesing av xls/xlsx filer
 require(sas7bdat) #brukes ved lesing av SAS filer
 require(XML)
-require(reshape2)  #melt brukes til wide->long
+## require(reshape2)  #melt brukes til wide->long
 require(zoo)  #na.locf for ? sette inn for NA i innrykket originaltabulering
 require(plyr)  #mapvalues for omkoding
 require(sqldf)
