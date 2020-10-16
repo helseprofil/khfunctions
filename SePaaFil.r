@@ -1,11 +1,6 @@
 #---------------------------------------------------------------------------------------------
 #NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
-#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20190927.r')
-#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20190927_HREG81-84.r')
-#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20191219.r')  #krever gamle pakker
-## source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctions_20200103.r')  #krever nye pakker
-
 source("KHfunctions.R")
 
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
