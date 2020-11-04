@@ -264,6 +264,24 @@ Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
 
    =val.f= er strengt tatt viktigere. Den angir i hovedtrekk hvorfor tall er NA. Er det fordi tallet
    mangler originalt, er det fordi det ikke lar seg bergene, er det fordi det anonymisres osv.
+
+   Men begge =val.a= og =val.f= får statis ferdi henholdsvis 0 og 1. Se [[https://github.com/helseprofil/khfunctions/blob/master/KHfunctions.R#L986][koden]].
+
+#+BEGIN_SRC R :eval FALSE 
+  valok<-1
+  valf<-paste(val,".f",sep="")
+  vala<-paste(val,".a",sep="")
+  valomk<-paste(val,"omk",sep="")
+
+  ##Lag omkodet verdi med numerisk. Ikke numerisk blir foreløpig NA
+  suppressWarnings(DF[,valomk]<-as.numeric(valKB$omk))
+  DF[,valf]<-0
+  DF[,vala]<-1
+  DF[valKB$omk==".." & DF[,val]!=valKB$omk,valf]<-1
+  DF[valKB$omk=="." & DF[,val]!=valKB$omk,valf]<-2
+  DF[valKB$omk==":" & DF[,val]!=valKB$omk,valf]<-3
+   #+END_SRC
+
 ** Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.
    TYP=0 er de Ordinåre geokodene, TYP=U er geokoder som angir "Uoppgitt" (slik som at 1199 er
    uopgitt kommune under fylket 11). Dette filteret brukes når det produseres kuber og
