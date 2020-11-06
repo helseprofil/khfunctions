@@ -1211,7 +1211,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
     names(DF)<-gsub("^\\s","",names(DF))
     names(DF)<-gsub("\\s$","",names(DF))
     names(DF)[names(DF)==""]<-paste("C",which(names(DF)==""),sep="")
-    
+    DF$filgruppe <- filbesk$FILGRUPPE    
     
     #DEV dette b?r v?re un?dvendig '' skal v?re lest inn som NA
     #DF[DF==""]<-NA
