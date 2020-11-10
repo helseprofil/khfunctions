@@ -1211,8 +1211,13 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
     names(DF)<-gsub("^\\s","",names(DF))
     names(DF)<-gsub("\\s$","",names(DF))
     names(DF)[names(DF)==""]<-paste("C",which(names(DF)==""),sep="")
-    DF$filgruppe <- filbesk$FILGRUPPE    
     
+    ## These variables are to be use in Stata process (request from Jørgen)
+    ## They will be deleted when Stata RSYNT1 is completed below
+    DF$filgruppe <- filbesk$FILGRUPPE
+    DF$delid <- filbesk$DELID
+    DF$tab1_innles <- filbesk$TAB1
+
     #DEV dette b?r v?re un?dvendig '' skal v?re lest inn som NA
     #DF[DF==""]<-NA
     #des<-lapply(DF,class)
@@ -1273,6 +1278,10 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
   #cat("\n")
   #print(head(T))
   #sink()
+
+  ## These variables are needed only in RSYNT1 for Stata
+  DF[c("filgruppe","delid","tab1_innles")] <- NULL
+
   TilFilLogg(filbesk$KOBLID,"TidLesFil",(proc.time()-klokke)[3],batchdate=batchdate,globs=globs)
   default.stringsAsFactors=TRUE 
   return(list(DF=DF,ok=ok))
