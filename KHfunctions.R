@@ -65,8 +65,13 @@ require(bat2bat) #https://github.com/helseprofil/bat2bat
 
 
 ### Test mode
-if(!exists("runtest")) runtest = FALSE
-if(runtest) {test = "Ja"} else {test = "Nei"}
+if(!exists("test_files")) {
+  runtest = FALSE
+  test = "Nei"
+} else {
+  runtest = TRUE
+  test = "Ja"
+}
 
 ## set root for ORIGINAL files when test=TRUE instead of c:/enc/DBtest
 originalPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
@@ -486,13 +491,14 @@ LagFilgruppe<-function(gruppe,
                        printSTATA=FALSE,
                        versjonert=FALSE,
                        dumps=list(),
-                       test = FALSE){
+                       test = runtest){
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
   lineMsg <- "-----------------------"
-  if(test) message(lineMsg,
-                   "\n** -- Test Modus -- **")
+  if(test)
+    message(lineMsg,
+            "\n** -- Test Modus -- **")
   
   ## To see which DB is currently used
   message(lineMsg,
@@ -500,6 +506,9 @@ LagFilgruppe<-function(gruppe,
           "\n  DB path:  ", globs$path, "\n", 
           lineMsg)
 
+  if(test)
+    message("  Test filer KOBLID: ", test_files, "\n", lineMsg)
+    
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -512,14 +521,11 @@ LagFilgruppe<-function(gruppe,
     sqlQuery(globs$log,paste("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='",gruppe,"' AND SV='S'",sep=""))
     sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='",gruppe,"' AND SV='S'",sep=""))
     #Finn parameterbeskrivelse av delfilene
-    delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs, test = test)
+    delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs, test = runtest)
 
     if(nrow(delfiler)>0){
       for (i in 1:nrow(delfiler)){
 
-        ## ## set root path
-        ## getSti <- globs$path
-        ## if (test)
         getSti <- originalPath
 
         filbesk<-delfiler[i,]
@@ -2240,14 +2246,14 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGl
 }
 
 #
-FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = FALSE){
+FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = NULL){
   #Default er å finne filbesk gyldige nå (Sys.time)
   datef<-format(Sys.time(), "#%Y-%m-%d#")
   #ALternativt kan man finne for en historisk batchdate
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   }
-  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, TESTFIL, INNLESING.*
+  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
               FROM INNLESING INNER JOIN 
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER 
               ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
@@ -2258,12 +2264,13 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = F
               AND ORIGINALFILER.IBRUKTIL>", datef,"
               AND INNLESING.VERSJONFRA<=",datef," 
               AND INNLESING.VERSJONTIL>",datef,sep="")
+  
   fb<-sqlQuery(globs$dbh,sqlt,stringsAsFactors=FALSE)
-
+  
   ## Picking up files path that is refered to in ORIGINALFILER
   ## --------------------------------------------------------
-  if (test) 
-    fb <- subset(fb, TESTFIL == 1)
+  if (test)
+    fb <- subset(fb, KOBLID  %in% test_files)
 
   invisible(fb)
 }
