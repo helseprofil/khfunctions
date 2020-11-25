@@ -161,5 +161,8 @@ Comparefile<-"F:/Prosjekter/Kommunehelsa/????????????"
 write.table(comp$V12,file=Comparefile,sep=';',na="",row.names = FALSE)
 
 
+## Batch mot Batch
+## ----------------
+## Evt. åpne denne URL https://fhprofil.shinyapps.io/bat2bat/
 
-
+bat2bat::run_app()
