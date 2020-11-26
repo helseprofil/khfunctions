@@ -2,9 +2,9 @@
 ## ---------
 rm(list = ls())
 
-
-BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
-#BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
+ts <- tm$new()
+ts <- tm$new(dbPath = "F:/Prosjekter/Kommunehelsa/PRODUKSJON")
+ts <- tm$new(dev = TRUE)
 
 #Denne m? ogs? ofte kj?res ved oppstart. Setter opp ODBC.
 KHglobs<-SettGlobs()
@@ -19,36 +19,27 @@ gpnavn <- c("ELEVUNDER", "ARBLEDIGE", "REGNEFERD_NH", "DODE_GK")
 ## tesfil = TRUE is to choose file where TESTING is 1 in ORGINALFILERse
 LagFilgruppe(gpnavn[4])
 
-LagFilgruppe("ELEVUNDER") #CSV fil
+LagFilgruppe("NEET_IMDI") #CSV fil
 LagFilgruppe("ELEVUNDER", test = TRUE) #CSV fil testfile
 LagFilgruppe("INNTULIKHET", test = TRUE) #CSV fil testfile
 
 
 
-tm <- R6::R6Class(
-  "TestMode",
-  public = list(
-    id = NULL,
-    initialize = function(){
-      assign("test_files", TRUE, envir = .GlobalEnv)
-      source("KHfunctions.R")
-      message("\n -->>>  Test modus aktivert  <<<--")
-    },
-    add_id = function(val){
-      self$id <- val
-      assign("test_files", self$id, envir = .GlobalEnv)
-    },
-    empty = function(){
-      message(">>> Slett test KOBLID <<<")
-      self$id <- NULL
-      rm(test_files, envir = .GlobalEnv)
-    }
-  )
-)
 
+## Mer nytte funksjoner for Test Mode
+## ----------------------------------
 
-ts <- tm$new()
+ts$dbFile
+ts$dbPath
+
+defpaths
+filDB
+
 ts$id
 test_files
-ts$add_id(3534)
-ts$empty()
+ts$add_id(3478) 
+ts$empty() #tømt alle KOBLID
+
+## Bytt nytt path eller fil
+ts$newPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
+ts$newFile <- "KHELSA.mdb"
