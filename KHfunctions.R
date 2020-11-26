@@ -64,11 +64,13 @@ require(fs)
 require(bat2bat) #https://github.com/helseprofil/bat2bat
 
 #Brukte pather under utvikling (NB: prioritert rekkefølge under)
-defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
-            "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-            "J:/FHI/PRODUKSJON",
-            "J:/kbDEV")
+defpaths<-c(
+  "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON", 
+  "F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+  "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+  "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+  "J:/FHI/PRODUKSJON",
+  "J:/kbDEV")
 
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
@@ -6181,7 +6183,7 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 
 
 KHglobs<-FinnGlobs()
-
+globPath <- FinnGlobs()$path
 
 ## ---------------------
 ## Backup filer
@@ -6207,8 +6209,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
     ## Access Tabell
     ## -------------
     "mdb" = {
-      styrpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING"
-      styrpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/VERSJONSARKIV"
+      styrpath <- file.path(globPath, "STYRING")
+      styrpath_b <- file.path(globPath, "STYRING/VERSJONSARKIV")
       styrvfiles<-list.files(path=styrpath_b)
 
       KHcFN<-paste(styrpath, filename, sep="/")
@@ -6240,8 +6242,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
     ## ----------
     "fun" = {
 
-      binpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN"
-      binpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/VERSJONSARKIV"
+      binpath <- file.path(globPath, "BIN")
+      binpath_b<-file.path(globPath, "BIN/VERSJONSARKIV")
       binvfiles<-list.files(path=binpath_b)
 
       fil <- "KHfunctions"
