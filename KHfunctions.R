@@ -64,33 +64,16 @@ require(fs)
 require(bat2bat) #https://github.com/helseprofil/bat2bat
 
 
-### Test mode
-if(!exists("test_files")) {
-  runtest = FALSE
-  test = "Nei"
-} else {
-  runtest = TRUE
-  test = "Ja"
-}
-
-## set root for ORIGINAL files when test=TRUE instead of c:/enc/DBtest
-originalPath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
 
 #Brukte pather under utvikling (NB: prioritert rekkefølge under)
-defpaths <- switch(test,
-                   Nei = c(originalPath, 
-                           "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
-                           "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-                           "J:/FHI/PRODUKSJON",
-                           "J:/kbDEV"),
-                   Ja = "c:/enc/DBtest")
+defpaths <-  c("F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON", 
+               "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+               "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+               "J:/FHI/PRODUKSJON",
+               "J:/kbDEV")
 
 ## Database filename
-filDB <- switch(test,
-                Nei = "KHELSA.mdb",
-                Ja = "KHELSA_dev.mdb")
-
-
+filDB <- "KHELSA.mdb"
 
 
 ## BIG TROUBLE!!! Watch out when setting up path. Too many 'setwd()' are used!
@@ -526,12 +509,10 @@ LagFilgruppe<-function(gruppe,
     if(nrow(delfiler)>0){
       for (i in 1:nrow(delfiler)){
 
-        getSti <- originalPath
-
         filbesk<-delfiler[i,]
         tm<-proc.time()
         ## set root for original files
-        filbesk$filn<-paste(getSti,filbesk$FILNAVN,sep="/")
+        filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
         filbesk$filn<-gsub("\\\\","/",filbesk$filn)
         #Sett evt default for år basert på aktuelt årstall
         filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
@@ -1308,6 +1289,7 @@ LesFil<-function (filbesk,batchdate=SettKHBatchDate(),globs=FinnGlobs(),dumps=ch
       synt<-gsub("\\\r","\\\n",filbesk$RSYNT1)
       error<-""
       ok<-1
+      
       if (grepl("<STATA>",synt)){
         synt<-gsub("<STATA>[ \n]*(.*)","\\1",synt)
         RES<-KjorStataSkript(DF,synt,batchdate=batchdate,globs=globs)
@@ -6253,98 +6235,98 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 
 
 KHglobs<-FinnGlobs()
-
+globPath <- FinnGlobs()$path
 
 ## ---------------------
 ## Backup filer
 ## ---------------------
 
-## Backup filer
-## ---------------
-backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, ...){
+  ## Backup filer
+  ## ---------------
+  backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, ...){
 
-  ## force : TRUE hvis man skal arkivere filen uansett ellers
-  ## for KHFunction.R sjekkes det dato filen er lagret først
+    ## force : TRUE hvis man skal arkivere filen uansett ellers
+    ## for KHFunction.R sjekkes det dato filen er lagret først
 
-  if (isTRUE(grepl("function", filename))){valgFil <- "fun"}
-  if (isTRUE(grepl("KHELSA", filename))){valgFil <- "mdb"}
+    if (isTRUE(grepl("function", filename))){valgFil <- "fun"}
+    if (isTRUE(grepl("KHELSA", filename))){valgFil <- "mdb"}
 
-  ## if (!require(RODBC)) {install.packages("RODBC")}
-  ## require(RODBC)
-  date<-format(Sys.time(), "%Y%m%d%H%M")
+    ## if (!require(RODBC)) {install.packages("RODBC")}
+    ## require(RODBC)
+    date<-format(Sys.time(), "%Y%m%d%H%M")
 
-  switch(
-    valgFil,
+    switch(
+      valgFil,
 
-    ## Access Tabell
-    ## -------------
-    "mdb" = {
-      styrpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING"
-      styrpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/VERSJONSARKIV"
-      styrvfiles<-list.files(path=styrpath_b)
+      ## Access Tabell
+      ## -------------
+      "mdb" = {
+        styrpath <- file.path(globPath, "STYRING")
+        styrpath_b <- file.path(globPath, "STYRING/VERSJONSARKIV")
+        styrvfiles<-list.files(path=styrpath_b)
 
-      KHcFN<-paste(styrpath, filename, sep="/")
-      KHvFN<-paste(styrpath_b,sort(styrvfiles[grepl("^KHELSA\\d+.mdb$",styrvfiles)],decreasing=TRUE)[1],sep="/")
+        KHcFN<-paste(styrpath, filename, sep="/")
+        KHvFN<-paste(styrpath_b,sort(styrvfiles[grepl("^KHELSA\\d+.mdb$",styrvfiles)],decreasing=TRUE)[1],sep="/")
 
-      khc<-RODBC::odbcConnectAccess2007(KHcFN)
-      khv<-RODBC::odbcConnectAccess2007(KHvFN)
+        khc<-RODBC::odbcConnectAccess2007(KHcFN)
+        khv<-RODBC::odbcConnectAccess2007(KHvFN)
 
 
-      nytt<-0
-      #Sammenlign
-      for (TAB in c("INNLESING","KUBER","TNP_PROD","FILGRUPPER","ORGINNLESkobl","ORIGINALFILER")){
-        TABc<-sqlQuery(khc,paste("SELECT * FROM",TAB))
-        TABv<-sqlQuery(khv,paste("SELECT * FROM",TAB))
-        if (!identical(TABc,TABv)){
-          nytt<-1
+        nytt<-0
+        #Sammenlign
+        for (TAB in c("INNLESING","KUBER","TNP_PROD","FILGRUPPER","ORGINNLESkobl","ORIGINALFILER")){
+          TABc<-sqlQuery(khc,paste("SELECT * FROM",TAB))
+          TABv<-sqlQuery(khv,paste("SELECT * FROM",TAB))
+          if (!identical(TABc,TABv)){
+            nytt<-1
+          }
+        }
+
+        if (nytt==1){
+          KHnFN<-sub(filename, paste("KHELSA",date,".mdb",sep=""),KHcFN)
+          KHnFN<-sub(styrpath,styrpath_b,KHnFN)
+          file.copy(KHcFN,KHnFN)
+        }
+
+      },
+
+      ## KHFunction
+      ## ----------
+      "fun" = {
+
+        binpath <- file.path(globPath, "BIN")
+        binpath_b<-file.path(globPath, "BIN/VERSJONSARKIV")
+        binvfiles<-list.files(path=binpath_b)
+
+        fil <- "KHfunctions"
+
+        arkivFil <- sort(binvfiles[grepl(paste("^",fil,"\\d+\\.r",sep=""),
+                                         binvfiles)],decreasing=TRUE)[1]
+
+        ## Fil i BIN som brukes
+        FILc<-paste(binpath, filename, sep="/")
+
+        ## Fil i VERSJONSARKIV
+        FILv<-paste(binpath_b, arkivFil, sep="/")
+
+        if (file.info(FILc)$mtime>file.info(FILv)$mtime){
+          FILn<-sub(filename,paste(fil, date, ".R", sep=""),FILc)
+          FILn<-sub(binpath,binpath_b,FILn)
+          file.copy(FILc,FILn)
+        } else {
+
+          cat("## --- Filen er ikke nyere enn i akrivet --- ##\n")
+
+        }
+
+        ## Arkiveres uansett
+        if (isTRUE(force)) {
+          FILn <- paste(binpath_b, "/", fil, date, ".R", sep = "")
+          file.copy(FILc, FILn)
         }
       }
-
-      if (nytt==1){
-        KHnFN<-sub(filename, paste("KHELSA",date,".mdb",sep=""),KHcFN)
-        KHnFN<-sub(styrpath,styrpath_b,KHnFN)
-        file.copy(KHcFN,KHnFN)
-      }
-
-    },
-
-    ## KHFunction
-    ## ----------
-    "fun" = {
-
-      binpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN"
-      binpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/VERSJONSARKIV"
-      binvfiles<-list.files(path=binpath_b)
-
-      fil <- "KHfunctions"
-
-      arkivFil <- sort(binvfiles[grepl(paste("^",fil,"\\d+\\.r",sep=""),
-                                       binvfiles)],decreasing=TRUE)[1]
-
-      ## Fil i BIN som brukes
-      FILc<-paste(binpath, filename, sep="/")
-
-      ## Fil i VERSJONSARKIV
-      FILv<-paste(binpath_b, arkivFil, sep="/")
-
-      if (file.info(FILc)$mtime>file.info(FILv)$mtime){
-        FILn<-sub(filename,paste(fil, date, ".R", sep=""),FILc)
-        FILn<-sub(binpath,binpath_b,FILn)
-        file.copy(FILc,FILn)
-      } else {
-
-        cat("## --- Filen er ikke nyere enn i akrivet --- ##\n")
-
-      }
-
-      ## Arkiveres uansett
-      if (isTRUE(force)) {
-        FILn <- paste(binpath_b, "/", fil, date, ".R", sep = "")
-        file.copy(FILc, FILn)
-      }
-    }
-  )
-}
+    )
+  }
 
 
 ###############################
@@ -6478,4 +6460,80 @@ godkjent <- function(profil = c("FHP", "OVP"),
       fileFrom, "\n**********\n")
 
 }
+
+
+## TEST MODUS
+## ----------
+
+tm <- R6::R6Class(
+  "TestMode",
+
+  ## Private methods------------------------------------
+  private = list(
+    ..dbFile = "KHELSA.mdb", 
+    ..devFile = "KHELSA_dev.mdb", 
+    ..devPath = "c:/enc/DBtest"
+  ), 
+
+  ## Public methods ------------------------------------
+  public = list(
+    id = NULL,
+    dbPath = NULL,
+    dbFile = NULL, 
+    initialize = function(dev = FALSE,
+                          dbPath = NULL,
+                          dbFile = NULL
+                          ){
+
+      assign("runtest", TRUE, envir = .GlobalEnv)
+      source("KHfunctions.R")
+
+      self$dbPath <- FinnGlobs()$path
+      self$dbFile <- private$..dbFile
+
+      ## Other path than the origin
+      if (!is.null(dbPath)){
+        self$dbPath <- dbPath
+      }
+      
+      ## Decision to activate as test mode ie. TRUE or FALSE
+      if (dev){
+        self$dbPath <- private$..devPath
+        self$dbFile <- private$..devFile
+      }
+
+      assign("defpaths", self$dbPath, envir = .GlobalEnv)
+      assign("filDB", self$dbFile, envir = .GlobalEnv)
+      
+      message("\n -->>>  Test modus aktivert  <<<--\n")
+    },
+
+    ## Public operations -------------------------------
+    ## add_id : For KOBLID numbers to be selected
+    ## empty : Delete all the selected KOBLID
+    add_id = function(val){
+      self$id <- c(self$id, val)
+      assign("test_files", self$id, envir = .GlobalEnv)
+    },
+    empty = function(){
+      message(">>> Slett test KOBLID <<<")
+      self$id <- NULL
+      rm(test_files, envir = .GlobalEnv)
+    }
+  ),
+
+  ## Active bindings ----------------------------------
+  ## newFile : Change to a new database file
+  ## newPath : Change new path to the new database file
+  active = list(
+    newFile = function(value){
+      self$dbFile <- value
+      assign("filDB", self$dbFile, envir = .GlobalEnv)
+    },
+    newPath = function(value){
+      self$dbPath <- value
+      assign("defpaths", self$dbPath, envir = .GlobalEnv)
+    }
+  )
+)
 
