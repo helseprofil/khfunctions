@@ -482,15 +482,16 @@ LagFilgruppe<-function(gruppe,
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
-  lineMsg <- "\n-----------------------\n"
+  lineMsg <- "\n---------------------------\n"
   if(test)
     message(lineMsg,
-            "\n** -- Test Modus -- **")
+            "\n** ---- Test Modus ---- **")
   
   ## To see which DB is currently used
+  ## that value in globs$KHdbname and globs$path
   message(lineMsg,
-          "  Database: ", globs$KHdbname, "\n", 
-          "  DB path:  ", globs$path,  
+          "  DB name: ", dbName, "\n", 
+          "  DB path: ", file.path(globs$path, "STYRING"),  
           lineMsg)
 
   if (test && is.null(testfiles)){
