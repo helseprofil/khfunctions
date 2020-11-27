@@ -75,6 +75,14 @@ defpaths<-c(
   "J:/FHI/PRODUKSJON",
   "J:/kbDEV")
 
+dbName = "KHELSA.mdb"
+
+## This is were raw files are
+rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+
+## Change path and dbFile if specified
+if (exists("testpath")) defpaths = testpath
+if (exists("testdb")) dbName = testdb
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -84,7 +92,8 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2021,
   KHgeoniv="K",
-  KHdbname="STYRING/KHELSA.mdb",
+  KHdbname = file.path("STYRING", dbName), 
+  ## KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
@@ -109,30 +118,30 @@ globglobs<-list(
   taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
   NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
   FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
-  FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
-  KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
-  #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
-  #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
-  #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
-  binDir="bin",
-  tmpfilerpath="bin\tmpfiler",
-  geo_illeg="GGG",
-  alder_illeg="888_888",
-  alder_ukjent="999_999",
-  kjonn_illeg="8",
-  kjonn_ukjent="9",
-  aar_illeg="8888_8888",
-  utdann_illeg="8",
-  utdann_ukjent="9",
-  landbak_illeg="8",
-  landbak_ukjent="9",
-  sivst_illeg="8",
-  sivst_ukjent="9",
-  SisteBatch="9999-01-01-01-01",
-  DefDumpFormat="CSV",
-  stjstr="************************************************************\n",
-  XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
-)
+    FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
+    KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
+    #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
+    #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
+    #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
+    binDir="bin",
+    tmpfilerpath="bin\tmpfiler",
+    geo_illeg="GGG",
+    alder_illeg="888_888",
+    alder_ukjent="999_999",
+    kjonn_illeg="8",
+    kjonn_ukjent="9",
+    aar_illeg="8888_8888",
+    utdann_illeg="8",
+    utdann_ukjent="9",
+    landbak_illeg="8",
+    landbak_ukjent="9",
+    sivst_illeg="8",
+    sivst_ukjent="9",
+    SisteBatch="9999-01-01-01-01",
+    DefDumpFormat="CSV",
+    stjstr="************************************************************\n",
+    XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
+  )
 
 
 
@@ -473,23 +482,23 @@ LagFilgruppe<-function(gruppe,
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
-  lineMsg <- "-----------------------"
+  lineMsg <- "\n-----------------------\n"
   if(test)
     message(lineMsg,
             "\n** -- Test Modus -- **")
   
   ## To see which DB is currently used
   message(lineMsg,
-          "\n  Database: ", globs$KHdbname,
-          "\n  DB path:  ", globs$path, "\n", 
+          "  Database: ", globs$KHdbname, "\n", 
+          "  DB path:  ", globs$path,  
           lineMsg)
 
-  if (is.null(testfiles)){
-    warning("Ingen KOBLID nr. er spesifisert")
+  if (test && is.null(testfiles)){
+    stop("Ingen KOBLID nr. er spesifisert")
   } 
 
   if(test){
-    message("  Test filer KOBLID: ", testfiles, "\n", lineMsg)
+    cat("  Test filer KOBLID: ", testfiles, lineMsg)
   }
 
   #Essensielt bare loop over alle delfiler/orignalfiler
@@ -507,9 +516,14 @@ LagFilgruppe<-function(gruppe,
     delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs)
     if(nrow(delfiler)>0){
       for (i in 1:nrow(delfiler)){
+
+        ## Need root path for raw files
+        getSti <- rawPath
+        
         filbesk<-delfiler[i,]
         tm<-proc.time()
-        filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
+        filbesk$filn <- file.path(getSti, filbesk$FILNAVN)
+        ## filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
         filbesk$filn<-gsub("\\\\","/",filbesk$filn)
         #Sett evt default for år basert på aktuelt årstall
         filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
@@ -626,8 +640,16 @@ LagFilgruppe<-function(gruppe,
       }
     }
   }
-  return(Filgruppe)
+
+  ## return(Filgruppe)
+  ht2(Filgruppe)
 }
+
+## show head and tail 
+ht2 <- function(x, n = 3){
+  rbind(head(x, n), tail(x, n))
+}
+
 
 #
 LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate(),globs=FinnGlobs(),printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE){
