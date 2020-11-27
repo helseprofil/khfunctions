@@ -1,0 +1,5 @@
+#+Title: Hva gikk galt?
+#+Date: 27.11.2020
+
+Problemer vi har hatt og hvordan vi taklet dem.
+

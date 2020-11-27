@@ -1,0 +1,16 @@
+#+Title: Hva har vi gjort?
+#+Date: 27.11.2020
+
+* MASTER branch
+
+* DEV branch
+** Legger nye kolonner for Stata
+- 3 nye kolonner er =filgruppe=, =delid= og =tab1_innles= 
+** Oppdatere lockfile
+- legger inn pakke =bat2bat=
+** Path til PDB og TestModus
+- Hash: [[https://github.com/helseprofil/khfunctions/commit/79b073ecfb846685fd7bfa737a3878515e57bb9e][79b073]] 
+- Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
+- Test modus med =testmodus.R= og kan velge =KOBLID=
+
+
