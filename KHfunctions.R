@@ -63,12 +63,17 @@ require(readxl)
 require(fs)
 require(bat2bat) #https://github.com/helseprofil/bat2bat
 
+if (!exists("runtest")) runtest = FALSE
+testfiles = NULL
+
 #Brukte pather under utvikling (NB: prioritert rekkefølge under)
-defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
-            "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-            "J:/FHI/PRODUKSJON",
-            "J:/kbDEV")
+defpaths<-c(
+  "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON", 
+  ## "F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+  "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+  "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+  "J:/FHI/PRODUKSJON",
+  "J:/kbDEV")
 
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
@@ -455,7 +460,38 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##########################################################
 
 #
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list()){
+LagFilgruppe<-function(gruppe,
+                       batchdate=SettKHBatchDate(),
+                       globs=FinnGlobs(),
+                       diagnose=0,
+                       printR=TRUE,
+                       printCSV=FALSE,
+                       printSTATA=FALSE,
+                       versjonert=FALSE,
+                       dumps=list(),
+                       test = runtest){
+
+  ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
+  ## for selecting the file to be processed
+  lineMsg <- "-----------------------"
+  if(test)
+    message(lineMsg,
+            "\n** -- Test Modus -- **")
+  
+  ## To see which DB is currently used
+  message(lineMsg,
+          "\n  Database: ", globs$KHdbname,
+          "\n  DB path:  ", globs$path, "\n", 
+          lineMsg)
+
+  if (is.null(testfiles)){
+    warning("Ingen KOBLID nr. er spesifisert")
+  } 
+
+  if(test){
+    message("  Test filer KOBLID: ", testfiles, "\n", lineMsg)
+  }
+
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -2181,7 +2217,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGl
 }
 
 #
-FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs()){
+FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = runtest, testID = testfiles){
   #Default er å finne filbesk gyldige nå (Sys.time)
   datef<-format(Sys.time(), "#%Y-%m-%d#")
   #ALternativt kan man finne for en historisk batchdate
@@ -2200,7 +2236,13 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs()){
               AND INNLESING.VERSJONFRA<=",datef," 
               AND INNLESING.VERSJONTIL>",datef,sep="")
   fb<-sqlQuery(globs$dbh,sqlt,stringsAsFactors=FALSE)
-  return(fb)
+  
+  ## Picking up files path that is refered to in ORIGINALFILER
+  ## --------------------------------------------------------
+  if (test)
+    fb <- subset(fb, KOBLID  %in% testID)
+  
+  invisible(fb)
 }
 
 #
