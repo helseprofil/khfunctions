@@ -17,6 +17,9 @@ KHglobs<-SettGlobs()
 ## Valg KOBLID
 ## -----------
 testfiles <- c(3534, 2589)
+LagFilgruppe("DODE_GK", id = 3534)
 
 
-LagFilgruppe("DODE_GK")
+
+testfiles <- 3256
+LagFilgruppe("ABORT_NH", id = c(3256, 20))
