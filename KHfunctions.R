@@ -635,6 +635,17 @@ LagFilgruppe<-function(gruppe,
     
     #SKRIV RESULTAT    
     path<-globs$path
+    
+    if (!exists("testmappe")) testmappe  <- file.path(globs$path, "TEST") 
+
+    if (test) {
+      printR = FALSE
+      testFile <- paste0(gruppe, batchdate, ".rds")
+      testPath <- file.path(testmappe, testFile)
+      message("Testfil: ", testPath)
+      saveRDS(Filgruppe, file = testPath)
+    }
+    
     if (printR){
       utfiln<-paste(path,"/",globs$StablaDirNy,"/",gruppe,".rds",sep="")
       #save(Filgruppe,file=utfiln)

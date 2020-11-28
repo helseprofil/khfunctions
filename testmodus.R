@@ -3,10 +3,13 @@
 rm(list = ls())
 runtest = TRUE
 
-## Hvis annen filsti og filnavn enn i PDB
-## speifiserer den her først før source khfunctions
+## Hvis annen filsti, filnavn enn det som er standard
+## må det speifiseres her først før source khfunctions
 testpath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
 testdb <- "KHELSA_dev.mdb"
+## Hvor test fil skal havne
+testmappe <- "c:/Testing"
+
 
 
 source("KHfunctions.R")
