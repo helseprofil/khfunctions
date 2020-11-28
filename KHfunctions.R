@@ -478,7 +478,8 @@ LagFilgruppe<-function(gruppe,
                        printSTATA=FALSE,
                        versjonert=FALSE,
                        dumps=list(),
-                       test = runtest){
+                       test = runtest,
+                       idtest = testfiles){
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
@@ -494,14 +495,18 @@ LagFilgruppe<-function(gruppe,
           "  DB path: ", file.path(globs$path, "STYRING"),  
           lineMsg)
 
-  if (test && is.null(testfiles)){
+  if (test && is.null(idtest)){
     stop("Ingen KOBLID nr. er spesifisert")
   } 
 
   if(test){
-    cat("  Test filer KOBLID: ", testfiles, lineMsg)
+    cat("  Test filer KOBLID: ", idtest, lineMsg)
   }
 
+  ## testfiles global value is needed by FinnFilBeskGruppe() for filtering
+  assign("testfiles", idtest, envir = .GlobalEnv)
+
+  
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -630,6 +635,17 @@ LagFilgruppe<-function(gruppe,
     
     #SKRIV RESULTAT    
     path<-globs$path
+    
+    if (!exists("testmappe")) testmappe  <- file.path(globs$path, "TEST") 
+
+    if (test) {
+      printR = FALSE
+      testFile <- paste0(gruppe, batchdate, ".rds")
+      testPath <- file.path(testmappe, testFile)
+      message("Testfil: ", testPath)
+      saveRDS(Filgruppe, file = testPath)
+    }
+    
     if (printR){
       utfiln<-paste(path,"/",globs$StablaDirNy,"/",gruppe,".rds",sep="")
       #save(Filgruppe,file=utfiln)
