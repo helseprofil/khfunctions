@@ -8,11 +8,11 @@
 - legger inn pakke =bat2bat=
 * DEV branch
 ** Path til PDB og TestModus
-- Hash: [[https://github.com/helseprofil/khfunctions/commit/79b073ecfb846685fd7bfa737a3878515e57bb9e][79b073]] 
+- PR [[https://github.com/helseprofil/khfunctions/pull/24][#24]]
 - Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
 - Test modus med =testmodus.R= og kan velge =KOBLID=
 ** Annen filsti og filname
-- Merge [[https://github.com/helseprofil/khfunctions/pull/25][#25]] 
+- PR [[https://github.com/helseprofil/khfunctions/pull/25][#25]] 
 ** idtest argument
 - Legger tillegg argument i =LagFilgruppe()= for å filtrere =KOBLID= med =idtest=.
 - Filtering av =KOBLID= kan også spesifiseres som =testfiles=.
