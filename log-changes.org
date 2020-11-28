@@ -11,12 +11,15 @@
 - PR [[https://github.com/helseprofil/khfunctions/pull/24][#24]]
 - Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
 - Test modus med =testmodus.R= og kan velge =KOBLID=
-** Annen filsti og filname
+** Annen filsti og filnavn
 - PR [[https://github.com/helseprofil/khfunctions/pull/25][#25]] 
+- Kan bruke annen filsti eller filnavn til databasen
 ** idtest argument
+- PR [[https://github.com/helseprofil/khfunctions/pull/28][#28]]
 - Legger tillegg argument i =LagFilgruppe()= for å filtrere =KOBLID= med =idtest=.
 - Filtering av =KOBLID= kan også spesifiseres som =testfiles=.
 ** Testmappe  
+- PR [[https://github.com/helseprofil/khfunctions/pull/28][#28]]
 - Testfiler skal ligger i mappen =PRODUCTION/TEST=.
 - Kan også spesifiseres hvor testfiler havner ved å defienere i =testmappe=.
 
