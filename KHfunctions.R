@@ -63,13 +63,26 @@ require(readxl)
 require(fs)
 require(bat2bat) #https://github.com/helseprofil/bat2bat
 
-#Brukte pather under utvikling (NB: prioritert rekkefølge under)
-defpaths<-c("F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-            "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
-            "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-            "J:/FHI/PRODUKSJON",
-            "J:/kbDEV")
+if (!exists("runtest")) runtest = FALSE
+testfiles = NULL
 
+#Brukte pather under utvikling (NB: prioritert rekkefølge under)
+defpaths<-c(
+  "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON", 
+  ## "F:/Prosjekter/Kommunehelsa/PRODUKSJON",
+  "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
+  "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
+  "J:/FHI/PRODUKSJON",
+  "J:/kbDEV")
+
+dbName = "KHELSA.mdb"
+
+## This is were raw files are
+rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+
+## Change path and dbFile if specified
+if (exists("testpath")) defpaths = testpath
+if (exists("testdb")) dbName = testdb
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -79,7 +92,8 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2021,
   KHgeoniv="K",
-  KHdbname="STYRING/KHELSA.mdb",
+  KHdbname = file.path("STYRING", dbName), 
+  ## KHdbname="STYRING/KHELSA.mdb",
   KHlogg="STYRING/KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
@@ -104,30 +118,30 @@ globglobs<-list(
   taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
   NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
   FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
-  FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
-  KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
-  #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
-  #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
-  #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
-  binDir="bin",
-  tmpfilerpath="bin\tmpfiler",
-  geo_illeg="GGG",
-  alder_illeg="888_888",
-  alder_ukjent="999_999",
-  kjonn_illeg="8",
-  kjonn_ukjent="9",
-  aar_illeg="8888_8888",
-  utdann_illeg="8",
-  utdann_ukjent="9",
-  landbak_illeg="8",
-  landbak_ukjent="9",
-  sivst_illeg="8",
-  sivst_ukjent="9",
-  SisteBatch="9999-01-01-01-01",
-  DefDumpFormat="CSV",
-  stjstr="************************************************************\n",
-  XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
-)
+    FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
+    KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
+    #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
+    #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
+    #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
+    binDir="bin",
+    tmpfilerpath="bin\tmpfiler",
+    geo_illeg="GGG",
+    alder_illeg="888_888",
+    alder_ukjent="999_999",
+    kjonn_illeg="8",
+    kjonn_ukjent="9",
+    aar_illeg="8888_8888",
+    utdann_illeg="8",
+    utdann_ukjent="9",
+    landbak_illeg="8",
+    landbak_ukjent="9",
+    sivst_illeg="8",
+    sivst_ukjent="9",
+    SisteBatch="9999-01-01-01-01",
+    DefDumpFormat="CSV",
+    stjstr="************************************************************\n",
+    XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
+  )
 
 
 
@@ -455,7 +469,44 @@ ListAlleOriginalFiler<-function(globs=FinnGlobs()){
 ##########################################################
 
 #
-LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diagnose=0,printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE,dumps=list()){
+LagFilgruppe<-function(gruppe,
+                       batchdate=SettKHBatchDate(),
+                       globs=FinnGlobs(),
+                       diagnose=0,
+                       printR=TRUE,
+                       printCSV=FALSE,
+                       printSTATA=FALSE,
+                       versjonert=FALSE,
+                       dumps=list(),
+                       test = runtest,
+                       idtest = testfiles){
+
+  ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
+  ## for selecting the file to be processed
+  lineMsg <- "\n---------------------------\n"
+  if(test)
+    message(lineMsg,
+            "\n** ---- Test Modus ---- **")
+  
+  ## To see which DB is currently used
+  ## that value in globs$KHdbname and globs$path
+  message(lineMsg,
+          "  DB name: ", dbName, "\n", 
+          "  DB path: ", file.path(globs$path, "STYRING"),  
+          lineMsg)
+
+  if (test && is.null(idtest)){
+    stop("Ingen KOBLID nr. er spesifisert")
+  } 
+
+  if(test){
+    cat("  Test filer KOBLID: ", idtest, lineMsg)
+  }
+
+  ## testfiles global value is needed by FinnFilBeskGruppe() for filtering
+  assign("testfiles", idtest, envir = .GlobalEnv)
+
+  
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
   #Stables til tabellen FG
@@ -471,9 +522,14 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     delfiler<-FinnFilBeskGruppe(gruppe,batchdate=batchdate,globs=globs)
     if(nrow(delfiler)>0){
       for (i in 1:nrow(delfiler)){
+
+        ## Need root path for raw files
+        getSti <- rawPath
+        
         filbesk<-delfiler[i,]
         tm<-proc.time()
-        filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
+        filbesk$filn <- file.path(getSti, filbesk$FILNAVN)
+        ## filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
         filbesk$filn<-gsub("\\\\","/",filbesk$filn)
         #Sett evt default for år basert på aktuelt årstall
         filbesk$AAR<-gsub("<\\$y>",paste("<",filbesk$DEFAAR,">",sep=""),filbesk$AAR)
@@ -579,6 +635,17 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
     
     #SKRIV RESULTAT    
     path<-globs$path
+    
+    if (!exists("testmappe")) testmappe  <- file.path(globs$path, "TEST") 
+
+    if (test) {
+      printR = FALSE
+      testFile <- paste0(gruppe, batchdate, ".rds")
+      testPath <- file.path(testmappe, testFile)
+      message("Testfil: ", testPath)
+      saveRDS(Filgruppe, file = testPath)
+    }
+    
     if (printR){
       utfiln<-paste(path,"/",globs$StablaDirNy,"/",gruppe,".rds",sep="")
       #save(Filgruppe,file=utfiln)
@@ -590,8 +657,16 @@ LagFilgruppe<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGlobs(),diag
       }
     }
   }
-  return(Filgruppe)
+
+  ## return(Filgruppe)
+  ht2(Filgruppe)
 }
+
+## show head and tail 
+ht2 <- function(x, n = 3){
+  rbind(head(x, n), tail(x, n))
+}
+
 
 #
 LagFlereFilgrupper<-function(filgrupper=character(0),batchdate=SettKHBatchDate(),globs=FinnGlobs(),printR=TRUE,printCSV=FALSE,printSTATA=FALSE,versjonert=FALSE){
@@ -2181,7 +2256,7 @@ FinnFilgruppeParametre<-function(gruppe,batchdate=SettKHBatchDate(),globs=FinnGl
 }
 
 #
-FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs()){
+FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = runtest, testID = testfiles){
   #Default er å finne filbesk gyldige nå (Sys.time)
   datef<-format(Sys.time(), "#%Y-%m-%d#")
   #ALternativt kan man finne for en historisk batchdate
@@ -2200,7 +2275,13 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs()){
               AND INNLESING.VERSJONFRA<=",datef," 
               AND INNLESING.VERSJONTIL>",datef,sep="")
   fb<-sqlQuery(globs$dbh,sqlt,stringsAsFactors=FALSE)
-  return(fb)
+  
+  ## Picking up files path that is refered to in ORIGINALFILER
+  ## --------------------------------------------------------
+  if (test)
+    fb <- subset(fb, KOBLID  %in% testID)
+  
+  invisible(fb)
 }
 
 #
