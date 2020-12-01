@@ -898,10 +898,15 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     DF<-as.data.frame(DF[,eval(parse(text=lp)), by=tabkols])
   }
   
+
+  ## Here define SPLIT
+  ## When EXT == 1 in filbesk then read KOBLID in EXT_args
+  ## Create dataframe for the new columns
+  ## Merge back to Raw after DF <- DF[, Kols] below
   
- 
   
-   ######################################################
+  
+  ######################################################
   #SKILL EVT UT SOM EGEN FUNKSJON
   #Nullstill logg
   if ("KODEBOKpre" %in% names(dumps)){
@@ -914,7 +919,11 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     colClass<-sapply(DF,class)
     if (any(colClass!="character")){
       cat("Advarsel! Kolonnene ",names(DF)[colClass!="character"]," er ikke character (",colClass[colClass!="character"],")\n",sep="")
-      DF[,colClass!="character"]<-as.character(DF[,colClass!="character"])
+      ## DF[,colClass!="character"]<-as.character(DF[,colClass!="character"])
+      
+      ## The above code creates lots of duplicated columns so it's changed as below
+      noneSTR <- names(colClass)[colClass != "character"]
+      DF[noneSTR] <- lapply(DF[noneSTR], as.character)
     }
     DF[is.na(DF)]<-""
     
@@ -2263,7 +2272,7 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = r
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   }
-  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, EXT, INNLESING.*
               FROM INNLESING INNER JOIN 
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER 
               ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
