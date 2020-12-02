@@ -987,8 +987,21 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF$AARh<-as.integer(mapvalues(DF$AAR,aar$ORG,aar$HI,warn_missing = FALSE))
     }
     
+    ## SPLIT_KOL will use the TAB1:TAB3 and defined in
+    ## INNLESING tabel SPLIT_KOL column with Existing_col=New_col
+    ## New_col should be defined in one of the TABs
+    allTabs <- c("TAB1","TAB2","TAB3")
+    if (!missing(filbesk$SPLIT_KOL) || filbesk$SPLIT_KOL == " ") {
+            spVal <- unlist(strsplit(filbesk$SPLIT_KOL, "="))
+            spTab <- which(filbesk[allTabs] == spVal[2])
+            dfTab <- names(filbesk[allTabs][spTab])
+
+            DF[dfTab] <- DF[spVal[1]]
+    }
+
+    
     #VASK AV TABx
-    for (tab in c("TAB1","TAB2","TAB3")){
+    for (tab in allTabs){
       if (tab %in% names(DF)){
         tabKB<-setNames(as.data.frame(table(DF[,tab],useNA="ifany"),stringsAsFactors=FALSE),c("ORG","FREQ"))
         tabKB$KBOMK<-KBomkod(tabKB$ORG,type=tab,filbesk=filbesk,batchdate=batchdate,globs=globs)
@@ -1148,6 +1161,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       print(Kols)
       cat("Nest siste trinn\n#########################\n")
     }
+
+    
     #print(filbesk)
     #kAN KRÆSJE VED UKJENT KOLNAVN!
     #print(FGP)
@@ -2272,7 +2287,7 @@ FinnFilBeskGruppe<-function(filgruppe,batchdate=NULL,globs=FinnGlobs(), test = r
   if (!is.null(batchdate)){
     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   }
-  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, EXT, INNLESING.*
+  sqlt<-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
               FROM INNLESING INNER JOIN 
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER 
               ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
