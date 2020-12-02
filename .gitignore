@@ -39,3 +39,4 @@ vignettes/*.pdf
 .Renviron
 *.R#
 /docs/.#index.org
+/test.R
