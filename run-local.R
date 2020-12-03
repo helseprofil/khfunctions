@@ -9,7 +9,8 @@ rm(list = ls())
 source("local-files.R")
 
 
-## Hvis skal ikke kopierer filer på nytt bruk copy=FALSE
+## Hvis man skal ikke kopiere filer på nytt f.eks neste kjøring av
+## annen Filgruppe fra samme Access fil så bruk copy=FALSE
 ## run_local(copy = FALSE)
 run_local()
 
