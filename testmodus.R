@@ -5,8 +5,8 @@ runtest = TRUE
 
 ## Hvis annen filsti, filnavn enn det som er standard
 ## må det speifiseres her først før source khfunctions
-testpath <- "F:/Prosjekter/Kommunehelsa/PRODUKSJON"
-testdb <- "KHELSA_dev.mdb"
+testpath <- "c:/enc/DBtest/STYRING"
+testdb <- "KHELSA_20201203.mdb"
 ## Hvor test fil skal havne
 testmappe <- "c:/Testing"
 

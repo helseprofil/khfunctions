@@ -75,18 +75,37 @@ defpaths<-c(
   "J:/FHI/PRODUKSJON",
   "J:/kbDEV")
 
-dbName = "KHELSA.mdb"
-
-## This is were raw files are
+## This is were default path and files are from the previous system.
+## rawPath is where all raw data are located
 rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+dbNameFile = "STYRING/KHELSA.mdb"
+dbLogFile = "STYRING/KHlogg.mdb"
 
-## Change path and dbFile if specified
+## TEST MODUS
+## Change path and dbFile if specified globally
+## use in testmodus or local run
 if (exists("testpath")) defpaths = testpath
-if (exists("testdb")) dbName = testdb
+if (!exists("testdb")) stop("Test Access file not found. Specify with: testdb = 'FileName.mdb'")
 
+if (runtest) {
+  dbNameFile = testdb
+  
+  dbLogFile = "KHlogg.mdb"
+  noLog <- fs::file_exists(file.path(defpaths, dbLogFile))
+}
+
+if (isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
+
+
+## RUN LOCAL
 ## This is needed in run_local function
 setLocal = FALSE
-if (exists("setLocalPath")) setLocal = TRUE
+if (exists("setLocalPath")) {
+  setLocal = TRUE
+  dbNameFile = setDBFile
+  dbLogFile = setLogFile
+}
+
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -96,9 +115,10 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2021,
   KHgeoniv="K",
-  KHdbname = file.path("STYRING", dbName), 
+  KHdbname = dbNameFile,
   ## KHdbname="STYRING/KHELSA.mdb",
-  KHlogg="STYRING/KHlogg.mdb",
+  KHlogg = dbLogFile, 
+  ## KHlogg="STYRING/KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat="PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
@@ -410,7 +430,6 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     ## This is needed due to constant crash with unstable network
     dbFile = globs$KHdbname
     logFile = globs$KHlogg
-    orgPath = path
     
     if (exists("setLocalPath", envir = .GlobalEnv)){
       path = setLocalPath
@@ -425,7 +444,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     KHLc<-odbcConnectAccess2007(paste(path,logFile,sep="/"))
 
     ## OBS!! Have to reset path to original for all the other globs use
-    path = orgPath
+    path = rawPath
     
   }
   
@@ -516,11 +535,11 @@ LagFilgruppe<-function(gruppe,
   
   ## To see which DB is currently used
   ## that value in globs$KHdbname and globs$path
-  whichPath <- ifelse(localDir, setLocalPath, globs$path)
-  whichDB <- ifelse(localDir, setDBFile, dbName)
+  whichPath <- ifelse(localDir, setLocalPath, defpaths[1])
+  whichDB <- ifelse(localDir, setDBFile, dbNameFile)
   message(lineMsg,
           "  DB name: ", whichDB, "\n", 
-          "  DB path: ", file.path(whichPath, "STYRING"),  
+          "  DB path: ", whichPath,  
           lineMsg)
 
   if (test && is.null(idtest)){
