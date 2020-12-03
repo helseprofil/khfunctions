@@ -6314,8 +6314,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
     ## Access Tabell
     ## -------------
     "mdb" = {
-      styrpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING"
-      styrpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/STYRING/VERSJONSARKIV"
+      styrpath <- file.path(defpaths[1], "STYRING")
+      styrpath_b<-file.path(defpaths[1], "STYRING", "VERSJONSARKIV")
       styrvfiles<-list.files(path=styrpath_b)
 
       KHcFN<-paste(styrpath, filename, sep="/")
@@ -6347,8 +6347,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
     ## ----------
     "fun" = {
 
-      binpath<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN"
-      binpath_b<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/VERSJONSARKIV"
+      binpath <- file.path(defpaths[1], "BIN")
+      binpath_b <- file.path(defpaths[1], "BIN", "VERSJONSARKIV")
       binvfiles<-list.files(path=binpath_b)
 
       fil <- "KHfunctions"
