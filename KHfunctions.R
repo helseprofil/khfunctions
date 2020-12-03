@@ -83,6 +83,9 @@ rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
 ## Change path and dbFile if specified
 if (exists("testpath")) defpaths = testpath
 if (exists("testdb")) dbName = testdb
+
+## This is needed in run_local function
+setLocal = FALSE
 if (exists("setLocalPath")) setLocal = TRUE
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
@@ -115,34 +118,34 @@ globglobs<-list(
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
   DUMPdir="RUNTIMEDUMP",
-    kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
-    taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
-    NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
-    FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
-    FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
-    KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
-    #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
-    #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
-    #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
-    binDir="bin",
-    tmpfilerpath="bin\tmpfiler",
-    geo_illeg="GGG",
-    alder_illeg="888_888",
-    alder_ukjent="999_999",
-    kjonn_illeg="8",
-    kjonn_ukjent="9",
-    aar_illeg="8888_8888",
-    utdann_illeg="8",
-    utdann_ukjent="9",
-    landbak_illeg="8",
-    landbak_ukjent="9",
-    sivst_illeg="8",
-    sivst_ukjent="9",
-    SisteBatch="9999-01-01-01-01",
-    DefDumpFormat="CSV",
-    stjstr="************************************************************\n",
-    XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
-  )
+  kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
+  taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
+  NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
+  FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
+  FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
+  KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
+  #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
+  #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
+  #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
+  binDir="bin",
+  tmpfilerpath="bin\tmpfiler",
+  geo_illeg="GGG",
+  alder_illeg="888_888",
+  alder_ukjent="999_999",
+  kjonn_illeg="8",
+  kjonn_ukjent="9",
+  aar_illeg="8888_8888",
+  utdann_illeg="8",
+  utdann_ukjent="9",
+  landbak_illeg="8",
+  landbak_ukjent="9",
+  sivst_illeg="8",
+  sivst_ukjent="9",
+  SisteBatch="9999-01-01-01-01",
+  DefDumpFormat="CSV",
+  stjstr="************************************************************\n",
+  XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
+)
 
 
 
@@ -178,7 +181,7 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
     }
   }
   
-    
+  
   UBeting<-Deler$DEL[Deler$OMKODbet=="U"]
   BetingOmk<-Deler$DEL[Deler$OMKODbet=="B"]
   BetingF<-Deler$DEL[Deler$OMKODbet=="F"]
@@ -209,7 +212,7 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
          AggVedStand=AggVedStand,
          IntervallHull=IntervallHull,
          AMissAllow=TRUE
-    )
+         )
   )
 }
 
@@ -355,7 +358,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   #Disse er faste over hver kjøring og endres normalt bare ved systemoppdatering/-migrering
   #Merk at globs$dbh ikke lukkes av seg selv, dermed kan det bli rot med gamle slike om FinnGlobs brukes for mye
   #Bruk evy odbcCloseAll() for å rydde absolutt alle 
-    
+  
   #Les globglobs (se topp av fil)
   globs<-globglobs
   if (is.na(modus)){
@@ -375,7 +378,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   KHdbname<-globs$KHdbname
   #Sett path om denne ikker er oppgitt:
- 
+  
   
   if (path==""){
     if(file.exists(paste(getwd(),KHdbname,sep="/"))){
