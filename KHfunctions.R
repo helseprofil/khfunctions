@@ -505,7 +505,7 @@ LagFilgruppe<-function(gruppe,
 
   ## testfiles global value is needed by FinnFilBeskGruppe() for filtering
   assign("testfiles", idtest, envir = .GlobalEnv)
-
+  
   
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
@@ -898,10 +898,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     DF<-as.data.frame(DF[,eval(parse(text=lp)), by=tabkols])
   }
   
-  
  
   
-   ######################################################
+  ######################################################
   #SKILL EVT UT SOM EGEN FUNKSJON
   #Nullstill logg
   if ("KODEBOKpre" %in% names(dumps)){
@@ -914,7 +913,11 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     colClass<-sapply(DF,class)
     if (any(colClass!="character")){
       cat("Advarsel! Kolonnene ",names(DF)[colClass!="character"]," er ikke character (",colClass[colClass!="character"],")\n",sep="")
-      DF[,colClass!="character"]<-as.character(DF[,colClass!="character"])
+      ## DF[,colClass!="character"]<-as.character(DF[,colClass!="character"])
+      
+      ## The above code creates lots of duplicated columns so it's changed as below
+      noneSTR <- names(colClass)[colClass != "character"]
+      DF[noneSTR] <- lapply(DF[noneSTR], as.character)
     }
     DF[is.na(DF)]<-""
     
@@ -978,8 +981,29 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF$AARh<-as.integer(mapvalues(DF$AAR,aar$ORG,aar$HI,warn_missing = FALSE))
     }
     
+    ## SPLIT_KOL will use the TAB1:TAB3 and defined in
+    ## INNLESING tabel SPLIT_KOL column with Existing_col=New_col
+    ## New_col should be defined in one of the TABs
+    allTabs <- c("TAB1","TAB2","TAB3")
+    if (!missing(filbesk$SPLIT_KOL) || filbesk$SPLIT_KOL == " ") {
+      spVal <- unlist(strsplit(filbesk$SPLIT_KOL, "="))
+
+      if (isFALSE(spVal[1] %in% names(filbesk)))
+        stop(spVal[1], " er ikke funnet som et kolonnenavn!")
+
+      spTab <- which(filbesk[allTabs] == spVal[2])
+
+      if (length(spTab) == 0)
+        stop("Ingen TAB har verdi: ", spVal[2])
+      
+      dfTab <- names(filbesk[allTabs][spTab])
+
+      DF[dfTab] <- DF[spVal[1]]
+    }
+
+    
     #VASK AV TABx
-    for (tab in c("TAB1","TAB2","TAB3")){
+    for (tab in allTabs){
       if (tab %in% names(DF)){
         tabKB<-setNames(as.data.frame(table(DF[,tab],useNA="ifany"),stringsAsFactors=FALSE),c("ORG","FREQ"))
         tabKB$KBOMK<-KBomkod(tabKB$ORG,type=tab,filbesk=filbesk,batchdate=batchdate,globs=globs)
@@ -1139,6 +1163,8 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       print(Kols)
       cat("Nest siste trinn\n#########################\n")
     }
+
+    
     #print(filbesk)
     #kAN KRÆSJE VED UKJENT KOLNAVN!
     #print(FGP)
