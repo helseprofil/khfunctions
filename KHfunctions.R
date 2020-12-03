@@ -85,7 +85,7 @@ dbLogFile = "STYRING/KHlogg.mdb"
 ## Change path and dbFile if specified globally
 ## use in testmodus or local run
 if (exists("testpath")) defpaths = testpath
-if (!exists("testdb")) stop("Test Access file not found. Specify with: testdb = 'FileName.mdb'")
+if (runtest && !exists("testdb")) stop("Test Access file not found. Specify with: testdb = 'FileName.mdb'")
 
 if (runtest) {
   dbNameFile = testdb
@@ -94,14 +94,14 @@ if (runtest) {
   noLog <- fs::file_exists(file.path(defpaths, dbLogFile))
 }
 
-if (isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
+if (runtest && isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
 
 
 ## RUN LOCAL
 ## This is needed in run_local function
-setLocal = FALSE
-if (exists("setLocalPath")) {
-  setLocal = TRUE
+if (!exists("setLocal")) setLocal = FALSE
+if ((setLocal)) {
+  defpaths = setLocalPath
   dbNameFile = setDBFile
   dbLogFile = setLogFile
 }
@@ -433,8 +433,6 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     
     if (exists("setLocalPath", envir = .GlobalEnv)){
       path = setLocalPath
-      dbFile = setDBFile
-      logFile = setLogFile
     } 
 
 

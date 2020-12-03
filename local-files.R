@@ -9,6 +9,9 @@ run_local <- function(localPath = NULL,
                       copy = TRUE){
 
 
+  ## Switch modus on
+  setLocal <<- TRUE
+  
   ## Original files
   filePath <-  "f:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/STYRING"
   oriDBFile <- "KHELSA.mdb"
@@ -31,7 +34,6 @@ run_local <- function(localPath = NULL,
     setLocalPath <<- localPath
   } 
 
-  
   if (is.null(DBFile)){
     setDBFile <<- nyFile
   } else {
