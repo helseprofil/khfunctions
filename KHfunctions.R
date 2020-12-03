@@ -83,6 +83,7 @@ rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
 ## Change path and dbFile if specified
 if (exists("testpath")) defpaths = testpath
 if (exists("testdb")) dbName = testdb
+if (exists("setLocalPath")) setLocal = TRUE
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -114,10 +115,10 @@ globglobs<-list(
   TNPDirDat="PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir="BIN/BUFFER",
   DUMPdir="RUNTIMEDUMP",
-  kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
-  taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
-  NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
-  FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
+    kolorgs=c("GEO","AAR","KJONN","ALDER","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3","VAL1","VAL2","VAL3"),
+    taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
+    NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
+    FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
     FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
     KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
     #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
@@ -398,12 +399,33 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     path<-""
   }
   
+  
+  
   if (path!=""){
+
+    ## Use other location of KHELSA.mdb and KHlogg.mdb
+    ## This is needed due to constant crash with unstable network
+    dbFile = globs$KHdbname
+    logFile = globs$KHlogg
+    orgPath = path
+    
+    if (exists("setLocalPath", envir = .GlobalEnv)){
+      path = setLocalPath
+      dbFile = setDBFile
+      logFile = setLogFile
+    } 
+
+
     #Sys.getenv("R_ARCH")   gir "/x64"eller "/i386" 
-    KHOc<-odbcConnectAccess2007(paste(path,globs$KHdbname,sep="/"))
+    KHOc<-odbcConnectAccess2007(paste(path,dbFile,sep="/"))
     #KHOc<-odbcConnectAccess(paste(path,KHdbname,sep="/"))
-    KHLc<-odbcConnectAccess2007(paste(path,globs$KHlogg,sep="/"))
+    KHLc<-odbcConnectAccess2007(paste(path,logFile,sep="/"))
+
+    ## OBS!! Have to reset path to original for all the other globs use
+    path = orgPath
+    
   }
+  
   globs<-c(globs,list(dbh=KHOc,log=KHLc,path=path))
   
   GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
@@ -479,7 +501,8 @@ LagFilgruppe<-function(gruppe,
                        versjonert=FALSE,
                        dumps=list(),
                        test = runtest,
-                       idtest = testfiles){
+                       idtest = testfiles,
+                       localDir = setLocal){
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
@@ -490,9 +513,11 @@ LagFilgruppe<-function(gruppe,
   
   ## To see which DB is currently used
   ## that value in globs$KHdbname and globs$path
+  whichPath <- ifelse(localDir, setLocalPath, globs$path)
+  whichDB <- ifelse(localDir, setDBFile, dbName)
   message(lineMsg,
-          "  DB name: ", dbName, "\n", 
-          "  DB path: ", file.path(globs$path, "STYRING"),  
+          "  DB name: ", whichDB, "\n", 
+          "  DB path: ", file.path(whichPath, "STYRING"),  
           lineMsg)
 
   if (test && is.null(idtest)){
