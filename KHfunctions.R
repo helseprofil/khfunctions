@@ -505,7 +505,7 @@ LagFilgruppe<-function(gruppe,
 
   ## testfiles global value is needed by FinnFilBeskGruppe() for filtering
   assign("testfiles", idtest, envir = .GlobalEnv)
-
+  
   
   #Essensielt bare loop over alle delfiler/orignalfiler
   #For hver orignalfil kjøres LagTabellFraFil
@@ -898,13 +898,7 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     DF<-as.data.frame(DF[,eval(parse(text=lp)), by=tabkols])
   }
   
-
-  ## Here define SPLIT
-  ## When EXT == 1 in filbesk then read KOBLID in EXT_args
-  ## Create dataframe for the new columns
-  ## Merge back to Raw after DF <- DF[, Kols] below
-  
-  
+ 
   
   ######################################################
   #SKILL EVT UT SOM EGEN FUNKSJON
@@ -992,11 +986,19 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ## New_col should be defined in one of the TABs
     allTabs <- c("TAB1","TAB2","TAB3")
     if (!missing(filbesk$SPLIT_KOL) || filbesk$SPLIT_KOL == " ") {
-            spVal <- unlist(strsplit(filbesk$SPLIT_KOL, "="))
-            spTab <- which(filbesk[allTabs] == spVal[2])
-            dfTab <- names(filbesk[allTabs][spTab])
+      spVal <- unlist(strsplit(filbesk$SPLIT_KOL, "="))
 
-            DF[dfTab] <- DF[spVal[1]]
+      if (isFALSE(spVal[1] %in% names(filbesk)))
+        stop(spVal[1], " er ikke funnet som et kolonnenavn!")
+
+      spTab <- which(filbesk[allTabs] == spVal[2])
+
+      if (length(spTab) == 0)
+        stop("Ingen TAB har verdi: ", spVal[2])
+      
+      dfTab <- names(filbesk[allTabs][spTab])
+
+      DF[dfTab] <- DF[spVal[1]]
     }
 
     
