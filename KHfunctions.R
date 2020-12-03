@@ -374,7 +374,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   KHdbname<-globs$KHdbname
   #Sett path om denne ikker er oppgitt:
- 
+  
   
   if (path==""){
     if(file.exists(paste(getwd(),KHdbname,sep="/"))){
@@ -981,12 +981,12 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF$AARh<-as.integer(mapvalues(DF$AAR,aar$ORG,aar$HI,warn_missing = FALSE))
     }
     
-    ## SPLIT_KOL will use the TAB1:TAB3 and defined in
-    ## INNLESING tabel SPLIT_KOL column with Existing_col=New_col
+    ## KOPI_KOL will use the TAB1:TAB3 and defined in
+    ## INNLESING tabel KOPI_KOL column with Existing_col=New_col
     ## New_col should be defined in one of the TABs
     allTabs <- c("TAB1","TAB2","TAB3")
-    if (!missing(filbesk$SPLIT_KOL) || filbesk$SPLIT_KOL == " ") {
-      spVal <- unlist(strsplit(filbesk$SPLIT_KOL, "="))
+    if (!missing(filbesk$KOPI_KOL) || filbesk$KOPI_KOL == "") {
+      spVal <- unlist(strsplit(filbesk$KOPI_KOL, "="))
 
       if (isFALSE(spVal[1] %in% names(filbesk)))
         stop(spVal[1], " er ikke funnet som et kolonnenavn!")
