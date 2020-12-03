@@ -1030,7 +1030,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     ## INNLESING tabel KOPI_KOL column with Existing_col=New_col
     ## New_col should be defined in one of the TABs
     allTabs <- c("TAB1","TAB2","TAB3")
-    if (!is.na(filbesk$KOPI_KOL) || filbesk$KOPI_KOL != "") {
+    
+    if (!is.na(filbesk$KOPI_KOL)) {
+      message("Kopi kolonne er: ", filbesk$KOPI_KOL)
       spVal <- unlist(strsplit(filbesk$KOPI_KOL, "="))
 
       if (isFALSE(spVal[1] %in% names(filbesk)))
