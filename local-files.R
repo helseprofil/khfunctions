@@ -1,11 +1,9 @@
 ## localPath : Path to copy files KHELSA and KHLogg. Default is c:/Users/username/DB_helseprofil
 ## DBFile : Name of Access file if other than KHELSA.mdb
-## LogFile : Name of Log File other than KHlogg.mdb
 ## copy = FALSE will use the existing files in the localPath
 
 run_local <- function(localPath = NULL,
                       DBFile = NULL,
-                      LogFile = NULL,
                       copy = TRUE){
 
 
@@ -40,20 +38,18 @@ run_local <- function(localPath = NULL,
     setDBFile <<- DBFile
   }
 
-  if (is.null(LogFile)){
-    setLogFile <<- oriLogFile
-  } else {
-    setLogFile <<- LogFile
-  }
-
   orgFile <- file.path(filePath, oriDBFile)
   orgLog <- file.path(filePath, oriLogFile)
 
+  ## LogFile names can't be changed coz of connection to KHELSA.mdb
+  setLogFile <<- "KHlogg.mdb"
   cpFile <- file.path(setLocalPath, setDBFile)
   cpLog <- file.path(setLocalPath, setLogFile)
 
   if (copy){
+    cat("Kopierer DB filen: \nFra: ", orgFile, "\nTil: ", cpFile, "\n... vent ...")
     fs::file_copy(orgFile, cpFile, overwrite = TRUE)
+    cat("....\n")
     fs::file_copy(orgLog, cpLog, overwrite = TRUE)
   }
   
