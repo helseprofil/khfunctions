@@ -2738,7 +2738,18 @@ SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,gl
 
 
 
-LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FALSE,bare_TN=0,drop_TN=0,tmpbryt=0,FullUt=0,csvcopy=FALSE,globs=FinnGlobs(),echo=0,dumps=list()){
+LagKUBE<-function(KUBEid,
+                  lagRapport=0,
+                  batchdate=SettKHBatchDate(),
+                  versjonert=FALSE,
+                  bare_TN=0,
+                  drop_TN=0,
+                  tmpbryt=0,
+                  FullUt=0,
+                  csvcopy=FALSE,
+                  globs=FinnGlobs(),
+                  echo=0,dumps=list()){
+  
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   rapport<-list(KUBE=KUBEid,lagRapport=lagRapport)
   
@@ -6306,7 +6317,7 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 
 
 
-KHglobs<-FinnGlobs()
+## KHglobs<-FinnGlobs()
 
 
 ## ---------------------
