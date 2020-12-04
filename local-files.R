@@ -51,6 +51,7 @@ run_local <- function(localPath = NULL,
     fs::file_copy(orgFile, cpFile, overwrite = TRUE)
     cat("....\n")
     fs::file_copy(orgLog, cpLog, overwrite = TRUE)
+    cat("Ferdig!\n")
   }
   
 }
