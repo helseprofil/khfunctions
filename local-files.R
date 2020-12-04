@@ -52,7 +52,7 @@ run_local <- function(localPath = NULL,
   cpFile <- file.path(setLocalPath, setDBFile)
   cpLog <- file.path(setLocalPath, setLogFile)
 
-  if (isTRUE(copy)){
+  if (copy){
     fs::file_copy(orgFile, cpFile, overwrite = TRUE)
     fs::file_copy(orgLog, cpLog, overwrite = TRUE)
   }
