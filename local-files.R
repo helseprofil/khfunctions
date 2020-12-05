@@ -1,3 +1,41 @@
+get_local_file <- function(){
+
+  ## Name of new file
+  sysDate <- format(Sys.time(), "%Y%m%d_%H%M")
+  dbFile <- paste0("KHELSA_", sysDate, ".mdb")
+  
+  ## Destination to copy to
+  bruker <- Sys.info()[["user"]]
+  dbDir <- file.path("c:/Users", bruker, "DB_helseprofil")
+  
+  if (isFALSE(fs::dir_exists(dbDir)))
+    fs::dir_create(dbDir)
+
+  newFile <- file.path(dbDir, dbFile)
+  
+  ## Get the most recent file in archive folder
+  dbAll <- list.files(dbDir)
+  dbLast <- sort(dbAll[grepl("^KHELSA_\\d+_\\d+.mdb$",dbAll)],decreasing=TRUE)[1]
+
+  en <- parent.frame()
+  
+  if (en$copy){
+    message("\nLokal mappen: ", dbDir)
+    message("Kopieres som: ", dbFile)
+    message("Nyeste lokalfil er: ", dbLast, "\n")
+    cp <- as.integer(readline(prompt = "Vil du kopiere filen? Svar 0=Nei 1=Ja "))
+  } else {
+    cp = en$copy
+  }
+  
+  return(list(dbDir = dbDir,
+              dbFile = dbFile,
+              dbLast = dbLast,
+              cp = cp))
+  
+}
+
+
 ## localPath : Path to copy files KHELSA and KHLogg. Default is c:/Users/username/DB_helseprofil
 ## DBFile : Name of Access file if other than KHELSA.mdb
 ## copy = FALSE will use the existing files in the localPath
@@ -5,7 +43,6 @@
 run_local <- function(localPath = NULL,
                       DBFile = NULL,
                       copy = TRUE){
-
 
   ## Switch modus on
   setLocal <<- TRUE
@@ -15,25 +52,20 @@ run_local <- function(localPath = NULL,
   oriDBFile <- "KHELSA.mdb"
   oriLogFile <- "KHlogg_template.mdb"
 
-  sysDate <- format(Sys.Date(), "%Y%m%d")
-  nyFile <- paste0("KHELSA_", sysDate, ".mdb")
-   
-  ## Destination to copy to
-  bruker <- Sys.info()[["user"]]
-  dbDir <- file.path("c:/Users", bruker, "DB_helseprofil")
+  DB <- get_local_file()
 
-  if (isFALSE(fs::dir_exists(dbDir)))
-    fs::dir_create(dbDir)
-  
+  if (isFALSE(copy))
+    message("\nLokalfil: ", DB$dbLast)
+
   
   if (is.null(localPath)){
-    setLocalPath <<- dbDir
+    setLocalPath <<- DB$dbDir
   } else {
     setLocalPath <<- localPath
   } 
 
   if (is.null(DBFile)){
-    setDBFile <<- nyFile
+    setDBFile <<- DB$dbFile
   } else {
     setDBFile <<- DBFile
   }
@@ -42,11 +74,11 @@ run_local <- function(localPath = NULL,
   orgLog <- file.path(filePath, oriLogFile)
 
   ## LogFile names can't be changed coz of connection to KHELSA.mdb
-  setLogFile <<- "KHlogg.mdb"
+  setLogFile <<- "KHlogg.mdb" #standard is STYRING/KHlogg.md
   cpFile <- file.path(setLocalPath, setDBFile)
   cpLog <- file.path(setLocalPath, setLogFile)
 
-  if (copy){
+  if (DB$cp){
     cat("Kopierer DB filen: \nFra: ", orgFile, "\nTil: ", cpFile, "\n... vent ...")
     fs::file_copy(orgFile, cpFile, overwrite = TRUE)
     cat("....\n")
