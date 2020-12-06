@@ -75,14 +75,37 @@ defpaths<-c(
   "J:/FHI/PRODUKSJON",
   "J:/kbDEV")
 
-dbName = "KHELSA.mdb"
-
-## This is were raw files are
+## This is were default path and files are from the previous system.
+## rawPath is where all raw data are located
 rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+dbNameFile = "STYRING/KHELSA.mdb"
+dbLogFile = "STYRING/KHlogg.mdb"
 
-## Change path and dbFile if specified
+## TEST MODUS
+## Change path and dbFile if specified globally
+## use in testmodus or local run
 if (exists("testpath")) defpaths = testpath
-if (exists("testdb")) dbName = testdb
+if (runtest && !exists("testdb")) stop("Test Access file not found. Specify with: testdb = 'FileName.mdb'")
+
+if (runtest) {
+  dbNameFile = testdb
+  
+  dbLogFile = "KHlogg.mdb"
+  noLog <- fs::file_exists(file.path(defpaths, dbLogFile))
+}
+
+if (runtest && isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
+
+
+## RUN LOCAL
+## This is needed in run_local function
+if (!exists("setLocal")) setLocal = FALSE
+if ((setLocal)) {
+  defpaths = setLocalPath
+  dbNameFile = setDBFile
+  dbLogFile = setLogFile
+}
+
 
 #GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 #Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
@@ -92,9 +115,10 @@ globglobs<-list(
   HOVEDmodus="NH",
   KHaargang=2021,
   KHgeoniv="K",
-  KHdbname = file.path("STYRING", dbName), 
+  KHdbname = dbNameFile,
   ## KHdbname="STYRING/KHELSA.mdb",
-  KHlogg="STYRING/KHlogg.mdb",
+  KHlogg = dbLogFile, 
+  ## KHlogg="STYRING/KHlogg.mdb",
   StablaDir="PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy="PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat="PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
@@ -118,30 +142,30 @@ globglobs<-list(
   taborgs=c("GEO","AAR","KJONN","ALDER","TAB1","TAB2","TAB3"),
   NesstarOutputDef=c(MT="MALTALL",T="TELLER",N="NEVNER",RATE="RATE",SMR="SMR",MEIS="MEIS",ST="sumTELLER",SN="sumNEVNER",SPT="sumPREDTELLER",RN="RATE.n"),
   FriskvikTabs=c("GEO","AAR","KJONN","ALDER","ETAB"),
-    FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
-    KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
-    #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
-    #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
-    #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
-    binDir="bin",
-    tmpfilerpath="bin\tmpfiler",
-    geo_illeg="GGG",
-    alder_illeg="888_888",
-    alder_ukjent="999_999",
-    kjonn_illeg="8",
-    kjonn_ukjent="9",
-    aar_illeg="8888_8888",
-    utdann_illeg="8",
-    utdann_ukjent="9",
-    landbak_illeg="8",
-    landbak_ukjent="9",
-    sivst_illeg="8",
-    sivst_ukjent="9",
-    SisteBatch="9999-01-01-01-01",
-    DefDumpFormat="CSV",
-    stjstr="************************************************************\n",
-    XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
-  )
+  FriskvikVals=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n"),
+  KubeKols=c("sumTELLER","sumNEVNER","RATE","MALTALL","sumPREDTELLER","PREDTELLER","SMR","NORM","MEIS","RATE.n","ALDER","AAR","SMRtmp"),
+  #DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
+  #OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
+  #TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
+  binDir="bin",
+  tmpfilerpath="bin\tmpfiler",
+  geo_illeg="GGG",
+  alder_illeg="888_888",
+  alder_ukjent="999_999",
+  kjonn_illeg="8",
+  kjonn_ukjent="9",
+  aar_illeg="8888_8888",
+  utdann_illeg="8",
+  utdann_ukjent="9",
+  landbak_illeg="8",
+  landbak_ukjent="9",
+  sivst_illeg="8",
+  sivst_ukjent="9",
+  SisteBatch="9999-01-01-01-01",
+  DefDumpFormat="CSV",
+  stjstr="************************************************************\n",
+  XLScols=as.vector(sapply(c("",as.vector(paste(sapply(c("",LETTERS[]),paste,LETTERS[],sep="")))),paste,LETTERS[],sep=""))
+)
 
 
 
@@ -177,7 +201,7 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
     }
   }
   
-    
+  
   UBeting<-Deler$DEL[Deler$OMKODbet=="U"]
   BetingOmk<-Deler$DEL[Deler$OMKODbet=="B"]
   BetingF<-Deler$DEL[Deler$OMKODbet=="F"]
@@ -208,7 +232,7 @@ SettDefDesignKH<-function(globs=FinnGlobs()){
          AggVedStand=AggVedStand,
          IntervallHull=IntervallHull,
          AMissAllow=TRUE
-    )
+         )
   )
 }
 
@@ -354,7 +378,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   #Disse er faste over hver kjøring og endres normalt bare ved systemoppdatering/-migrering
   #Merk at globs$dbh ikke lukkes av seg selv, dermed kan det bli rot med gamle slike om FinnGlobs brukes for mye
   #Bruk evy odbcCloseAll() for å rydde absolutt alle 
-    
+  
   #Les globglobs (se topp av fil)
   globs<-globglobs
   if (is.na(modus)){
@@ -374,7 +398,7 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
   }
   KHdbname<-globs$KHdbname
   #Sett path om denne ikker er oppgitt:
- 
+  
   
   if (path==""){
     if(file.exists(paste(getwd(),KHdbname,sep="/"))){
@@ -398,12 +422,30 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     path<-""
   }
   
+  
+  
   if (path!=""){
+
+    ## Use other location of KHELSA.mdb and KHlogg.mdb
+    ## This is needed due to constant crash with unstable network
+    dbFile = globs$KHdbname
+    logFile = globs$KHlogg
+    
+    if (exists("setLocalPath", envir = .GlobalEnv)){
+      path = setLocalPath
+    } 
+
+
     #Sys.getenv("R_ARCH")   gir "/x64"eller "/i386" 
-    KHOc<-odbcConnectAccess2007(paste(path,globs$KHdbname,sep="/"))
+    KHOc<-odbcConnectAccess2007(paste(path,dbFile,sep="/"))
     #KHOc<-odbcConnectAccess(paste(path,KHdbname,sep="/"))
-    KHLc<-odbcConnectAccess2007(paste(path,globs$KHlogg,sep="/"))
+    KHLc<-odbcConnectAccess2007(paste(path,logFile,sep="/"))
+
+    ## OBS!! Have to reset path to original for all the other globs use
+    path = rawPath
+    
   }
+  
   globs<-c(globs,list(dbh=KHOc,log=KHLc,path=path))
   
   GeoNavn<-data.table(sqlQuery(KHOc,"SELECT * from GeoNavn",as.is=TRUE))
@@ -479,7 +521,8 @@ LagFilgruppe<-function(gruppe,
                        versjonert=FALSE,
                        dumps=list(),
                        test = runtest,
-                       idtest = testfiles){
+                       idtest = testfiles,
+                       localDir = setLocal){
 
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
@@ -490,9 +533,11 @@ LagFilgruppe<-function(gruppe,
   
   ## To see which DB is currently used
   ## that value in globs$KHdbname and globs$path
+  whichPath <- ifelse(localDir, setLocalPath, defpaths[1])
+  whichDB <- ifelse(localDir, setDBFile, dbNameFile)
   message(lineMsg,
-          "  DB name: ", dbName, "\n", 
-          "  DB path: ", file.path(globs$path, "STYRING"),  
+          "  DB name: ", whichDB, "\n", 
+          "  DB path: ", whichPath,  
           lineMsg)
 
   if (test && is.null(idtest)){
@@ -2693,7 +2738,18 @@ SettFilInfoKUBE<-function(KUBEid,batchdate=SettKHBatchDate(),versjonert=FALSE,gl
 
 
 
-LagKUBE<-function(KUBEid,lagRapport=0,batchdate=SettKHBatchDate(),versjonert=FALSE,bare_TN=0,drop_TN=0,tmpbryt=0,FullUt=0,csvcopy=FALSE,globs=FinnGlobs(),echo=0,dumps=list()){
+LagKUBE<-function(KUBEid,
+                  lagRapport=0,
+                  batchdate=SettKHBatchDate(),
+                  versjonert=FALSE,
+                  bare_TN=0,
+                  drop_TN=0,
+                  tmpbryt=0,
+                  FullUt=0,
+                  csvcopy=FALSE,
+                  globs=FinnGlobs(),
+                  echo=0,dumps=list()){
+  
   datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
   rapport<-list(KUBE=KUBEid,lagRapport=lagRapport)
   
@@ -6261,7 +6317,7 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 
 
 
-KHglobs<-FinnGlobs()
+## KHglobs<-FinnGlobs()
 
 
 ## ---------------------
