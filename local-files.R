@@ -57,19 +57,21 @@ run_local <- function(localPath = NULL,
   if (isFALSE(copy))
     message("\nLokalfil: ", DB$dbLast)
 
-  
   if (is.null(localPath)){
     setLocalPath <<- DB$dbDir
   } else {
     setLocalPath <<- localPath
   } 
 
-  if (is.null(DBFile)){
+  if (DB$cp){
     setDBFile <<- DB$dbFile
   } else {
-    setDBFile <<- DBFile
+    setDBFile <<- DB$dbLast
   }
-
+  
+  if (!is.null(DBFile))
+    setDBFile <<- DBFile
+  
   orgFile <- file.path(filePath, oriDBFile)
   orgLog <- file.path(filePath, oriLogFile)
 
@@ -78,7 +80,7 @@ run_local <- function(localPath = NULL,
   cpFile <- file.path(setLocalPath, setDBFile)
   cpLog <- file.path(setLocalPath, setLogFile)
 
-  if (DB$cp){
+  if (is.null(DBFile) && DB$cp){
     cat("Kopierer DB filen: \nFra: ", orgFile, "\nTil: ", cpFile, "\n... vent ...")
     fs::file_copy(orgFile, cpFile, overwrite = TRUE)
     cat("....\n")
