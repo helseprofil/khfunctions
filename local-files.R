@@ -19,7 +19,7 @@ get_local_file <- function(){
 
   en <- parent.frame()
   
-  if (en$copy){
+  if (is.null(en$DBFile) && en$copy){
     message("\nLokal mappen: ", dbDir)
     message("Kopieres som: ", dbFile)
     message("Nyeste lokalfil er: ", dbLast, "\n")
