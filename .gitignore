@@ -39,3 +39,6 @@ vignettes/*.pdf
 .Renviron
 *.R#
 /docs/.#index.org
+/test.R
+run-local-NO.R
+testmodus_not.R
