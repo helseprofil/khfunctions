@@ -7,13 +7,15 @@ rm(list = ls())
 ## KHELSA.mdb og KHlogg.mdb med datotag lages der
 source("local-files.R")
 
-## Hvis man skal ikke kopiere filer på nytt f.eks neste kjøring av
-## annen Filgruppe fra samme Access fil så bruk copy=FALSE
-## run_local(copy = FALSE)
+## Du vil bli spurt om du vil kopiere filen og svar med 1=Ja eller 0=Nei
+## Evt. kan du bruke run_local(copy=FALSE) hvis du allerede har kopiert
+## den nyested Access filen i lokal mappen.
 run_local()
+
+
 source("KHfunctions.R")
 
-#Denne m? ogs? ofte kj?res ved oppstart. Setter opp ODBC.
+#Denne m? også ofte kjøres ved oppstart. Setter opp ODBC.
 KHglobs<-SettGlobs()
 
 ## Bruk local ACCESS
