@@ -27,6 +27,9 @@ get_local_file <- function(){
   } else {
     cp = en$copy
   }
+
+  if (is.na(cp))
+    stop("\n OPS! Ditt svar er ikke registeret. Run funksjonen linjer per linjer")
   
   return(list(dbDir = dbDir,
               dbFile = dbFile,
