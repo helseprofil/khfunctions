@@ -965,7 +965,9 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF[noneSTR] <- lapply(DF[noneSTR], as.character)
     }
     DF[is.na(DF)]<-""
-
+    ##:ess-bp-start::browser@nil:##
+    browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
+    
     ## TABS
     ## ------------------------------------------------------------
     ## KOPI_KOL will use the TAB1:TAB3 and defined in
@@ -977,13 +979,14 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       message("Kopi kolonne er: ", filbesk$KOPI_KOL)
       spVal <- unlist(strsplit(filbesk$KOPI_KOL, "="))
 
-      if (isFALSE(spVal[1] %in% names(filbesk)))
-        stop(spVal[1], " er ikke funnet som et kolonnenavn!")
+      if (isFALSE(spVal %in% names(filbesk)))
+        stop("Har ikke funnet kolonnenavn som: ")
 
-      spTab <- which(filbesk[allTabs] == spVal[2])
+      ## spTab <- which(filbesk[allTabs] == "kopi")
+      spTab <- grep("<kopi_kol>", filbesk[allTabs], ignore.case=TRUE)
 
       if (length(spTab) == 0)
-        stop("Ingen TAB har verdi: ", spVal[2])
+        stop("Hvor skal kolonne ", spVal[1], " kopieres til?")
       
       dfTab <- names(filbesk[allTabs][spTab])
 
