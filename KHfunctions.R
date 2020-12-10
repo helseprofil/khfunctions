@@ -965,8 +965,6 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
       DF[noneSTR] <- lapply(DF[noneSTR], as.character)
     }
     DF[is.na(DF)]<-""
-    ##:ess-bp-start::browser@nil:##
-    browser(expr=is.null(.ESSBP.[["@2@"]]));##:ess-bp-end:##
     
     ## TABS
     ## ------------------------------------------------------------
