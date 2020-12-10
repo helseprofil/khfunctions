@@ -976,11 +976,11 @@ LagTabellFraFil<-function (filbesk,FGP,batchdate=SettKHBatchDate(),diagnose=0,gl
     if (!is.na(filbesk$KOPI_KOL)) {
       message("Kopi kolonne er: ", filbesk$KOPI_KOL)
       spVal <- unlist(strsplit(filbesk$KOPI_KOL, "="))
+      spVal <- trimws(spVal)
 
       if (isFALSE(spVal %in% names(filbesk)))
         stop("Har ikke funnet kolonnenavn som: ")
 
-      ## spTab <- which(filbesk[allTabs] == "kopi")
       spTab <- grep("<kopi_kol>", filbesk[allTabs], ignore.case=TRUE)
 
       if (length(spTab) == 0)
