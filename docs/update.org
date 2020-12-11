@@ -17,8 +17,6 @@
 - Commit [[https://github.com/helseprofil/khfunctions/commit/c108a44da957dc1e7e94c051c696a1285422ea19][c108a44]]
 - Legger ouput for =TmpRutineSammenlignKHkuber= funksjon til mappen =Batch2020vs2021=
 - Mappennavn lages automatisk dvs. fjoråret vs. året hvis det ikke finnes
-
-* DEV branch
 ** Path til PDB og TestModus
 - PR [[https://github.com/helseprofil/khfunctions/pull/24][#24]]
 - Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
@@ -34,10 +32,16 @@
 - PR [[https://github.com/helseprofil/khfunctions/pull/28][#28]]
 - Testfiler skal ligger i mappen =PRODUCTION/TEST=.
 - Kan også spesifiseres hvor testfiler havner ved å defienere i =testmappe=.
+** Run local
+- Commit [[https://github.com/helseprofil/khfunctions/commit/fddc0b97e337032a5f73697ba07eaee0359d941b][fddc0b]]
+- Bruk =run-test.R= fil for å kopiere KHELSA.mdb og KHlogg.mdb til local mappen =C:\User\username\DB_helseprofil=.
+- Gjelder bare til å kjøre =LagFilgruppe= og =LagKUBE=.
 ** Kopi kolonne
 - Commit [[https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86][94a450e]]
 - Kan kopiere standard variabler til =TAB= ved å spesifisere =KOPI_KOL= i INNLESING tabell.
 - Bruke ~LANDBAK=TAB1~ i =KOPI_KOL= hvis man skal kopiere variable LANDBAK til ~TAB1~ 
 - Må spesifisere ~TAB1~ i FILGRUPPER tabell også når kopierte variable skal være i ~TAB1~
 - Spesifisere =<kopi_kol>= i kolonne ~KOPI_KOL~ i INNLESING tabell.
+
+* DEV branch
 
