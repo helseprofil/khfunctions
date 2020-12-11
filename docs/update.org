@@ -1,0 +1,43 @@
+#+Title: Oppdateringer og muligheter
+#+Date: 27.11.2020
+
+#+options: ^:nil
+#+OPTIONS: html-postamble:nil
+#+LANGUAGE: no
+
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
+
+
+* MASTER branch
+** Legger nye kolonner for Stata
+- 3 nye kolonner er =filgruppe=, =delid= og =tab1_innles= 
+** Oppdatere lockfile
+- legger inn pakke =bat2bat=
+** Path to batchfil
+- Commit [[https://github.com/helseprofil/khfunctions/commit/c108a44da957dc1e7e94c051c696a1285422ea19][c108a44]]
+- Legger ouput for =TmpRutineSammenlignKHkuber= funksjon til mappen =Batch2020vs2021=
+- Mappennavn lages automatisk dvs. fjoråret vs. året hvis det ikke finnes
+
+* DEV branch
+** Path til PDB og TestModus
+- PR [[https://github.com/helseprofil/khfunctions/pull/24][#24]]
+- Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
+- Test modus med =run-test.R= og kan velge =KOBLID=
+** Annen filsti og filnavn
+- PR [[https://github.com/helseprofil/khfunctions/pull/25][#25]] 
+- Kan bruke annen filsti eller filnavn til database med =testpath= og =testdb=
+** idtest argument
+- PR [[https://github.com/helseprofil/khfunctions/pull/28][#28]]
+- Legger tillegg argument i =LagFilgruppe()= for å filtrere =KOBLID= med =idtest=.
+- Filtering av =KOBLID= kan også spesifiseres som =testfiles=.
+** Testmappe  
+- PR [[https://github.com/helseprofil/khfunctions/pull/28][#28]]
+- Testfiler skal ligger i mappen =PRODUCTION/TEST=.
+- Kan også spesifiseres hvor testfiler havner ved å defienere i =testmappe=.
+** Kopi kolonne
+- Commit [[https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86][94a450e]]
+- Kan kopiere standard variabler til =TAB= ved å spesifisere =KOPI_KOL= i INNLESING tabell.
+- Bruke ~LANDBAK=TAB1~ i =KOPI_KOL= hvis man skal kopiere variable LANDBAK til ~TAB1~ 
+- Må spesifisere ~TAB1~ i FILGRUPPER tabell også når kopierte variable skal være i ~TAB1~
+- Spesifisere =<kopi_kol>= i kolonne ~KOPI_KOL~ i INNLESING tabell.
+

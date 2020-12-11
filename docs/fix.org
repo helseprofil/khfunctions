@@ -1,0 +1,12 @@
+#+Title: Hva gikk galt?
+#+Date: 27.11.2020
+
+#+options: ^:nil
+#+OPTIONS: html-postamble:nil
+#+LANGUAGE: no
+
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
+
+Problemer vi har hatt og hvordan vi taklet dem.
+
+
