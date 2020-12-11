@@ -7,8 +7,9 @@ runtest = TRUE
 ## må det speifiseres her først før source khfunctions
 testpath <- "c:/enc/DBtest/STYRING"
 testdb <- "KHELSA_20201203.mdb"
-## Hvor test fil skal havne
-testmappe <- "c:/DB_test"
+
+## Hvor test fil skal havne hvis ikke spesifisert så havne det i PRODUKSJON/TEST mappe i PDB
+## testmappe <- "c:/DB_test"
 
 
 
