@@ -6234,6 +6234,18 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
   print(tabs1)
   print(tabs2)
   KHglobs$DefDesign$DesignKols
+
+  ## Folder to keep the output if not allready there
+  currYr <- as.integer(format(Sys.Date(),"%Y"))
+  nextYr <- currYr + 1
+  foldName <- paste0("Batch", currYr, "vs", nextYr)
+
+  validDir <- file.path(defpaths[1], "VALIDERING/NESSTAR_KUBER", foldName)
+
+  if (isFALSE(fs::dir_exists(validDir)))
+    fs::dir_create(validDir)
+
+  
   
   if (nrow(KUBE1)>0 & nrow(KUBE2)>0 & length(setdiff(tabs1,tabs2))==0){
     setkeyv(KUBE1,tabs1)
@@ -6247,7 +6259,7 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
     #MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
     
     
-    utfil<-paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/VALIDERING/NESSTAR_KUBER/NH2016v2015/",KUBENAVN,".csv",sep="")
+    utfil<-paste(validDir, KUBENAVN,".csv",sep="")
     cat(paste("Skriver ut",utfil,"\n"))
     write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
   } else {
