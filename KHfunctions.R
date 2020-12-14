@@ -6309,8 +6309,12 @@ SettKubedirs<-function(globs,modus=NA){
 
 TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=character(0),globs=FinnGlobs()){
   
-  KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
-  KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+  ## KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
+  ## KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+
+  ## use data.table way to read csv
+  KUBE1 <- data.table::fread(kube1filnavn)
+  KUBE2 <- data.table::fread(kube2filnavn)
   
   print(names(KUBE1))
   print(names(KUBE2))
@@ -6325,18 +6329,17 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
   KHglobs$DefDesign$DesignKols
 
   ## Folder to keep the output if not allready there
-  currYr <- as.integer(format(Sys.Date(),"%Y"))
-  nextYr <- currYr + 1
+  currYr <- KHglobs$KHaargang - 1
+  nextYr <- KHglobs$KHaargang
   foldName <- paste0("Batch", currYr, "vs", nextYr)
-
+  
   validDir <- file.path(defpaths[1], "VALIDERING/NESSTAR_KUBER", foldName)
 
   if (isFALSE(fs::dir_exists(validDir)))
     fs::dir_create(validDir)
 
   
-  
-  if (nrow(KUBE1)>0 & nrow(KUBE2)>0 & length(setdiff(tabs1,tabs2))==0){
+  if (length(setdiff(tabs1,tabs2))==0 && nrow(KUBE1)>0 && nrow(KUBE2)>0){
     setkeyv(KUBE1,tabs1)
     setkeyv(KUBE2,tabs1)
     #VERSJON 1 INNER JOIN
@@ -6352,7 +6355,7 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
     cat(paste("Skriver ut",utfil,"\n"))
     write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
   } else {
-    cat("!!!!!! tabellene har ulike kolonner og kan ikke matches")
+    stop("!!!!!! tabellene har ulike kolonner og kan ikke matches")
   }
 }
 
