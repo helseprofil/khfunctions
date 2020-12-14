@@ -38,10 +38,12 @@
 - Gjelder bare til å kjøre =LagFilgruppe= og =LagKUBE=.
 ** Kopi kolonne
 - Commit [[https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86][94a450e]]
-- Kan kopiere standard variabler til =TAB= ved å spesifisere =KOPI_KOL= i INNLESING tabell.
-- Bruke ~LANDBAK=TAB1~ i =KOPI_KOL= hvis man skal kopiere variable LANDBAK til ~TAB1~ 
-- Må spesifisere ~TAB1~ i FILGRUPPER tabell også når kopierte variable skal være i ~TAB1~
-- Spesifisere =<kopi_kol>= i kolonne ~KOPI_KOL~ i INNLESING tabell.
+- Kan kopiere standard variabler til =TAB= ved å spesifisere det i =KOPI_KOL= i INNLESING tabell.
+- Skrev ~LANDBAK=TAB1~ i =KOPI_KOL= hvis man skal kopiere f.eks variable ~LANDBAK~ til ~TAB1~ 
+- Skrev =<kopi_kol>= i ~TAB1~ kolonne i INNLESING tabell siden ~LANDBAK~ skal kopieres i ~TAB1~
+- Bruk KODEBOK tabell hvis verdien ~LANDBAK~ skal omkodes i ~TAB1~
+- Må spesifisere ~TAB1~ i FILGRUPPER tabell også når den kopierte variable skal være i ~TAB1~
+
 
 * DEV branch
 
