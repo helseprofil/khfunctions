@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="no" xml:lang="no">
 <head>
-<!-- 2020-12-14 man. 09:54 -->
+<!-- 2020-12-15 tir. 13:34 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Oppdateringer og muligheter</title>
@@ -228,57 +228,61 @@
 <h2>Innhold</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org8ab00b3">1. MASTER branch</a>
+<li><a href="#org83e69af">1. MASTER branch</a>
 <ul>
-<li><a href="#org35b19e2">1.1. Legger nye kolonner for Stata</a></li>
-<li><a href="#org9aaefcc">1.2. Oppdatere lockfile</a></li>
-<li><a href="#org2cb21ed">1.3. Path to batchfil</a></li>
-<li><a href="#orgb7f043a">1.4. Path til PDB og TestModus</a></li>
-<li><a href="#org8501eb2">1.5. Annen filsti og filnavn</a></li>
-<li><a href="#org2db6e54">1.6. idtest argument</a></li>
-<li><a href="#org5c607d1">1.7. Testmappe</a></li>
-<li><a href="#orgdac0902">1.8. Run local</a></li>
-<li><a href="#org771cd33">1.9. Kopi kolonne</a></li>
+<li><a href="#org476aa43">1.1. Legger nye kolonner for Stata</a></li>
+<li><a href="#org3fb758c">1.2. Oppdatere lockfile</a></li>
+<li><a href="#org244a4e7">1.3. batchfil</a></li>
+<li><a href="#org444715e">1.4. Path til PDB og TestModus</a></li>
+<li><a href="#org49d9227">1.5. Annen filsti og filnavn</a></li>
+<li><a href="#orgf433bbe">1.6. idtest argument</a></li>
+<li><a href="#org232aaa4">1.7. Testmappe</a></li>
+<li><a href="#org6b3134a">1.8. Run local</a></li>
+<li><a href="#orgb0f52b1">1.9. Kopi kolonne</a></li>
 </ul>
 </li>
-<li><a href="#orgaf762c0">2. DEV branch</a></li>
+<li><a href="#org0e24a61">2. DEV branch</a></li>
 </ul>
 </div>
 </div>
 
 
-<div id="outline-container-org8ab00b3" class="outline-2">
-<h2 id="org8ab00b3"><span class="section-number-2">1</span> MASTER branch</h2>
+<div id="outline-container-org83e69af" class="outline-2">
+<h2 id="org83e69af"><span class="section-number-2">1</span> MASTER branch</h2>
 <div class="outline-text-2" id="text-1">
+<p>
+Endringer kan ses på commit history <a href="https://github.com/helseprofil/khfunctions/commits/master">her</a>.
+</p>
 </div>
-<div id="outline-container-org35b19e2" class="outline-3">
-<h3 id="org35b19e2"><span class="section-number-3">1.1</span> Legger nye kolonner for Stata</h3>
+<div id="outline-container-org476aa43" class="outline-3">
+<h3 id="org476aa43"><span class="section-number-3">1.1</span> Legger nye kolonner for Stata</h3>
 <div class="outline-text-3" id="text-1-1">
 <ul class="org-ul">
 <li>3 nye kolonner er <code>filgruppe</code>, <code>delid</code> og <code>tab1_innles</code></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org9aaefcc" class="outline-3">
-<h3 id="org9aaefcc"><span class="section-number-3">1.2</span> Oppdatere lockfile</h3>
+<div id="outline-container-org3fb758c" class="outline-3">
+<h3 id="org3fb758c"><span class="section-number-3">1.2</span> Oppdatere lockfile</h3>
 <div class="outline-text-3" id="text-1-2">
 <ul class="org-ul">
 <li>legger inn pakke <code>bat2bat</code></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org2cb21ed" class="outline-3">
-<h3 id="org2cb21ed"><span class="section-number-3">1.3</span> Path to batchfil</h3>
+<div id="outline-container-org244a4e7" class="outline-3">
+<h3 id="org244a4e7"><span class="section-number-3">1.3</span> batchfil</h3>
 <div class="outline-text-3" id="text-1-3">
 <ul class="org-ul">
-<li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/c108a44da957dc1e7e94c051c696a1285422ea19">c108a44</a></li>
+<li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/2a618ec956fef9b505273b34156f9a3c7fd00f2f">2a618ec</a></li>
 <li>Legger ouput for <code>TmpRutineSammenlignKHkuber</code> funksjon til mappen <code>Batch2020vs2021</code></li>
 <li>Mappennavn lages automatisk dvs. fjoråret vs. året hvis det ikke finnes</li>
+<li>Gi beskjed hvis filen ikke finnes</li>
 </ul>
 </div>
 </div>
-<div id="outline-container-orgb7f043a" class="outline-3">
-<h3 id="orgb7f043a"><span class="section-number-3">1.4</span> Path til PDB og TestModus</h3>
+<div id="outline-container-org444715e" class="outline-3">
+<h3 id="org444715e"><span class="section-number-3">1.4</span> Path til PDB og TestModus</h3>
 <div class="outline-text-3" id="text-1-4">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/24">#24</a></li>
@@ -287,8 +291,8 @@
 </ul>
 </div>
 </div>
-<div id="outline-container-org8501eb2" class="outline-3">
-<h3 id="org8501eb2"><span class="section-number-3">1.5</span> Annen filsti og filnavn</h3>
+<div id="outline-container-org49d9227" class="outline-3">
+<h3 id="org49d9227"><span class="section-number-3">1.5</span> Annen filsti og filnavn</h3>
 <div class="outline-text-3" id="text-1-5">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/25">#25</a></li>
@@ -296,8 +300,8 @@
 </ul>
 </div>
 </div>
-<div id="outline-container-org2db6e54" class="outline-3">
-<h3 id="org2db6e54"><span class="section-number-3">1.6</span> idtest argument</h3>
+<div id="outline-container-orgf433bbe" class="outline-3">
+<h3 id="orgf433bbe"><span class="section-number-3">1.6</span> idtest argument</h3>
 <div class="outline-text-3" id="text-1-6">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/28">#28</a></li>
@@ -306,8 +310,8 @@
 </ul>
 </div>
 </div>
-<div id="outline-container-org5c607d1" class="outline-3">
-<h3 id="org5c607d1"><span class="section-number-3">1.7</span> Testmappe</h3>
+<div id="outline-container-org232aaa4" class="outline-3">
+<h3 id="org232aaa4"><span class="section-number-3">1.7</span> Testmappe</h3>
 <div class="outline-text-3" id="text-1-7">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/28">#28</a></li>
@@ -316,18 +320,20 @@
 </ul>
 </div>
 </div>
-<div id="outline-container-orgdac0902" class="outline-3">
-<h3 id="orgdac0902"><span class="section-number-3">1.8</span> Run local</h3>
+<div id="outline-container-org6b3134a" class="outline-3">
+<h3 id="org6b3134a"><span class="section-number-3">1.8</span> Run local</h3>
 <div class="outline-text-3" id="text-1-8">
 <ul class="org-ul">
-<li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/fddc0b97e337032a5f73697ba07eaee0359d941b">fddc0b</a></li>
-<li>Bruk <code>run-test.R</code> fil for å kopiere KHELSA.mdb og KHlogg.mdb til local mappen <code>C:\User\username\DB_helseprofil</code>.</li>
+<li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/3e48d407e33320e89217348170c741c1886bd623">3e48d40</a></li>
+<li>Bruk <code>run-local.R</code> fil for å kopiere KHELSA.mdb og KHlogg.mdb til local mappen <code>C:\User\username\DB_helseprofil</code>.</li>
 <li>Gjelder bare til å kjøre <code>LagFilgruppe</code> og <code>LagKUBE</code>.</li>
+<li>Kjør <code>run_local()</code> funksjon</li>
+<li>Bruk argument <code>run_local(copy=TRUE)</code> eller <code>FALSE</code> hvis man vil unngå spørmål for kopiering.</li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org771cd33" class="outline-3">
-<h3 id="org771cd33"><span class="section-number-3">1.9</span> Kopi kolonne</h3>
+<div id="outline-container-orgb0f52b1" class="outline-3">
+<h3 id="orgb0f52b1"><span class="section-number-3">1.9</span> Kopi kolonne</h3>
 <div class="outline-text-3" id="text-1-9">
 <ul class="org-ul">
 <li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86">94a450e</a></li>
@@ -342,8 +348,8 @@
 </div>
 
 
-<div id="outline-container-orgaf762c0" class="outline-2">
-<h2 id="orgaf762c0"><span class="section-number-2">2</span> DEV branch</h2>
+<div id="outline-container-org0e24a61" class="outline-2">
+<h2 id="org0e24a61"><span class="section-number-2">2</span> DEV branch</h2>
 </div>
 </div>
 </body>

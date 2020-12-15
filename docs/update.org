@@ -9,14 +9,16 @@
 
 
 * MASTER branch
+Endringer kan ses på commit history [[https://github.com/helseprofil/khfunctions/commits/master][her]].
 ** Legger nye kolonner for Stata
 - 3 nye kolonner er =filgruppe=, =delid= og =tab1_innles= 
 ** Oppdatere lockfile
 - legger inn pakke =bat2bat=
-** Path to batchfil
-- Commit [[https://github.com/helseprofil/khfunctions/commit/c108a44da957dc1e7e94c051c696a1285422ea19][c108a44]]
+** batchfil
+- Commit [[https://github.com/helseprofil/khfunctions/commit/2a618ec956fef9b505273b34156f9a3c7fd00f2f][2a618ec]]
 - Legger ouput for =TmpRutineSammenlignKHkuber= funksjon til mappen =Batch2020vs2021=
 - Mappennavn lages automatisk dvs. fjoråret vs. året hvis det ikke finnes
+- Gi beskjed hvis filen ikke finnes
 ** Path til PDB og TestModus
 - PR [[https://github.com/helseprofil/khfunctions/pull/24][#24]]
 - Path endret til =F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON=
@@ -33,9 +35,11 @@
 - Testfiler skal ligger i mappen =PRODUCTION/TEST=.
 - Kan også spesifiseres hvor testfiler havner ved å defienere i =testmappe=.
 ** Run local
-- Commit [[https://github.com/helseprofil/khfunctions/commit/fddc0b97e337032a5f73697ba07eaee0359d941b][fddc0b]]
-- Bruk =run-test.R= fil for å kopiere KHELSA.mdb og KHlogg.mdb til local mappen =C:\User\username\DB_helseprofil=.
+- Commit [[https://github.com/helseprofil/khfunctions/commit/3e48d407e33320e89217348170c741c1886bd623][3e48d40]]
+- Bruk =run-local.R= fil for å kopiere KHELSA.mdb og KHlogg.mdb til local mappen =C:\User\username\DB_helseprofil=.
 - Gjelder bare til å kjøre =LagFilgruppe= og =LagKUBE=.
+- Kjør =run_local()= funksjon
+- Bruk argument =run_local(copy=TRUE)= eller =FALSE= hvis man vil unngå spørmål for kopiering.
 ** Kopi kolonne
 - Commit [[https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86][94a450e]]
 - Kan kopiere standard variabler til =TAB= ved å spesifisere det i =KOPI_KOL= i INNLESING tabell.
