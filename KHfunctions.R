@@ -6309,8 +6309,17 @@ SettKubedirs<-function(globs,modus=NA){
 
 TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=character(0),globs=FinnGlobs()){
   
-  KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
-  KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+  ## KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
+  ## KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+
+  fileD <- fs::file_exists(c(kube1filnavn, kube2filnavn))
+  if(sum(fileD) != 2){
+    print(names(fileD)[!(fileD)])
+    stop("Fant ingen fil/filer i mappen du skrev oppe")
+  }
+  
+  KUBE1 <- data.table::fread(kube1filnavn)
+  KUBE2 <- data.table::fread(kube2filnavn)
   
   print(names(KUBE1))
   print(names(KUBE2))
@@ -6325,18 +6334,17 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
   KHglobs$DefDesign$DesignKols
 
   ## Folder to keep the output if not allready there
-  currYr <- as.integer(format(Sys.Date(),"%Y"))
-  nextYr <- currYr + 1
+  currYr <- KHglobs$KHaargang - 1
+  nextYr <- KHglobs$KHaargang
   foldName <- paste0("Batch", currYr, "vs", nextYr)
-
+  
   validDir <- file.path(defpaths[1], "VALIDERING/NESSTAR_KUBER", foldName)
 
   if (isFALSE(fs::dir_exists(validDir)))
     fs::dir_create(validDir)
 
   
-  
-  if (nrow(KUBE1)>0 & nrow(KUBE2)>0 & length(setdiff(tabs1,tabs2))==0){
+  if (length(setdiff(tabs1,tabs2))==0 && nrow(KUBE1)>0 && nrow(KUBE2)>0){
     setkeyv(KUBE1,tabs1)
     setkeyv(KUBE2,tabs1)
     #VERSJON 1 INNER JOIN
@@ -6346,13 +6354,14 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
     #KOMP<-merge(KUBE1,KUBE2,all=TRUE)
     
     #MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
-    
-    
-    utfil<-paste(validDir, KUBENAVN,".csv",sep="")
+
+    fileName <- paste0(KUBENAVN, ".csv")
+    utfil<-file.path(validDir, fileName)
     cat(paste("Skriver ut",utfil,"\n"))
-    write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
+    ## write.table(KOMP,file=utfil,sep=";",row.names=FALSE)
+    data.table::fwrite(KOMP, file = utfil, sep = ";")
   } else {
-    cat("!!!!!! tabellene har ulike kolonner og kan ikke matches")
+    stop("!!!!!! tabellene har ulike kolonner og kan ikke matches")
   }
 }
 
