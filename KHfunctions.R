@@ -6312,7 +6312,12 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
   ## KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
   ## KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
 
-  ## use data.table way to read csv
+  fileD <- fs::file_exists(c(kube1filnavn, kube2filnavn))
+  if(sum(fileD) != 2){
+    print(names(fileD)[!(fileD)])
+    stop("Fant ingen fil/filer i mappen du skrev oppe")
+  }
+  
   KUBE1 <- data.table::fread(kube1filnavn)
   KUBE2 <- data.table::fread(kube2filnavn)
   
@@ -6329,8 +6334,8 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
   KHglobs$DefDesign$DesignKols
 
   ## Folder to keep the output if not allready there
-  currYr <- KHglobs$KHaargang - 1
-  nextYr <- KHglobs$KHaargang
+  currYr <- globglobs$KHaargang - 1
+  nextYr <- globglobs$KHaargang
   foldName <- paste0("Batch", currYr, "vs", nextYr)
   
   validDir <- file.path(defpaths[1], "VALIDERING/NESSTAR_KUBER", foldName)
@@ -6360,12 +6365,11 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 }
 
 
+
+KHglobs<-FinnGlobs()
+
+
 #############################################
-
-
-
-
-## KHglobs<-FinnGlobs()
 
 
 ## ---------------------
