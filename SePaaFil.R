@@ -3,11 +3,12 @@
 rm(list = ls())
 source("KHfunctions.R")
 
+#Denne må også ofte kjøres ved oppstart. Setter opp ODBC.
+KHglobs<-SettGlobs()
+
 BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 #BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
 
-#Denne m? ogs? ofte kj?res ved oppstart. Setter opp ODBC.
-KHglobs<-SettGlobs()
 
 #---------------------------------------------------------------------------------------------
 # UTDATERT H-2019
