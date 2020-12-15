@@ -19,7 +19,7 @@ get_local_file <- function(){
 
   en <- parent.frame()
   
-  if (is.null(en$DBFile) && en$copy){
+  if (is.null(en$DBFile) && is.null(en$copy)){
     message("\nLokal mappen: ", dbDir)
     message("Kopieres som: ", dbFile)
     message("Nyeste lokalfil er: ", dbLast, "\n")
@@ -41,11 +41,11 @@ get_local_file <- function(){
 
 ## localPath : Path to copy files KHELSA and KHLogg. Default is c:/Users/username/DB_helseprofil
 ## DBFile : Name of Access file if other than KHELSA.mdb
-## copy = FALSE will use the existing files in the localPath
+## copy = FALSE will use the existing files in the localPath, else TRUE. NULL will prompt question
 
 run_local <- function(localPath = NULL,
                       DBFile = NULL,
-                      copy = TRUE){
+                      copy = NULL){
 
   ## Switch modus on
   setLocal <<- TRUE
