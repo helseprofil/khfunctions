@@ -47,7 +47,11 @@ Endringer kan ses på commit history [[https://github.com/helseprofil/khfunction
 - Skrev =<kopi_kol>= i ~TAB1~ kolonne i INNLESING tabell siden ~LANDBAK~ skal kopieres i ~TAB1~
 - Bruk KODEBOK tabell hvis verdien ~LANDBAK~ skal omkodes i ~TAB1~
 - Må spesifisere ~TAB1~ i FILGRUPPER tabell også når den kopierte variable skal være i ~TAB1~
-
+** Text rawdata med " symbol
+- Issue/bug [[https://github.com/helseprofil/khfunctions/issues/40][#40]]
+- Rawdata som starter og slutter med ="= ble lest feil (eg. KOBLID 22 ENEFHIM)
+- RYSYNT1 beskreves hvordan de skal leses
+- Arsaken er de 3 kolonner som legges til for Stata
 
 * DEV branch
 

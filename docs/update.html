@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="no" xml:lang="no">
 <head>
-<!-- 2020-12-15 tir. 13:34 -->
+<!-- 2020-12-15 tir. 15:16 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Oppdateringer og muligheter</title>
@@ -228,50 +228,51 @@
 <h2>Innhold</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org83e69af">1. MASTER branch</a>
+<li><a href="#org8dd8cca">1. MASTER branch</a>
 <ul>
-<li><a href="#org476aa43">1.1. Legger nye kolonner for Stata</a></li>
-<li><a href="#org3fb758c">1.2. Oppdatere lockfile</a></li>
-<li><a href="#org244a4e7">1.3. batchfil</a></li>
-<li><a href="#org444715e">1.4. Path til PDB og TestModus</a></li>
-<li><a href="#org49d9227">1.5. Annen filsti og filnavn</a></li>
-<li><a href="#orgf433bbe">1.6. idtest argument</a></li>
-<li><a href="#org232aaa4">1.7. Testmappe</a></li>
-<li><a href="#org6b3134a">1.8. Run local</a></li>
-<li><a href="#orgb0f52b1">1.9. Kopi kolonne</a></li>
+<li><a href="#org529d32c">1.1. Legger nye kolonner for Stata</a></li>
+<li><a href="#orge4de0ba">1.2. Oppdatere lockfile</a></li>
+<li><a href="#org61a162b">1.3. batchfil</a></li>
+<li><a href="#org5eae578">1.4. Path til PDB og TestModus</a></li>
+<li><a href="#orga499d9e">1.5. Annen filsti og filnavn</a></li>
+<li><a href="#orge7f22ca">1.6. idtest argument</a></li>
+<li><a href="#org45cc674">1.7. Testmappe</a></li>
+<li><a href="#orgd59bb4b">1.8. Run local</a></li>
+<li><a href="#org89cfff3">1.9. Kopi kolonne</a></li>
+<li><a href="#org377c085">1.10. Text rawdata med " symbol</a></li>
 </ul>
 </li>
-<li><a href="#org0e24a61">2. DEV branch</a></li>
+<li><a href="#org5c92b62">2. DEV branch</a></li>
 </ul>
 </div>
 </div>
 
 
-<div id="outline-container-org83e69af" class="outline-2">
-<h2 id="org83e69af"><span class="section-number-2">1</span> MASTER branch</h2>
+<div id="outline-container-org8dd8cca" class="outline-2">
+<h2 id="org8dd8cca"><span class="section-number-2">1</span> MASTER branch</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 Endringer kan ses på commit history <a href="https://github.com/helseprofil/khfunctions/commits/master">her</a>.
 </p>
 </div>
-<div id="outline-container-org476aa43" class="outline-3">
-<h3 id="org476aa43"><span class="section-number-3">1.1</span> Legger nye kolonner for Stata</h3>
+<div id="outline-container-org529d32c" class="outline-3">
+<h3 id="org529d32c"><span class="section-number-3">1.1</span> Legger nye kolonner for Stata</h3>
 <div class="outline-text-3" id="text-1-1">
 <ul class="org-ul">
 <li>3 nye kolonner er <code>filgruppe</code>, <code>delid</code> og <code>tab1_innles</code></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org3fb758c" class="outline-3">
-<h3 id="org3fb758c"><span class="section-number-3">1.2</span> Oppdatere lockfile</h3>
+<div id="outline-container-orge4de0ba" class="outline-3">
+<h3 id="orge4de0ba"><span class="section-number-3">1.2</span> Oppdatere lockfile</h3>
 <div class="outline-text-3" id="text-1-2">
 <ul class="org-ul">
 <li>legger inn pakke <code>bat2bat</code></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org244a4e7" class="outline-3">
-<h3 id="org244a4e7"><span class="section-number-3">1.3</span> batchfil</h3>
+<div id="outline-container-org61a162b" class="outline-3">
+<h3 id="org61a162b"><span class="section-number-3">1.3</span> batchfil</h3>
 <div class="outline-text-3" id="text-1-3">
 <ul class="org-ul">
 <li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/2a618ec956fef9b505273b34156f9a3c7fd00f2f">2a618ec</a></li>
@@ -281,8 +282,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-org444715e" class="outline-3">
-<h3 id="org444715e"><span class="section-number-3">1.4</span> Path til PDB og TestModus</h3>
+<div id="outline-container-org5eae578" class="outline-3">
+<h3 id="org5eae578"><span class="section-number-3">1.4</span> Path til PDB og TestModus</h3>
 <div class="outline-text-3" id="text-1-4">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/24">#24</a></li>
@@ -291,8 +292,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-org49d9227" class="outline-3">
-<h3 id="org49d9227"><span class="section-number-3">1.5</span> Annen filsti og filnavn</h3>
+<div id="outline-container-orga499d9e" class="outline-3">
+<h3 id="orga499d9e"><span class="section-number-3">1.5</span> Annen filsti og filnavn</h3>
 <div class="outline-text-3" id="text-1-5">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/25">#25</a></li>
@@ -300,8 +301,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-orgf433bbe" class="outline-3">
-<h3 id="orgf433bbe"><span class="section-number-3">1.6</span> idtest argument</h3>
+<div id="outline-container-orge7f22ca" class="outline-3">
+<h3 id="orge7f22ca"><span class="section-number-3">1.6</span> idtest argument</h3>
 <div class="outline-text-3" id="text-1-6">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/28">#28</a></li>
@@ -310,8 +311,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-org232aaa4" class="outline-3">
-<h3 id="org232aaa4"><span class="section-number-3">1.7</span> Testmappe</h3>
+<div id="outline-container-org45cc674" class="outline-3">
+<h3 id="org45cc674"><span class="section-number-3">1.7</span> Testmappe</h3>
 <div class="outline-text-3" id="text-1-7">
 <ul class="org-ul">
 <li>PR <a href="https://github.com/helseprofil/khfunctions/pull/28">#28</a></li>
@@ -320,8 +321,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-org6b3134a" class="outline-3">
-<h3 id="org6b3134a"><span class="section-number-3">1.8</span> Run local</h3>
+<div id="outline-container-orgd59bb4b" class="outline-3">
+<h3 id="orgd59bb4b"><span class="section-number-3">1.8</span> Run local</h3>
 <div class="outline-text-3" id="text-1-8">
 <ul class="org-ul">
 <li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/3e48d407e33320e89217348170c741c1886bd623">3e48d40</a></li>
@@ -332,8 +333,8 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
-<div id="outline-container-orgb0f52b1" class="outline-3">
-<h3 id="orgb0f52b1"><span class="section-number-3">1.9</span> Kopi kolonne</h3>
+<div id="outline-container-org89cfff3" class="outline-3">
+<h3 id="org89cfff3"><span class="section-number-3">1.9</span> Kopi kolonne</h3>
 <div class="outline-text-3" id="text-1-9">
 <ul class="org-ul">
 <li>Commit <a href="https://github.com/helseprofil/khfunctions/commit/94a450e08dbfb87f8325ca273c85258b04501b86">94a450e</a></li>
@@ -345,11 +346,21 @@ Endringer kan ses på commit history <a href="https://github.com/helseprofil/khf
 </ul>
 </div>
 </div>
+<div id="outline-container-org377c085" class="outline-3">
+<h3 id="org377c085"><span class="section-number-3">1.10</span> Text rawdata med " symbol</h3>
+<div class="outline-text-3" id="text-1-10">
+<ul class="org-ul">
+<li>Issue/bug <a href="https://github.com/helseprofil/khfunctions/issues/40">#40</a></li>
+<li>Rawdata som starter og slutter med <code>"</code> ble lest feil (eg. KOBLID 22 ENEFHIM)</li>
+<li>RYSYNT1 beskreves hvordan de skal leses</li>
+<li>Arsaken er de 3 kolonner som legges til for Stata</li>
+</ul>
+</div>
+</div>
 </div>
 
-
-<div id="outline-container-org0e24a61" class="outline-2">
-<h2 id="org0e24a61"><span class="section-number-2">2</span> DEV branch</h2>
+<div id="outline-container-org5c92b62" class="outline-2">
+<h2 id="org5c92b62"><span class="section-number-2">2</span> DEV branch</h2>
 </div>
 </div>
 </body>
