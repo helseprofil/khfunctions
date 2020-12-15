@@ -6357,13 +6357,11 @@ TmpRutineSammenlignKHkuber<-function(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs=cha
 }
 
 
+
+KHglobs<-FinnGlobs()
+
+
 #############################################
-
-
-
-
-## KHglobs<-FinnGlobs()
-
 
 ## ---------------------
 ## Backup filer
