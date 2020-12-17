@@ -8,5 +8,21 @@
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
 Problemer vi har hatt og hvordan vi taklet dem.
+* Bruk DBI og odbc pakker
+KHfunctions har brukt =RODBC= pakke. Vi bytter til =DBI= og =odbc= pakker fordi den er aktiv vedlikeholdt
+og laget av RStudio folk dvs. kanskje er mer stabil. Kan leses [[https://db.rstudio.com/odbc/][her]]. Disse er greit å vite:
 
+- Connection er definert i =SettGlobs= funksjon med objekt =KHOc= og =KHLc= for KHELSA.mdb og KHlogg.mdb.
+- De er sendes global med =globs= objekt som =globs$dbh= og =globs$log=.
+- Funksjoner som brukes:
+
+| RODBC     | DBI          |
+|-----------+--------------|
+| sqlQuery  | dbSendQuery  |
+| sqlFetch  | dbFetch      |
+|           |              |
+|           | dbGetQuery   |
+|           |              |
+| odbcClose | dbDisconnect |
+|           |              |
 

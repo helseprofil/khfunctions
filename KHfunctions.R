@@ -436,11 +436,20 @@ SettGlobs<-function(path="",modus=NA,gibeskjed=FALSE) {
     } 
 
 
-    #Sys.getenv("R_ARCH")   gir "/x64"eller "/i386" 
-    KHOc<-odbcConnectAccess2007(paste(path,dbFile,sep="/"))
-    #KHOc<-odbcConnectAccess(paste(path,KHdbname,sep="/"))
-    KHLc<-odbcConnectAccess2007(paste(path,logFile,sep="/"))
+    ## #Sys.getenv("R_ARCH")   gir "/x64"eller "/i386" 
+    ## KHOc<-odbcConnectAccess2007(paste(path,dbFile,sep="/"))
+    ## #KHOc<-odbcConnectAccess(paste(path,KHdbname,sep="/"))
+    ## KHLc<-odbcConnectAccess2007(paste(path,logFile,sep="/"))
 
+    ## Get connection to DB
+    con_file  <<-  file.path(path, dbFile)
+    con_log  <<-  file.path(path, logFile)
+    KHOc <- RODBC::odbcDriverConnect(paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",
+                                            con_file))
+    KHLc <- RODBC::odbcDriverConnect(paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",
+                                            con_log))
+
+    
     ## OBS!! Have to reset path to original for all the other globs use
     path = rawPath
     
