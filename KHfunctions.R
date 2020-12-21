@@ -6485,14 +6485,13 @@ godkjent <- function(profil = c("FHP", "OVP"),
                      modus = globglobs$KHgeoniv,
                      aar = globglobs$KHaar, ...){
 
+  profil <- match.arg(profil)
   
   bruker <- Sys.info()[["user"]]
   message("\n********\n  Kopiering av filer for ",
           profil[1], " og geonivå ", modus, " for ",
           aar, " begynner nå. Gjennomført av ", bruker, "\n********\n" )
   
-  extra <- list(...)
-
   ## Get connection to DB
   mdb_file <- file.path(defpaths[1], globglobs$KHdbname)
   conn <- RODBC::odbcDriverConnect(paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",

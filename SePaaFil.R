@@ -167,3 +167,13 @@ write.table(comp$V12,file=Comparefile,sep=';',na="",row.names = FALSE)
 ## Evt. åpne denne URL https://fhprofil.shinyapps.io/bat2bat/
 
 bat2bat::run_app()
+
+
+
+## Godkjent
+## ------------
+## profil : FHP eller OVP
+## modus : Default er "K" og kan velge "F" (fylke) eller "B" (Bydel)
+## aar : default er nåværende årgang, ellers spesifiseres ved bruk aar = 2020
+
+godkjent(profil = "FHP", modus = "K")
