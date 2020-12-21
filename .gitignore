@@ -43,3 +43,4 @@ vignettes/*.pdf
 run-local-NO.R
 testmodus_not.R
 *-NO.R
+*-NO.*
