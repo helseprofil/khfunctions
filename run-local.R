@@ -37,5 +37,5 @@ source("KHfunctions.R")
 KHglobs<-SettGlobs()
 
 
-LagKUBE("ARBLEDIGE")
-
+LagKubeDatertCsv("ARBLEDIGE")
+LagKubeDatertCsv("MOBBING_UNGDATA")
