@@ -55,8 +55,11 @@ k <- LagKUBE("DAAR_RUSTAB_ANTALL",dumps=dumps)
 #Du kan ogs? lage dump i alle RSYNT-punkter, ved ? legge inn en "lagre fil"-kommando som RSYNT.
 
 #---------------------------------------------------------------------------------------------
-#TA BACKUP av skript og KHELSA.mdb (sjekker om behov)
-source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/auto_backup_KH.r')
+#UTDATERT 2020: TA BACKUP av skript og KHELSA.mdb (sjekker om behov)
+#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/auto_backup_KH.r')
+
+# BRUK I STEDET KOMMANDO:
+backup("KHELSA.mdb")
 
 #---------------------------------------------------------------------------------------------
 
@@ -66,7 +69,7 @@ SammelignAarganger()
 FG <- FinnFilT("INNTULIKHET")
 
 #Lagre et datasett fra R-memory til statafil (manuell fildump)
-write.dta(FG,paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/RUNTIMEDUMP","/","DAAR_GK_filgruppe.dta",sep=""))
+write.dta(FG, paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/RUNTIMEDUMP","/","DAAR_GK_filgruppe.dta",sep=""))
 #Daar-fil tok tre-fire minutter ? lagre (17 mill rader).
 
 #TMP n?dl?sning:
@@ -77,32 +80,35 @@ saveRDS(TMP,"F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLA
 
 #---------------------------------------------------------------------------------------------
 #TMP: valider ?rgang mot ?rgang KH
-KUBENAVN<-"SPEDBARNDOD_NH"  #Bare for output
-tabs<-c("DODSTIDSPKT")
-#Filnavn for de to ?rgangene. M? v?re csv!
-kube1filnavn<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/KUBER/NORGESHELSA/NH2017NESSTAR/SPEDBARNDOD_NH_2017-09-18-11-09.csv"
-kube2filnavn<-"F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/KUBER/NORGESHELSA/NH2018NESSTAR/SPEDBARNDOD_NH_2018-04-09-15-45.csv"
+  # Lager en csv-fil med de to datasettene side om side. Du må selv gjøre sammenlikningen.
+  # SE OGSÅ Sammenlikne kuber, og Batch mot batch, nedenfor.
+KUBENAVN<-"Drikkevann"  #Bare for output
+tabs<-c("INDIKATOR", "NIVA")
+#Filnavn for de to ?rgangene. M? v?re csv!  Ta med filtype i navnet.
+  #Husk \\ eller / som katalogskilletegn.
+kube1filnavn <- "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\PRODUKTER\\KUBER\\KOMMUNEHELSA\\KH2020NESSTAR\\DRIKKEVANN_2020-01-08-10-38.csv"
+kube2filnavn <- "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\PRODUKTER\\KUBER\\KOMMUNEHELSA\\KH2021NESSTAR\\DRIKKEVANN_2021-01-11-15-25.csv"
 
 TmpRutineSammenlignKHkuber(kubefilnavn1,kubefilnavn2,KUBENAVN,tabs)
 
 #---------------------------------------------------------------------------------------------
 ## BUFFERbatch  !!!!!!!
 
-BUFFER[["BEF_GKu"]]<-FinnFilT("BEF_GK_Tu")
+BUFFER[["BEF_GKu"]] <- FinnFilT("BEF_GK_Tu")
 
 #---------------------------------------------------------------------------------------------
 #Se n?rmere p? en stablet fil
 
-FG<-FinnFilT("SVANGERROYK")
+FG <- FinnFilT("SVANGERROYK")
 
-subset(FG,AARl==2020 & GEO=="0214" & KJONN==1)
+subset(FG, AARl==2020 & GEO=="0214" & KJONN==1)
 
-subset(FG,AARl==2012 & GEO %in% c("0214","0215") & KJONN==1)
+subset(FG, AARl==2012 & GEO %in% c("0214","0215") & KJONN==1)
 
 
 #---------------------------------------------------------------------------------------------
 #FinneDubletter for filgruppe
-DUB<-SjekkDuplikaterFG("BEFOLK",FullResult=TRUE)$DUB
+DUB <- SjekkDuplikaterFG("BEFOLK",FullResult=TRUE)$DUB
 
 #---------------------------------------------------------------------------------------------
 #For ? konvertere alle de StableFilgruppene til hhv csv og stata
@@ -170,7 +176,7 @@ bat2bat::run_app()
 
 
 
-## Godkjent
+## Lage Godkjent-mappe for flatfil- og barometerproduksjonen
 ## ------------
 ## profil : FHP eller OVP
 ## modus : Default er "K" og kan velge "F" (fylke) eller "B" (Bydel)
