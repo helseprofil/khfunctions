@@ -6486,6 +6486,8 @@ godkjent <- function(profil = c("FHP", "OVP"),
                      aar = globglobs$KHaar, ...){
 
   profil <- match.arg(profil)
+
+  modusFolder <- switch(modus, F = "NH", "KH")
   
   bruker <- Sys.info()[["user"]]
   message("\n********\n  Kopiering av filer for ",
@@ -6496,7 +6498,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   mdb_file <- file.path(defpaths[1], globglobs$KHdbname)
   conn <- RODBC::odbcDriverConnect(paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",
                                  mdb_file))
-
+  
   tblCols <- c("PROFILTYPE", "INDIKATOR", "KUBE_NAVN", "MODUS", "AARGANG")
   tblName <- "FRISKVIK"
   sqlFrisk <- glue::glue_sql("SELECT {`tblCols`*}
@@ -6506,7 +6508,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   tbl_fsk <- RODBC::sqlQuery(conn, sqlFrisk)
 
   tblCols <- c("KUBE_NAVN", "VERSJON_PROFILAAR_GEO", "OK_PROFILAAR_GEO")
-  tblName <- paste0("KH", aar, "_KUBESTATUS")
+  tblName <- paste0(modusFolder, aar, "_KUBESTATUS")
   sqlKube <- glue::glue_sql("SELECT {`tblCols`*} from {`tblName`}", .con = DBI::ANSI())
 
   tbl_kube <- RODBC::sqlQuery(conn, sqlKube)

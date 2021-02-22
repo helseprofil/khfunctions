@@ -182,4 +182,4 @@ bat2bat::run_app()
 ## modus : Default er "K" og kan velge "F" (fylke) eller "B" (Bydel)
 ## aar : default er nåværende årgang, ellers spesifiseres ved bruk aar = 2020
 
-godkjent(profil = "FHP", modus = "K")
+godkjent(profil = "FHP", modus = "F")
