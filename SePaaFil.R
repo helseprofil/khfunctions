@@ -48,10 +48,20 @@ k <- LagKUBE("DAAR_RUSTAB_ANTALL",dumps=dumps)
 #Du kan ogs? lage dump i alle RSYNT-punkter, ved ? legge inn en "lagre fil"-kommando som RSYNT.
 
 #---------------------------------------------------------------------------------------------
-#UTDATERT 2020: TA BACKUP av skript og KHELSA.mdb (sjekker om behov)
-#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/auto_backup_KH.r')
 
-# BRUK I STEDET KOMMANDO:
+# TIPS OM SPESIALVERSJONER AV LØYPA:
+
+# - Kjøre lokalt, det vil si kopiere styringsdatabasen til egen PC for å slippe 
+# nettverksproblemer med ODBC.
+# Åpne R-script "run-local.R" i samme katalog.
+
+# - Kjøre innlesing av bare én ORGfil, mens man utarbeider innlesingsspec:
+# Åpne R-script "run-test.R" i samme katalog
+# (eller se https://github.com/helseprofil/khfunctions/blob/master/run-test.R)
+
+#---------------------------------------------------------------------------------------------
+
+# TA BACKUP AV STYRINGSDATABASEN:
 backup("KHELSA.mdb")
 
 #---------------------------------------------------------------------------------------------
