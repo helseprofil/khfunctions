@@ -11,13 +11,6 @@ BUFFER<-list(BEF_GKa=KlargjorFil("BEF_GKa",versjonert=TRUE)$FIL)
 
 
 #---------------------------------------------------------------------------------------------
-# UTDATERT H-2019
-    # FOR ? F? kuber standardisert med FAST standardbefolkning (NH), source i stedet dette:
-      # OBS: Filgrupper kan ikke kj?res med dette, de m? lages p? forh?nd med det vanlige scriptet.
-    #rm(list = ls())
-    #source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/KHfunctionsD.r')
-
-#---------------------------------------------------------------------------------------------
 #*********************************************************************************************
 #Kj?r innlesing:
 
@@ -36,8 +29,8 @@ k<-LagKUBE("RFU_NH_ROYK_5_fildumpdummy")
 
 #---------------------------------------------------------------------------------------------
 #Lage runtimedump
-#Liste over dumppunkter: F:\Prosjekter\Kommunehelsa\PRODUKSJON\DOK\DUMPPUNKTER.docx
-#Dump lagres alltid i F:\Prosjekter\Kommunehelsa\PRODUKSJON\RUNTIMEDUMP\
+#Liste over dumppunkter: F:\Forskningsprosjekter\PDB 2455 - Helseprofiler og til_\PRODUKSJON\DOK\DUMPPUNKTER.docx
+#Dump lagres alltid i F:\Forskningsprosjekter\PDB 2455 - Helseprofiler og til_\PRODUKSJON\RUNTIMEDUMP\
 
 dumps=list() #-> Ingen dump
 
@@ -55,10 +48,20 @@ k <- LagKUBE("DAAR_RUSTAB_ANTALL",dumps=dumps)
 #Du kan ogs? lage dump i alle RSYNT-punkter, ved ? legge inn en "lagre fil"-kommando som RSYNT.
 
 #---------------------------------------------------------------------------------------------
-#UTDATERT 2020: TA BACKUP av skript og KHELSA.mdb (sjekker om behov)
-#source('F:/Prosjekter/Kommunehelsa/PRODUKSJON/BIN/auto_backup_KH.r')
 
-# BRUK I STEDET KOMMANDO:
+# TIPS OM SPESIALVERSJONER AV LØYPA:
+
+# - Kjøre lokalt, det vil si kopiere styringsdatabasen til egen PC for å slippe 
+# nettverksproblemer med ODBC.
+# Åpne R-script "run-local.R" i samme katalog.
+
+# - Kjøre innlesing av bare én ORGfil, mens man utarbeider innlesingsspec:
+# Åpne R-script "run-test.R" i samme katalog
+# (eller se https://github.com/helseprofil/khfunctions/blob/master/run-test.R)
+
+#---------------------------------------------------------------------------------------------
+
+# TA BACKUP AV STYRINGSDATABASEN:
 backup("KHELSA.mdb")
 
 #---------------------------------------------------------------------------------------------
@@ -69,13 +72,13 @@ SammelignAarganger()
 FG <- FinnFilT("INNTULIKHET")
 
 #Lagre et datasett fra R-memory til statafil (manuell fildump)
-write.dta(FG, paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/RUNTIMEDUMP","/","DAAR_GK_filgruppe.dta",sep=""))
+write.dta(FG, paste("F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/RUNTIMEDUMP","/","GRSKPOENG_NEVNER_filgruppe.dta",sep=""))
 #Daar-fil tok tre-fire minutter ? lagre (17 mill rader).
 
 #TMP n?dl?sning:
-TMP<-readRDS("F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT/DODE_GK_2016-01-15-12-44.rds")
+TMP<-readRDS("F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT/DODE_GK_2016-01-15-12-44.rds")
 rename(TMP,c("DODE_f","DODE_a","DODE_n"),c("DODE.f","DODE.a","DODE.n"))
-saveRDS(TMP,"F:/Prosjekter/Kommunehelsa/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT/DODE_GK_2016-01-15-12-44.rds")
+saveRDS(TMP,"F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT/DODE_GK_2016-01-15-12-44.rds")
 
 
 #---------------------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ source("KHfunctions.R")
 KHglobs<-SettGlobs()
 
 ## Bruk local ACCESS
-LagFilgruppe("ARBLEDIGE")
+LagFilgruppe("ARBLEDIGE", versjonert = TRUE)
 
 
 
@@ -30,7 +30,7 @@ LagFilgruppe("ARBLEDIGE")
 rm(list = ls())
 source("local-files.R")
 
-## Behøver ikke å kompiere ACCESS på nytt hvis det er samme kjøring
+## Behøver ikke å kopiere ACCESS på nytt hvis det er samme kjøring
 ## som brukes til LagFilgruppe
 run_local(copy = FALSE)
 source("KHfunctions.R")
