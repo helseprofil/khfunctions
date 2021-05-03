@@ -2,10 +2,23 @@
 
 * Befolkings file
 What these variables represent? Jørgen explained:
-•	BEF0101 er befolkning 1. januar
-•	BEF3112 er befolkning 31. desember
-•	mBEFc er middelfolkemengde etter cohort-alder. Benyttes som nevner når telleren er etter cohort-alder. Eksempel: NPR. I datafiler fra NPR er alder cohort-alder. Definisjonen på kohortalder = hendelsesår minus fødselsår. For å ta med selv som eksempel: Jeg er født i juli 1964. Hvis jeg kommer på sykehus i morgen, så vil alder ved innleggelse være 2021-1964=57 år (sel om jeg ikke har fylt 57 ennå). NPR-statistikk bruker derfor mBEFc som nevner.
-•	mBEFa er middelfolkemengde etter fylte år. Benyttes som nevner når telleren er etter fylte år. Eksempel: Dødsårsaksregisteret. For å ta med selv som eksempel igjen: Hvis jeg dør i morgen, så vil alder ved død være 56 år (ikke 57 som ovenfor.) Dødsårsaksstatistikk bruker derfor mBEFa som nevner.
+
+- BEF0101 er befolkning 1. januar
+- BEF3112 er befolkning 31. desember
+- mBEFc er middelfolkemengde etter cohort-alder. Benyttes som nevner når
+  telleren er etter cohort-alder. Eksempel: NPR. I datafiler fra NPR er alder
+  cohort-alder. Definisjonen på kohortalder = hendelsesår minus fødselsår. For å
+  ta med selv som eksempel: Jeg er født i juli 1964. Hvis jeg kommer på sykehus
+  i morgen, så vil alder ved innleggelse være 2021-1964=57 år (sel om jeg ikke
+  har fylt 57 ennå). NPR-statistikk bruker derfor mBEFc som nevner.
+- mBEFa er middelfolkemengde etter fylte år. Benyttes som nevner når telleren er
+  etter fylte år. Eksempel: Dødsårsaksregisteret. For å ta med selv som eksempel
+  igjen: Hvis jeg dør i morgen, så vil alder ved død være 56 år (ikke 57 som
+  ovenfor.) Dødsårsaksstatistikk bruker derfor mBEFa som nevner.
 
 * Branch Prikk
-Håndtering av tidsserie for kommuner som er splittet eller slåttt sammen. Alle tallene før sammenslåingen skal prikkes, men ikke fra året kommunen er slått sammen. Denne er en quick fix og gjelder bare til disse kommunene: 5055, 5056, 5059, 1806, 1875. Hvordan den fungerer er basert på løsningen for =B_STARTAAR= i Filgruppe tabell.
+Håndtering av tidsserie for kommuner som er splittet eller slåttt sammen. Alle
+tallene før sammenslåingen skal prikkes, men ikke fra året kommunen er slått
+sammen. Denne er en quick fix og gjelder bare til disse kommunene: 5055, 5056,
+5059, 1806, 1875. Hvordan den fungerer er basert på løsningen for =B_STARTAAR= i
+Filgruppe tabell. Merged #343a12a
