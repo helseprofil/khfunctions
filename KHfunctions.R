@@ -3079,7 +3079,7 @@ LagKUBE<-function(KUBEid,
 
     ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
     nameFGP <- filer["T"]
-    selectedCol <- "K_STARTAAR"
+    selectedCol <- "DK2020_STARTAAR"
     if (FGPs[[nameFGP]][[selectedCol]]>0){
       mergedCounty <- as.character(c(5055, 5056, 5059, 1806, 1875))
       valK=FinnValKols(names(KUBE))
