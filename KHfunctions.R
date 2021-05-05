@@ -6613,3 +6613,4 @@ godkjent <- function(profil = c("FHP", "OVP"),
 
 }
 
+if (runtest) message("\n --- Test Modus er aktivert! ---\n")
