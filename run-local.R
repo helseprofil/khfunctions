@@ -15,12 +15,9 @@ run_local()
 
 source("KHfunctions.R")
 
-#Denne m? også ofte kjøres ved oppstart. Setter opp ODBC.
-KHglobs<-SettGlobs()
-
 ## Bruk local ACCESS
 LagFilgruppe("ARBLEDIGE", versjonert = TRUE)
-
+LagFilgruppe("ABORT_NH")
 
 
 

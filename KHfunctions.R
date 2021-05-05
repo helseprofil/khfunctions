@@ -63,10 +63,7 @@ require(readxl)
 require(fs)
 require(bat2bat) #https://github.com/helseprofil/bat2bat
 
-if (!exists("runtest")) runtest = FALSE
-testfiles = NULL
-
-#Brukte pather under utvikling (NB: prioritert rekkefølge under)
+                                        #Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths<-c(
   "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON", 
   ## "F:/Prosjekter/Kommunehelsa/PRODUKSJON",
@@ -82,19 +79,20 @@ dbNameFile = "STYRING/KHELSA.mdb"
 dbLogFile = "STYRING/KHlogg.mdb"
 
 ## TEST MODUS
-## Change path and dbFile if specified globally
+## Change path and dbFile if specified globally else use default
 ## use in testmodus or local run
-if (exists("testpath")) defpaths = testpath
-if (runtest && !exists("testdb")) stop("Test Access file not found. Specify with: testdb = 'FileName.mdb'")
-
-if (runtest) {
+if (!exists("runtest")) runtest = FALSE
+testfiles = NULL
+useTest = FALSE
+if (exists("testpath") && exists("testdb")) useTest = TRUE
+if (useTest){
+  defpaths = testpath
   dbNameFile = testdb
-  
   dbLogFile = "KHlogg.mdb"
   noLog <- fs::file_exists(file.path(defpaths, dbLogFile))
+  if (runtest && isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
 }
 
-if (runtest && isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
 
 
 ## RUN LOCAL
