@@ -52,6 +52,12 @@ Endringer kan ses på commit history [[https://github.com/helseprofil/khfunction
 - Rawdata som starter og slutter med ="= ble lest feil (eg. KOBLID 22 ENEFHIM)
 - RYSYNT1 beskreves hvordan de skal leses
 - Arsaken er de 3 kolonner som legges til for Stata
+** [ #43 ] Test modus default path og fil
+- Bruk default hvis =testpath= og =testdb= er ikke spesifisert
+** Kommune deling
+- Commit [[https://github.com/helseprofil/khfunctions/commit/cbafd1a216602be840481b8385c0934efbe1fd1f][cbafd1a]]
+- Bruk kolonne =DK2020_STARTAAR= for å aktivere når tallene skal inkluderes.
+  Dvs. alle før det tallet blir ikke inkludert pga. kommuner har blitt delt [ #42 ]
 
 * DEV branch
 
