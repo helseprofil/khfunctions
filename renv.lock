@@ -262,6 +262,13 @@
       "Repository": "CRAN",
       "Hash": "bb0eec2fe32e88d9e2836c2f73ea2077"
     },
+    "epitools": {
+      "Package": "epitools",
+      "Version": "0.5-10.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "b1eef914dc165a4974012e43efb58da0"
+    },
     "evaluate": {
       "Package": "evaluate",
       "Version": "0.14",
