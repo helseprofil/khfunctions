@@ -49,8 +49,7 @@
 ## )
 ## sapply(pkgs, require, character.only = TRUE)
 
-library("epitools")
-
+library(epitools)
 library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
 library(DBI)
 library(foreign) # Brukes ved lesing av SPSS, dBF
