@@ -12,13 +12,13 @@
 #--------------------------------------------------------------
 ## MARS-2020: Sikre at de to pakkene er installert.
 ## Required packages
-pkgs <- c("data.table", "epitools")
+## pkgs <- c("data.table", "epitools")
 
-## Sjekke hvis finnes og installere hvis ikke finnes
-nypkg <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
-if (length(nypkg)) install.packages(nypkg)
+## ## Sjekke hvis finnes og installere hvis ikke finnes
+## nypkg <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
+## if (length(nypkg)) install.packages(nypkg)
 
-sapply(pkgs, require, character.only = TRUE)
+## sapply(pkgs, require, character.only = TRUE)
 #--------------------------------------------------------------
 
 library("epitools")
