@@ -1,7 +1,9 @@
 #---------------------------------------------------------------------------------------------
 # NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
-source("KHfunctions.R")
+urlKH <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/KHfunctions.R"
+devtools::source_url(urlKH)
+
 
 # Denne må også ofte kjøres ved oppstart. Setter opp ODBC.
 KHglobs <- SettGlobs()
