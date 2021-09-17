@@ -116,7 +116,7 @@ if ((setLocal)) {
 ############################################## ----
 globglobs <- list(
   HOVEDmodus = "NH",
-  KHaargang = 2021,
+  KHaargang = 2022,
   KHgeoniv = "K",
   KHdbname = dbNameFile,
   ## KHdbname="STYRING/KHELSA.mdb",
