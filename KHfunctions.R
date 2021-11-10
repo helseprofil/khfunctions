@@ -82,6 +82,8 @@ defpaths <- c(
 rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
 dbNameFile <- "STYRING/KHELSA.mdb"
 dbLogFile <- "STYRING/KHlogg.mdb"
+#dbNameFile <- "_TESTMILJO/STYRING/KHELSA.mdb"
+#dbLogFile <- "_TESTMILJO/STYRING/KHlogg.mdb"
 
 ## TEST MODUS
 ## Change path and dbFile if specified globally else use default
@@ -141,15 +143,15 @@ globglobs <- list(
   TNPDirDat = "PRODUKTER/MELLOMPROD/R/TNP/DATERT",
   BUFFERdir = "BIN/BUFFER",
   DUMPdir = "RUNTIMEDUMP",
-  kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "SIVST", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"),
+  kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"),
   taborgs = c("GEO", "AAR", "KJONN", "ALDER", "TAB1", "TAB2", "TAB3"),
   NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"),
   FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "ETAB"),
   FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"),
   KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"),
-  # DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK","TAB1","TAB2","TAB3"),
-  # OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","SIVST","LANDBAK"),
-  # TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","SIVST","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
+  # DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","INNVKAT","LANDBAK","TAB1","TAB2","TAB3"),
+  # OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","INNVKAT","LANDBAK"),
+  # TabKols=c("AARl","AARh","GEOniv","ALDERl","ALDERh","KJONN","UTDANN","INNVKAT","LANDBAK","GEO","FYLKE","TAB1","TAB2","TAB3"),
   binDir = "bin",
   tmpfilerpath = "bin\tmpfiler",
   geo_illeg = "GGG",
@@ -162,8 +164,8 @@ globglobs <- list(
   utdann_ukjent = "9",
   landbak_illeg = "8",
   landbak_ukjent = "9",
-  sivst_illeg = "8",
-  sivst_ukjent = "9",
+  innvkat_illeg = "8",
+  innvkat_ukjent = "9",
   SisteBatch = "9999-01-01-01-01",
   DefDumpFormat = "CSV",
   stjstr = "************************************************************\n",
@@ -1089,15 +1091,15 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
 
 
-    # RENSK SIVST
-    if ("SIVST" %in% names(DF)) {
-      org <- setNames(as.data.frame(table(DF$SIVST, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
-      sivst <- SIVSTvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+    # RENSK INNVKAT
+    if ("INNVKAT" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$INNVKAT, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      innvkat <- INNVKATvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
 
-      SkrivKBLogg(KB = sivst, type = "SIVST", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "SIVST_ok", ifelse(globs$sivst_illeg %in% sivst$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      SkrivKBLogg(KB = innvkat, type = "INNVKAT", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(globs$innvkat_illeg %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
 
-      DF$SIVST <- as.integer(mapvalues(DF$SIVST, sivst$ORG, sivst$OMK, warn_missing = FALSE))
+      DF$INNVKAT <- as.integer(mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
     }
 
 
@@ -2049,30 +2051,30 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
   return(utdann)
 }
 
-SIVSTvask <- function(sivst, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
   if (nrow(filbesk) == 0) {
-    sivst <- setNames(as.data.frame(sivst, stringsAsFactors = FALSE), c("SIVST"))
-    sivst$KBOMK <- sivst[, 1]
+    innvkat <- setNames(as.data.frame(innvkat, stringsAsFactors = FALSE), c("INNVKAT"))
+    innvkat$KBOMK <- innvkat[, 1]
   } else {
-    sivst$KBOMK <- KBomkod(sivst$ORG, type = "SIVST", filbesk = filbesk, batchdate = batchdate, globs = globs)
+    innvkat$KBOMK <- KBomkod(innvkat$ORG, type = "INNVKAT", filbesk = filbesk, batchdate = batchdate, globs = globs)
   }
-  sivst$OK <- 1
-  sivst$OMK <- sivst$KBOMK
+  innvkat$OK <- 1
+  innvkat$OMK <- innvkat$KBOMK
   if (regexp == TRUE) {
-    sivst$OMK <- sub("^ *(ugift|ug) *$", "1", sivst$OMK, ignore.case = TRUE)
-    sivst$OMK <- sub("^ *(gift|g) *$", "2", sivst$OMK, ignore.case = TRUE)
-    sivst$OMK <- sub("^ *(enke.*|e) *$", "3", sivst$OMK, ignore.case = TRUE)
-    sivst$OMK <- sub("^ *(skilt|separert|s|skilt\\/separert) *$", "4", sivst$OMK, ignore.case = TRUE)
-    sivst$OMK <- sub("^ *(annen) *$", "5", sivst$OMK, ignore.case = TRUE)
-    sivst$OMK <- sub("^ *(ukjent|uoppgitt) *$", "9", sivst$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(ugift|ug) *$", "1", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(gift|g) *$", "2", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(enke.*|e) *$", "3", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(skilt|separert|s|skilt\\/separert) *$", "4", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(annen) *$", "5", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(ukjent|uoppgitt) *$", "9", innvkat$OMK, ignore.case = TRUE)
   }
-  sivst$OMK <- sub("^ *(alle) *$", "0", sivst$OMK, ignore.case = TRUE)
+  innvkat$OMK <- sub("^ *(alle) *$", "0", innvkat$OMK, ignore.case = TRUE)
 
   # Ugyldig verdi/ukjent kode
-  sivst$OMK[!(sivst$OMK %in% c(0, 1, 2, 3, 4, 5, 9, "-"))] <- globs$sivst_illeg
-  sivst$OK[!(sivst$OMK %in% c(0, 1, 2, 3, 4, 5, 9, "-"))] <- 0
+  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- globs$innvkat_illeg
+  innvkat$OK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- 0
 
-  return(sivst)
+  return(innvkat)
 }
 
 LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
@@ -3441,7 +3443,7 @@ LagKUBE <- function(KUBEid,
       OutVar <- c(OutVar, hjelpeVar)
     }
 
-    KHtabs <- c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "SIVST", "LANDBAK")
+    KHtabs <- c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK")
     tabs <- c(KHtabs, etabs)
     if (!(is.na(KUBEdscr$DIMDROPP) | KUBEdscr$DIMDROPP == "")) {
       dimdropp <- unlist(str_split(KUBEdscr$DIMDROPP, ","))
@@ -3679,7 +3681,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         FVdscr$ALDER <- gsub("^ALLE$", paste(FGP$amin, "_", FGP$amax, sep = ""), FVdscr$ALDER)
         filterA <- c(filterA, paste("ALDER=='", FVdscr$ALDER, "'", sep = ""))
       }
-      for (tab in c("AARh", "KJONN", "SIVST", "UTDANN", "LANDBAK")) {
+      for (tab in c("AARh", "KJONN", "INNVKAT", "UTDANN", "LANDBAK")) {
         if (grepl("\\S", FVdscr[[tab]]) & FVdscr[[tab]] != "-") {
           filterA <- c(filterA, paste(tab, "==", FVdscr[[tab]], sep = ""))
         }
@@ -3698,7 +3700,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       }
 
       # SISTE RYDD KOLONNER (bare for TabKols)
-      MissKol <- setdiff(c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "SIVST", "LANDBAK", "ETAB"), names(FRISKVIK))
+      MissKol <- setdiff(c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"), names(FRISKVIK))
       if (length(MissKol) > 0) {
         FRISKVIK[, (MissKol) := NA]
       }
@@ -4002,7 +4004,7 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_d
   if (D_develop_predtype == "IND") {
     alletabs <- setdiff(names(FG), FinnValKolsF(names(FG)))
   } else {
-    alletabs <- intersect(c("GEO", "GEOniv", "FYLKE", "AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "TAB1", "TAB2", "UTDANN", "SIVST", "LANDBAK"), names(FG))
+    alletabs <- intersect(c("GEO", "GEOniv", "FYLKE", "AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "TAB1", "TAB2", "UTDANN", "INNVKAT", "LANDBAK"), names(FG))
   }
   for (ovkSpec in AoverkSpecs) {
     FGt <- FG[eval(parse(text = ovkSpec$subcond)), ]
@@ -4756,7 +4758,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
 
   # Standard "alle"-verdier
   pstrorg <- gsub("(^ *|& *)ALDER( *&| *$)", "ALDER==\\1\"ALLE\"\\2", pstrorg)
-  pstrorg <- gsub("(^ *|& *)(KJONN|UTD|LAND|SIVST)( *&| *$)", "\\1\\2==0\\3", pstrorg)
+  pstrorg <- gsub("(^ *|& *)(KJONN|UTD|LAND|INNVKAT)( *&| *$)", "\\1\\2==0\\3", pstrorg)
 
   # Intervaller
   # Er det mulig å abstrahere her, dvs å ta alle "INT"-deler med samme syntaks???
