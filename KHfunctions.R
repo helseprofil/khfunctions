@@ -2100,8 +2100,8 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
   landbak$OMK <- sub("^ *(Alle) *$", "0", landbak$OMK, ignore.case = TRUE)
 
   # Ugyldig verdi/ukjent kode
-  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, "-"))] <- globs$landbak_illeg
-  landbak$OK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, "-"))] <- 0
+  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- globs$landbak_illeg
+  landbak$OK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- 0
 
   return(landbak)
 }
