@@ -12,14 +12,15 @@ source("local-files.R")
 ## den nyested Access filen i lokal mappen.
 run_local()
 
+## Source KHfunctions
+urlKH <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/KHfunctions.R"
+devtools::source_url(urlKH)
 
-source("KHfunctions.R")
+## Bruk local ACCESS ----------
 
-## Bruk local ACCESS
+## FILGRUPPE
 LagFilgruppe("ARBLEDIGE", versjonert = TRUE)
 LagFilgruppe("ABORT_NH")
-
-
 
 
 ## KUBE
@@ -30,7 +31,8 @@ source("local-files.R")
 ## Behøver ikke å kopiere ACCESS på nytt hvis det er samme kjøring
 ## som brukes til LagFilgruppe
 run_local(copy = FALSE)
-source("KHfunctions.R")
+urlKH <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/KHfunctions.R"
+devtools::source_url(urlKH)
 KHglobs<-SettGlobs()
 
 
