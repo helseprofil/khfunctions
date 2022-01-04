@@ -5,9 +5,8 @@ get_local_file <- function(){
   dbFile <- paste0("KHELSA_", sysDate, ".mdb")
   
   ## Destination to copy to
-  bruker <- Sys.info()[["user"]]
-  dbDir <- file.path("c:/Users", bruker, "DB_helseprofil")
-  
+  dbDir <- file.path(fs::path_home(), "DB_helseprofil")
+
   if (isFALSE(fs::dir_exists(dbDir)))
     fs::dir_create(dbDir)
 
@@ -53,7 +52,7 @@ run_local <- function(localPath = NULL,
   ## Original files
   filePath <-  "f:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/STYRING"
   oriDBFile <- "KHELSA.mdb"
-  oriLogFile <- "KHlogg_template.mdb"
+  oriLogFile <- "template/KHlogg_template.mdb"
 
   DB <- get_local_file()
 
