@@ -5,7 +5,8 @@ rm(list = ls())
 ## Aktivere kopiering av filer
 ## mappen c:/Users/din_bruker/DB_helseprofil er laget
 ## KHELSA.mdb og KHlogg.mdb med datotag lages der
-source("local-files.R")
+urlLocal <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/local-files.R"
+devtools::source_url(urlLocal)
 
 ## Du vil bli spurt om du vil kopiere filen og svar med 1=Ja eller 0=Nei
 ## Evt. kan du bruke run_local(copy=FALSE) hvis du allerede har kopiert
@@ -26,7 +27,8 @@ LagFilgruppe("ABORT_NH")
 ## KUBE
 ## -----
 rm(list = ls())
-source("local-files.R")
+urlLocal <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/local-files.R"
+devtools::source_url(urlLocal)
 
 ## Behøver ikke å kopiere ACCESS på nytt hvis det er samme kjøring
 ## som brukes til LagFilgruppe
