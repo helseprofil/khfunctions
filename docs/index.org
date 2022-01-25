@@ -337,8 +337,8 @@ bydelene i noen byer) har manglende tall.
 standardflaggene!
 
 "Vedvarende lavinntekt NH" brukte ingen av de standard
-tallvariablene som har en tilhørende _f-variabel (teller, nevner, rate), og
-dermed var heller ingen av standard _f -variablene i bruk (alt var missing i
+tallvariablene som har en tilhørende *_f*-variabel (teller, nevner, rate), og
+dermed var heller ingen av standard *_f* -variablene i bruk (alt var missing i
 disse). Det fantes et måltall =LAVINNT_VEDV=, med tilhørende =LAVINNT_VEDV_f= , men
 da fungerte ikke produksjon av SPVflagg i henhold til denne flaggvariabelen.
 SPVflagg ble feil, og retting i =LAVINNT..._f= i en Rsynt-Postprosess virket ikke.
