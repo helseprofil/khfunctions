@@ -4,6 +4,7 @@
 #+options: ^:nil
 #+OPTIONS: html-postamble:nil
 #+LANGUAGE: no
+#+STARTUP: shrink
 
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
@@ -292,3 +293,25 @@ Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
    - Kolonne *ALDER_ALLE* har forskjellige verdier bl.a =0_120=, =1_6=, =25_= og ingen verdi? Når
      ingen verdi blir det satt 0_120 som min og maks alder. Når det skreves bare =25_= skal det får
      25 som min alder og 120 som maks alder.
+* SPVflagg
+Disse gjelder når dataene er kjørt i =LagKUBE=. Notat er fra Steinar.
+
+|         <5> | <10>                | <30>                 | <40>                                                                                                                          |
+| Kode i data | Tegn i KH/NH tabell | Tekst i fotnote      | Tekst i SSB Statbank fotnote                                                                                                  |
+|-------------+---------------------+----------------------+-------------------------------------------------------------------------------------------------------------------------------|
+|           0 | ingen               |                      |                                                                                                                               |
+|           1 | ..                  | Manglende data       | Tallgrunnlag mangler dvs. tall er ikke kommet inn i våre databaser eller er for usikre til å publiseres                       |
+|           2 | .                   | Lar seg ikke beregne | Ikke mulig å oppgi tall dvs. tall finnes ikke på dette tidspunktet fordi kategorien ikke var i bruk da tallene ble samlet inn |
+|           3 | :                   | Anonymisert          | Vises ikke av konfidensialitetshensyn dvs. tall publiseres ikke for å unngå å identifisere personer eller virksomheter        |
+
+
+Kodene settes i gamleløypa (KHfunctions.R, i kubeproduksjonstrinnet) i variabler
+med navn <måtall>.f . Det er flere koder i bruk inne i databehandlingen, fordi
+ulike årsaker til at det mangler tall må behandles ulikt ved aggregering,
+prikking og skjuling. Helt til slutt i LagKUBE oversettes de interne kodene til
+en av de tre vist ovenfor.
+
+Den koden som kommer ut i kuben, ser ikke alltid logisk ut. I flere tilfeller
+har vi skrevet postprosesseringsscript som har "ryddet opp" i kodene, når vi vet
+at det er spesielle årsaker til at større grupper i dataene (for eksempel
+bydelene i noen byer) har manglende tall.
