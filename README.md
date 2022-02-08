@@ -1,5 +1,5 @@
 # KHfunction.R
-Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er ikke inkludert her.
+Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er også nødvending for at alle funkjsonene skal funke, men de er ikke inkludert her.
 
 Restructurering og refactoring av funksjonen er under arbeid...
 

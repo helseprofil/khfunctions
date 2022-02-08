@@ -5,27 +5,38 @@ get_local_file <- function(){
   dbFile <- paste0("KHELSA_", sysDate, ".mdb")
   
   ## Destination to copy to
-  bruker <- Sys.info()[["user"]]
-  dbDir <- file.path("c:/Users", bruker, "DB_helseprofil")
-  
+  dbDir <- file.path(fs::path_home(), "DB_helseprofil")
+
   if (isFALSE(fs::dir_exists(dbDir)))
     fs::dir_create(dbDir)
 
   newFile <- file.path(dbDir, dbFile)
-  
+
   ## Get the most recent file in archive folder
   dbAll <- list.files(dbDir)
-  dbLast <- sort(dbAll[grepl("^KHELSA_\\d+_\\d+.mdb$",dbAll)],decreasing=TRUE)[1]
+  dbKH <- sort(dbAll[grepl("^KHELSA_\\d+_\\d+.mdb$",dbAll)],decreasing=TRUE)
+  dbLast <- dbKH[1]
+
+  if (length(dbKH) > 1){
+    dbOthers <- dbKH[-1]
+  } else {
+    dbOthers <- NA
+  }
 
   en <- parent.frame()
-  
+
   if (is.null(en$DBFile) && is.null(en$copy)){
     message("\nLokal mappen: ", dbDir)
-    message("Kopieres som: ", dbFile)
+    message("Kopieres KHELSE som: ", dbFile)
     message("Nyeste lokalfil er: ", dbLast, "\n")
     cp <- as.integer(readline(prompt = "Vil du kopiere filen? Svar 0=Nei 1=Ja "))
   } else {
     cp = en$copy
+  }
+
+  if (!is.na(dbOthers)){
+    message("Slett gamle KHELSE filer ...")
+    fs::file_delete(file.path(dbDir, dbOthers))
   }
 
   if (is.na(cp))
@@ -39,6 +50,7 @@ get_local_file <- function(){
 }
 
 
+
 ## localPath : Path to copy files KHELSA and KHLogg. Default is c:/Users/username/DB_helseprofil
 ## DBFile : Name of Access file if other than KHELSA.mdb
 ## copy = FALSE will use the existing files in the localPath, else TRUE. NULL will prompt question
@@ -49,11 +61,11 @@ run_local <- function(localPath = NULL,
 
   ## Switch modus on
   setLocal <<- TRUE
-  
+
   ## Original files
-  filePath <-  "f:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/STYRING"
-  oriDBFile <- "KHELSA.mdb"
-  oriLogFile <- "KHlogg_template.mdb"
+  filePath <-  "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+  oriDBFile <- "STYRING/KHELSA.mdb"
+  oriLogFile <- "STYRING/template/KHlogg_template.mdb"
 
   DB <- get_local_file()
 
@@ -64,17 +76,17 @@ run_local <- function(localPath = NULL,
     setLocalPath <<- DB$dbDir
   } else {
     setLocalPath <<- localPath
-  } 
+  }
 
   if (DB$cp){
     setDBFile <<- DB$dbFile
   } else {
     setDBFile <<- DB$dbLast
   }
-  
+
   if (!is.null(DBFile))
     setDBFile <<- DBFile
-  
+
   orgFile <- file.path(filePath, oriDBFile)
   orgLog <- file.path(filePath, oriLogFile)
 
@@ -90,6 +102,5 @@ run_local <- function(localPath = NULL,
     fs::file_copy(orgLog, cpLog, overwrite = TRUE)
     cat("Ferdig!\n")
   }
-  
-}
 
+}

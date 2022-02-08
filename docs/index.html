@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="no" xml:lang="no">
 <head>
-<!-- 2020-12-21 man. 16:19 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>KHELSE function</title>
-<meta name="generator" content="Org mode" />
-<style type="text/css">
- <!--/*--><![CDATA[/*><!--*/
+  <!-- 2022-01-25 tir. 14:09 -->
+  <meta http-equiv="Content-Type" content=
+  "text/html; charset=utf-8" />
+  <meta name="viewport" content=
+  "width=device-width, initial-scale=1" />
+  <title>KHELSE function</title>
+  <meta name="author" content="Yusman Kamaleri" />
+  <meta name="generator" content="Org Mode" />
+  <style>
+  <![CDATA[
+  #content { max-width: 60em; margin: auto; }
   .title  { text-align: center;
              margin-bottom: .2em; }
   .subtitle { text-align: center;
@@ -30,8 +32,9 @@
   #postamble p, #preamble p { font-size: 90%; margin: .2em; }
   p.verse { margin-left: 3%; }
   pre {
-    border: 1px solid #ccc;
-    box-shadow: 3px 3px 3px #eee;
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
     padding: 8pt;
     font-family: monospace;
     overflow: auto;
@@ -40,21 +43,21 @@
   pre.src {
     position: relative;
     overflow: auto;
-    padding-top: 1.2em;
   }
   pre.src:before {
     display: none;
     position: absolute;
-    background-color: white;
-    top: -10px;
-    right: 10px;
+    top: -8px;
+    right: 12px;
     padding: 3px;
-    border: 1px solid black;
+    color: #555;
+    background-color: #f2f2f299;
   }
-  pre.src:hover:before { display: inline;}
+  pre.src:hover:before { display: inline; margin-top: 14px;}
   /* Languages per Org manual */
   pre.src-asymptote:before { content: 'Asymptote'; }
   pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
   pre.src-C:before { content: 'C'; }
   /* pre.src-C++ doesn't work in CSS */
   pre.src-clojure:before { content: 'Clojure'; }
@@ -190,656 +193,1121 @@
   .org-info-js_search-highlight
     { background-color: #ffff00; color: #000000; font-weight: bold; }
   .org-svg { width: 90%; }
-  /*]]>*/-->
-</style>
-<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/htmlize.css"/>
-<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/readtheorg.css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/lib/js/jquery.stickytableheaders.min.js"></script>
-<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/readtheorg.js"></script>
-<script type="text/javascript">
-// @license magnet:?xt=urn:btih:e95b018ef3580986a04669f1b5879592219e2a7a&dn=public-domain.txt Public Domain
-<!--/*--><![CDATA[/*><!--*/
-     function CodeHighlightOn(elem, id)
-     {
-       var target = document.getElementById(id);
-       if(null != target) {
-         elem.classList.add("code-highlighted");
-         target.classList.add("code-highlighted");
-       }
-     }
-     function CodeHighlightOff(elem, id)
-     {
-       var target = document.getElementById(id);
-       if(null != target) {
-         elem.classList.remove("code-highlighted");
-         target.classList.remove("code-highlighted");
-       }
-     }
-    /*]]>*///-->
-// @license-end
-</script>
+  ]]>
+  </style>
+  <link rel="stylesheet" type="text/css" href=
+  "https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/htmlize.css" />
+  <link rel="stylesheet" type="text/css" href=
+  "https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/readtheorg.css" />
+
+  <script src=
+  "https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script src=
+  "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src=
+  "https://fniessen.github.io/org-html-themes/src/lib/js/jquery.stickytableheaders.min.js"></script>
+  <script type="text/javascript" src=
+  "https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/readtheorg.js"></script>
 </head>
 <body>
-<div id="content">
-<h1 class="title">KHELSE function</h1>
-<div id="table-of-contents">
-<h2>Innhold</h2>
-<div id="text-table-of-contents">
-<ul>
-<li><a href="#org043ebc1">1. SettDefDesignKH</a></li>
-<li><a href="#orgb5975e1">2. LagFilgruppe</a>
-<ul>
-<li><a href="#orgf5b7706">2.1. Argumenter</a></li>
-<li><a href="#org3c302cd">2.2. Prosess</a></li>
-<li><a href="#orgf85e24f">2.3. Output</a></li>
-</ul>
-</li>
-<li><a href="#orga246ac4">3. FinnFilgruppeParametre</a>
-<ul>
-<li><a href="#orgb86e99f">3.1. Argumenter</a></li>
-<li><a href="#org43ca9e0">3.2. Output</a></li>
-<li><a href="#orgc89836a">3.3. Kommentar</a></li>
-</ul>
-</li>
-<li><a href="#org3d17c3b">4. FinnFilBeskGruppe</a>
-<ul>
-<li><a href="#org376e23b">4.1. Argumenter</a></li>
-<li><a href="#org3043a49">4.2. Output</a></li>
-</ul>
-</li>
-<li><a href="#org6f7ea50">5. LagTabellFraFil</a>
-<ul>
-<li><a href="#org2f4754f">5.1. Argumenter</a></li>
-<li><a href="#org82e34ed">5.2. Output</a></li>
-<li><a href="#orga9aab87">5.3. <span class="todo TODO">TODO</span> Kommenter <code>[0/0]</code></a></li>
-</ul>
-</li>
-<li><a href="#orgf983334">6. LesFil</a>
-<ul>
-<li><a href="#orgef72713">6.1. Argumenter</a></li>
-<li><a href="#org8e73678">6.2. Output</a></li>
-</ul>
-</li>
-<li><a href="#orgeb04699">7. FinnFilGruppeFraKoblid</a>
-<ul>
-<li><a href="#org66a2468">7.1. Argumenter</a></li>
-<li><a href="#org0fee353">7.2. Output</a></li>
-</ul>
-</li>
-<li><a href="#org17bc0ca">8. TilFilLogg</a>
-<ul>
-<li><a href="#org4819d3b">8.1. Argumenter</a></li>
-<li><a href="#org5061f3e">8.2. Output:</a></li>
-</ul>
-</li>
-<li><a href="#org4f41f8d">9. KHCsvread</a>
-<ul>
-<li><a href="#org36f8987">9.1. Argumenter</a></li>
-<li><a href="#org8e68aaf">9.2. Output</a></li>
-<li><a href="#org0a34658">9.3. Kommentar</a></li>
-</ul>
-</li>
-<li><a href="#org72a6512">10. cSVmod</a>
-<ul>
-<li><a href="#org84c22fd">10.1. Argumenter</a></li>
-<li><a href="#orgc089222">10.2. Output</a></li>
-<li><a href="#orgb65d435">10.3. Kommentar</a></li>
-<li><a href="#org9906b68">10.4. Forbedring</a></li>
-</ul>
-</li>
-<li><a href="#org0944c5a">11. Generell spørsmål</a>
-<ul>
-<li><a href="#orgb84a32c">11.1. Variable med <code>*.l</code> og <code>*.h</code> extention</a></li>
-<li><a href="#org21e8711">11.2. Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</a></li>
-<li><a href="#orgd44478d">11.3. Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</a></li>
-<li><a href="#orga2a2c78">11.4. I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</a></li>
-</ul>
-</li>
-<li><a href="#orge363356">12. Access related spørsmål</a>
-<ul>
-<li><a href="#org6bf1d0e">12.1. FILGRUPPER tabell</a></li>
-</ul>
-</li>
-</ul>
-</div>
-</div>
-<p>
-Gjennomgang av funksjoner brukes i KHELSE funksjon. Funksjonene som presenteres her er tilnærmet
-rekkefølgen de blir kalles inn. Funksjoner som har blitt sjekket har tags <code>##FUN01</code> etc.
-</p>
-<div id="outline-container-org043ebc1" class="outline-2">
-<h2 id="org043ebc1"><span class="section-number-2">1</span> SettDefDesignKH</h2>
-<div class="outline-text-2" id="text-1">
-<p>
-En del av <code>globs</code>. Henter parametre fra tabell <b>KH_DELER</b>. Lager variabler med TYPE = <code>INT</code> med
-extention <code>*.l</code> og <code>*.h</code> for evt. lavest og høyest verdi. Lager en list objekt som følgende:
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">list(DelKols=DelKols, #uten deling FYLKE og GEO i GEOniv
-     DelKolsF=DelKolsF, #med deling for FYLKE og GEO
-     KolsDel=KolsDel, # motsatte av DelKols
-     DelKolN=DelKolN, #kolonne DelKol med attribute fra DEL
-     DelType=DelType, #kolonne TYPE med attribute fra DEL
-     DelFormat=DelFormat, #kolonne FORMAT med attribute fra DEL
-     UBeting=UBeting,
-     BetingOmk=BetingOmk,
-     BetingF=BetingF,
-     OmkDel=OmkDel,
-     DesignKols=DesignKols, #Kolonne uten TABS
-     DesignKolsF=DesignKolsF, #Kolonne med TABS
-     DesignKolsFA=DesignKolsFA, #Alle kolonne inkludert FYLKE og GEO
-     AggPri=AggPri, #ordered DEL ift. AGGREGERPRI
-     AggVedStand=AggVedStand, #velger only A og K
-     IntervallHull=IntervallHull,
-     AMissAllow=TRUE)
+  <div id="content" class="content">
+    <h1 class="title">KHELSE function</h1>
+    <div id="table-of-contents" role="doc-toc">
+      <h2>Innhold</h2>
+      <div id="text-table-of-contents" role="doc-toc">
+        <ul>
+          <li><a href="#org3157e9d">1. SettDefDesignKH</a></li>
+          <li>
+            <a href="#org3236bbf">2. LagFilgruppe</a>
+            <ul>
+              <li><a href="#org2e7069e">2.1. Argumenter</a></li>
+              <li><a href="#org50f69a4">2.2. Prosess</a></li>
+              <li><a href="#org78edc9a">2.3. Output</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org8d9e868">3. FinnFilgruppeParametre</a>
+            <ul>
+              <li><a href="#org9cae498">3.1. Argumenter</a></li>
+              <li><a href="#orgc17835e">3.2. Output</a></li>
+              <li><a href="#orgfad8035">3.3. Kommentar</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org7cbb04d">4. FinnFilBeskGruppe</a>
+            <ul>
+              <li><a href="#org90720ab">4.1. Argumenter</a></li>
+              <li><a href="#orgcd1dab4">4.2. Output</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org033ae78">5. LagTabellFraFil</a>
+            <ul>
+              <li><a href="#org3acb58b">5.1. Argumenter</a></li>
+              <li><a href="#org093fc7c">5.2. Output</a></li>
+              <li><a href="#org312c18d">5.3. <span class=
+              "todo TODO">TODO</span> Kommenter
+              <code>[0/0]</code></a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org936e219">6. LesFil</a>
+            <ul>
+              <li><a href="#org0ab38f9">6.1. Argumenter</a></li>
+              <li><a href="#org82d5b0f">6.2. Output</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org3d1d8d0">7. FinnFilGruppeFraKoblid</a>
+            <ul>
+              <li><a href="#org46c6754">7.1. Argumenter</a></li>
+              <li><a href="#org6cdfce8">7.2. Output</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#orgb1d19b7">8. TilFilLogg</a>
+            <ul>
+              <li><a href="#org5eccbac">8.1. Argumenter</a></li>
+              <li><a href="#orgd66a9e9">8.2. Output:</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org78b7331">9. KHCsvread</a>
+            <ul>
+              <li><a href="#org8be2370">9.1. Argumenter</a></li>
+              <li><a href="#orgdb5f950">9.2. Output</a></li>
+              <li><a href="#org0664fd7">9.3. Kommentar</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org3ac30ff">10. cSVmod</a>
+            <ul>
+              <li><a href="#org56cf789">10.1. Argumenter</a></li>
+              <li><a href="#org7dab161">10.2. Output</a></li>
+              <li><a href="#org4eea04f">10.3. Kommentar</a></li>
+              <li><a href="#org8f27872">10.4. Forbedring</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org874c493">11. Generell spørsmål</a>
+            <ul>
+              <li><a href="#orgf8190c2">11.1. Variable med
+              <code>*.l</code> og <code>*.h</code>
+              extention</a></li>
+              <li><a href="#org03e6e53">11.2. Hva er
+              <code>val.f</code> og <code>val.a</code>, og hvordan
+              den brukes?</a></li>
+              <li><a href="#org3131e3f">11.3. Hva kolonne TYP
+              brukes til i GeoKoder tabell? Verdien er O og
+              U.</a></li>
+              <li><a href="#org846ab12">11.4. I Access tabell
+              FILGRUPPER for kolonne ALDER_ALLE som har ingen
+              data</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#orga6f7f17">12. Access related spørsmål</a>
+            <ul>
+              <li><a href="#orgcf652f3">12.1. FILGRUPPER
+              tabell</a></li>
+            </ul>
+          </li>
+          <li><a href="#org39d4030">13. SPVflagg</a></li>
+          <li><a href="#org42d0936">14. Spesialvariabler i
+          R</a></li>
+        </ul>
+      </div>
+    </div>
+    <p>Gjennomgang av funksjoner brukes i KHELSE funksjon.
+    Funksjonene som presenteres her er tilnærmet rekkefølgen de
+    blir kalles inn. Funksjoner som har blitt sjekket har tags
+    <code>##FUN01</code> etc.</p>
+    <div id="outline-container-org3157e9d" class="outline-2">
+      <h2 id="org3157e9d"><span class="section-number-2">1.</span>
+      SettDefDesignKH</h2>
+      <div class="outline-text-2" id="text-1">
+        <p>En del av <code>globs</code>. Henter parametre fra
+        tabell <b>KH_DELER</b>. Lager variabler med TYPE =
+        <code>INT</code> med extention <code>*.l</code> og
+        <code>*.h</code> for evt. lavest og høyest verdi. Lager en
+        list objekt som følgende:</p>
+        <div class="org-src-container">
+          <pre class="src src-R">  list<span style=
+          "color: #076678;">(</span>DelKols<span style=
+          "color: #8f3f71;">=</span>DelKols, <span style=
+          "color: #a89984;">#</span><span style=
+          "color: #a89984;">uten deling FYLKE og GEO i GEOniv</span>
+       DelKolsF<span style=
+"color: #8f3f71;">=</span>DelKolsF, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">med deling for FYLKE og GEO</span>
+       KolsDel<span style=
+"color: #8f3f71;">=</span>KolsDel, <span style=
+"color: #a89984;"># </span><span style=
+"color: #a89984;">motsatte av DelKols</span>
+       DelKolN<span style=
+"color: #8f3f71;">=</span>DelKolN, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">kolonne DelKol med attribute fra DEL</span>
+       DelType<span style=
+"color: #8f3f71;">=</span>DelType, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">kolonne TYPE med attribute fra DEL</span>
+       DelFormat<span style=
+"color: #8f3f71;">=</span>DelFormat, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">kolonne FORMAT med attribute fra DEL</span>
+       UBeting<span style="color: #8f3f71;">=</span>UBeting,
+       BetingOmk<span style="color: #8f3f71;">=</span>BetingOmk,
+       BetingF<span style="color: #8f3f71;">=</span>BetingF,
+       OmkDel<span style="color: #8f3f71;">=</span>OmkDel,
+       DesignKols<span style=
+"color: #8f3f71;">=</span>DesignKols, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">Kolonne uten TABS</span>
+       DesignKolsF<span style=
+"color: #8f3f71;">=</span>DesignKolsF, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">Kolonne med TABS</span>
+       DesignKolsFA<span style=
+"color: #8f3f71;">=</span>DesignKolsFA, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">Alle kolonne inkludert FYLKE og GEO</span>
+       AggPri<span style=
+"color: #8f3f71;">=</span>AggPri, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">ordered DEL ift. AGGREGERPRI</span>
+       AggVedStand<span style=
+"color: #8f3f71;">=</span>AggVedStand, <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">velger only A og K</span>
+       IntervallHull<span style=
+"color: #8f3f71;">=</span>IntervallHull,
+       AMissAllow<span style="color: #8f3f71;">=</span><span style=
+"color: #8f3f71;">TRUE</span><span style="color: #076678;">)</span>
 </pre>
-</div>
-</div>
-</div>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org3236bbf" class="outline-2">
+      <h2 id="org3236bbf"><span class="section-number-2">2.</span>
+      LagFilgruppe</h2>
+      <div class="outline-text-2" id="text-2">
+        <p>Hovedfunksjon for å lese raw data og slå sammen dataene
+        til en RDS fil.</p>
+      </div>
+      <div id="outline-container-org2e7069e" class="outline-3">
+        <h3 id="org2e7069e"><span class=
+        "section-number-3">2.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-2-1">
+          <ul class="org-ul">
+            <li>gruppe :</li>
+            <li>batchdate : fra <b>SettKHBatchDate()</b></li>
+            <li>globs : from <b>FinnGlobs()</b></li>
+            <li>diagnose = 0</li>
+            <li>printR = TRUE</li>
+            <li>printCSV = FALSE</li>
+            <li>printSTATA = FALSE</li>
+            <li>versjonert = FALSE</li>
+            <li>dumps = list()</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org50f69a4" class="outline-3">
+        <h3 id="org50f69a4"><span class=
+        "section-number-3">2.2.</span> Prosess</h3>
+        <div class="outline-text-3" id="text-2-2">
+          <p>Beskrivelse av prosessene:</p>
+          <ul class="org-ul">
+            <li><b>FinnfilgruppeParametre()</b> lager <b>FGP</b>
+            object</li>
+            <li><b>FinnFilBeskGruppe()</b> lager <b>filbesk</b>
+            object</li>
+            <li>Loop alle rader i <code>filbesk</code> og lager
+            følgende:
+              <ul class="org-ul">
+                <li><b>filn</b> som er absolutt path til filen</li>
+                <li><b>AAR</b> hvis det ikke er spesifisert eller
+                skrevet som <code>&lt;$y&gt;</code> skal value
+                hentes fra DEFAAR i ORIGINALFILER tabell</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org78edc9a" class="outline-3">
+        <h3 id="org78edc9a"><span class=
+        "section-number-3">2.3.</span> Output</h3>
+      </div>
+    </div>
+    <div id="outline-container-org8d9e868" class="outline-2">
+      <h2 id="org8d9e868"><span class="section-number-2">3.</span>
+      FinnFilgruppeParametre</h2>
+      <div class="outline-text-2" id="text-3">
+        <p>Setter inn parameter til en filgruppenavn. Access tabell
+        <code>FILGRUPPER</code> brukes i denne funksjonen. Denne
+        produserer object <b>FGP</b> til viderebruk.</p>
+      </div>
+      <div id="outline-container-org9cae498" class="outline-3">
+        <h3 id="org9cae498"><span class=
+        "section-number-3">3.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-3-1">
+          <ul class="org-ul">
+            <li>gruppe : Filgruppenavn</li>
+            <li>batch : fra <b>SettKHBatchDate()</b>. Denne lager
+            dagens dato til format «%Y-%m-%d-%H-%M»</li>
+            <li>globs : fra <b>FinnGlobs()</b> function.</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-orgc17835e" class="outline-3">
+        <h3 id="orgc17835e"><span class=
+        "section-number-3">3.2.</span> Output</h3>
+        <div class="outline-text-3" id="text-3-2">
+          <p>En tabell av type <i>list</i> hentet fra tabell
+          <b>FILGRUPPER</b>. I tillegg legges det 3 til dvs.
+          <code>vals</code>, <code>amin</code> og
+          <code>amax</code>. De to siste er for alder minimum og
+          maksium hentet fra kolonne <code>ALDER_ALLE</code>. List
+          <code>vals</code> i tillegg inneholder 3 tillegg lister
+          <code>$vals$verdi_i_VAL1navn</code>,
+          <code>$vals$verdi_i_VAL1navn$miss</code> og
+          <code>$vals$verdi_i_VAL1navn$miss</code>. Det samme for
+          VAL2 og VAL3. F.eks for filgruppe ARBEIDSLEDIGE så blir
+          det:</p>
+          <pre class="example" id="org250c6d3">
+  $vals
+  $vals$ARBEIDSLEDIGE
+  $vals$ARBEIDSLEDIGE$miss
+  [1] "0"
 
-
-
-<div id="outline-container-orgb5975e1" class="outline-2">
-<h2 id="orgb5975e1"><span class="section-number-2">2</span> LagFilgruppe</h2>
-<div class="outline-text-2" id="text-2">
-<p>
-Hovedfunksjon for å lese raw data og slå sammen dataene til en RDS fil.
-</p>
-</div>
-<div id="outline-container-orgf5b7706" class="outline-3">
-<h3 id="orgf5b7706"><span class="section-number-3">2.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-2-1">
-<ul class="org-ul">
-<li>gruppe :</li>
-<li>batchdate : fra <b>SettKHBatchDate()</b></li>
-<li>globs : from <b>FinnGlobs()</b></li>
-<li>diagnose = 0</li>
-<li>printR = TRUE</li>
-<li>printCSV = FALSE</li>
-<li>printSTATA = FALSE</li>
-<li>versjonert = FALSE</li>
-<li>dumps = list()</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-org3c302cd" class="outline-3">
-<h3 id="org3c302cd"><span class="section-number-3">2.2</span> Prosess</h3>
-<div class="outline-text-3" id="text-2-2">
-<p>
-Beskrivelse av prosessene:
-</p>
-<ul class="org-ul">
-<li><b>FinnfilgruppeParametre()</b> lager <b>FGP</b> object</li>
-<li><b>FinnFilBeskGruppe()</b> lager <b>filbesk</b> object</li>
-<li>Loop alle rader i <code>filbesk</code> og lager følgende:
-<ul class="org-ul">
-<li><b>filn</b> som er absolutt path til filen</li>
-<li><b>AAR</b> hvis det ikke er spesifisert eller skrevet som <code>&lt;$y&gt;</code> skal value hentes fra DEFAAR i ORIGINALFILER tabell</li>
-</ul></li>
-</ul>
-</div>
-</div>
-<div id="outline-container-orgf85e24f" class="outline-3">
-<h3 id="orgf85e24f"><span class="section-number-3">2.3</span> Output</h3>
-</div>
-</div>
-
-<div id="outline-container-orga246ac4" class="outline-2">
-<h2 id="orga246ac4"><span class="section-number-2">3</span> FinnFilgruppeParametre</h2>
-<div class="outline-text-2" id="text-3">
-<p>
-Setter inn parameter til en filgruppenavn. Access tabell <code>FILGRUPPER</code> brukes i denne funksjonen.
-Denne produserer object <b>FGP</b> til viderebruk.
-</p>
-</div>
-<div id="outline-container-orgb86e99f" class="outline-3">
-<h3 id="orgb86e99f"><span class="section-number-3">3.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-3-1">
-<ul class="org-ul">
-<li>gruppe : Filgruppenavn</li>
-<li>batch  : fra <b>SettKHBatchDate()</b>. Denne lager dagens dato til format "%Y-%m-%d-%H-%M"</li>
-<li>globs  : fra <b>FinnGlobs()</b> function.</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-org43ca9e0" class="outline-3">
-<h3 id="org43ca9e0"><span class="section-number-3">3.2</span> Output</h3>
-<div class="outline-text-3" id="text-3-2">
-<p>
-En tabell av type <i>list</i> hentet fra tabell <b>FILGRUPPER</b>. I tillegg legges det 3 til dvs. <code>vals</code>,
-<code>amin</code> og <code>amax</code>. De to siste er for alder minimum og maksium hentet fra kolonne <code>ALDER_ALLE</code>. List
-<code>vals</code> i tillegg inneholder 3 tillegg lister <code>$vals$verdi_i_VAL1navn</code>, <code>$vals$verdi_i_VAL1navn$miss</code> og
-<code>$vals$verdi_i_VAL1navn$miss</code>. Det samme for VAL2 og VAL3. F.eks for filgruppe ARBEIDSLEDIGE så blir det:
-</p>
-<pre class="example" id="orgfe66e97">
-$vals
-$vals$ARBEIDSLEDIGE
-$vals$ARBEIDSLEDIGE$miss
-[1] "0"
-
-$vals$ARBEIDSLEDIGE$sumbar
-[1] "1"
+  $vals$ARBEIDSLEDIGE$sumbar
+  [1] "1"
 
 </pre>
-</div>
-</div>
-<div id="outline-container-orgc89836a" class="outline-3">
-<h3 id="orgc89836a"><span class="section-number-3">3.3</span> Kommentar</h3>
-<div class="outline-text-3" id="text-3-3">
-<ul class="org-ul">
-<li>Sjekk aktiv filgruppenavn basert på tidsperiode dvs. <code>VERSJONFRA</code> og <code>VERSJONTIL</code> i Access tabell,
-men denne informasjon er ikke brukes eller oppdateres. Object <code>FGPaktiv</code>.</li>
-<li>Sjekk hvis det er duplikater filgruppenavn. Denne er unødvendig hvis kolonne <code>FILGRUPPE</code> er nøkkel
-eller unik i Access tabell.</li>
-<li>Object <code>amax</code> for maksimal aldre hentes fra Access tabel <b>HOVEDPARAMETREg</b>, men der er det bare en
-linje som lager default for maks alder. Kan dette gjøres annen sted eller er dette egentlig en ubrukt tabell?</li>
-</ul>
-</div>
-</div>
-</div>
-<div id="outline-container-org3d17c3b" class="outline-2">
-<h2 id="org3d17c3b"><span class="section-number-2">4</span> FinnFilBeskGruppe</h2>
-<div class="outline-text-2" id="text-4">
-<p>
-Henter filnavn og path gjennom informasjon i Access tabell ORIGINALFILER, INNLESING og
-ORGINNLESkobl. Denne funksjonen produserer object <b>delfiler</b> til viderebruk.
-</p>
-</div>
-<div id="outline-container-org376e23b" class="outline-3">
-<h3 id="org376e23b"><span class="section-number-3">4.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-4-1">
-<ul class="org-ul">
-<li>gruppe : filgruppenavn</li>
-<li>batchdate = NULL</li>
-<li>globs : fra <code>FinnGlobs()</code></li>
-</ul>
-
-<p>
-SQL spesifikasjonen som brukes:
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">sqlt&lt;-paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
-            FROM INNLESING INNER JOIN
-            (  ORGINNLESkobl INNER JOIN ORIGINALFILER
-            ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
-            ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
-            AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
-            WHERE INNLESING.FILGRUPPE='",filgruppe,"'
-            AND ORIGINALFILER.IBRUKFRA&lt;=",datef,"
-            AND ORIGINALFILER.IBRUKTIL&gt;", datef,"
-            AND INNLESING.VERSJONFRA&lt;=",datef,"
-            AND INNLESING.VERSJONTIL&gt;",datef,sep="")
+        </div>
+      </div>
+      <div id="outline-container-orgfad8035" class="outline-3">
+        <h3 id="orgfad8035"><span class=
+        "section-number-3">3.3.</span> Kommentar</h3>
+        <div class="outline-text-3" id="text-3-3">
+          <ul class="org-ul">
+            <li>Sjekk aktiv filgruppenavn basert på tidsperiode
+            dvs. <code>VERSJONFRA</code> og <code>VERSJONTIL</code>
+            i Access tabell, men denne informasjon er ikke brukes
+            eller oppdateres. Object <code>FGPaktiv</code>.</li>
+            <li>Sjekk hvis det er duplikater filgruppenavn. Denne
+            er unødvendig hvis kolonne <code>FILGRUPPE</code> er
+            nøkkel eller unik i Access tabell.</li>
+            <li>Object <code>amax</code> for maksimal aldre hentes
+            fra Access tabel <b>HOVEDPARAMETREg</b>, men der er det
+            bare en linje som lager default for maks alder. Kan
+            dette gjøres annen sted eller er dette egentlig en
+            ubrukt tabell?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org7cbb04d" class="outline-2">
+      <h2 id="org7cbb04d"><span class="section-number-2">4.</span>
+      FinnFilBeskGruppe</h2>
+      <div class="outline-text-2" id="text-4">
+        <p>Henter filnavn og path gjennom informasjon i Access
+        tabell ORIGINALFILER, INNLESING og ORGINNLESkobl. Denne
+        funksjonen produserer object <b>delfiler</b> til
+        viderebruk.</p>
+      </div>
+      <div id="outline-container-org90720ab" class="outline-3">
+        <h3 id="org90720ab"><span class=
+        "section-number-3">4.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-4-1">
+          <ul class="org-ul">
+            <li>gruppe : filgruppenavn</li>
+            <li>batchdate = NULL</li>
+            <li>globs : fra <code>FinnGlobs()</code></li>
+          </ul>
+          <p>SQL spesifikasjonen som brukes:</p>
+          <div class="org-src-container">
+            <pre class="src src-R">     sqlt<span style=
+            "color: #8f3f71;">&lt;-</span>paste<span style=
+            "color: #076678;">(</span><span style=
+            "color: #79740e;">"SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*</span>
+<span style=
+"color: #79740e;">                 FROM INNLESING INNER JOIN</span>
+<span style=
+"color: #79740e;">                 (  ORGINNLESkobl INNER JOIN ORIGINALFILER</span>
+<span style=
+"color: #79740e;">                 ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)</span>
+<span style=
+"color: #79740e;">                 ON   (INNLESING.DELID = ORGINNLESkobl.DELID)</span>
+<span style=
+"color: #79740e;">                 AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)</span>
+<span style=
+"color: #79740e;">                 WHERE INNLESING.FILGRUPPE='"</span>,filgruppe,<span style="color: #79740e;">"'</span>
+<span style=
+"color: #79740e;">                 AND ORIGINALFILER.IBRUKFRA&lt;="</span>,datef,<span style="color: #79740e;">"</span>
+<span style=
+"color: #79740e;">                 AND ORIGINALFILER.IBRUKTIL&gt;"</span>, datef,<span style="color: #79740e;">"</span>
+<span style=
+"color: #79740e;">                 AND INNLESING.VERSJONFRA&lt;="</span>,datef,<span style="color: #79740e;">"</span>
+<span style=
+"color: #79740e;">                 AND INNLESING.VERSJONTIL&gt;"</span>,datef,sep<span style="color: #8f3f71;">=</span><span style="color: #79740e;">""</span><span style="color: #076678;">)</span>
 </pre>
-</div>
-
-<p>
-Disse variabler er laget av denne funksjonen:
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">&gt; names(fb)
- [1] "KOBLID"      "FILID"       "FILNAVN"     "FORMAT"      "DEFAAR"
- [6] "ID"          "FILGRUPPE"   "DELID"       "BRUK"        "VERSJONFRA"
-[11] "VERSJONTIL"  "FORMATgml"   "INNLESARG"   "MANHEADER"   "MULTIHEAD"
-[16] "KASTKOLS"    "UNDERTABLOK" "FYLLTAB"     "RESHAPEid"   "RESHAPEmeas"
-[21] "RESHAPEvar"  "RESHAPEval"  "AGGERGER_DF" "RSYNT1"      "RSYNT2"
-[26] "FEILRAPPORT" "GEO"         "GEOd2"       "GRUNNKRETS"  "TKNR"
-[31] "SONER"       "AAR"         "KJONN"       "ALDER"       "UTDANN"
-[36] "SIVST"       "LANDBAK"     "TAB1"        "TAB2"        "TAB3"
-[41] "VAL1"        "VAL2"        "VAL3"        "ALDERkb"     "KJONNkb"
-[46] "TAB1kb"      "TAB2kb"      "TAB3kb"      "KOMMENTAR"   "RAPPORT2"
-[51] "TID"         "PROSESSDATO" "SKALA_VAL1"  "SKALA_VAL2"  "SKALA_VAL3"
+          </div>
+          <p>Disse variabler er laget av denne funksjonen:</p>
+          <div class="org-src-container">
+            <pre class="src src-R">  <span style=
+            "color: #8f3f71;">&gt;</span> names<span style=
+            "color: #076678;">(</span>fb<span style=
+            "color: #076678;">)</span>
+   <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">1</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"KOBLID"</span>      <span style=
+"color: #79740e;">"FILID"</span>       <span style=
+"color: #79740e;">"FILNAVN"</span>     <span style=
+"color: #79740e;">"FORMAT"</span>      <span style=
+"color: #79740e;">"DEFAAR"</span>
+   <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">6</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"ID"</span>          <span style=
+"color: #79740e;">"FILGRUPPE"</span>   <span style=
+"color: #79740e;">"DELID"</span>       <span style=
+"color: #79740e;">"BRUK"</span>        <span style=
+"color: #79740e;">"VERSJONFRA"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">11</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"VERSJONTIL"</span>  <span style=
+"color: #79740e;">"FORMATgml"</span>   <span style=
+"color: #79740e;">"INNLESARG"</span>   <span style=
+"color: #79740e;">"MANHEADER"</span>   <span style=
+"color: #79740e;">"MULTIHEAD"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">16</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"KASTKOLS"</span>    <span style=
+"color: #79740e;">"UNDERTABLOK"</span> <span style=
+"color: #79740e;">"FYLLTAB"</span>     <span style=
+"color: #79740e;">"RESHAPEid"</span>   <span style=
+"color: #79740e;">"RESHAPEmeas"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">21</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"RESHAPEvar"</span>  <span style=
+"color: #79740e;">"RESHAPEval"</span>  <span style=
+"color: #79740e;">"AGGERGER_DF"</span> <span style=
+"color: #79740e;">"RSYNT1"</span>      <span style=
+"color: #79740e;">"RSYNT2"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">26</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"FEILRAPPORT"</span> <span style=
+"color: #79740e;">"GEO"</span>         <span style=
+"color: #79740e;">"GEOd2"</span>       <span style=
+"color: #79740e;">"GRUNNKRETS"</span>  <span style=
+"color: #79740e;">"TKNR"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">31</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"SONER"</span>       <span style=
+"color: #79740e;">"AAR"</span>         <span style=
+"color: #79740e;">"KJONN"</span>       <span style=
+"color: #79740e;">"ALDER"</span>       <span style=
+"color: #79740e;">"UTDANN"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">36</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"SIVST"</span>       <span style=
+"color: #79740e;">"LANDBAK"</span>     <span style=
+"color: #79740e;">"TAB1"</span>        <span style=
+"color: #79740e;">"TAB2"</span>        <span style=
+"color: #79740e;">"TAB3"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">41</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"VAL1"</span>        <span style=
+"color: #79740e;">"VAL2"</span>        <span style=
+"color: #79740e;">"VAL3"</span>        <span style=
+"color: #79740e;">"ALDERkb"</span>     <span style=
+"color: #79740e;">"KJONNkb"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">46</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"TAB1kb"</span>      <span style=
+"color: #79740e;">"TAB2kb"</span>      <span style=
+"color: #79740e;">"TAB3kb"</span>      <span style=
+"color: #79740e;">"KOMMENTAR"</span>   <span style=
+"color: #79740e;">"RAPPORT2"</span>
+  <span style="color: #076678;">[</span><span style=
+"color: #8f3f71; font-weight: bold;">51</span><span style=
+"color: #076678;">]</span> <span style=
+"color: #79740e;">"TID"</span>         <span style=
+"color: #79740e;">"PROSESSDATO"</span> <span style=
+"color: #79740e;">"SKALA_VAL1"</span>  <span style=
+"color: #79740e;">"SKALA_VAL2"</span>  <span style=
+"color: #79740e;">"SKALA_VAL3"</span>
 </pre>
-</div>
-</div>
-</div>
-<div id="outline-container-org3043a49" class="outline-3">
-<h3 id="org3043a49"><span class="section-number-3">4.2</span> Output</h3>
-</div>
-</div>
-<div id="outline-container-org6f7ea50" class="outline-2">
-<h2 id="org6f7ea50"><span class="section-number-2">5</span> LagTabellFraFil</h2>
-<div class="outline-text-2" id="text-5">
-</div>
-<div id="outline-container-org2f4754f" class="outline-3">
-<h3 id="org2f4754f"><span class="section-number-3">5.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-5-1">
-<ul class="org-ul">
-<li>filbesk : Object fra <code>FinnFilBeskGruppe()</code> function</li>
-<li>FGP : Object fra <code>FinnFilgruppeParametre()</code> function</li>
-<li>diagnose = diagnose</li>
-<li>globs = globs</li>
-<li>versjonert = versjonert</li>
-<li>dumps = dumps</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-org82e34ed" class="outline-3">
-<h3 id="org82e34ed"><span class="section-number-3">5.2</span> Output</h3>
-</div>
-<div id="outline-container-orga9aab87" class="outline-3">
-<h3 id="orga9aab87"><span class="section-number-3">5.3</span> <span class="todo TODO">TODO</span> Kommenter <code>[0/0]</code></h3>
-<div class="outline-text-3" id="text-5-3">
-<p>
-[ ] Hva skal kolonne <b>FYLLTAB</b> brukkes for?
-[ ] Hvor finner man kolonner <b>RESHAPEpre</b> og <b>RESHAPEpost</b>?
-[ ] Hva er <b>GEOd2</b>?
-</p>
-</div>
-</div>
-</div>
-<div id="outline-container-orgf983334" class="outline-2">
-<h2 id="orgf983334"><span class="section-number-2">6</span> LesFil</h2>
-<div class="outline-text-2" id="text-6">
-<p>
-Innkalt under <b>LagTabellFraFil()</b> function
-</p>
-</div>
-<div id="outline-container-orgef72713" class="outline-3">
-<h3 id="orgef72713"><span class="section-number-3">6.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-6-1">
-<ul class="org-ul">
-<li>filbesk</li>
-<li>batchdate = batcdate</li>
-<li>globs = globs</li>
-<li>dumps = dumps</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-org8e73678" class="outline-3">
-<h3 id="org8e73678"><span class="section-number-3">6.2</span> Output</h3>
-</div>
-</div>
-<div id="outline-container-orgeb04699" class="outline-2">
-<h2 id="orgeb04699"><span class="section-number-2">7</span> FinnFilGruppeFraKoblid</h2>
-<div class="outline-text-2" id="text-7">
-<p>
-Valg filgruppenavn i kolonne FILGRUPPE som match <code>filbesk$KOBLID</code> fra tabell <b>ORGINNLESkobl</b>. Innkalles under
-<b>LesFil()</b> i sqlQuery for INSERT i SQL kode med argument <code>filbesk$KOBLID</code>.
-</p>
-</div>
-<div id="outline-container-org66a2468" class="outline-3">
-<h3 id="org66a2468"><span class="section-number-3">7.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-7-1">
-<ul class="org-ul">
-<li>koblid : verdi fra object filbesk$KOBLID</li>
-<li>globs  : fra function <b>FinnGlobs()</b></li>
-</ul>
-</div>
-</div>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-orgcd1dab4" class="outline-3">
+        <h3 id="orgcd1dab4"><span class=
+        "section-number-3">4.2.</span> Output</h3>
+      </div>
+    </div>
+    <div id="outline-container-org033ae78" class="outline-2">
+      <h2 id="org033ae78"><span class="section-number-2">5.</span>
+      LagTabellFraFil</h2>
+      <div class="outline-text-2" id="text-5"></div>
+      <div id="outline-container-org3acb58b" class="outline-3">
+        <h3 id="org3acb58b"><span class=
+        "section-number-3">5.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-5-1">
+          <ul class="org-ul">
+            <li>filbesk : Object fra
+            <code>FinnFilBeskGruppe()</code> function</li>
+            <li>FGP : Object fra
+            <code>FinnFilgruppeParametre()</code> function</li>
+            <li>diagnose = diagnose</li>
+            <li>globs = globs</li>
+            <li>versjonert = versjonert</li>
+            <li>dumps = dumps</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org093fc7c" class="outline-3">
+        <h3 id="org093fc7c"><span class=
+        "section-number-3">5.2.</span> Output</h3>
+      </div>
+      <div id="outline-container-org312c18d" class="outline-3">
+        <h3 id="org312c18d"><span class=
+        "section-number-3">5.3.</span> <span class=
+        "todo TODO">TODO</span> Kommenter <code>[0/0]</code></h3>
+        <div class="outline-text-3" id="text-5-3">
+          <p>[ ] Hva skal kolonne <b>FYLLTAB</b> brukkes for? [ ]
+          Hvor finner man kolonner <b>RESHAPEpre</b> og
+          <b>RESHAPEpost</b>? [ ] Hva er <b>GEOd2</b>?</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org936e219" class="outline-2">
+      <h2 id="org936e219"><span class="section-number-2">6.</span>
+      LesFil</h2>
+      <div class="outline-text-2" id="text-6">
+        <p>Innkalt under <b>LagTabellFraFil()</b> function</p>
+      </div>
+      <div id="outline-container-org0ab38f9" class="outline-3">
+        <h3 id="org0ab38f9"><span class=
+        "section-number-3">6.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-6-1">
+          <ul class="org-ul">
+            <li>filbesk</li>
+            <li>batchdate = batcdate</li>
+            <li>globs = globs</li>
+            <li>dumps = dumps</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org82d5b0f" class="outline-3">
+        <h3 id="org82d5b0f"><span class=
+        "section-number-3">6.2.</span> Output</h3>
+      </div>
+    </div>
+    <div id="outline-container-org3d1d8d0" class="outline-2">
+      <h2 id="org3d1d8d0"><span class="section-number-2">7.</span>
+      FinnFilGruppeFraKoblid</h2>
+      <div class="outline-text-2" id="text-7">
+        <p>Valg filgruppenavn i kolonne FILGRUPPE som match
+        <code>filbesk$KOBLID</code> fra tabell
+        <b>ORGINNLESkobl</b>. Innkalles under <b>LesFil()</b> i
+        sqlQuery for INSERT i SQL kode med argument
+        <code>filbesk$KOBLID</code>.</p>
+      </div>
+      <div id="outline-container-org46c6754" class="outline-3">
+        <h3 id="org46c6754"><span class=
+        "section-number-3">7.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-7-1">
+          <ul class="org-ul">
+            <li>koblid : verdi fra object filbesk$KOBLID</li>
+            <li>globs : fra function <b>FinnGlobs()</b></li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org6cdfce8" class="outline-3">
+        <h3 id="org6cdfce8"><span class=
+        "section-number-3">7.2.</span> Output</h3>
+        <div class="outline-text-3" id="text-7-2">
+          <p>En vector av den filgruppenavn til den spesifisert
+          KOBLID eg. <code>UFORE</code>.</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-orgb1d19b7" class="outline-2">
+      <h2 id="orgb1d19b7"><span class="section-number-2">8.</span>
+      TilFilLogg</h2>
+      <div class="outline-text-2" id="text-8">
+        <p><span class="underline">OBS!</span>: Denne funksjonen
+        ender opp med CRASH nokså ofte! Innkalles under
+        <b>LesFil()</b> for å leser Access tabell
+        <b>INNLES_LOGG</b> basert på KOBLID og objekt
+        <code>batchdate</code>.</p>
+      </div>
+      <div id="outline-container-org5eccbac" class="outline-3">
+        <h3 id="org5eccbac"><span class=
+        "section-number-3">8.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-8-1">
+          <ul class="org-ul">
+            <li>koblid :</li>
+            <li>felt :</li>
+            <li>verdi :</li>
+            <li>batchdate : from <b>SettKHBatchDate()</b>
+            function</li>
+            <li>globs : fra <b>FinnGlobs()</b></li>
+          </ul>
+          <p>Query som brukes bl.a</p>
+          <div class="org-src-container">
+            <pre class="src src-R">  sqlQuery<span style=
+            "color: #076678;">(</span>globs$log,paste<span style=
+            "color: #b16286;">(</span><span style=
+            "color: #79740e;">"DELETE * FROM INNLES_LOGG WHERE KOBLID="</span>,koblid,<span style="color: #79740e;">"AND SV='S'"</span>,sep<span style="color: #8f3f71;">=</span><span style="color: #79740e;">""</span><span style="color: #b16286;">)</span><span style="color: #076678;">)</span>
 
-<div id="outline-container-org0fee353" class="outline-3">
-<h3 id="org0fee353"><span class="section-number-3">7.2</span> Output</h3>
-<div class="outline-text-3" id="text-7-2">
-<p>
-En vector av den filgruppenavn til den spesifisert KOBLID eg. <code>UFORE</code>.
-</p>
-</div>
-</div>
-</div>
-<div id="outline-container-org17bc0ca" class="outline-2">
-<h2 id="org17bc0ca"><span class="section-number-2">8</span> TilFilLogg</h2>
-<div class="outline-text-2" id="text-8">
-<p>
-<span class="underline">OBS!</span>: Denne funksjonen ender opp med CRASH nokså ofte! Innkalles under <b>LesFil()</b> for å leser
-Access tabell <b>INNLES_LOGG</b> basert på KOBLID og objekt <code>batchdate</code>.
-</p>
-</div>
-<div id="outline-container-org4819d3b" class="outline-3">
-<h3 id="org4819d3b"><span class="section-number-3">8.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-8-1">
-<ul class="org-ul">
-<li>koblid :</li>
-<li>felt :</li>
-<li>verdi :</li>
-<li>batchdate : from <b>SettKHBatchDate()</b> function</li>
-<li>globs : fra <b>FinnGlobs()</b></li>
-</ul>
+  upd<span style="color: #8f3f71;">&lt;-</span>paste<span style=
+"color: #076678;">(</span><span style=
+"color: #79740e;">"INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT="</span>,koblid,<span style="color: #79740e;">",'"</span>,batchdate,<span style="color: #79740e;">"', 'S',"</span>,FinnFilGruppeFraKoblid<span style="color: #b16286;">(</span>koblid<span style="color: #b16286;">)</span>,sep<span style="color: #8f3f71;">=</span><span style="color: #79740e;">""</span><span style="color: #076678;">)</span>
+      sqlQuery<span style=
+"color: #076678;">(</span>globs$log,upd<span style=
+"color: #076678;">)</span>
 
-<p>
-Query som brukes bl.a
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">sqlQuery(globs$log,paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=",koblid,"AND SV='S'",sep=""))
-
-upd&lt;-paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=",koblid,",'",batchdate,"', 'S',",FinnFilGruppeFraKoblid(koblid),sep="")
-    sqlQuery(globs$log,upd)
-
-upd&lt;-paste("UPDATE INNLES_LOGG SET ",felt,"=",verdi," WHERE KOBLID=",koblid," AND SV='S' AND BATCH='",batchdate,"'",sep="")
+  upd<span style="color: #8f3f71;">&lt;-</span>paste<span style=
+"color: #076678;">(</span><span style=
+"color: #79740e;">"UPDATE INNLES_LOGG SET "</span>,felt,<span style="color: #79740e;">"="</span>,verdi,<span style="color: #79740e;">" WHERE KOBLID="</span>,koblid,<span style="color: #79740e;">" AND SV='S' AND BATCH='"</span>,batchdate,<span style="color: #79740e;">"'"</span>,sep<span style="color: #8f3f71;">=</span><span style="color: #79740e;">""</span><span style="color: #076678;">)</span>
 </pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-org5061f3e" class="outline-3">
-<h3 id="org5061f3e"><span class="section-number-3">8.2</span> Output:</h3>
-<div class="outline-text-3" id="text-8-2">
-<p>
-Legger til ny rad i INNLES_LOGG tabell via INSERT eller oppdatere tabellen via UPDATE.
-</p>
-</div>
-</div>
-</div>
-<div id="outline-container-org4f41f8d" class="outline-2">
-<h2 id="org4f41f8d"><span class="section-number-2">9</span> KHCsvread</h2>
-<div class="outline-text-2" id="text-9">
-<p>
-Leser inn CSV filer ved bruk <code>read.csv</code> eller <code>data.table::fread</code>.
-</p>
-</div>
-<div id="outline-container-org36f8987" class="outline-3">
-<h3 id="org36f8987"><span class="section-number-3">9.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-9-1">
-<ul class="org-ul">
-<li>filn : Absolutt sti til filen</li>
-<li>header = FALSE</li>
-<li>skip = 0</li>
-<li>calClasses = "character"</li>
-<li>sep = ";"</li>
-<li>quote = "\"" <span class="underline">obs!</span> denne bør være '\"'</li>
-<li>dec = "."</li>
-<li>fill = FALSE</li>
-<li>encoding = "unknown"</li>
-<li>blank.lines.skip = FALSE</li>
-<li>na.strings = c("NA")</li>
-<li>brukfread = TRUE</li>
-<li>&#x2026;</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-org8e68aaf" class="outline-3">
-<h3 id="org8e68aaf"><span class="section-number-3">9.2</span> Output</h3>
-<div class="outline-text-3" id="text-9-2">
-<p>
-En csv fil med header=FALSE dvs. header i tabellen blir til en ny kolonne. Hvorfor??
-</p>
-</div>
-</div>
-<div id="outline-container-org0a34658" class="outline-3">
-<h3 id="org0a34658"><span class="section-number-3">9.3</span> Kommentar</h3>
-<div class="outline-text-3" id="text-9-3">
-<p>
-Koden for å lese csv med <code>fread</code> som produserer <code>data.frame</code> kan skrives slik:
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">fread(DT, data.table = FALSE)
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-orgd66a9e9" class="outline-3">
+        <h3 id="orgd66a9e9"><span class=
+        "section-number-3">8.2.</span> Output:</h3>
+        <div class="outline-text-3" id="text-8-2">
+          <p>Legger til ny rad i INNLES_LOGG tabell via INSERT
+          eller oppdatere tabellen via UPDATE.</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org78b7331" class="outline-2">
+      <h2 id="org78b7331"><span class="section-number-2">9.</span>
+      KHCsvread</h2>
+      <div class="outline-text-2" id="text-9">
+        <p>Leser inn CSV filer ved bruk <code>read.csv</code> eller
+        <code>data.table::fread</code>.</p>
+      </div>
+      <div id="outline-container-org8be2370" class="outline-3">
+        <h3 id="org8be2370"><span class=
+        "section-number-3">9.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-9-1">
+          <ul class="org-ul">
+            <li>filn : Absolutt sti til filen</li>
+            <li>header = FALSE</li>
+            <li>skip = 0</li>
+            <li>calClasses = «character»</li>
+            <li>sep = «;»</li>
+            <li>quote = «\»« <span class="underline">obs!</span>
+            denne bør være ‘\»’</li>
+            <li>dec = «.»</li>
+            <li>fill = FALSE</li>
+            <li>encoding = «unknown»</li>
+            <li>blank.lines.skip = FALSE</li>
+            <li>na.strings = c(«NA»)</li>
+            <li>brukfread = TRUE</li>
+            <li>…</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-orgdb5f950" class="outline-3">
+        <h3 id="orgdb5f950"><span class=
+        "section-number-3">9.2.</span> Output</h3>
+        <div class="outline-text-3" id="text-9-2">
+          <p>En csv fil med header=FALSE dvs. header i tabellen
+          blir til en ny kolonne. Hvorfor??</p>
+        </div>
+      </div>
+      <div id="outline-container-org0664fd7" class="outline-3">
+        <h3 id="org0664fd7"><span class=
+        "section-number-3">9.3.</span> Kommentar</h3>
+        <div class="outline-text-3" id="text-9-3">
+          <p>Koden for å lese csv med <code>fread</code> som
+          produserer <code>data.frame</code> kan skrives slik:</p>
+          <div class="org-src-container">
+            <pre class="src src-R">  fread<span style=
+            "color: #076678;">(</span>DT, data.table <span style=
+            "color: #8f3f71;">=</span> <span style=
+            "color: #8f3f71;">FALSE</span><span style=
+            "color: #076678;">)</span>
 </pre>
-</div>
-</div>
-</div>
-</div>
-<div id="outline-container-org72a6512" class="outline-2">
-<h2 id="org72a6512"><span class="section-number-2">10</span> cSVmod</h2>
-<div class="outline-text-2" id="text-10">
-<p>
-Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
-</p>
-</div>
-<div id="outline-container-org84c22fd" class="outline-3">
-<h3 id="org84c22fd"><span class="section-number-3">10.1</span> Argumenter</h3>
-<div class="outline-text-3" id="text-10-1">
-<ul class="org-ul">
-<li>DF : data.frame i CSV format fra KHCsvread eller XLS</li>
-<li>filbesk :</li>
-<li>header = TRUE</li>
-<li>skip = 0
-Hvilke rader som skal uttelates ved lesing</li>
-<li>slettRader = integer(0)
-<b>obs!</b> her bør det være <code>0L</code>. Denne skal velger rader som skal slettes.</li>
-<li>sisteRad = 1
-Velges hvilken som er siste rader</li>
-<li>TomRadSlutt = FALSE Velge hvilken rader som er tommer og subsett data.frame fra rad 1 til raden
-som den tomme raden.</li>
-<li>FjernTommeRader = FALSE
-Slett tomme rader i hele data.frame</li>
-<li>FjernTommeKol = TRUE
-Slett tomme kolonne</li>
-<li>globs = FinnGlobs()</li>
-<li>&#x2026;</li>
-</ul>
-</div>
-</div>
-<div id="outline-container-orgc089222" class="outline-3">
-<h3 id="orgc089222"><span class="section-number-3">10.2</span> Output</h3>
-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org3ac30ff" class="outline-2">
+      <h2 id="org3ac30ff"><span class="section-number-2">10.</span>
+      cSVmod</h2>
+      <div class="outline-text-2" id="text-10">
+        <p>Restrukturerer dataene ved bruk parametrer fra INNLESING
+        tabell.</p>
+      </div>
+      <div id="outline-container-org56cf789" class="outline-3">
+        <h3 id="org56cf789"><span class=
+        "section-number-3">10.1.</span> Argumenter</h3>
+        <div class="outline-text-3" id="text-10-1">
+          <ul class="org-ul">
+            <li>DF : data.frame i CSV format fra KHCsvread eller
+            XLS</li>
+            <li>filbesk :</li>
+            <li>header = TRUE</li>
+            <li>skip = 0 Hvilke rader som skal uttelates ved
+            lesing</li>
+            <li>slettRader = integer(0) <b>obs!</b> her bør det
+            være <code>0L</code>. Denne skal velger rader som skal
+            slettes.</li>
+            <li>sisteRad = 1 Velges hvilken som er siste rader</li>
+            <li>TomRadSlutt = FALSE Velge hvilken rader som er
+            tommer og subsett data.frame fra rad 1 til raden som
+            den tomme raden.</li>
+            <li>FjernTommeRader = FALSE Slett tomme rader i hele
+            data.frame</li>
+            <li>FjernTommeKol = TRUE Slett tomme kolonne</li>
+            <li>globs = FinnGlobs()</li>
+            <li>…</li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org7dab161" class="outline-3">
+        <h3 id="org7dab161"><span class=
+        "section-number-3">10.2.</span> Output</h3>
+      </div>
+      <div id="outline-container-org4eea04f" class="outline-3">
+        <h3 id="org4eea04f"><span class=
+        "section-number-3">10.3.</span> Kommentar</h3>
+        <div class="outline-text-3" id="text-10-3">
+          <p>Flere argumenter som egentlig gjør nesten det samme
+          oppgavene. Alternativ å finne tomme rader eller kolonne
+          kan brukes <code>apply</code> og er nok raskere.</p>
+          <div class="org-src-container">
+            <pre class="src src-R">    rnames <span style=
+            "color: #8f3f71;">&lt;-</span> rownames<span style=
+            "color: #076678;">(</span>DF<span style=
+            "color: #b16286;">[</span>apply<span style=
+            "color: #8ec07c;">(</span>is.na<span style=
+            "color: #d65d0e;">(</span>DF<span style=
+            "color: #d65d0e;">)</span> <span style=
+            "color: #8f3f71;">|</span> DF <span style=
+            "color: #8f3f71;">==</span> <span style=
+            "color: #79740e;">""</span>, <span style=
+            "color: #8f3f71; font-weight: bold;">1</span>, all<span style=
+            "color: #8ec07c;">)</span>, <span style=
+            "color: #b16286;">]</span><span style=
+            "color: #076678;">)</span> <span style=
+            "color: #a89984;">#</span><span style=
+            "color: #a89984;">for rader</span>
+    knames <span style=
+"color: #8f3f71;">&lt;-</span> rownames<span style=
+"color: #076678;">(</span>DF<span style=
+"color: #b16286;">[</span>apply<span style=
+"color: #8ec07c;">(</span>is.na<span style=
+"color: #d65d0e;">(</span>DF<span style=
+"color: #d65d0e;">)</span> <span style=
+"color: #8f3f71;">|</span> DF <span style=
+"color: #8f3f71;">==</span> <span style=
+"color: #79740e;">""</span>, <span style=
+"color: #8f3f71; font-weight: bold;">2</span>, all<span style=
+"color: #8ec07c;">)</span>, <span style=
+"color: #b16286;">]</span><span style=
+"color: #076678;">)</span> <span style=
+"color: #a89984;">#</span><span style=
+"color: #a89984;">for kolonner</span>
 
-<div id="outline-container-orgb65d435" class="outline-3">
-<h3 id="orgb65d435"><span class="section-number-3">10.3</span> Kommentar</h3>
-<div class="outline-text-3" id="text-10-3">
-<p>
-Flere argumenter som egentlig gjør nesten det samme oppgavene. Alternativ å finne tomme rader
-eller kolonne kan brukes <code>apply</code> og er nok raskere.
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">rnames &lt;- rownames(DF[apply(is.na(DF) | DF == "", 1, all), ]) #for rader
-knames &lt;- rownames(DF[apply(is.na(DF) | DF == "", 2, all), ]) #for kolonner
-
-which(rownames(DF) %in% tnames)
+    which<span style="color: #076678;">(</span>rownames<span style=
+"color: #b16286;">(</span>DF<span style=
+"color: #b16286;">)</span> <span style=
+"color: #8f3f71;">%in%</span> tnames<span style=
+"color: #076678;">)</span>
 </pre>
-</div>
-</div>
-</div>
-<div id="outline-container-org9906b68" class="outline-3">
-<h3 id="org9906b68"><span class="section-number-3">10.4</span> Forbedring</h3>
-<div class="outline-text-3" id="text-10-4">
-<ul class="org-ul">
-<li>Finne ut i INNLESSING tabell hvor mange som har <code>FjernTommeRader</code> og <code>FjernTommeKol</code>. Sjekk</li>
-</ul>
-<p>
-hvordan filen ser ut og tilpasse deretter før ny database lages.
-</p>
-</div>
-</div>
-</div>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org8f27872" class="outline-3">
+        <h3 id="org8f27872"><span class=
+        "section-number-3">10.4.</span> Forbedring</h3>
+        <div class="outline-text-3" id="text-10-4">
+          <ul class="org-ul">
+            <li>Finne ut i INNLESSING tabell hvor mange som har
+            <code>FjernTommeRader</code> og
+            <code>FjernTommeKol</code>. Sjekk</li>
+          </ul>
+          <p>hvordan filen ser ut og tilpasse deretter før ny
+          database lages.</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org874c493" class="outline-2">
+      <h2 id="org874c493"><span class="section-number-2">11.</span>
+      Generell spørsmål</h2>
+      <div class="outline-text-2" id="text-11">
+        <p>Alle type spørsmål som trenger oppklaring:</p>
+      </div>
+      <div id="outline-container-orgf8190c2" class="outline-3">
+        <h3 id="orgf8190c2"><span class=
+        "section-number-3">11.1.</span> Variable med
+        <code>*.l</code> og <code>*.h</code> extention</h3>
+        <div class="outline-text-3" id="text-11-1">
+          <p>Alle år og aldre er ALLTID intervaller i hele
+          systemet. Dermed brukes alltid AARl/AARh og
+          ALDERl/ALDERh. Dette gjelder selv om det bare dreire seg
+          om enkelte kalenderår (AARl=2020, AARh=2020) eller enkle
+          aldersår (ALDERl=30,ALDERh=30).</p>
+        </div>
+      </div>
+      <div id="outline-container-org03e6e53" class="outline-3">
+        <h3 id="org03e6e53"><span class=
+        "section-number-3">11.2.</span> Hva er <code>val.f</code>
+        og <code>val.a</code>, og hvordan den brukes?</h3>
+        <div class="outline-text-3" id="text-11-2">
+          <p><code>val.a</code> og <code>val.f</code> er to flagg
+          som alltid går hånd i hånd med hver verdikolonne.
+          Detaljene kan våre ganske kompliserte, men i
+          hovedtrekk:</p>
+          <p><code>val.a</code> teller opp hvor mange originaltall
+          som har vårt brukt til å lage verdien. Eksempler: Når to
+          kommuner slås sammen for kommuneharmonisering blir det
+          typisk <code>val.a=2</code>. Når tall for 5 enkeltaldre
+          slås sammen til en 5 års aldersgruppe blir det
+          <code>val.a=5</code>. De to tilfellen i kombinasjon gir
+          <code>val.a=10</code></p>
+          <p><code>val.f</code> er strengt tatt viktigere. Den
+          angir i hovedtrekk hvorfor tall er NA. Er det fordi
+          tallet mangler originalt, er det fordi det ikke lar seg
+          bergene, er det fordi det anonymisres osv.</p>
+          <p>Men begge <code>val.a</code> og <code>val.f</code> får
+          statis ferdi henholdsvis 0 og 1. Se <a href=
+          "https://github.com/helseprofil/khfunctions/blob/master/KHfunctions.R#L986">
+          koden</a>.</p>
+          <div class="org-src-container">
+            <pre class="src src-R">  valok<span style=
+            "color: #8f3f71;">&lt;-</span><span style=
+            "color: #8f3f71; font-weight: bold;">1</span>
+  valf<span style="color: #8f3f71;">&lt;-</span>paste<span style=
+"color: #076678;">(</span>val,<span style=
+"color: #79740e;">".f"</span>,sep<span style=
+"color: #8f3f71;">=</span><span style=
+"color: #79740e;">""</span><span style="color: #076678;">)</span>
+  vala<span style="color: #8f3f71;">&lt;-</span>paste<span style=
+"color: #076678;">(</span>val,<span style=
+"color: #79740e;">".a"</span>,sep<span style=
+"color: #8f3f71;">=</span><span style=
+"color: #79740e;">""</span><span style="color: #076678;">)</span>
+  valomk<span style="color: #8f3f71;">&lt;-</span>paste<span style=
+"color: #076678;">(</span>val,<span style=
+"color: #79740e;">"omk"</span>,sep<span style=
+"color: #8f3f71;">=</span><span style=
+"color: #79740e;">""</span><span style="color: #076678;">)</span>
 
-<div id="outline-container-org0944c5a" class="outline-2">
-<h2 id="org0944c5a"><span class="section-number-2">11</span> Generell spørsmål</h2>
-<div class="outline-text-2" id="text-11">
-<p>
-Alle type spørsmål som trenger oppklaring:
-</p>
-</div>
-<div id="outline-container-orgb84a32c" class="outline-3">
-<h3 id="orgb84a32c"><span class="section-number-3">11.1</span> Variable med <code>*.l</code> og <code>*.h</code> extention</h3>
-<div class="outline-text-3" id="text-11-1">
-<p>
-Alle år og aldre er ALLTID intervaller i hele systemet. Dermed brukes alltid AARl/AARh og
-ALDERl/ALDERh. Dette gjelder selv om det bare dreire seg om enkelte kalenderår (AARl=2020,
-AARh=2020) eller enkle aldersår (ALDERl=30,ALDERh=30).
-</p>
-</div>
-</div>
-<div id="outline-container-org21e8711" class="outline-3">
-<h3 id="org21e8711"><span class="section-number-3">11.2</span> Hva er <code>val.f</code> og <code>val.a</code>, og hvordan den brukes?</h3>
-<div class="outline-text-3" id="text-11-2">
-<p>
-<code>val.a</code> og <code>val.f</code> er to flagg som alltid går hånd i hånd med hver verdikolonne. Detaljene kan
-våre ganske kompliserte, men i hovedtrekk:
-</p>
-
-<p>
-<code>val.a</code> teller opp hvor mange originaltall som har vårt brukt til å lage verdien. Eksempler:
-Når to kommuner slås sammen for kommuneharmonisering blir det typisk <code>val.a=2</code>. Når tall for
-5 enkeltaldre slås sammen til en 5 års aldersgruppe blir det <code>val.a=5</code>. De to tilfellen i
-kombinasjon gir <code>val.a=10</code>
-</p>
-
-<p>
-<code>val.f</code> er strengt tatt viktigere. Den angir i hovedtrekk hvorfor tall er NA. Er det fordi tallet
-mangler originalt, er det fordi det ikke lar seg bergene, er det fordi det anonymisres osv.
-</p>
-
-<p>
-Men begge <code>val.a</code> og <code>val.f</code> får statis ferdi henholdsvis 0 og 1. Se <a href="https://github.com/helseprofil/khfunctions/blob/master/KHfunctions.R#L986">koden</a>.
-</p>
-
-<div class="org-src-container">
-<pre class="src src-R">valok&lt;-1
-valf&lt;-paste(val,".f",sep="")
-vala&lt;-paste(val,".a",sep="")
-valomk&lt;-paste(val,"omk",sep="")
-
-##Lag omkodet verdi med numerisk. Ikke numerisk blir foreløpig NA
-suppressWarnings(DF[,valomk]&lt;-as.numeric(valKB$omk))
-DF[,valf]&lt;-0
-DF[,vala]&lt;-1
-DF[valKB$omk==".." &amp; DF[,val]!=valKB$omk,valf]&lt;-1
-DF[valKB$omk=="." &amp; DF[,val]!=valKB$omk,valf]&lt;-2
-DF[valKB$omk==":" &amp; DF[,val]!=valKB$omk,valf]&lt;-3
+  <span style="color: #a89984;">##</span><span style=
+"color: #a89984;">Lag omkodet verdi med numerisk. Ikke numerisk blir foreløpig NA</span>
+  suppressWarnings<span style=
+"color: #076678;">(</span>DF<span style=
+"color: #b16286;">[</span>,valomk<span style=
+"color: #b16286;">]</span><span style=
+"color: #8f3f71;">&lt;-</span>as.numeric<span style=
+"color: #b16286;">(</span>valKB$omk<span style=
+"color: #b16286;">)</span><span style="color: #076678;">)</span>
+  DF<span style="color: #076678;">[</span>,valf<span style=
+"color: #076678;">]</span><span style=
+"color: #8f3f71;">&lt;-</span><span style=
+"color: #8f3f71; font-weight: bold;">0</span>
+  DF<span style="color: #076678;">[</span>,vala<span style=
+"color: #076678;">]</span><span style=
+"color: #8f3f71;">&lt;-</span><span style=
+"color: #8f3f71; font-weight: bold;">1</span>
+  DF<span style="color: #076678;">[</span>valKB$omk<span style=
+"color: #8f3f71;">==</span><span style=
+"color: #79740e;">".."</span> <span style=
+"color: #8f3f71;">&amp;</span> DF<span style=
+"color: #b16286;">[</span>,val<span style=
+"color: #b16286;">]</span>!<span style=
+"color: #8f3f71;">=</span>valKB$omk,valf<span style=
+"color: #076678;">]</span><span style=
+"color: #8f3f71;">&lt;-</span><span style=
+"color: #8f3f71; font-weight: bold;">1</span>
+  DF<span style="color: #076678;">[</span>valKB$omk<span style=
+"color: #8f3f71;">==</span><span style=
+"color: #79740e;">"."</span> <span style=
+"color: #8f3f71;">&amp;</span> DF<span style=
+"color: #b16286;">[</span>,val<span style=
+"color: #b16286;">]</span>!<span style=
+"color: #8f3f71;">=</span>valKB$omk,valf<span style=
+"color: #076678;">]</span><span style=
+"color: #8f3f71;">&lt;-</span><span style=
+"color: #8f3f71; font-weight: bold;">2</span>
+  DF<span style="color: #076678;">[</span>valKB$omk<span style=
+"color: #8f3f71;">==</span><span style=
+"color: #79740e;">":"</span> <span style=
+"color: #8f3f71;">&amp;</span> DF<span style=
+"color: #b16286;">[</span>,val<span style=
+"color: #b16286;">]</span>!<span style=
+"color: #8f3f71;">=</span>valKB$omk,valf<span style=
+"color: #076678;">]</span><span style=
+"color: #8f3f71;">&lt;-</span><span style=
+"color: #8f3f71; font-weight: bold;">3</span>
 </pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-orgd44478d" class="outline-3">
-<h3 id="orgd44478d"><span class="section-number-3">11.3</span> Hva kolonne TYP brukes til i GeoKoder tabell? Verdien er O og U.</h3>
-<div class="outline-text-3" id="text-11-3">
-<p>
-TYP=0 er de Ordinåre geokodene, TYP=U er geokoder som angir "Uoppgitt" (slik som at 1199 er
-uopgitt kommune under fylket 11). Dette filteret brukes når det produseres kuber og
-Firksvik-data, da blir det ikke rapportert tall for U-koder, men disse må våre med fram til da
-fordi de inngår i summer som lager totaler for høyere geografisk nivå (1199 tall inngår
-i 11 osv).
-</p>
-</div>
-</div>
-
-<div id="outline-container-orga2a2c78" class="outline-3">
-<h3 id="orga2a2c78"><span class="section-number-3">11.4</span> I Access tabell FILGRUPPER for kolonne ALDER_ALLE som har ingen data</h3>
-<div class="outline-text-3" id="text-11-4">
-<p>
-Noen ganger skreves det som <code>NA</code> eller <code>25_</code>. Når det er <code>NA</code> så plukket verdier fra default ie.
-min og maks alder. Når det er bare <code>25_</code> så legges maks alder fra tabell ..
-</p>
-</div>
-</div>
-</div>
-<div id="outline-container-orge363356" class="outline-2">
-<h2 id="orge363356"><span class="section-number-2">12</span> Access related spørsmål</h2>
-<div class="outline-text-2" id="text-12">
-<p>
-Dette er spørsmål spesifisert til kolonnebruk i Access tabeller.
-</p>
-</div>
-<div id="outline-container-org6bf1d0e" class="outline-3">
-<h3 id="org6bf1d0e"><span class="section-number-3">12.1</span> FILGRUPPER tabell</h3>
-<div class="outline-text-3" id="text-12-1">
-<ul class="org-ul">
-<li>Hva kolonne <b>FILTER1</b>, <b>FILTER2</b> og <b>FILTER3</b> brukes til? Verdien er <code>1</code>.</li>
-<li>Kolonne <b>ALDER_ALLE</b> har forskjellige verdier bl.a <code>0_120</code>, <code>1_6</code>, <code>25_</code> og ingen verdi? Når
-ingen verdi blir det satt 0_120 som min og maks alder. Når det skreves bare <code>25_</code> skal det får
-25 som min alder og 120 som maks alder.</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org3131e3f" class="outline-3">
+        <h3 id="org3131e3f"><span class=
+        "section-number-3">11.3.</span> Hva kolonne TYP brukes til
+        i GeoKoder tabell? Verdien er O og U.</h3>
+        <div class="outline-text-3" id="text-11-3">
+          <p>TYP=0 er de Ordinåre geokodene, TYP=U er geokoder som
+          angir «Uoppgitt» (slik som at 1199 er uopgitt kommune
+          under fylket 11). Dette filteret brukes når det
+          produseres kuber og Firksvik-data, da blir det ikke
+          rapportert tall for U-koder, men disse må våre med fram
+          til da fordi de inngår i summer som lager totaler for
+          høyere geografisk nivå (1199 tall inngår i 11 osv).</p>
+        </div>
+      </div>
+      <div id="outline-container-org846ab12" class="outline-3">
+        <h3 id="org846ab12"><span class=
+        "section-number-3">11.4.</span> I Access tabell FILGRUPPER
+        for kolonne ALDER_ALLE som har ingen data</h3>
+        <div class="outline-text-3" id="text-11-4">
+          <p>Noen ganger skreves det som <code>NA</code> eller
+          <code>25_</code>. Når det er <code>NA</code> så plukket
+          verdier fra default ie. min og maks alder. Når det er
+          bare <code>25_</code> så legges maks alder fra tabell
+          ..</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-orga6f7f17" class="outline-2">
+      <h2 id="orga6f7f17"><span class="section-number-2">12.</span>
+      Access related spørsmål</h2>
+      <div class="outline-text-2" id="text-12">
+        <p>Dette er spørsmål spesifisert til kolonnebruk i Access
+        tabeller.</p>
+      </div>
+      <div id="outline-container-orgcf652f3" class="outline-3">
+        <h3 id="orgcf652f3"><span class=
+        "section-number-3">12.1.</span> FILGRUPPER tabell</h3>
+        <div class="outline-text-3" id="text-12-1">
+          <ul class="org-ul">
+            <li>Hva kolonne <b>FILTER1</b>, <b>FILTER2</b> og
+            <b>FILTER3</b> brukes til? Verdien er
+            <code>1</code>.</li>
+            <li>Kolonne <b>ALDER_ALLE</b> har forskjellige verdier
+            bl.a <code>0_120</code>, <code>1_6</code>,
+            <code>25_</code> og ingen verdi? Når ingen verdi blir
+            det satt 0_120 som min og maks alder. Når det skreves
+            bare <code>25_</code> skal det får 25 som min alder og
+            120 som maks alder.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org39d4030" class="outline-2">
+      <h2 id="org39d4030"><span class="section-number-2">13.</span>
+      SPVflagg</h2>
+      <div class="outline-text-2" id="text-13">
+        <p>Disse gjelder når dataene er kjørt i
+        <code>LagKUBE</code>. Notat er fra Steinar.</p>
+        <table border="2" cellspacing="0" cellpadding="6" rules=
+        "groups" frame="hsides">
+          <colgroup>
+            <col class="org-right" />
+            <col class="org-left" />
+            <col class="org-left" />
+            <col class="org-left" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" class="org-right">Kode i data</th>
+              <th scope="col" class="org-left">Tegn i KH/NH
+              tabell</th>
+              <th scope="col" class="org-left">Tekst i fotnote</th>
+              <th scope="col" class="org-left">Tekst i SSB Statbank
+              fotnote</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="org-right">0</td>
+              <td class="org-left">ingen</td>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="org-right">1</td>
+              <td class="org-left">..</td>
+              <td class="org-left">Manglende data</td>
+              <td class="org-left">Tallgrunnlag mangler dvs. tall
+              er ikke kommet inn i våre databaser eller er for
+              usikre til å publiseres</td>
+            </tr>
+            <tr>
+              <td class="org-right">2</td>
+              <td class="org-left">.</td>
+              <td class="org-left">Lar seg ikke beregne</td>
+              <td class="org-left">Ikke mulig å oppgi tall dvs.
+              tall finnes ikke på dette tidspunktet fordi
+              kategorien ikke var i bruk da tallene ble samlet
+              inn</td>
+            </tr>
+            <tr>
+              <td class="org-right">3</td>
+              <td class="org-left">:</td>
+              <td class="org-left">Anonymisert</td>
+              <td class="org-left">Vises ikke av
+              konfidensialitetshensyn dvs. tall publiseres ikke for
+              å unngå å identifisere personer eller
+              virksomheter</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Kodene settes i gamleløypa (KHfunctions.R, i
+        kubeproduksjonstrinnet) i variabler med navn
+        &lt;måtall&gt;.f . Det er flere koder i bruk inne i
+        databehandlingen, fordi ulike årsaker til at det mangler
+        tall må behandles ulikt ved aggregering, prikking og
+        skjuling. Helt til slutt i LagKUBE oversettes de interne
+        kodene til en av de tre vist ovenfor.</p>
+        <p>Den koden som kommer ut i kuben, ser ikke alltid logisk
+        ut. I flere tilfeller har vi skrevet
+        postprosesseringsscript som har «ryddet opp» i kodene, når
+        vi vet at det er spesielle årsaker til at større grupper i
+        dataene (for eksempel bydelene i noen byer) har manglende
+        tall.</p>
+      </div>
+    </div>
+    <div id="outline-container-org42d0936" class="outline-2">
+      <h2 id="org42d0936"><span class="section-number-2">14.</span>
+      Spesialvariabler i R</h2>
+      <div class="outline-text-2" id="text-14">
+        <table border="2" cellspacing="0" cellpadding="6" rules=
+        "groups" frame="hsides">
+          <colgroup>
+            <col class="org-left" />
+            <col class="org-left" />
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="org-left">..a</td>
+              <td class="org-left">Antall rader tallet stammer fra
+              (Kommunesammenslåinger!, M+K -&gt; Kjønn samlet,
+              o.l.)</td>
+            </tr>
+            <tr>
+              <td class="org-left">..f</td>
+              <td class="org-left">Flagg, blir til SPVflagg etter
+              et sett regler. Det er ett slikt flagg for hver
+              tallvariabel, men de samles til en verdi i SPVflagg.
+              Reglene er bl.a. :</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">- Verdier 1-2-3 blir til det
+              samme i SPVflagg. Kan altså sette disse direkte, hvis
+              de skal rettes.</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">- Verdier -1 og 4 blir til
+              SPVflagg=3, verdi 9 blir til =1.</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">+ Verdi 4 betyr «Naboprikket»,
+              og utløser ikke skjuling av serier.</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">- Verdi 8: Dukket opp i
+              Skjenketidsslutt og Skjenkesteder for kommuner med
+              tom celle i inndata. Har ikke klart å finne ut hva
+              kodene betyr, og Kåre husker ikke/har ikke tid til å
+              grave det fram - det var en komplisert hack for å
+              håndtere ubalanse i Sysvak.</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">+ Håndtert ved å legge følgende
+              i KODEBOK for aktuell innlesingsspec: Tom celle i
+              VAL1 kodes til «..» (uten gåseøyne).</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">- Hvis verdien skal korrigeres
+              til et høyere tall i min RSYNT, holder det å endre i
+              en av de måltallkolonnene som skal leveres ut (da
+              bruker systemet den høyeste verdien for alle
+              ut-kolonner). Men hvis jeg skal korrigere nedover,
+              f.eks. til SPVflagg==1, må jeg behandle alle
+              ut-kolonnene. DET ER TRYGGEST å ta alle, uansett
+              …</td>
+            </tr>
+            <tr>
+              <td class="org-left">&nbsp;</td>
+              <td class="org-left">- Erfaring: Reglene virker bare
+              skikkelig når filen bruker standardvariablene. Se
+              nedenfor.*</td>
+            </tr>
+            <tr>
+              <td class="org-left">..n</td>
+              <td class="org-left">Antall <i>årganger</i> tallet
+              stammer fra (f.eks. ved glidende snitt)</td>
+            </tr>
+            <tr>
+              <td class="org-left">MALTALL</td>
+              <td class="org-left">Er en intern resultatkolonne,
+              som kopieres til riktig ut-kolonne. På stadiet
+              «RSYNT_POSTPROSESS» er den ferdig brukt og
+              overflødig, den dør like etter.</td>
+            </tr>
+            <tr>
+              <td class="org-left">STANDARD</td>
+              <td class="org-left">Dersom standardkolonnene fins,
+              er det de som blir levert ut. Teller, Rate, Meis og
+              SMR.</td>
+            </tr>
+            <tr>
+              <td class="org-left">ANDRE</td>
+              <td class="org-left">Sjekk i FILFILTRE. Der kan det
+              være spesifisert mellomregninger etc. (Eks. :
+              Vaksgrad (i Sysvak) - stå som navn på VAL1 i
+              innlesingen, er faktisk levert vaks.dekning, men
+              brukes i beregning av Teller spesifisert i
+              FILFILTRE.)</td>
+            </tr>
+          </tbody>
+        </table>
+        <p><b>Flagg når det er spesielle variabelnavn:</b> Overfør
+        rettinger til et av standardflaggene!</p>
+        <p>«Vedvarende lavinntekt NH» brukte ingen av de standard
+        tallvariablene som har en tilhørende <b>_f</b>-variabel
+        (teller, nevner, rate), og dermed var heller ingen av
+        standard <b>_f</b> -variablene i bruk (alt var missing i
+        disse). Det fantes et måltall <code>LAVINNT_VEDV</code>,
+        med tilhørende <code>LAVINNT_VEDV_f</code> , men da
+        fungerte ikke produksjon av SPVflagg i henhold til denne
+        flaggvariabelen. SPVflagg ble feil, og retting i
+        <code>LAVINNT..._f</code> i en Rsynt-Postprosess virket
+        ikke.</p>
+        <p><b>Jeg satte replace RATE_f = LAVINNT_VEDV_f til slutt i
+        en Rsynt-Postprosess, og da slo endringene inn i
+        SPVflagg.</b></p>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

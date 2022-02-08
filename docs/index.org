@@ -4,6 +4,7 @@
 #+options: ^:nil
 #+OPTIONS: html-postamble:nil
 #+LANGUAGE: no
+#+STARTUP: shrink
 
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
@@ -292,3 +293,55 @@ Restrukturerer dataene ved bruk parametrer fra INNLESING tabell.
    - Kolonne *ALDER_ALLE* har forskjellige verdier bl.a =0_120=, =1_6=, =25_= og ingen verdi? Når
      ingen verdi blir det satt 0_120 som min og maks alder. Når det skreves bare =25_= skal det får
      25 som min alder og 120 som maks alder.
+* SPVflagg
+Disse gjelder når dataene er kjørt i =LagKUBE=. Notat er fra Steinar.
+
+|         <5> | <10>                | <30>                 | <40>                                                                                                                          |
+| Kode i data | Tegn i KH/NH tabell | Tekst i fotnote      | Tekst i SSB Statbank fotnote                                                                                                  |
+|-------------+---------------------+----------------------+-------------------------------------------------------------------------------------------------------------------------------|
+|           0 | ingen               |                      |                                                                                                                               |
+|           1 | ..                  | Manglende data       | Tallgrunnlag mangler dvs. tall er ikke kommet inn i våre databaser eller er for usikre til å publiseres                       |
+|           2 | .                   | Lar seg ikke beregne | Ikke mulig å oppgi tall dvs. tall finnes ikke på dette tidspunktet fordi kategorien ikke var i bruk da tallene ble samlet inn |
+|           3 | :                   | Anonymisert          | Vises ikke av konfidensialitetshensyn dvs. tall publiseres ikke for å unngå å identifisere personer eller virksomheter        |
+
+
+Kodene settes i gamleløypa (KHfunctions.R, i kubeproduksjonstrinnet) i variabler
+med navn <måtall>.f . Det er flere koder i bruk inne i databehandlingen, fordi
+ulike årsaker til at det mangler tall må behandles ulikt ved aggregering,
+prikking og skjuling. Helt til slutt i LagKUBE oversettes de interne kodene til
+en av de tre vist ovenfor.
+
+Den koden som kommer ut i kuben, ser ikke alltid logisk ut. I flere tilfeller
+har vi skrevet postprosesseringsscript som har "ryddet opp" i kodene, når vi vet
+at det er spesielle årsaker til at større grupper i dataene (for eksempel
+bydelene i noen byer) har manglende tall.
+* Spesialvariabler i R
+
+| <10>     | <75>                                                                                                                                                                                                                                                                                                                                    |
+|----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ..a      | Antall rader tallet stammer fra (Kommunesammenslåinger!,  M+K -> Kjønn samlet, o.l.)                                                                                                                                                                                                                                                    |
+| ..f      | Flagg, blir til SPVflagg etter et sett regler. Det er ett slikt flagg for hver tallvariabel, men de samles til en verdi i SPVflagg. Reglene er bl.a. :                                                                                                                                                                                  |
+|          | - Verdier 1-2-3 blir til det samme i SPVflagg. Kan altså sette disse direkte, hvis de skal rettes.                                                                                                                                                                                                                                      |
+|          | - Verdier -1 og 4 blir til SPVflagg=3, verdi 9 blir til =1.                                                                                                                                                                                                                                                                             |
+|          | + Verdi 4 betyr "Naboprikket", og utløser ikke skjuling av serier.                                                                                                                                                                                                                                                                      |
+|          | - Verdi 8: Dukket opp i Skjenketidsslutt og Skjenkesteder for kommuner med tom celle i inndata. Har ikke klart å finne ut hva kodene betyr, og Kåre husker ikke/har ikke tid til å grave det fram - det var en komplisert hack for å håndtere ubalanse i Sysvak.                                                                        |
+|          | + Håndtert ved å legge følgende i KODEBOK for aktuell innlesingsspec: Tom celle i VAL1 kodes til ".." (uten gåseøyne).                                                                                                                                                                                                                  |
+|          | - Hvis verdien skal korrigeres til et høyere tall i min RSYNT, holder det å endre i en av de måltallkolonnene som skal leveres ut (da bruker systemet den høyeste verdien for alle ut-kolonner). Men hvis jeg skal korrigere nedover, f.eks. til SPVflagg==1, må jeg behandle alle ut-kolonnene. DET ER TRYGGEST å ta alle, uansett ... |
+|          | - Erfaring: Reglene virker bare skikkelig når filen bruker standardvariablene. Se nedenfor.*                                                                                                                                                                                                                                            |
+| ..n      | Antall /årganger/ tallet stammer fra (f.eks. ved glidende snitt)                                                                                                                                                                                                                                                                        |
+| MALTALL  | Er en intern resultatkolonne, som kopieres til riktig ut-kolonne.  På stadiet "RSYNT_POSTPROSESS" er den ferdig brukt og overflødig, den dør like etter.                                                                                                                                                                                |
+| STANDARD | Dersom standardkolonnene fins, er det de som blir levert ut. Teller, Rate, Meis og SMR.                                                                                                                                                                                                                                                 |
+| ANDRE    | Sjekk i FILFILTRE. Der kan det være spesifisert mellomregninger etc. (Eks. : Vaksgrad (i Sysvak) - stå som navn på VAL1 i innlesingen, er faktisk levert vaks.dekning, men brukes i beregning av Teller spesifisert i FILFILTRE.)                                                                                                       |
+
+*Flagg når det er spesielle variabelnavn:* Overfør rettinger til et av
+standardflaggene!
+
+"Vedvarende lavinntekt NH" brukte ingen av de standard
+tallvariablene som har en tilhørende *_f*-variabel (teller, nevner, rate), og
+dermed var heller ingen av standard *_f* -variablene i bruk (alt var missing i
+disse). Det fantes et måltall =LAVINNT_VEDV=, med tilhørende =LAVINNT_VEDV_f= , men
+da fungerte ikke produksjon av SPVflagg i henhold til denne flaggvariabelen.
+SPVflagg ble feil, og retting i =LAVINNT..._f= i en Rsynt-Postprosess virket ikke.
+
+*Jeg satte replace RATE_f = LAVINNT_VEDV_f til slutt i en Rsynt-Postprosess, og
+da slo endringene inn i SPVflagg.*
