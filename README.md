@@ -10,7 +10,8 @@ https://folkehelseprofil.github.io/khfunction/
 
 # Bruk
 
-For å sikre at alle pakker versjoner som brukes i *KHfunctions* er for alle maskiner, kjør denne kommandoen:
+For å sikre at alle pakker versjoner som brukes i *KHfunctions* er like for alle
+maskiner, kjør denne kommandoen:
 
 ```r
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
