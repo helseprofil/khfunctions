@@ -10,6 +10,11 @@ https://folkehelseprofil.github.io/khfunction/
 
 # Bruk
 
-- Alle funksjoner her anvender felles cache for R pakker som ligger i **PDB** med mappenavn **rsync**.
-- For førstegangsbruk kjør `renv::restore()` i console.
-- Filen *renv.lock* skal ikke endres manuelt.
+For å sikre at alle pakker versjoner som brukes i *KHfunctions* er for alle maskiner, kjør denne kommandoen:
+
+```r
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_restore("khfunctions")
+```
+
+Bruk *SePaaFil.R* fil for å bruke de mest brukte kommandoene. 
