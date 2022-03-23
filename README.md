@@ -19,5 +19,5 @@ kh_restore("khfunctions")
 ```
 
 Bruk *SePaaFil.R* fil som vises på nedre høyre vindu i RStudio for å bruke de
-mest brukte kommandoene. Din aktiv projektmappe blir i
-*C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
+mest brukte kommandoene. Din aktive projektmappe blir i
+**C:/Users/dittBrukerNavn/helseprofl/khfunctions**.
