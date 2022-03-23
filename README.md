@@ -8,7 +8,7 @@ OBS!! :memo: Branch `hist` er en samlig av tilfeldige utvalgte historiske filer 
 :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her
 https://folkehelseprofil.github.io/khfunction/ 
 
-# Bruk
+# Installasjon og bruk
 
 For å sikre at alle pakker versjoner som brukes i *KHfunctions* er like for alle
 maskiner, kjør denne kommandoen:
@@ -18,4 +18,6 @@ source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_restore("khfunctions")
 ```
 
-Bruk *SePaaFil.R* fil for å bruke de mest brukte kommandoene. 
+Bruk *SePaaFil.R* fil som vises på nedre høyre vindu i RStudio for å bruke de
+mest brukte kommandoene. Din aktiv projektmappe blir i
+*C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
