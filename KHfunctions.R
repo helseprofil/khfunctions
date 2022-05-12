@@ -20,7 +20,7 @@
 # Så vidt jeg skjønner skal det være delkols<-globs$DefDesign$DelKols[[del]] gjennom hele FinnRedsign.
 # Det er forstatt for mye dilldall rundt det
 
-
+# Vi endrer i ny branch - æøå
 
 # 20190821:
 # defpaths flyttet opp for synlighet
