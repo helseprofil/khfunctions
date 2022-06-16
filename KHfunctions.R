@@ -20,7 +20,7 @@
 # Så vidt jeg skjønner skal det være delkols<-globs$DefDesign$DelKols[[del]] gjennom hele FinnRedsign.
 # Det er forstatt for mye dilldall rundt det
 
-
+# Vi endrer i ny branch - æøå
 
 # 20190821:
 # defpaths flyttet opp for synlighet
@@ -1867,6 +1867,8 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   geo$OMK <- sub("^0{1,2}(( hele|) landet| *$)", "0", geo$OMK, ignore.case = TRUE)
   geo$OMK <- sub("^(Hele +|)landet( i alt|) *$", "0", geo$OMK, ignore.case = TRUE)
   geo$OMK <- sub("^Fylke (\\d{1,2})$", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{8})a{0,1}( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{7})a{0,1}( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
   geo$OMK <- sub("^(\\d{6})a{0,1}( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
   geo$OMK <- sub("^(\\d{5})a{0,1}( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
   geo$OMK <- sub("^(\\d{4})( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
