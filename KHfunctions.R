@@ -3226,9 +3226,6 @@ LagKUBE <- function(KUBEid,
 
     ######################################################
     # EVT SPESIALBEHANDLING
-    # Start with Stata Prikking
-
-    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
 
     if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
@@ -3470,9 +3467,10 @@ LagKUBE <- function(KUBEid,
     ######################################################
     # EVT SPESIALBEHANDLING
 
+    # Start with Stata Prikking
 
+    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
 
-    
 
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
