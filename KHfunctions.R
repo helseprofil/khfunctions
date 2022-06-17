@@ -6558,7 +6558,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
     KUBE <- RES$TABLE
   } else {
-    RES[["feil"]] <- "No"
+    RES[["feil"]] <- 0
   }
 
   if (RES$feil != "") {
@@ -6580,7 +6580,7 @@ warn_prikk <- function(r, s){
 get_col <- function(spec, col, num = TRUE){
 
   var <- spec[[col]]
-  if (is.na(var) | var == ""){
+  if (is.na(var) || var == ""){
     var <- NA
   }
 
