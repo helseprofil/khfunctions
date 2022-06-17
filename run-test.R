@@ -12,7 +12,8 @@ runtest = TRUE
 ## hvis ikke er spesifisert så lages det i PRODUKSJON/TEST mappe i PDB
 ## testmappe <- "c:/DB_test"
 
-source("KHfunctions.R")
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
 
 
 ## Valg KOBLID
