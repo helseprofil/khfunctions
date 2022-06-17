@@ -133,6 +133,7 @@ globglobs <- list(
   KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/",
   KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R/",
   KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/",
+  KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
   FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE/",
   FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM/",
   FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL/",
@@ -2809,7 +2810,7 @@ LagKUBE <- function(KUBEid,
                     FullUt = 0,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
-                    echo = 0, dumps = list()) {
+                    echo = 0, dumps = list(), test = FALSE) {
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
 
@@ -3225,6 +3226,10 @@ LagKUBE <- function(KUBEid,
 
     ######################################################
     # EVT SPESIALBEHANDLING
+    # Start with Stata Prikking
+
+    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
+
     if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
       error <- ""
@@ -3461,8 +3466,6 @@ LagKUBE <- function(KUBEid,
     if (!"KJONN" %in% names(KUBE)) {
       tabs <- setdiff(tabs, "KJONN")
     }
-    ##:ess-bp-start::browser@nil:##
-    browser(expr=is.null(.ESSBP.[["@3@"]]));##:ess-bp-end:##
 
     ######################################################
     # EVT SPESIALBEHANDLING
@@ -6523,7 +6526,15 @@ KHglobs <- FinnGlobs()
 ## Stata prikking do file
 ## --------
 
-do_stata_prikk <- function(dt, spec, globs){
+do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
+
+  if (test) {
+    ## For testing before variables can be found in Access
+    spec[["Stata_PRIKK_T"]] <- 5
+    spec[["Stata_PRIKK_N"]] <- 5
+    spec[["Stata_STATTOL_T"]] <- NA
+  }
+
 
   p1 <- get_col(spec, "Stata_PRIKK_T")
   p2 <- get_col(spec, "Stata_PRIKK_N")
@@ -6537,23 +6548,26 @@ do_stata_prikk <- function(dt, spec, globs){
   r_prikk <- sum(r_p1, r_p2, r_p3, na.rm = TRUE)
 
   ## This is only with numeric output -----
-  doStata <- sum(c(p1,p2,p3), na.rm = TRUE)
+  s_prikk <- sum(c(p1,p2,p3), na.rm = TRUE)
 
   warn_prikk(r_prikk, s_prikk)
 
-  if (doStata > 0){
-    synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
+  if (s_prikk > 0){
+    ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
+    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]])
+    synt <- paste0("include ", sfile)
 
-    RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    if (RES$feil != "") {
-      error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
-      ok <- 0
-    } else {
-      KUBE <- RES$TABLE
-    }
+    RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
+    KUBE <- RES$TABLE
+  } else {
+    RES[["feil"]] <- "No"
   }
 
+  if (RES$feil != "") {
+    stop("Noe gikk galt i kjøring av STATA ", RES$feil)
+  }
 
+  return(KUBE)
 }
 
 warn_prikk <- function(r, s){
