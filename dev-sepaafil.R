@@ -2,7 +2,9 @@ rm(list = ls())
 source("KHfunctions.R")
 source("KHfunctions.R", encoding = "UTF-8")
 
+df <- LagKUBE("KMI_LKU_L", test = TRUE)
 df <- LagKUBE("LESEFERD_INNVKAT")
+
 
 k <- LagKUBE("RFU_NH_ROYK_5_fildumpdummy")
 
