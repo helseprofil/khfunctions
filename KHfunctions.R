@@ -6552,8 +6552,8 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
 
   if (s_prikk > 0){
     ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]])
-    synt <- paste0("include ", sfile)
+    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/")
+    synt <- paste0('include "', sfile, '"')
 
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
     KUBE <- RES$TABLE
