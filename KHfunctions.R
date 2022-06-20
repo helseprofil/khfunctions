@@ -2489,19 +2489,19 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
   return(FIL)
 }
 
-LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list()) {
+LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
   batchdate <- SettKHBatchDate()
   loggfile <- paste(globs$path, "/", globs$KubeDir, "LOGG/", batchdate, ".txt", sep = "")
   sink(loggfile, split = TRUE)
   cat("BATCH:", batchdate, "\n")
   for (KUBEid in KUBEidA) {
-    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps)
+    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps, ...)
   }
   sink()
 }
 
-LagKubeDatertCsv <- function(KUBEID, dumps = list()) {
-  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps))
+LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
+  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
 }
 
 KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
@@ -2810,7 +2810,7 @@ LagKUBE <- function(KUBEid,
                     FullUt = 0,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
-                    echo = 0, dumps = list(), test = FALSE) {
+                    echo = 0, dumps = list(), ...) {
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
 
@@ -3468,6 +3468,12 @@ LagKUBE <- function(KUBEid,
     # EVT SPESIALBEHANDLING
 
     # Start with Stata Prikking
+    .args <- list(...) #only applicable when testing the function
+    if (any(names(.args) == "test")) {
+      test = .args[["test"]]
+    } else {
+      test = FALSE
+    }
 
     KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
 
