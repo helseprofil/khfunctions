@@ -8,7 +8,7 @@ runtest = TRUE
 ## testpath <- "c:/enc/DBtest/STYRING"
 ## testdb <- "KHELSA_20201203.mdb"
 
-## Hvor test fil skal havne
+## Hvor test fil dvs. produktet eller output, skal havne
 ## hvis ikke er spesifisert så lages det i PRODUKSJON/TEST mappe i PDB
 ## testmappe <- "c:/DB_test"
 
