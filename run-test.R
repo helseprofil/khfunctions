@@ -5,12 +5,16 @@ runtest = TRUE
 
 ## Hvis annen filsti og filnavn enn det som er standard
 ## må det speifiseres her først før source khfunctions
-## testpath <- "c:/enc/DBtest/STYRING"
-## testdb <- "KHELSA_20201203.mdb"
+## OBS!! Uncomment kodene nedenfor for å bruke nye filsti og filnavn til databasen
+## --------------------------------------------------------------------------
+# testpath <- "c:/enc/DBtest/STYRING"
+# testdb <- "KHELSA_20201203.mdb"
 
 ## Hvor test fil dvs. produktet eller output, skal havne
 ## hvis ikke er spesifisert så lages det i PRODUKSJON/TEST mappe i PDB
-## testmappe <- "c:/DB_test"
+## OBS!! Uncomment koden nedenfor for å bruke annen testmappe enn default
+## --------------------------------------------------------------------------
+# testmappe <- "c:/DB_test"
 
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
@@ -20,3 +24,8 @@ kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
 ## -----------
 LagFilgruppe("DODE_GK", id = 3534) #en fil
 LagFilgruppe("ABORT_NH", id = c(3984, 3256)) #flere filer
+
+## KUBE
+## ------------
+LagKubeDatertCsv("ARBLEDIGE")
+LagKubeDatertCsv("MOBBING_UNGDATA")
