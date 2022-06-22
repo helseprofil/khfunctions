@@ -65,7 +65,7 @@ library(intervals)
 library(data.table) # Bruker data.table for rask merge
 library(readxl)
 library(fs)
-library(bat2bat) # https://github.com/helseprofil/bat2bat
+## library(bat2bat) # https://github.com/helseprofil/bat2bat
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths <- c(
