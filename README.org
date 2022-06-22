@@ -13,7 +13,7 @@ Restructurering og refactoring av funksjonen er under arbeid...
 
 OBS!! :memo: Branch =hist= er en samlig av tilfeldige utvalgte historiske filer for *khfunctions* før bruk av GitHub.
 
-Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her [[https://folkehelseprofil.github.io/khfunction/ ][https://folkehelseprofil.github.io/khfunction/]]
+Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her [[https://helseprofil.github.io/khfunctions/ ][https://helseprofil.github.io/khfunctions/]]
 
 * Bruk
 
