@@ -1,7 +1,7 @@
 #+title: KHfunctions
 #+author: KHelse
 
-#+html: <a img src="https://img.shields.io/badge/status-Production%20Ready-blue.svg"></a>
+#+html: <a href=""><img src="https://img.shields.io/badge/status-Production%20Ready-blue.svg"></a>
 #+html: <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg"></a>
 
 Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er også nødvending for at alle funkjsonene skal funke, men de er ikke inkludert her.
