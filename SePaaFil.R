@@ -177,7 +177,7 @@ write.table(comp$V12, file = Comparefile, sep = ";", na = "", row.names = FALSE)
 ## ----------------
 ## Evt. åpne denne URL https://fhprofil.shinyapps.io/bat2bat/
 
-bat2bat::run_app()
+## bat2bat::run_app()
 
 
 
