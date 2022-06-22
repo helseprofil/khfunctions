@@ -8,5 +8,6 @@ pkgs <- c(
 
 renv::install(pkgs)
 renv::install("helseprofil/bat2bat")
+renv::remove("bat2bat")
 
 renv::snapshot()
