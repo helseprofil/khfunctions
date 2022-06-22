@@ -1,3 +1,5 @@
+![](https://img.shields.io/badge/status-Production%20Ready-blue.svg)
+
 # KHfunctions
 Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er også nødvending for at alle funkjsonene skal funke, men de er ikke inkludert her.
 
