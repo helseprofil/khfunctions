@@ -6535,6 +6535,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
     spec[["Stata_STATTOL_T"]] <- NA
   }
 
+  kube_spec(spec = spec)
 
   p1 <- get_col(spec, "Stata_PRIKK_T")
   p2 <- get_col(spec, "Stata_PRIKK_N")
@@ -6580,7 +6581,8 @@ kube_spec <- function(spec){
   varSpec <- c("KUBE_NAVN", varStata)
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varSpec, fileSpec)
-
+  message("Create Stata spec in ", fileSpec)
+  invisible()
 }
 
 warn_prikk <- function(r, s){
