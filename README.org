@@ -17,7 +17,7 @@ Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan al
 
 * Bruk
 
-For å sikre at den gjeldene *khfunctions.R* filen skal brukes, kjør kodene nedenfor:
+For å sikre at den gjeldene *KHfunctions.R* filen skal brukes, kjør kodene nedenfor:
 
 #+begin_src r
 rm(list = ls())
@@ -29,7 +29,7 @@ Betingelsen er at du har installert alle pakkene som trengs.
 
 * Installasjon
 
-For å sikre at alle pakker versjoner som brukes i *KHfunctions* er like for alle
+For å sikre at alle pakker versjoner som brukes i *khfunctions* er like for alle
 maskiner, bruk denne kommandoen:
 
 #+begin_src r
@@ -38,7 +38,8 @@ kh_restore("khfunctions")
 #+end_src
 
 Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaFil.R]] fil som vises på nedre høyre vindu i RStudio for å bruke de
-mest brukte kommandoene. Din aktive projektmappe blir i
+mest brukte kommandoene. Din aktive projektmappe blir i:
+
 *C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
 
 
