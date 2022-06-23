@@ -6577,10 +6577,12 @@ kube_spec <- function(spec){
   if (!fs::dir_exists(rootDir))
     fs::dir_create(rootDir)
 
-  varStata <- grep("^Stata", names(as.data.frame(spec)), value = TRUE)
+  specDF <- as.data.frame(spec)
+  varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
+  varDF <- specDF[, varSpec]
   fileSpec <- file.path(rootDir, "kubespec.csv")
-  data.table::fwrite(varSpec, fileSpec)
+  data.table::fwrite(varDF, fileSpec)
   message("Create Stata spec in ", fileSpec)
   invisible()
 }
