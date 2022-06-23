@@ -6570,6 +6570,19 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   return(KUBE)
 }
 
+kube_spec <- function(spec){
+
+  rootDir <- file.path(fs::path_home(), "helseprofil")
+  if (!fs::dir_exists(rootDir))
+    fs::dir_create(rootDir)
+
+  varStata <- grep("^Stata", names(as.data.frame(spec)), value = TRUE)
+  varSpec <- c("KUBE_NAVN", varStata)
+  fileSpec <- file.path(rootDir, "kubespec.csv")
+  data.table::fwrite(varSpec, fileSpec)
+
+}
+
 warn_prikk <- function(r, s){
 
   if (r > 0 & s > 0){
