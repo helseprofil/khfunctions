@@ -7,11 +7,11 @@
 #+html: <a href=""><img alt="GitHub issues" src="https://img.shields.io/github/issues/helseprofil/khfunctions"></a>
 #+html: <a href=""><img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/helseprofil/khfunctions"></a>
 
-Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er også nødvending for at alle funkjsonene skal funke, men de er ikke inkludert her.
+Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er også nødvending for at alle funksjonene skal funke, men de er ikke inkludert her.
 
-Restructurering og refactoring av funksjonen er under arbeid...
+Restrukturering og refactor av funksjonen er under arbeid...
 
-OBS!! :memo: Branch =hist= er en samlig av tilfeldige utvalgte historiske filer for *khfunctions* før bruk av GitHub.
+OBS!! :memo: Branch =hist= er en samling av tilfeldige utvalgte historiske filer for *khfunctions* før bruk av GitHub.
 
 Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her [[https://helseprofil.github.io/khfunctions/ ][https://helseprofil.github.io/khfunctions/]]
 
@@ -38,14 +38,14 @@ kh_restore("khfunctions")
 #+end_src
 
 Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaFil.R]] fil som vises på nedre høyre vindu i RStudio for å bruke de
-mest brukte kommandoene. Din aktive projektmappe blir i:
+mest brukte kommandoene. Din aktive projekt mappe blir i:
 
 *C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
 
 
 * Testing
 
-Nye ide eller løsninger i Access kan testes ved bruk av filen [[https://github.com/helseprofil/khfunctions/blob/master/run-test.R][run-test.R]]. Der
+Nye idé eller løsninger i Access kan testes ved bruk av filen [[https://github.com/helseprofil/khfunctions/blob/master/run-test.R][run-test.R]]. Der
 finner man veiledning om hvordan testing kan gjennomføres.
 
 * Lokal fil
