@@ -6582,7 +6582,7 @@ kube_spec <- function(spec){
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, varSpec]
   fileSpec <- file.path(rootDir, "kubespec.csv")
-  data.table::fwrite(varDF, fileSpec)
+  data.table::fwrite(varDF, fileSpec, sep = ";")
   message("Create Stata spec in ", fileSpec)
   invisible()
 }
