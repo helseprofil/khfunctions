@@ -17,7 +17,8 @@ runtest = TRUE
 # testmappe <- "c:/Path/to/DB_output"
 
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-## Bytt den gyldige branch navn som skal testet. Test funksjon skal ikke lages i master branch før godkjenning!
+## Bytt den gyldige branch navn hvis nye funksjon skal testet.
+## Test funksjon skal ikke lages i master branch før godkjenning!
 kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
 
 
