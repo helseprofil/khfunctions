@@ -138,7 +138,7 @@ Disse variabler er laget av denne funksjonen:
 - dumps = dumps
 ** Output
 ** TODO Kommentar [0/0]
-   - [ ] Hva skal kolonne *FYLLTAB* brukkes for?
+   - [ ] Hva skal kolonne *FYLLTAB* brukkes til?
    - [ ] Hvor finner man kolonner *RESHAPEpre* og *RESHAPEpost*?
    - [ ] Hva er *GEOd2*?
 * LesFil
