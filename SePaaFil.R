@@ -2,7 +2,7 @@
 # NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
+kh_source(repo = "khfunctions", branch = "iss49", file = "KHfunctions.R", encoding = "latin1")
 
 
 # Denne må også ofte kjøres ved oppstart. Setter opp ODBC.
