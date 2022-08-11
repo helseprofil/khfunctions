@@ -6540,10 +6540,10 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   s_prikk <- sum(sapply(spec[, stataVar], get_col), na.rm = TRUE)
 
-  # Check that R prikk should be empty if Stata prikk should be used
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
   r_prikk <- sum(sapply(spec[, RprikkVar], get_col), na.rm = TRUE)
 
+  # Check that R prikk should be empty if Stata prikk should be used
   warn_prikk(r_prikk, s_prikk)
   RES <- NULL
 
@@ -6590,7 +6590,7 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
-
+# Easier to check with sum by converting valid col value to 1
 get_col <- function(var, num = TRUE){
 
   if (is.na(var) || var == ""){
@@ -6608,6 +6608,7 @@ get_col <- function(var, num = TRUE){
   return(var)
 }
 
+# Avoid warning message "NAs introduced by coercion" when using as.numeric
 var_num <- function(x){
 
   v <- is.numeric(x)
