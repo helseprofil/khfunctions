@@ -6537,19 +6537,12 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
 
   kube_spec(spec = spec)
 
-  p1 <- get_col(spec, "Stata_PRIKK_T")
-  p2 <- get_col(spec, "Stata_PRIKK_N")
-  p3 <- get_col(spec, "Stata_STATTOL_T")
+  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
+  s_prikk <- sum(sapply(spec[, stataVar], get_col), na.rm = TRUE)
 
   # Check that R prikk should be empty if Stata prikk should be used
-  r_p1 <- get_col(spec, "PRIKK_T")
-  r_p2 <- get_col(spec, "PRIKK_N")
-  r_p3 <- get_col(spec, "STATTOL_T")
-
-  r_prikk <- sum(r_p1, r_p2, r_p3, na.rm = TRUE)
-
-  ## This is only with numeric output -----
-  s_prikk <- sum(c(p1,p2,p3), na.rm = TRUE)
+  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
+  r_prikk <- sum(sapply(spec[, RprikkVar], get_col), na.rm = TRUE)
 
   warn_prikk(r_prikk, s_prikk)
   RES <- NULL
@@ -6597,20 +6590,15 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
-get_col <- function(spec, col, num = TRUE){
+get_col <- function(var, num = TRUE){
 
-  var <- spec[[col]]
-  if (is.na(var) || var == ""){
-    var <- NA
-  }
-
+  var <- as.numeric(var)
   if (!is.na(var) && num){
     var <- 1
   }
 
   return(var)
 }
-
 
 #############################################
 
