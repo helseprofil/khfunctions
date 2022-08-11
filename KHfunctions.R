@@ -6590,10 +6590,15 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
+
 get_col <- function(var, num = TRUE){
 
   if (is.na(var) || var == ""){
     var <- NA
+  }
+
+  if (num){
+    var <- var_num(var)
   }
 
   if (!is.na(var) && num){
@@ -6601,6 +6606,16 @@ get_col <- function(var, num = TRUE){
   }
 
   return(var)
+}
+
+var_num <- function(x){
+
+  v <- is.numeric(x)
+  if (!v){
+    x <- NA
+  }
+
+  return(x)
 }
 
 #############################################
