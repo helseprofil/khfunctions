@@ -6562,7 +6562,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
     KUBE <- RES$TABLE
   } else {
-    RES[["feil"]] <- 0
+    RES[["feil"]] <- ""
   }
 
   if (RES$feil != "") {
