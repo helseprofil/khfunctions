@@ -6552,6 +6552,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   s_prikk <- sum(c(p1,p2,p3), na.rm = TRUE)
 
   warn_prikk(r_prikk, s_prikk)
+  RES <- NULL
 
   if (s_prikk > 0){
     ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
@@ -6565,7 +6566,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   }
 
   if (RES$feil != "") {
-    stop("Noe gikk galt i kjøring av STATA ", RES$feil)
+    stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
   }
 
   return(KUBE)
