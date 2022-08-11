@@ -6592,7 +6592,10 @@ warn_prikk <- function(r, s){
 
 get_col <- function(var, num = TRUE){
 
-  var <- as.numeric(var)
+  if (is.na(var) || var == ""){
+    var <- NA
+  }
+
   if (!is.na(var) && num){
     var <- 1
   }
