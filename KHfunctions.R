@@ -65,7 +65,7 @@ library(intervals)
 library(data.table) # Bruker data.table for rask merge
 library(readxl)
 library(fs)
-library(bat2bat) # https://github.com/helseprofil/bat2bat
+## library(bat2bat) # https://github.com/helseprofil/bat2bat
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths <- c(
@@ -319,17 +319,13 @@ SettTotalKoder <- function(globs = FinnGlobs()) {
 ## }
 
 
-
+## Find the most recent version of locally installed Stata
 FinnStataExe <- function() {
   stata_bin <- "StataSE-64.exe"
-
   program_path <- c("C:/Program Files/", "C:/Program Files (x86)/")
-
   stata_prog <- grep("Stata", fs::dir_ls(program_path), value = TRUE)
-
   stata_ver <- stringi::stri_extract(stata_prog, regex = "\\d{2}$")
   Vers <- max(as.numeric(stata_ver))
-
   stata_path <- grep(Vers, stata_prog, value = TRUE)
   Exe <- file.path(stata_path, stata_bin)
 

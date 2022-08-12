@@ -1,8 +1,8 @@
 #---------------------------------------------------------------------------------------------
 # NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
 rm(list = ls())
-urlKH <- "https://raw.githubusercontent.com/helseprofil/khfunctions/master/KHfunctions.R"
-devtools::source_url(urlKH)
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
 
 
 # Denne må også ofte kjøres ved oppstart. Setter opp ODBC.
@@ -177,7 +177,7 @@ write.table(comp$V12, file = Comparefile, sep = ";", na = "", row.names = FALSE)
 ## ----------------
 ## Evt. åpne denne URL https://fhprofil.shinyapps.io/bat2bat/
 
-bat2bat::run_app()
+## bat2bat::run_app()
 
 
 
