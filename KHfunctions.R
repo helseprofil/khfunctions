@@ -6528,20 +6528,13 @@ KHglobs <- FinnGlobs()
 
 do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
 
-  if (test) {
-    ## For testing before variables can be found in Access
-    spec[["Stata_PRIKK_T"]] <- 5
-    spec[["Stata_PRIKK_N"]] <- 5
-    spec[["Stata_STATTOL_T"]] <- NA
-  }
-
-  kube_spec(spec = spec)
+  spc <- kube_spec(spec = spec)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  s_prikk <- sum(sapply(spec[, stataVar], get_col), na.rm = TRUE)
+  s_prikk <- sum(sapply(spc[, stataVar], get_col), na.rm = TRUE)
 
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  r_prikk <- sum(sapply(spec[, RprikkVar], get_col), na.rm = TRUE)
+  r_prikk <- sum(sapply(spc[, RprikkVar], get_col), na.rm = TRUE)
 
   # Check that R prikk should be empty if Stata prikk should be used
   warn_prikk(r_prikk, s_prikk)
@@ -6553,7 +6546,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
     synt <- paste0('include "', sfile, '"')
 
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    KUBE <- RES$TABLE
+    dt <- RES$TABLE
   } else {
     RES[["feil"]] <- ""
   }
@@ -6562,7 +6555,7 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
     stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
   }
 
-  return(KUBE)
+  return(dt)
 }
 
 kube_spec <- function(spec){
@@ -6578,7 +6571,7 @@ kube_spec <- function(spec){
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";")
   message("Create Stata spec in ", fileSpec)
-  invisible()
+  return(specDF)
 }
 
 warn_prikk <- function(r, s){
