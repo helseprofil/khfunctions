@@ -34,7 +34,10 @@ maskiner, bruk denne kommandoen:
 
 #+begin_src r
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_restore("khfunctions")
+kh_install("khfunctions")
+
+# Eller
+kh_install("khfunctions", path = "C:/Min/Egen/path")
 #+end_src
 
 RStudio skal restarte når prosessen er ferdig. Prosjekt for *khfunctions* åpnes
