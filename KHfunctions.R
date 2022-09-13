@@ -133,6 +133,7 @@ globglobs <- list(
   KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/",
   KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R/",
   KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/",
+  KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
   FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE/",
   FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM/",
   FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL/",
@@ -2484,19 +2485,19 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
   return(FIL)
 }
 
-LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list()) {
+LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
   batchdate <- SettKHBatchDate()
   loggfile <- paste(globs$path, "/", globs$KubeDir, "LOGG/", batchdate, ".txt", sep = "")
   sink(loggfile, split = TRUE)
   cat("BATCH:", batchdate, "\n")
   for (KUBEid in KUBEidA) {
-    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps)
+    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps, ...)
   }
   sink()
 }
 
-LagKubeDatertCsv <- function(KUBEID, dumps = list()) {
-  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps))
+LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
+  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
 }
 
 KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
@@ -2805,7 +2806,7 @@ LagKUBE <- function(KUBEid,
                     FullUt = 0,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
-                    echo = 0, dumps = list()) {
+                    echo = 0, dumps = list(), ...) {
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
 
@@ -3221,6 +3222,7 @@ LagKUBE <- function(KUBEid,
 
     ######################################################
     # EVT SPESIALBEHANDLING
+
     if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
       error <- ""
@@ -3460,6 +3462,18 @@ LagKUBE <- function(KUBEid,
 
     ######################################################
     # EVT SPESIALBEHANDLING
+
+    # Start with Stata Prikking
+    .args <- list(...) #only applicable when testing the function
+    if (any(names(.args) == "test")) {
+      test = .args[["test"]]
+    } else {
+      test = FALSE
+    }
+
+    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
+
+
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
       error <- ""
@@ -6508,6 +6522,95 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
 
 KHglobs <- FinnGlobs()
 
+## --------
+## Stata prikking do file
+## --------
+
+do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
+
+  spc <- kube_spec(spec = spec)
+
+  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
+  s_prikk <- sum(sapply(spc[, stataVar], get_col), na.rm = TRUE)
+
+  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
+  r_prikk <- sum(sapply(spc[, RprikkVar], get_col), na.rm = TRUE)
+
+  # Check that R prikk should be empty if Stata prikk should be used
+  warn_prikk(r_prikk, s_prikk)
+  RES <- NULL
+
+  if (s_prikk > 0){
+    ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
+    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/")
+    synt <- paste0('include "', sfile, '"')
+
+    RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
+    dt <- RES$TABLE
+  } else {
+    RES[["feil"]] <- ""
+  }
+
+  if (RES$feil != "") {
+    stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
+  }
+
+  return(dt)
+}
+
+kube_spec <- function(spec){
+
+  rootDir <- file.path(fs::path_home(), "helseprofil")
+  if (!fs::dir_exists(rootDir))
+    fs::dir_create(rootDir)
+
+  specDF <- as.data.frame(spec)
+  varStata <- grep("^Stata", names(specDF), value = TRUE)
+  varSpec <- c("KUBE_NAVN", varStata)
+  varDF <- specDF[, varSpec]
+  fileSpec <- file.path(rootDir, "kubespec.csv")
+  data.table::fwrite(varDF, fileSpec, sep = ";")
+  message("Create Stata spec in ", fileSpec)
+  return(specDF)
+}
+
+warn_prikk <- function(r, s){
+
+  if (r > 0 & s > 0){
+    stop("You can't prikk for both R and Stata way. Choose either one!")
+  }
+
+  invisible()
+}
+
+# Easier to check with sum by converting valid col value to 1
+get_col <- function(var, num = TRUE){
+
+  if (is.na(var) || var == ""){
+    var <- NA
+  }
+
+  if (num){
+    var <- var_num(var)
+  }
+
+  if (!is.na(var) && num){
+    var <- 1
+  }
+
+  return(var)
+}
+
+# Avoid warning message "NAs introduced by coercion" when using as.numeric
+var_num <- function(x){
+
+  v <- is.numeric(x)
+  if (!v){
+    x <- NA
+  }
+
+  return(x)
+}
 
 #############################################
 
@@ -6535,72 +6638,72 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
 
   switch(valgFil,
 
-    ## Access Tabell
-    ## -------------
-    "mdb" = {
-      styrpath <- file.path(defpaths[1], "STYRING")
-      styrpath_b <- file.path(defpaths[1], "STYRING", "VERSJONSARKIV")
-      styrvfiles <- list.files(path = styrpath_b)
+         ## Access Tabell
+         ## -------------
+         "mdb" = {
+           styrpath <- file.path(defpaths[1], "STYRING")
+           styrpath_b <- file.path(defpaths[1], "STYRING", "VERSJONSARKIV")
+           styrvfiles <- list.files(path = styrpath_b)
 
-      KHcFN <- paste(styrpath, filename, sep = "/")
-      KHvFN <- paste(styrpath_b, sort(styrvfiles[grepl("^KHELSA\\d+.mdb$", styrvfiles)], decreasing = TRUE)[1], sep = "/")
+           KHcFN <- paste(styrpath, filename, sep = "/")
+           KHvFN <- paste(styrpath_b, sort(styrvfiles[grepl("^KHELSA\\d+.mdb$", styrvfiles)], decreasing = TRUE)[1], sep = "/")
 
-      khc <- RODBC::odbcConnectAccess2007(KHcFN)
-      khv <- RODBC::odbcConnectAccess2007(KHvFN)
+           khc <- RODBC::odbcConnectAccess2007(KHcFN)
+           khv <- RODBC::odbcConnectAccess2007(KHvFN)
 
 
-      nytt <- 0
-      # Sammenlign
-      for (TAB in c("INNLESING", "KUBER", "TNP_PROD", "FILGRUPPER", "ORGINNLESkobl", "ORIGINALFILER")) {
-        TABc <- sqlQuery(khc, paste("SELECT * FROM", TAB))
-        TABv <- sqlQuery(khv, paste("SELECT * FROM", TAB))
-        if (!identical(TABc, TABv)) {
-          nytt <- 1
-        }
-      }
+           nytt <- 0
+           # Sammenlign
+           for (TAB in c("INNLESING", "KUBER", "TNP_PROD", "FILGRUPPER", "ORGINNLESkobl", "ORIGINALFILER")) {
+             TABc <- sqlQuery(khc, paste("SELECT * FROM", TAB))
+             TABv <- sqlQuery(khv, paste("SELECT * FROM", TAB))
+             if (!identical(TABc, TABv)) {
+               nytt <- 1
+             }
+           }
 
-      if (nytt == 1) {
-        KHnFN <- sub(filename, paste("KHELSA", date, ".mdb", sep = ""), KHcFN)
-        KHnFN <- sub(styrpath, styrpath_b, KHnFN)
-        file.copy(KHcFN, KHnFN)
-      }
-    },
+           if (nytt == 1) {
+             KHnFN <- sub(filename, paste("KHELSA", date, ".mdb", sep = ""), KHcFN)
+             KHnFN <- sub(styrpath, styrpath_b, KHnFN)
+             file.copy(KHcFN, KHnFN)
+           }
+         },
 
-    ## KHFunction
-    ## ----------
-    "fun" = {
-      binpath <- file.path(defpaths[1], "BIN")
-      binpath_b <- file.path(defpaths[1], "BIN", "VERSJONSARKIV")
-      binvfiles <- list.files(path = binpath_b)
+         ## KHFunction
+         ## ----------
+         "fun" = {
+           binpath <- file.path(defpaths[1], "BIN")
+           binpath_b <- file.path(defpaths[1], "BIN", "VERSJONSARKIV")
+           binvfiles <- list.files(path = binpath_b)
 
-      fil <- "KHfunctions"
+           fil <- "KHfunctions"
 
-      arkivFil <- sort(binvfiles[grepl(
-        paste("^", fil, "\\d+\\.r", sep = ""),
-        binvfiles
-      )], decreasing = TRUE)[1]
+           arkivFil <- sort(binvfiles[grepl(
+             paste("^", fil, "\\d+\\.r", sep = ""),
+             binvfiles
+           )], decreasing = TRUE)[1]
 
-      ## Fil i BIN som brukes
-      FILc <- paste(binpath, filename, sep = "/")
+           ## Fil i BIN som brukes
+           FILc <- paste(binpath, filename, sep = "/")
 
-      ## Fil i VERSJONSARKIV
-      FILv <- paste(binpath_b, arkivFil, sep = "/")
+           ## Fil i VERSJONSARKIV
+           FILv <- paste(binpath_b, arkivFil, sep = "/")
 
-      if (file.info(FILc)$mtime > file.info(FILv)$mtime) {
-        FILn <- sub(filename, paste(fil, date, ".R", sep = ""), FILc)
-        FILn <- sub(binpath, binpath_b, FILn)
-        file.copy(FILc, FILn)
-      } else {
-        cat("## --- Filen er ikke nyere enn i akrivet --- ##\n")
-      }
+           if (file.info(FILc)$mtime > file.info(FILv)$mtime) {
+             FILn <- sub(filename, paste(fil, date, ".R", sep = ""), FILc)
+             FILn <- sub(binpath, binpath_b, FILn)
+             file.copy(FILc, FILn)
+           } else {
+             cat("## --- Filen er ikke nyere enn i akrivet --- ##\n")
+           }
 
-      ## Arkiveres uansett
-      if (isTRUE(force)) {
-        FILn <- paste(binpath_b, "/", fil, date, ".R", sep = "")
-        file.copy(FILc, FILn)
-      }
-    }
-  )
+           ## Arkiveres uansett
+           if (isTRUE(force)) {
+             FILn <- paste(binpath_b, "/", fil, date, ".R", sep = "")
+             file.copy(FILc, FILn)
+           }
+         }
+         )
 }
 
 
