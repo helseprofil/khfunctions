@@ -22,7 +22,7 @@ For å sikre at den gjeldene *KHfunctions.R* filen skal brukes, kjør kodene ned
 #+begin_src r
 rm(list = ls())
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R")
+kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
 #+end_src
 
 Betingelsen er at du har installert alle pakkene som trengs.
@@ -34,7 +34,17 @@ maskiner, bruk denne kommandoen:
 
 #+begin_src r
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_restore("khfunctions")
+kh_install("khfunctions")
+
+# Eller
+kh_install("khfunctions", path = "C:/Min/Egen/path")
+#+end_src
+
+RStudio skal restarte når prosessen er ferdig. Prosjekt for *khfunctions* åpnes
+automatisk. Herfra skal du kjøre komando:
+
+#+begin_src r
+renv::restore()
 #+end_src
 
 Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaFil.R]] fil som vises på nedre høyre vindu i RStudio for å bruke de
