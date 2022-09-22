@@ -1356,8 +1356,24 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
     if (!is.na(filbesk$MANHEADER)) {
       mh <- unlist(str_split(filbesk$MANHEADER, "="))
       mh[1] <- gsub("\\[|\\]", "", mh[1])
+
+      ## Use old colnames to specify for new colnames with index or regex
+      mhi <- tryCatch({
+        as.numeric(unlist(strsplit(mh[1], ",")))
+      },
+      warning = function(w){
+        .colXX <- trimws(unlist(strsplit(mh[1], ",")))
+        vapply(.colXX, function(x) grep(x, names(DF)), numeric(1))
+      },
+      error = function(err){
+        .colXX <- trimws(unlist(strsplit(mh[1], ",")))
+        .varsDF <- sapply(.colXX, function(x) grep(x, names(DF), value = TRUE))
+        message("Columnames in the dataset to rename:")
+        print(.varsDF)
+        stop("Check MANHEADER! Columnames to rename must be unique: [", trimws( mh[1] ), "] =", mh[2])
+      })
+
       eval(parse(text = paste("mhs<-", mh[2], sep = "")))
-      eval(parse(text = paste("mhi<-c(", mh[1], ")", sep = "")))
       names(DF)[mhi] <- mhs
 
       # Skjønner ikke helt hvorfor ikke denne enkler funker:
@@ -1450,6 +1466,18 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
 
 # Funksjoner brukt i innlesing
 ##########################################################
+
+## get_index_col <- function(xcols, val){
+##   # xcols - colnames for data.frame
+##   # val - Old colnames to be changed
+##   .colXX <- trimws(unlist(strsplit(val[1], ",")))
+
+##   dd <- vector("list", length(xcols))
+##   names(dd) <- xcols
+
+##   mhi <- vapply(.colXX, function(x) grep(x, names(dd)), numeric(1))
+##   return(mhi)
+## }
 
 #
 KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", sep = ";", quote = "\"", dec = ".", fill = FALSE, encoding = "unknown", blank.lines.skip = FALSE, na.strings = c("NA"), brukfread = TRUE, ...) {
