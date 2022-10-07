@@ -15,29 +15,9 @@ OBS!! :memo: Branch =hist= er en samling av tilfeldige utvalgte historiske filer
 
 Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her [[https://helseprofil.github.io/khfunctions/ ][https://helseprofil.github.io/khfunctions/]]
 
-* Bruk
-
-Ved oppstart av prosjektet, skal siste versjoner av funksjonene automatisk hentes fra GitHub. Dersom funksjonene ikke lastes (ikke ligger i Environment), eller du vil være helt sikker på at du bruker siste versjoner, kan du kjøre kodene nedenfor:
-
-#+begin_src r
-rm(list = ls())
-source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
-#+end_src
-
-Betingelsen er at du har installert alle pakkene som trengs.
-
-* Bruke spesifikk testbranch
-
-Ved testing av ny funksjonalitet, må følgende kode kjøres for å bruke aktuell testversjon av funksjonene:
-
-#+begin_src r
-rm(list = ls())
-source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "NAVN PÅ TEST BRANCH", file = "KHfunctions.R", encoding = "latin1")
-#+end_src
-
 * Installasjon
+
+Dette steget gjøres første gang du installerer KHfunctions **OG** dersom det har blitt gjort større oppdateringer utover endring i kodene (siste koder hentes alltid fra GitHub, og forutsetter ikke at du installerer på nytt). Du vil få beskjed dersom dette blir aktuelt. Har du allerede installert prosjektet, kan du gå videre til instruksjoner for bruk under.
 
 For å sikre at alle bruker samme versjoner av pakker som brukes i *khfunctions*, bruk denne kommandoen:
 
@@ -60,6 +40,28 @@ Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaF
 mest brukte kommandoene. Din aktive projekt mappe blir i:
 
 *C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
+
+* Bruk
+
+Ved oppstart av prosjektet, skal siste versjoner av funksjonene automatisk hentes fra GitHub. Dersom funksjonene ikke lastes (ikke ligger i Environment), eller du vil være helt sikker på at du bruker siste versjoner, kan du kjøre kodene nedenfor:
+
+#+begin_src r
+rm(list = ls())
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
+#+end_src
+
+Betingelsen er at du har installert alle pakkene som trengs.
+
+* Bruke spesifikk testbranch
+
+Ved testing av ny funksjonalitet, må følgende kode kjøres for å bruke aktuell testversjon av funksjonene:
+
+#+begin_src r
+rm(list = ls())
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "NAVN PÅ TEST BRANCH", file = "KHfunctions.R", encoding = "latin1")
+#+end_src
 
 
 * Testing
