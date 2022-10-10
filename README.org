@@ -57,7 +57,7 @@ kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encod
 
 Betingelsen er at du har installert alle pakkene som trengs.
 
-* Bruke spesifikk testbranch
+* Bruk spesifikk testbranch
 
 Ved testing av ny funksjonalitet, må følgende kode kjøres for å bruke aktuell testversjon av funksjonene:
 
