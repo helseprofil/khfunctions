@@ -8,8 +8,10 @@
 #+html: <a href=""><img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/helseprofil/khfunctions"></a>
 
 Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP.
-=KHfunctions= er utviklet av [[https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/][Kåre Bævre]]. Flere Stata do filer er også
-nødvending for at alle funksjonene skal funke, men de er ikke inkludert her.
+=KHfunctions= er hovedsakelig utviklet og skrevet av [[https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/][Kåre Bævre]]. Videre
+utvikling som er gjort deretter er bare minimal. I tillegg til Access database,
+flere Stata do filer er også nødvending for at alle funksjonene skal funke, men
+de er ikke inkludert her.
 
 Restrukturering og refactor av funksjonen er under arbeid...
 
