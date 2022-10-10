@@ -75,7 +75,7 @@ finner man veiledning om hvordan testing kan gjennomføres.
 
 * Lokal fil
 
-Bruk av lokal filer kan vÃ¦re nytting i noen tilfeller bl.a dårlig
+Bruk av lokal filer kan være nytting i noen tilfeller bl.a dårlig
 nettforbindelse eller på reise. Filen [[https://github.com/helseprofil/khfunctions/blob/master/run-local.R][run-local.R]] kan brukes til dette. Her
 gjelder det BARE for kjøring av =LagFilgruppe()= eller =LagKubeDatertCsv()= når
 alle informasjonene er lagt inn i *skarpe* Access dvs. produksjon.
