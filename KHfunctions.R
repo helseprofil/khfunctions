@@ -43,29 +43,33 @@
 
 # 0.2.3.1: Generalisert NaboAno til betinget
 
-## pkgs <- c(
-##   "RODBC", "DBI", "foreign", "sas7bdat", "XML", "zoo", "plyr", "sqldf",
-##   "stringr", "intervals", "data.table", "readxl", "fs", "bat2bat", "epitools"
-## )
-## sapply(pkgs, require, character.only = TRUE)
-
-library(epitools)
-library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
-library(DBI)
-library(foreign) # Brukes ved lesing av SPSS, dBF
-# library(gdata)  #Brukes ved lesing av xls/xlsx filer
-library(sas7bdat) # brukes ved lesing av SAS filer
-library(XML)
-## library(reshape2)  #melt brukes til wide->long
-library(zoo) # na.locf for ? sette inn for NA i innrykket originaltabulering
-library(plyr) # mapvalues for omkoding
-library(sqldf)
-library(stringr)
-library(intervals)
-library(data.table) # Bruker data.table for rask merge
-library(readxl)
-library(fs)
+## library(epitools)
+## library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
+## library(DBI)
+## library(foreign) # Brukes ved lesing av SPSS, dBF
+## # library(gdata)  #Brukes ved lesing av xls/xlsx filer
+## library(sas7bdat) # brukes ved lesing av SAS filer
+## library(XML)
+## ## library(reshape2)  #melt brukes til wide->long
+## library(zoo) # na.locf for ? sette inn for NA i innrykket originaltabulering
+## library(plyr) # mapvalues for omkoding
+## library(sqldf)
+## library(stringr)
+## library(intervals)
+## library(data.table) # Bruker data.table for rask merge
+## library(readxl)
+## library(fs)
 ## library(bat2bat) # https://github.com/helseprofil/bat2bat
+
+khPackages <- c(
+  "RODBC", "DBI", "foreign", "sas7bdat", "XML", "zoo", "plyr", "sqldf",
+  "stringr", "intervals", "data.table", "readxl", "fs", "epitools",
+  "orgdata"
+)
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_load(char = khPackages)
+
+show_function = FALSE
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths <- c(
@@ -2514,6 +2518,8 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 }
 
 LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
+  is_kh_debug(show = show_function)
+
   batchdate <- SettKHBatchDate()
   loggfile <- paste(globs$path, "/", globs$KubeDir, "LOGG/", batchdate, ".txt", sep = "")
   sink(loggfile, split = TRUE)
@@ -2525,10 +2531,12 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
 }
 
 LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
+  is_kh_debug(show = show_function)
   invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
 }
 
 KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
+  is_kh_debug(show = show_function)
   TilBuffer <- 0
   if (!exists("BUFFER")) {
     .GlobalEnv$BUFFER <- list()
@@ -2835,6 +2843,9 @@ LagKUBE <- function(KUBEid,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
                     echo = 0, dumps = list(), ...) {
+
+  is_kh_debug(show = show_function)
+
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
 
@@ -6122,6 +6133,8 @@ FinnDatertKube <- function(KUBEid, batch = NA, silent = FALSE, hist = 0) {
 }
 
 SammenlignKuber <- function(V1, V2, FULL = TRUE, streng = TRUE, comparecols = character(0)) {
+  is_kh_debug()
+
   Tab1 <- FinnTabKolsKUBE(names(V1))
   Tab2 <- FinnTabKolsKUBE(names(V2))
   tabdiff <- union(setdiff(Tab1, Tab2), setdiff(Tab2, Tab1))
@@ -6360,6 +6373,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
 }
 
 FinnKubeInfo <- function(kube) {
+  is_kh_debug()
   globs <- FinnGlobs()
   return(sqlQuery(globs$dbh, paste("
         SELECT DISTINCT KUBE_NAVN, TELLERKOL, NEVNERKOL, EKSTRAVARIABLE, FILGRUPPER.VAL1navn,FILGRUPPER.VAL2navn,FILGRUPPER.VAL3navn,
@@ -6371,6 +6385,8 @@ FinnKubeInfo <- function(kube) {
 
 
 KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+  is_kh_debug()
+
   tmpdir <- paste(globs$path, "/", globs$BUFFERdir, "/", sep = "")
   wdOrg <- getwd()
   setwd(tmpdir)
@@ -6880,3 +6896,15 @@ godkjent <- function(profil = c("FHP", "OVP"),
 }
 
 if (runtest) message("\n --- Test Modus er aktivert! ---\n")
+
+
+is_kh_debug <- function(show = NULL){
+  if (is.null(show)) show = show_function
+
+  if (show) {
+    fnc <- sys.calls()[[sys.nframe() - 1]][1]
+    orgdata:::is_colour_txt(x = deparse(fnc), msg = "Execute:", type = "debug")
+  }
+
+  invisible()
+}
