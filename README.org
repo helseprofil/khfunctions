@@ -7,30 +7,23 @@
 #+html: <a href=""><img alt="GitHub issues" src="https://img.shields.io/github/issues/helseprofil/khfunctions"></a>
 #+html: <a href=""><img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/helseprofil/khfunctions"></a>
 
-Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP. Flere Stata do filer er ogsÃ¥ nÃ¸dvending for at alle funksjonene skal funke, men de er ikke inkludert her.
+Hoved hjernen til data prosessering for helseprofilene ie. FHP og OVP.
+=KHfunctions= er hovedsakelig utviklet og skrevet av [[https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/][Kåre Bævre]]. Videre
+utvikling som er gjort deretter er bare minimal. I tillegg til Access database,
+flere Stata do filer er også nødvending for at alle funksjonene skal funke, men
+de er ikke inkludert her.
 
 Restrukturering og refactor av funksjonen er under arbeid...
 
-OBS!! :memo: Branch =hist= er en samling av tilfeldige utvalgte historiske filer for *khfunctions* fÃ¸r bruk av GitHub.
+OBS!! :memo: Branch =hist= er en samling av tilfeldige utvalgte historiske filer for *khfunctions* før bruk av GitHub.
 
 Viktig! :warning: Dokumenter for khfunction er fortsatt under arbeid, men kan allerede leses her [[https://helseprofil.github.io/khfunctions/ ][https://helseprofil.github.io/khfunctions/]]
 
-* Bruk
-
-For Ã¥ sikre at den gjeldene *KHfunctions.R* filen skal brukes, kjÃ¸r kodene nedenfor:
-
-#+begin_src r
-rm(list = ls())
-source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
-#+end_src
-
-Betingelsen er at du har installert alle pakkene som trengs.
-
 * Installasjon
 
-For Ã¥ sikre at alle pakker versjoner som brukes i *khfunctions* er like for alle
-maskiner, bruk denne kommandoen:
+Dette steget gjøres første gang du installerer KHfunctions *OG* dersom det har blitt gjort større oppdateringer utover endring i kodene (siste koder hentes alltid fra GitHub, og forutsetter ikke at du installerer på nytt). Du vil få beskjed dersom dette blir aktuelt. Har du allerede installert prosjektet, kan du gå videre til instruksjoner for bruk under.
+
+For å sikre at alle bruker samme versjoner av pakker som brukes i *khfunctions*, bruk denne kommandoen:
 
 #+begin_src r
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
@@ -40,27 +33,49 @@ kh_install("khfunctions")
 kh_install("khfunctions", path = "C:/Min/Egen/path")
 #+end_src
 
-RStudio skal restarte nÃ¥r prosessen er ferdig. Prosjekt for *khfunctions* Ã¥pnes
-automatisk. Herfra skal du kjÃ¸re komando:
+RStudio skal restarte når prosessen er ferdig. Prosjekt for *khfunctions* åpnes
+automatisk. Herfra skal du kjøre komando:
 
 #+begin_src r
 renv::restore()
 #+end_src
 
-Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaFil.R]] fil som vises pÃ¥ nedre hÃ¸yre vindu i RStudio for Ã¥ bruke de
+Bruk [[https://github.com/helseprofil/khfunctions/blob/master/SePaaFil.R][SePaaFil.R]] fil som vises på nedre høyre vindu i RStudio for å bruke de
 mest brukte kommandoene. Din aktive projekt mappe blir i:
 
 *C:/Users/dittBrukerNavn/helseprofl/khfunctions*.
 
+* Bruk
+
+Ved oppstart av prosjektet, skal siste versjoner av funksjonene automatisk hentes fra GitHub. Dersom funksjonene ikke lastes (ikke ligger i Environment), eller du vil være helt sikker på at du bruker siste versjoner, kan du kjøre kodene nedenfor:
+
+#+begin_src r
+rm(list = ls())
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
+#+end_src
+
+Betingelsen er at du har installert alle pakkene som trengs.
+
+* Bruk spesifikk testbranch
+
+Ved testing av ny funksjonalitet, må følgende kode kjøres for å bruke aktuell testversjon av funksjonene:
+
+#+begin_src r
+rm(list = ls())
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "NAVN PÅ TEST BRANCH", file = "KHfunctions.R", encoding = "latin1")
+#+end_src
+
 
 * Testing
 
-Nye idÃ© eller lÃ¸sninger i Access kan testes ved bruk av filen [[https://github.com/helseprofil/khfunctions/blob/master/run-test.R][run-test.R]]. Der
-finner man veiledning om hvordan testing kan gjennomfÃ¸res.
+Nye ideer eller løsninger i Access kan testes ved bruk av filen [[https://github.com/helseprofil/khfunctions/blob/master/run-test.R][run-test.R]]. Der
+finner man veiledning om hvordan testing kan gjennomføres.
 
 * Lokal fil
 
-Bruk av lokal filer kan vÃ¦re nytting i noen tilfeller bl.a dÃ¥rlig
-nettforbindelse eller pÃ¥ reise. Filen [[https://github.com/helseprofil/khfunctions/blob/master/run-local.R][run-local.R]] kan brukes til dette. Her
-gjelder det BARE for kjÃ¸ring av =LagFilgruppe()= eller =LagKubeDatertCsv()= nÃ¥r
+Bruk av lokal filer kan være nytting i noen tilfeller bl.a dårlig
+nettforbindelse eller på reise. Filen [[https://github.com/helseprofil/khfunctions/blob/master/run-local.R][run-local.R]] kan brukes til dette. Her
+gjelder det BARE for kjøring av =LagFilgruppe()= eller =LagKubeDatertCsv()= når
 alle informasjonene er lagt inn i *skarpe* Access dvs. produksjon.

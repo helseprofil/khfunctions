@@ -1,8 +1,11 @@
+# Oppdatering 7.oktober: Siden linjene under nå skal kjøres automatisk ved oppstart av prosjektet, 
+# skal det ikke lenger være nødvendig å gjøre dette manuelt. De er derfor kommentert bort, men kan 
+# gjenopprettes for å kjøres ved behov (dersom alle funksjonene ikke ligger i Environment)
 #---------------------------------------------------------------------------------------------
 # NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
-rm(list = ls())
-source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
+# rm(list = ls())
+# source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+# kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
 
 
 # Denne mÃ¥ ogsÃ¥ ofte kjÃ¸res ved oppstart. Setter opp ODBC.
