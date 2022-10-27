@@ -43,31 +43,31 @@
 
 # 0.2.3.1: Generalisert NaboAno til betinget
 
-## library(epitools)
-## library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
-## library(DBI)
-## library(foreign) # Brukes ved lesing av SPSS, dBF
-## # library(gdata)  #Brukes ved lesing av xls/xlsx filer
-## library(sas7bdat) # brukes ved lesing av SAS filer
-## library(XML)
-## ## library(reshape2)  #melt brukes til wide->long
-## library(zoo) # na.locf for ? sette inn for NA i innrykket originaltabulering
-## library(plyr) # mapvalues for omkoding
-## library(sqldf)
-## library(stringr)
-## library(intervals)
-## library(data.table) # Bruker data.table for rask merge
-## library(readxl)
-## library(fs)
+library(epitools)
+library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
+library(DBI)
+library(foreign) # Brukes ved lesing av SPSS, dBF
+# library(gdata)  #Brukes ved lesing av xls/xlsx filer
+library(sas7bdat) # brukes ved lesing av SAS filer
+library(XML)
+## library(reshape2)  #melt brukes til wide->long
+library(zoo) # na.locf for ? sette inn for NA i innrykket originaltabulering
+library(plyr) # mapvalues for omkoding
+library(sqldf)
+library(stringr)
+library(intervals)
+library(data.table) # Bruker data.table for rask merge
+library(readxl)
+library(fs)
 ## library(bat2bat) # https://github.com/helseprofil/bat2bat
 
-khPackages <- c(
-  "RODBC", "DBI", "foreign", "sas7bdat", "XML", "zoo", "plyr", "sqldf",
-  "stringr", "intervals", "data.table", "readxl", "fs", "epitools",
-  "orgdata"
-)
+# khPackages <- c(
+#   "RODBC", "DBI", "foreign", "sas7bdat", "XML", "zoo", "plyr", "sqldf",
+#   "stringr", "intervals", "data.table", "readxl", "fs", "epitools",
+#   "orgdata"
+# )
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_load(char = khPackages)
+kh_load(char = "orgdata")
 
 show_function = FALSE
 
