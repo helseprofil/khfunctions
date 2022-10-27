@@ -6903,7 +6903,11 @@ is_kh_debug <- function(show = NULL){
 
   if (show) {
     fnc <- sys.calls()[[sys.nframe() - 1]][1]
-    orgdata:::is_colour_txt(x = deparse(fnc), msg = "Execute:", type = "debug")
+    orgdata:::is_colour_txt(x = deparse(fnc),
+                            msg = "Execute:",
+                            type = "debug",
+                            emoji = TRUE,
+                            symbol = "mark")
   }
 
   invisible()
