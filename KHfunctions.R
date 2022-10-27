@@ -2518,7 +2518,7 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 }
 
 LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
-  is_kh_debug(show = show_function)
+  is_kh_debug()
 
   batchdate <- SettKHBatchDate()
   loggfile <- paste(globs$path, "/", globs$KubeDir, "LOGG/", batchdate, ".txt", sep = "")
@@ -2531,12 +2531,12 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
 }
 
 LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
-  is_kh_debug(show = show_function)
+  is_kh_debug()
   invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
 }
 
 KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
-  is_kh_debug(show = show_function)
+  is_kh_debug()
   TilBuffer <- 0
   if (!exists("BUFFER")) {
     .GlobalEnv$BUFFER <- list()
@@ -2844,7 +2844,7 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, dumps = list(), ...) {
 
-  is_kh_debug(show = show_function)
+  is_kh_debug()
 
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
