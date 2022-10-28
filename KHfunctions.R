@@ -69,6 +69,8 @@ library(fs)
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_load(char = "orgdata")
 
+show_function = FALSE
+
 is_kh_debug <- function(show = NULL){
   if (is.null(show)) show = show_function
   
@@ -84,8 +86,6 @@ is_kh_debug <- function(show = NULL){
   invisible()
 }
 
-
-show_function = FALSE
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths <- c(
