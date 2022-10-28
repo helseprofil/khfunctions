@@ -69,6 +69,22 @@ library(fs)
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_load(char = "orgdata")
 
+is_kh_debug <- function(show = NULL){
+  if (is.null(show)) show = show_function
+  
+  if (show) {
+    fnc <- sys.calls()[[sys.nframe() - 1]][1]
+    orgdata:::is_colour_txt(x = deparse(fnc),
+                            msg = "Execute:",
+                            type = "debug",
+                            emoji = TRUE,
+                            symbol = "mark")
+  }
+  
+  invisible()
+}
+
+
 show_function = FALSE
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
@@ -7127,19 +7143,3 @@ godkjent <- function(profil = c("FHP", "OVP"),
 }
 
 if (runtest) message("\n --- Test Modus er aktivert! ---\n")
-
-
-is_kh_debug <- function(show = NULL){
-  if (is.null(show)) show = show_function
-
-  if (show) {
-    fnc <- sys.calls()[[sys.nframe() - 1]][1]
-    orgdata:::is_colour_txt(x = deparse(fnc),
-                            msg = "Execute:",
-                            type = "debug",
-                            emoji = TRUE,
-                            symbol = "mark")
-  }
-
-  invisible()
-}
