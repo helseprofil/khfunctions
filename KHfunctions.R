@@ -73,14 +73,20 @@ show_function = FALSE
 
 is_kh_debug <- function(show = NULL){
   if (is.null(show)) show = show_function
-  
+
+
   if (show) {
     fnc <- sys.calls()[[sys.nframe() - 1]][1]
-    orgdata:::is_colour_txt(x = deparse(fnc),
-                            msg = "Execute:",
-                            type = "debug",
-                            emoji = TRUE,
-                            symbol = "mark")
+
+    if (requireNamespace("orgdata", quietly = TRUE)){
+      orgdata:::is_colour_txt(x = deparse(fnc),
+                              msg = "Execute:",
+                              type = "debug",
+                              emoji = TRUE,
+                              symbol = "mark")
+    } else {
+      message("Execute: ", deparse(fnc))
+    }
   }
   
   invisible()
