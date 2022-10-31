@@ -6053,21 +6053,22 @@ DFHeadToString2 <- function(innDF) {
 
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 expand.grid.df <- function(...) {
+  is_kh_debug()
 
   DFs <- list(...)
 
   ddt <- lapply(DFs, function(x) is(x, "data.table"))
   dx <- which(ddt == "FALSE")
 
-   if (length( dx ) > 0){
-     for (i in dx){
-       data.table::setDT(DFs[[i]])
-     }
-   }
+  if (length(dx) > 0){
+    for (i in dx){
+      data.table::setDT(DFs[[i]])
+    }
+  }
 
-   rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
 
-   for (i in seq_along(DFs))
+  for (i in seq_along(DFs))
     names(DFs)[i] <- paste0("data", i)
 
   res <- DFs[[1L]][rows[[1L]]]
