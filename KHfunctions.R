@@ -6042,13 +6042,45 @@ DFHeadToString2 <- function(innDF) {
   return(paste(capture.output(print(head(innDF))), collapse = "\n"))
 }
 
+## expand.grid.df <- function(...) {
+##   is_kh_debug()
+
+##   # Hjelpefunksjon, se http://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames
+##   # Finnes også en i reshape, men ikke i reshape2, så bruker ikke denne
+##   # Skjønner ikke helt syntaksen, men funker utmerket
+##   Reduce(function(...) merge(..., by = NULL), list(...))
+## }
+
+## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 expand.grid.df <- function(...) {
-  is_kh_debug()
-  
-  # Hjelpefunksjon, se http://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames
-  # Finnes også en i reshape, men ikke i reshape2, så bruker ikke denne
-  # Skjønner ikke helt syntaksen, men funker utmerket
-  Reduce(function(...) merge(..., by = NULL), list(...))
+
+  DFs <- list(...)
+
+  ddt <- lapply(DFs, function(x) is(x, "data.table"))
+  dx <- which(ddt == "FALSE")
+
+   if (length( dx ) > 0){
+     for (i in dx){
+       data.table::setDT(DFs[[i]])
+     }
+   }
+
+   rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+
+   for (i in seq_along(DFs))
+    names(DFs)[i] <- paste0("data", i)
+
+  res <- DFs[[1L]][rows[[1L]]]
+  DFs[[1L]] <- NULL
+  DFnames <- names(DFs)
+  for (i in seq_along(DFs)){
+    x <- DFnames[i]
+    res <- res[, c(.SD, DFs[[x]][rows[[i]]])]
+    DFs[[x]] <- NULL
+  }
+
+  gc()
+  data.table::setDF(res)
 }
 
 setkeym <- function(DTo, keys) {
