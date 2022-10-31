@@ -6067,7 +6067,7 @@ expand.grid.df <- function(...) {
 
   if (length(dx) > 0){
     for (i in dx){
-      data.table::setDT(DFs[[i]])
+      DFs[[i]] <- data.table::as.data.table(DFs[[i]])
     }
   }
 
