@@ -74,7 +74,6 @@ show_function = FALSE
 is_kh_debug <- function(show = NULL){
   if (is.null(show)) show = show_function
 
-
   if (show) {
     fnc <- sys.calls()[[sys.nframe() - 1]][1]
 
@@ -428,7 +427,7 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
     globs$KubeDirDat <- globs$KubeDirDat_KH
     globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
+    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$FriskVDir <- globs$FriskVDir_NH
