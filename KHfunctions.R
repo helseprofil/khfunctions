@@ -5847,6 +5847,8 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   setkeyv(FULL, names(Udekk))
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
   setnames(Udekk, names(Udekk), gsub("_omk$", "", names(Udekk)))
+
+  gc()
   return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
 }
 
