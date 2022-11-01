@@ -5589,9 +5589,13 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   setnames(FULL, names(FULL), paste(names(FULL), "_omk", sep = ""))
   Udekk <- copy(FULL)
 
+  rm(FULL)
+  gc()
+
   betKols <- setdiff(names(DesFRA$SKombs$bet), "HAR")
   if (length(betKols) > 0) {
-    FULL <- data.table(expand.grid.df(as.data.frame(FULL), as.data.frame(DesFRA$SKombs$bet[, betKols, with = FALSE])))
+    FULL <- expand.grid.df(Udekk, DesFRA$SKombs$bet[, ..betKols])
+    data.table::setDT(FULL)
   }
   for (del in DesFRA$UBeting) {
     if (is.null(DesTIL$Part[[del]])) {
