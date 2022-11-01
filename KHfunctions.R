@@ -2470,6 +2470,8 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
     }
     resultat <- c(FGP, list(vals = vals, amin = amin, amax = amax))
   }
+
+  gc()
   return(c(resultat, list(ok = ok)))
 }
 
@@ -2760,6 +2762,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 
 
   FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
+  gc()
   return(list(FIL = FIL, FGP = FGP, FILd = FILd, TilBuffer = TilBuffer))
 }
 
@@ -4825,6 +4828,7 @@ FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs(), echo = 0) {
   setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
   FDes <- FinnDesign(Dekk12)
   cat(" Ferdig i FinnFellesTab\n")
+  gc()
   return(list(Dekk = Dekk12, FDes = FDes))
 }
 
@@ -5540,7 +5544,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   # Tilbakestill key
   setkeym(ObsDesign, names(ObsDesign))
   setkeym(FIL, keyorg)
-
+  gc()
   return(Design)
 }
 
@@ -6063,7 +6067,7 @@ expand.grid.df <- function(...) {
   DFs <- list(...)
 
   ddt <- lapply(DFs, function(x) is(x, "data.table"))
-  dx <- which(ddt == "FALSE")
+  dx <- which(ddt == 0)
 
   if (length(dx) > 0){
     for (i in dx){
@@ -6087,8 +6091,10 @@ expand.grid.df <- function(...) {
     DFs[[x]] <- NULL
   }
 
-  gc()
   data.table::setDF(res)
+  rm(DFs)
+  gc()
+  return(res)
 }
 
 setkeym <- function(DTo, keys) {
