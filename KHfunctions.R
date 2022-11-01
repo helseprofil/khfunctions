@@ -5589,7 +5589,6 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   setnames(FULL, names(FULL), paste(names(FULL), "_omk", sep = ""))
   Udekk <- copy(FULL)
 
-  rm(FULL)
   gc()
 
   betKols <- setdiff(names(DesFRA$SKombs$bet), "HAR")
