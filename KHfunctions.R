@@ -6076,10 +6076,12 @@ expand.grid.df <- function(...) {
   for (i in seq_along(DFs))
     names(DFs)[i] <- paste0("data", i)
 
+  DFlength <- length(DFs)
+  DFnames <- names(DFs)
+
   res <- DFs[[1L]][rows[[1L]]]
   DFs[[1L]] <- NULL
-  DFnames <- names(DFs)
-  for (i in seq_along(DFs)){
+  for (i in seq_len(DFlength)[-1L]){
     x <- DFnames[i]
     res <- res[, c(.SD, DFs[[x]][rows[[i]]])]
     DFs[[x]] <- NULL
