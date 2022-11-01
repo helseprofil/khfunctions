@@ -5604,6 +5604,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   }
 
 
+  gc()
   Parts <- list()
   for (del in names(KB)) {
     # if (del %in% names(DesTIL$Part)){
@@ -5745,6 +5746,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     print(Parts)
   }
 
+  gc()
   SKombs <- list()
   KBs <- list()
   Filters <- list()
@@ -5902,6 +5904,8 @@ SettPartDekk <- function(KB, del = "", har = paste(del, "_HAR", sep = ""), betco
       sep = ""
     )))
   }
+
+  gc()
   return(KB)
 }
 
