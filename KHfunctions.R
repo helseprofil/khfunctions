@@ -6091,10 +6091,9 @@ expand.grid.df <- function(...) {
     DFs[[x]] <- NULL
   }
 
-  data.table::setDF(res)
   rm(DFs, rows)
   gc()
-  return(res)
+  data.table::setDF(res)
 }
 
 setkeym <- function(DTo, keys) {
