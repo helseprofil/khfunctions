@@ -6092,7 +6092,7 @@ expand.grid.df <- function(...) {
   }
 
   data.table::setDF(res)
-  rm(DFs)
+  rm(DFs, rows)
   gc()
   return(res)
 }
