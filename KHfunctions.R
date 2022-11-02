@@ -5865,6 +5865,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
 
 ## Try to handle memory exhaustion
 handle_udekk <- function(FULL, namesFULL, TempFile){
+  is_kh_debug()
   Udekk <- readRDS(TempFile)
   setkeyv(Udekk, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
