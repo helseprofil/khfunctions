@@ -3,14 +3,18 @@
 show_functions = FALSE
 show_arguments = FALSE
 
-is_kh_debug <- function(fun = NULL, arg = NULL){
-  if (is.null(arg)) {
+is_kh_debug <- function(fun = show_functions, arg = show_arguments){
+
+  if (fun & arg)
+    arg <- FALSE
+
+  if (arg) {
     show = show_arguments
     what = "arg"
     args <- sys.call(sys.parent())
   }
 
-  if (is.null(fun)) {
+  if (fun) {
     show = show_functions
     what = "fun"
     args = NULL
@@ -24,33 +28,31 @@ is_kh_debug <- function(fun = NULL, arg = NULL){
 }
 
 is_show_time <- function(what = c("fun", "arg"), args){
-
-  msg <- switch(what,
-                fun = {
-                  fnc <- sys.calls()[[sys.nframe() - 2]][1]
-                  if (requireNamespace("orgdata", quietly = TRUE)){
-                    orgdata:::is_colour_txt(x = deparse(fnc),
-                                            msg = "Execute:",
-                                            type = "debug",
-                                            emoji = TRUE,
-                                            symbol = "mark")
-                  } else {
-                    message("Execute: ", deparse(fnc))
-                  }
-                },
-                arg = {
-
-                  fnc <- args
-                  if (requireNamespace("orgdata", quietly = TRUE)){
-                    orgdata:::is_colour_txt(x = deparse(fnc),
-                                            msg = "Execute:",
-                                            type = "debug",
-                                            emoji = TRUE,
-                                            symbol = "mark")
-                  } else {
-                    message("Execute: ", deparse(fnc))
-                  }
-                })
+  switch(what,
+         fun = {
+           fnc <- sys.calls()[[sys.nframe() - 2]][1]
+           if (requireNamespace("orgdata", quietly = TRUE)){
+             orgdata:::is_colour_txt(x = deparse(fnc),
+                                     msg = "Execute:",
+                                     type = "debug",
+                                     emoji = TRUE,
+                                     symbol = "mark")
+           } else {
+             message("Execute: ", deparse(fnc))
+           }
+         },
+         arg = {
+           fnc <- args
+           if (requireNamespace("orgdata", quietly = TRUE)){
+             orgdata:::is_colour_txt(x = deparse(fnc),
+                                     msg = "Execute:",
+                                     type = "debug",
+                                     emoji = TRUE,
+                                     symbol = "mark")
+           } else {
+             message("Execute: ", deparse(fnc))
+           }
+         })
 
   invisible()
 }
