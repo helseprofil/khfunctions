@@ -5580,9 +5580,6 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     FULL <- do.call(expand.grid.df, DesTIL$Part)
     data.table::setDT(FULL)
 
-    TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
-    saveRDS(FULL, TempFile)
-
     harkols <- names(FULL)[grepl("_HAR$", names(FULL))]
     if (length(harkols) > 0) {
       FULL[, (harkols) := NULL]
@@ -5593,6 +5590,9 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     FULL[, (harkols) := NULL]
   }
   setnames(FULL, names(FULL), paste(names(FULL), "_omk", sep = ""))
+
+  TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
+  saveRDS(FULL, TempFile)
 
   # Need to get the colnames before manipulation
   namesFULL <- names(FULL)
