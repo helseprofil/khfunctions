@@ -5869,6 +5869,7 @@ handle_udekk <- function(FULL, namesFULL, TempFile){
   setkeyv(FULL, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
   setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
+  return(Udekk)
 }
 
 
