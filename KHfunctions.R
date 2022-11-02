@@ -5576,7 +5576,13 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   # Rydd DesTIL$Design (Kan variere litt mht HAR avhengig av hvor kallet på denne funksjonen er gjort fra. Skal ha 1 har felt)
   if (is.null(DesTIL$Design)) {
     komblist <- paste("as.data.frame(DesTIL$Part[[\"", names(DesTIL$Part), "\"]])", sep = "", collapse = ",")
-    FULL <- data.table(eval(parse(text = paste("expand.grid.df(", komblist, ")", sep = ""))))
+    ## FULL <- data.table(eval(parse(text = paste("expand.grid.df(", komblist, ")", sep = ""))))
+    FULL <- do.call(expand.grid.df, DesTIL$Part)
+    data.table::setDT(FULL)
+
+    TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
+    saveRDS(FULL, TempFile)
+
     harkols <- names(FULL)[grepl("_HAR$", names(FULL))]
     if (length(harkols) > 0) {
       FULL[, (harkols) := NULL]
@@ -5587,13 +5593,14 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     FULL[, (harkols) := NULL]
   }
   setnames(FULL, names(FULL), paste(names(FULL), "_omk", sep = ""))
-  Udekk <- copy(FULL)
 
+  # Need to get the colnames before manipulation
+  namesFULL <- names(FULL)
   gc()
 
   betKols <- setdiff(names(DesFRA$SKombs$bet), "HAR")
   if (length(betKols) > 0) {
-    FULL <- expand.grid.df(Udekk, DesFRA$SKombs$bet[, ..betKols])
+    FULL <- expand.grid.df(FULL, DesFRA$SKombs$bet[, ..betKols])
     data.table::setDT(FULL)
   }
   for (del in DesFRA$UBeting) {
@@ -5848,20 +5855,26 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   setkeyv(FULL, omkkols)
   Dekk <- unique(FULL[, omkkols, with = FALSE])
   setnames(Dekk, names(Dekk), gsub("_omk$", "", names(Dekk)))
-  setkeyv(Udekk, names(Udekk))
-  setkeyv(FULL, names(Udekk))
-  Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
-  setnames(Udekk, names(Udekk), gsub("_omk$", "", names(Udekk)))
+
+  Udekk <- handle_udekk(FULL, namesFULL, TempFile)
 
   gc()
   return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
 }
 
+## Try to handle memory exhaustion
+handle_udekk <- function(FULL, namesFULL, TempFile){
+  Udekk <- readRDS(TempFile)
+  setkeyv(Udekk, namesFULL)
+  setkeyv(FULL, namesFULL)
+  Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
+  setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
+}
 
 
 SettPartDekk <- function(KB, del = "", har = paste(del, "_HAR", sep = ""), betcols = character(0), globs = FinnGlobs(), IntervallHull = globs$DefDesign$IntervallHull) {
   is_kh_debug()
-  
+
   OmkPriCols <- names(KB)[grepl("_(omk|pri)$", names(KB))]
   delKolN <- globs$DefDesign$DelKolN[del]
   bycols <- c(OmkPriCols, betcols)
