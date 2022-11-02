@@ -3,20 +3,22 @@ show_functions = FALSE
 show_arguments = FALSE
 
 if (show_functions & show_arguments){
-  warning("Use either `show_arguments` or `show_functions`, but not both!")
+  warning("Use either `show_arguments` or `show_functions`, but not both! \n",
+          "`show_arguments` is now deactivated")
+  show_arguments = FALSE
 }
 
 is_kh_debug <- function(fun = NULL, arg = NULL){
-  if (is.null(fun)) {
-    show = show_functions
-    what = "fun"
-    args = NULL
-  }
-
   if (is.null(arg)) {
     show = show_arguments
     what = "arg"
     args <- sys.call(sys.parent())
+  }
+
+  if (is.null(fun)) {
+    show = show_functions
+    what = "fun"
+    args = NULL
   }
 
   if (show) {
