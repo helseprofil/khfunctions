@@ -1,12 +1,7 @@
 
+# If both are TRUE then show_arguments will be deactivated automatically.
 show_functions = FALSE
 show_arguments = FALSE
-
-if (show_functions & show_arguments){
-  warning("Use either `show_arguments` or `show_functions`, but not both! \n",
-          "`show_arguments` is now deactivated")
-  show_arguments = FALSE
-}
 
 is_kh_debug <- function(fun = NULL, arg = NULL){
   if (is.null(arg)) {
