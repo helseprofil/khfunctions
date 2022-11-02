@@ -68,29 +68,7 @@ library(fs)
 # )
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_load(char = "orgdata")
-
-show_function = FALSE
-
-is_kh_debug <- function(show = NULL){
-  if (is.null(show)) show = show_function
-
-  if (show) {
-    fnc <- sys.calls()[[sys.nframe() - 1]][1]
-
-    if (requireNamespace("orgdata", quietly = TRUE)){
-      orgdata:::is_colour_txt(x = deparse(fnc),
-                              msg = "Execute:",
-                              type = "debug",
-                              emoji = TRUE,
-                              symbol = "mark")
-    } else {
-      message("Execute: ", deparse(fnc))
-    }
-  }
-  
-  invisible()
-}
-
+kh_source(repo = "khfunctions", branch = "master", file = "show-functions.R", encoding = "latin1")
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
 defpaths <- c(
