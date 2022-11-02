@@ -5856,6 +5856,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   Dekk <- unique(FULL[, omkkols, with = FALSE])
   setnames(Dekk, names(Dekk), gsub("_omk$", "", names(Dekk)))
 
+  setkeyv(FULL, namesFULL)
   Udekk <- handle_udekk(FULL, namesFULL, TempFile)
 
   gc()
@@ -5866,7 +5867,6 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
 handle_udekk <- function(FULL, namesFULL, TempFile){
   Udekk <- readRDS(TempFile)
   setkeyv(Udekk, namesFULL)
-  setkeyv(FULL, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
   setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
   return(Udekk)
