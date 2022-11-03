@@ -9,23 +9,23 @@ is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE
 
   if (arg) {
     show = show_arguments
-    outMsg = sys.call(sys.parent())
+    out = sys.calls()[[1]]
   }
 
   if (fun) {
     show = show_functions
-    outMsg = sys.calls()[[sys.nframe() - 1]][1]
+    out = sys.calls()[[1]][1]
   }
 
   if (show) {
     if (requireNamespace("orgdata", quietly = TRUE)){
-      orgdata:::is_colour_txt(x = deparse(outMsg),
+      orgdata:::is_colour_txt(x = deparse(out),
                               msg = "Execute:",
                               type = "debug",
                               emoji = TRUE,
                               symbol = "mark")
     } else {
-      message("Execute: ", deparse(outMsg))
+      message("Execute: ", deparse(out))
     }
   }
 
