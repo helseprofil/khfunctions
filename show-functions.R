@@ -18,15 +18,7 @@ is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE
   }
 
   if (show) {
-    if (requireNamespace("orgdata", quietly = TRUE)){
-      orgdata:::is_colour_txt(x = deparse(out),
-                              msg = "Execute:",
-                              type = "debug",
-                              emoji = TRUE,
-                              symbol = "mark")
-    } else {
-      message("Execute: ", deparse(out))
-    }
+    message("Execute: ", deparse(out))
   }
 
   invisible()
