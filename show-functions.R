@@ -3,7 +3,7 @@
 show_functions = FALSE
 show_arguments = FALSE
 
-is_kh_debug <- function(fun = show_functions, arg = show_arguments){
+is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
 
   if (fun & arg)
     arg <- FALSE
