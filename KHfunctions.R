@@ -405,7 +405,8 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
     globs$KubeDirDat <- globs$KubeDirDat_KH
     globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
+    globs$KubeDir <- globs$KubeDir_NH
+
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$FriskVDir <- globs$FriskVDir_NH
@@ -3682,7 +3683,7 @@ LagKUBE <- function(KUBEid,
       #         cat("--------------\n")
       #       }
     } else {
-      cat("      (Ingen eldre vesjon å sammenligne med)\n")
+      cat("      (Ingen eldre versjon å sammenligne med)\n")
       CompForrigeKube <- NA
     }
     # Ad hoc redigering
@@ -3711,7 +3712,7 @@ LagKUBE <- function(KUBEid,
         utfild <- gsub("(.*)/R/(.*)", "\\1/csv/\\2", utfild)
         utfild <- gsub("(.*)\\.rds$", "\\1.csv", utfild)
         print(utfild)
-        write.table(NESSTAR, file = utfild, sep = ";", na = "", row.names = FALSE)
+        data.table::fwrite(NESSTAR, file = utfild, sep = ";", na = "", row.names = FALSE)
       }
     }
   }

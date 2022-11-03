@@ -29,6 +29,10 @@ k <- LagKubeDatertCsv("INNTULIKHET")
 # LAGE EN NY KUBE, uten csv-kopi (f.eks. for bare ? f? en fildump - se neste avsnitt)
 k <- LagKUBE("RFU_NH_ROYK_5_fildumpdummy")
 
+
+  k <- LagKubeDatertCsv("ENEFHIB")
+
+
 #*********************************************************************************************
 # DIVERSE VERKT?Y:
 
