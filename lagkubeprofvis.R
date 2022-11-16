@@ -1,3 +1,5 @@
+library(profvis)
+
 LagKUBEprofvis <- function(KUBEid,
                     lagRapport = 0,
                     batchdate = SettKHBatchDate(),
