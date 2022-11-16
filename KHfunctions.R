@@ -67,7 +67,6 @@ library(fs)
 #   "orgdata"
 # )
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_load(char = "orgdata")
 kh_source(repo = "khfunctions", branch = "master", file = "show-functions.R", encoding = "latin1")
 
 # Brukte pather under utvikling (NB: prioritert rekkefølge under)
