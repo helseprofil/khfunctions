@@ -404,7 +404,7 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
     globs$KubeDirDat <- globs$KubeDirDat_KH
     globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
+    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$FriskVDir <- globs$FriskVDir_NH
@@ -6888,21 +6888,22 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   return(dt)
 }
 
-kube_spec <- function(spec){
+kube_spec <- function(spec, dims){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
   if (!fs::dir_exists(rootDir))
     fs::dir_create(rootDir)
 
-  specDF <- as.data.frame(spec)
+  specDF <- as.data.table(spec)
   varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
-  varDF <- specDF[, varSpec]
+  varDF <- specDF[, .SD, .SDcols = varSpec]
+  varDF[, DIMS := list(dims)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
-  data.table::fwrite(varDF, fileSpec, sep = ";")
+  data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
-  return(specDF)
+  return(varDF)
 }
 
 warn_prikk <- function(r, s){
