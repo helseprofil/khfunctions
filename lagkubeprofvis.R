@@ -12,7 +12,10 @@ LagKUBEprofvis <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, dumps = list(), ...) {
   
-  profvis::profvis({
+  
+  # is_profile()
+  
+  profvis({
   is_kh_debug()
   
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
