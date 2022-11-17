@@ -3593,7 +3593,7 @@ LagKUBE <- function(KUBEid,
       test = FALSE
     }
 
-    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
+    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, fgspec = FGPs, batchdate = batchdate, globs = globs, test = test)
 
 
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
@@ -6855,10 +6855,10 @@ KHglobs <- FinnGlobs()
 ## Stata prikking do file
 ## --------
 
-do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
+do_stata_prikk <- function(dt, spec, fgspec, batchdate, globs, test = FALSE){
   is_kh_debug()
   
-  dims <- find_dims(dt = dt)
+  dims <- find_dims(dt = dt, spec = fgspec)
   spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
@@ -6917,29 +6917,29 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
-find_dims <- function(dt){
+find_dims <- function(dt, spec){
   is_kh_debug()
-  # Extract all values from Tab1-3 columns in FILGRUPPE table
-  # Make list of all unique values
-  dims <- sqlQuery(globs$dbh, "SELECT TAB1, TAB2, TAB3 FROM FILGRUPPER") 
-  setDT(dims)
-  dims <- melt(dims, measure.vars = patterns("^TAB"))
-  dims <- dims[!is.na(value)]
-  dims <- unique(dims$value)
+  # List standarddims
+  standarddims <- c("GEO",
+                    "AAR",
+                    "ALDER",
+                    "KJONN",
+                    "UTDANN",
+                    "INNVKAT",
+                    "LANDBAK")
   
-  # Add standard dimensions
-  dims <- 
-    c("GEO", 
-      "AAR", 
-      "ALDER", 
-      "KJONN", 
-      "UTDANN", 
-      "INNVKAT", 
-      "LANDBAK",  
-      dims)
+  # Extract everything written in TAB1, TAB2, and TAB3 in the files involved
+  tabdims <- vector()
+  for(i in 1:length(spec)){
+    tabdims <- c(tabdims, 
+                 unlist(spec[[i]][c("TAB1", "TAB2", "TAB3")], use.names = F))
+  }
   
-  # Extract column names included in dimension list
-  names(dt)[names(dt) %in% dims]
+  # Remove NA from tabdims, combine with standarddims
+  tabdims <- tabdims[!is.na(tabdims)]
+  alldims <- c(standarddims, tabdims)
+  # Extract column names from dt included in dimension list
+  names(dt)[names(dt) %in% alldims]
 }
 
 # Easier to check with sum by converting valid col value to 1
