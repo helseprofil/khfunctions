@@ -6862,10 +6862,10 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  s_prikk <- sum(sapply(spc[, stataVar], get_col), na.rm = TRUE)
+  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
 
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  r_prikk <- sum(sapply(spc[, RprikkVar], get_col), na.rm = TRUE)
+  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
 
   # Check that R prikk should be empty if Stata prikk should be used
   warn_prikk(r_prikk, s_prikk)
@@ -6904,7 +6904,7 @@ kube_spec <- function(spec, dims){
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
-  return(varDF)
+  return(specDF)
 }
 
 warn_prikk <- function(r, s){
