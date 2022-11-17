@@ -6858,7 +6858,8 @@ KHglobs <- FinnGlobs()
 do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   is_kh_debug()
   
-  spc <- kube_spec(spec = spec)
+  dims <- find_dims(KUBE = dt)
+  spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   s_prikk <- sum(sapply(spc[, stataVar], get_col), na.rm = TRUE)
@@ -6914,6 +6915,31 @@ warn_prikk <- function(r, s){
   }
 
   invisible()
+}
+
+find_dims <- function(KUBE){
+  is_kh_debug()
+  # Extract all values from Tab1-3 columns in FILGRUPPE table
+  # Make list of all unique values
+  dims <- sqlQuery(globs$dbh, "SELECT TAB1, TAB2, TAB3 FROM FILGRUPPER") 
+  setDT(dims)
+  dims <- melt(dims, measure.vars = patterns("^TAB"))
+  dims <- dims[!is.na(value)]
+  dims <- unique(dims$value)
+  
+  # Add standard dimensions
+  dims <- 
+    c("GEO", 
+      "AAR", 
+      "ALDER", 
+      "KJONN", 
+      "UTDANN", 
+      "INNVKAT", 
+      "LANDBAK",  
+      dims)
+  
+  # Extract column names included in dimension list
+  names(KUBE)[names(KUBE) %in% dims]
 }
 
 # Easier to check with sum by converting valid col value to 1
