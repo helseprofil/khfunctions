@@ -3592,9 +3592,20 @@ LagKUBE <- function(KUBEid,
     } else {
       test = FALSE
     }
-
+    
+    if ("STATAPRIKKpre" %in% names(dumps)) {
+      for (format in dumps[["STATAPRIKKpre"]]) {
+        DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpre", sep = "_"), globs = globs, format = format)
+      }
+    }
+    
     KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, fgspec = FGPs, batchdate = batchdate, globs = globs, test = test)
-
+    
+    if ("STATAPRIKKpost" %in% names(dumps)) {
+      for (format in dumps[["STATAPRIKKpost"]]) {
+        DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpost", sep = "_"), globs = globs, format = format)
+      }
+    }
 
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
