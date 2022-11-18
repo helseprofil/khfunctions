@@ -404,7 +404,7 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
     globs$KubeDirDat <- globs$KubeDirDat_KH
     globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
+    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$FriskVDir <- globs$FriskVDir_NH
@@ -3593,7 +3593,7 @@ LagKUBE <- function(KUBEid,
       test = FALSE
     }
 
-    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, batchdate = batchdate, globs = globs, test = test)
+    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, fgspec = FGPs, batchdate = batchdate, globs = globs, test = test)
 
 
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
@@ -6855,16 +6855,17 @@ KHglobs <- FinnGlobs()
 ## Stata prikking do file
 ## --------
 
-do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
+do_stata_prikk <- function(dt, spec, fgspec, batchdate, globs, test = FALSE){
   is_kh_debug()
   
-  spc <- kube_spec(spec = spec)
+  dims <- find_dims(dt = dt, spec = fgspec)
+  spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  s_prikk <- sum(sapply(spc[, stataVar], get_col), na.rm = TRUE)
+  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
 
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  r_prikk <- sum(sapply(spc[, RprikkVar], get_col), na.rm = TRUE)
+  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
 
   # Check that R prikk should be empty if Stata prikk should be used
   warn_prikk(r_prikk, s_prikk)
@@ -6888,19 +6889,20 @@ do_stata_prikk <- function(dt, spec, batchdate, globs, test = FALSE){
   return(dt)
 }
 
-kube_spec <- function(spec){
+kube_spec <- function(spec, dims){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
   if (!fs::dir_exists(rootDir))
     fs::dir_create(rootDir)
 
-  specDF <- as.data.frame(spec)
+  specDF <- as.data.table(spec)
   varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
-  varDF <- specDF[, varSpec]
+  varDF <- specDF[, .SD, .SDcols = varSpec]
+  varDF[, DIMS := list(dims)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
-  data.table::fwrite(varDF, fileSpec, sep = ";")
+  data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
   return(specDF)
 }
@@ -6913,6 +6915,31 @@ warn_prikk <- function(r, s){
   }
 
   invisible()
+}
+
+find_dims <- function(dt, spec){
+  is_kh_debug()
+  # List standarddims
+  standarddims <- c("GEO",
+                    "AAR",
+                    "ALDER",
+                    "KJONN",
+                    "UTDANN",
+                    "INNVKAT",
+                    "LANDBAK")
+  
+  # Extract everything written in TAB1, TAB2, and TAB3 in the files involved
+  tabdims <- vector()
+  for(i in 1:length(spec)){
+    tabdims <- c(tabdims, 
+                 unlist(spec[[i]][c("TAB1", "TAB2", "TAB3")], use.names = F))
+  }
+  
+  # Remove NA from tabdims, combine with standarddims
+  tabdims <- tabdims[!is.na(tabdims)]
+  alldims <- c(standarddims, tabdims)
+  # Extract column names from dt included in dimension list
+  names(dt)[names(dt) %in% alldims]
 }
 
 # Easier to check with sum by converting valid col value to 1
