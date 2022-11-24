@@ -59,10 +59,10 @@
     },
     "XML": {
       "Package": "XML",
-      "Version": "3.99-0.10",
+      "Version": "3.99-0.12",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "f140675d766cf765bf06a5f14afb149d",
+      "Hash": "b83df448ba12cfafbbb0726450745d08",
       "Requirements": []
     },
     "bit": {
