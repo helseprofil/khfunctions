@@ -2944,6 +2944,10 @@ LagKUBE <- function(KUBEid,
   FGPs <- Finfo$FGPs
   FilDesL <- Finfo$FilDesL
   KUBEd <- list()
+  
+  # Lage stataspec og eksportere USER/helseprofil/kubespec.csv
+  dims <- find_dims(dt = dt, spec = FGPs)
+  stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
 
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
@@ -3599,7 +3603,7 @@ LagKUBE <- function(KUBEid,
       }
     }
     
-    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, fgspec = FGPs, batchdate = batchdate, globs = globs, test = test)
+    KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs, test = test)
 
     if ("STATAPRIKKpost" %in% names(dumps)) {
       for (format in dumps[["STATAPRIKKpost"]]) {
@@ -6867,11 +6871,8 @@ KHglobs <- FinnGlobs()
 ## Stata prikking do file
 ## --------
 
-do_stata_prikk <- function(dt, spec, fgspec, batchdate, globs, test = FALSE){
+do_stata_prikk <- function(dt, spc, batchdate, globs, test = FALSE){
   is_kh_debug()
-  
-  dims <- find_dims(dt = dt, spec = fgspec)
-  spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
@@ -6901,7 +6902,7 @@ do_stata_prikk <- function(dt, spec, fgspec, batchdate, globs, test = FALSE){
   return(dt)
 }
 
-kube_spec <- function(spec, dims){
+kube_spec <- function(spec, dims = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -6912,7 +6913,10 @@ kube_spec <- function(spec, dims){
   varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, .SD, .SDcols = varSpec]
-  varDF[, DIMS := list(dims)]
+    # Add DIMS column if present
+    if(!is.null(dims)){
+    varDF[, DIMS := list(dims)]
+    }
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
