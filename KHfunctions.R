@@ -3640,9 +3640,9 @@ LagKUBE <- function(KUBEid,
       }
     }
 
-    if ("POSTPROSESS_post" %in% names(dumps)) {
-      for (format in dumps[["POSTPROSESS_post"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "POSTPROSESS_post", sep = "_"), globs = globs, format = format)
+    if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
+      for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
+        DumpTabell(KUBE, paste(KUBEid, "RSYNT_POSTPROSESSpost", sep = "_"), globs = globs, format = format)
       }
     }
 
