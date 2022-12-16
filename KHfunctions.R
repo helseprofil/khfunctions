@@ -2944,6 +2944,9 @@ LagKUBE <- function(KUBEid,
   FGPs <- Finfo$FGPs
   FilDesL <- Finfo$FilDesL
   KUBEd <- list()
+  
+  # Lage og eksportere USER/helseprofil/kubespec.csv
+  kube_spec(spec = KUBEdscr, dims = NA)
 
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
@@ -3599,7 +3602,11 @@ LagKUBE <- function(KUBEid,
       }
     }
     
-    KUBE <- do_stata_prikk(dt = KUBE, spec = KUBEdscr, fgspec = FGPs, batchdate = batchdate, globs = globs, test = test)
+    # Lage stataspec og overskrive helseprofil/kubespec.csv som inkluderer DIMS 
+    dims <- find_dims(dt = KUBE, spec = FGPs)
+    stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
+    
+    KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs, test = test)
 
     if ("STATAPRIKKpost" %in% names(dumps)) {
       for (format in dumps[["STATAPRIKKpost"]]) {
@@ -3607,6 +3614,7 @@ LagKUBE <- function(KUBEid,
       }
     }
     
+    # Start RSYNT_postprosess
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
       error <- ""
@@ -3632,6 +3640,11 @@ LagKUBE <- function(KUBEid,
       }
     }
 
+    if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
+      for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
+        DumpTabell(KUBE, paste(KUBEid, "RSYNT_POSTPROSESSpost", sep = "_"), globs = globs, format = format)
+      }
+    }
 
     # LAYOUT
     utkols <- c(tabs, OutVar)
@@ -6867,11 +6880,8 @@ KHglobs <- FinnGlobs()
 ## Stata prikking do file
 ## --------
 
-do_stata_prikk <- function(dt, spec, fgspec, batchdate, globs, test = FALSE){
+do_stata_prikk <- function(dt, spc, batchdate, globs, test = FALSE){
   is_kh_debug()
-  
-  dims <- find_dims(dt = dt, spec = fgspec)
-  spc <- kube_spec(spec = spec, dims = dims)
 
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
