@@ -3614,6 +3614,7 @@ LagKUBE <- function(KUBEid,
       }
     }
     
+    # Start RSYNT_postprosess
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
       error <- ""
@@ -3639,6 +3640,11 @@ LagKUBE <- function(KUBEid,
       }
     }
 
+    if ("POSTPROSESS_post" %in% names(dumps)) {
+      for (format in dumps[["POSTPROSESS_post"]]) {
+        DumpTabell(KUBE, paste(KUBEid, "POSTPROSESS_post", sep = "_"), globs = globs, format = format)
+      }
+    }
 
     # LAYOUT
     utkols <- c(tabs, OutVar)
