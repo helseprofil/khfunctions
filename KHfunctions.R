@@ -3623,8 +3623,8 @@ LagKUBE <- function(KUBEid,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
           ok <- 0
+          stop("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
         } else {
           KUBE <- RES$TABLE
         }
