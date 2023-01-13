@@ -675,7 +675,7 @@ LagFilgruppe <- function(gruppe,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(Filgruppe, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
+          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
           ok <- 0
         } else {
           Filgruppe <- RES$TABLE
@@ -869,7 +869,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
+          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
           ok <- 0
         } else {
           DF <- RES$TABLE
@@ -1448,7 +1448,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
 
         RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
+          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
           ok <- 0
         } else {
           DF <- RES$TABLE
@@ -3356,7 +3356,7 @@ LagKUBE <- function(KUBEid,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          error <- paste("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
+          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
           ok <- 0
         } else {
           KUBE <- RES$TABLE
