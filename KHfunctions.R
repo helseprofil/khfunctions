@@ -1427,7 +1427,20 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
 
     if ("RSYNT1pre" %in% names(dumps)) {
       for (format in dumps[["RSYNT1pre"]]) {
+        
+        if(format == "STATA"){
+          # Add special variables used in RSYNT1 STATA code
+          DF$filgruppe <- filbesk$FILGRUPPE
+          DF$delid <- filbesk$DELID
+          DF$tab1_innles <- filbesk$TAB1
+        }
+        
         DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = format)
+        
+        if(format == "STATA"){
+          # Delete special variables 
+          DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
+        }
       }
     }
 
