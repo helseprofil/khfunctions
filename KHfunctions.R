@@ -149,7 +149,7 @@ globglobs <- list(
   kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"),
   taborgs = c("GEO", "AAR", "KJONN", "ALDER", "TAB1", "TAB2", "TAB3"),
   NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"),
-  FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "ETAB"),
+  FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"),
   FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"),
   KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"),
   # DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","INNVKAT","LANDBAK","TAB1","TAB2","TAB3"),
@@ -2960,7 +2960,7 @@ LagKUBE <- function(KUBEid,
   
   # Lage og eksportere USER/helseprofil/kubespec.csv
   kube_spec(spec = KUBEdscr, dims = NA)
-
+  
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
