@@ -495,7 +495,7 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
 FinnGlobs <- function() {
   is_kh_debug()
   
-  # Hjelperutine, kjekk å brukes som default. Bruker KHglobs elller setter denne
+  # Hjelperutine, kjekk å brukes som default. Bruker KHglobs eller setter denne
   globs <- NA
   if (exists("KHglobs")) {
     globs <- KHglobs
@@ -504,6 +504,9 @@ FinnGlobs <- function() {
   }
   return(globs)
 }
+
+# Definer KHglobs
+KHglobs <- FinnGlobs()
 
 # KHglobs<-SettGlobs()
 
@@ -6884,10 +6887,6 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
     stop("!!!!!! tabellene har ulike kolonner og kan ikke matches")
   }
 }
-
-
-
-KHglobs <- FinnGlobs()
 
 ## --------
 ## Stata prikking do file
