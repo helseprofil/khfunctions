@@ -126,19 +126,16 @@ globglobs <- list(
   ## KHdbname="STYRING/KHELSA.mdb",
   KHlogg = dbLogFile,
   ## KHlogg="STYRING/KHlogg.mdb",
-  StablaDir = "PRODUKTER/MELLOMPROD/R/STABLAORG/",
   StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
-  KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA/",
-  KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R/",
-  KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT/R/",
-  KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/",
-  KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R/",
-  KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/",
+  KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R",
+  KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT/R",
+  KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R",
+  KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R",
   KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
-  FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE/",
-  FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM/",
-  FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL/",
+  FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE",
+  FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM",
+  FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL",
   ovpDir_F = "PRODUKTER/KUBER/OVP_FYLKE/",
   ovpDir_K = "PRODUKTER/KUBER/OVP_KOMM/",
   ovpDir_B = "PRODUKTER/KUBER/OVP_BYDEL/",
@@ -399,25 +396,21 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   }
 
   if (modus == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
-    globs$FriskVDir <- globs$FriskVDir_KH
-  } else {
-    globs$KubeDir <- globs$KubeDir_NH
-    globs$KubeDirNy <- globs$KubeDirNy_NH
-    globs$KubeDirDat <- globs$KubeDirDat_NH
-    globs$FriskVDir <- globs$FriskVDir_NH
-  }
+    } else {
+      globs$KubeDirNy <- globs$KubeDirNy_NH
+      globs$KubeDirDat <- globs$KubeDirDat_NH
+    }
+  
   KHdbname <- globs$KHdbname
   # Sett path om denne ikker er oppgitt:
-
 
   if (path == "") {
     if (file.exists(paste(getwd(), KHdbname, sep = "/"))) {
       path <- getwd()
       if (gibeskjed == TRUE) {
-        cat("Setter path=", path, "fra getwd()\n")
+        cat("Setter path = ", path, " fra getwd()\n")
       }
     } else {
       i <- 1
@@ -2965,15 +2958,11 @@ LagKUBE <- function(KUBEid,
   kube_spec(spec = KUBEdscr, dims = NA)
   
   if (KUBEdscr$MODUS == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
-    globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
-    globs$FriskVDir <- globs$FriskVDir_NH
   }
 
 
@@ -6813,15 +6802,11 @@ SettKubedirs <- function(globs, modus = NA) {
   is_kh_debug()
   
   if (modus == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
-    globs$FriskVDir <- globs$FriskVDir_KH
   } else {
-    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
-    globs$FriskVDir <- globs$FriskVDir_NH
   }
   return(globs)
 }
