@@ -130,8 +130,10 @@ globglobs <- list(
   StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
   KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R",
   KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT/R",
+  KubeDirQC_NH = "PRODUKTER/KUBER/NORGESHELSA/QC",
   KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R",
   KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R",
+  KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC",
   KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
   FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE",
   FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM",
@@ -148,6 +150,8 @@ globglobs <- list(
   NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"),
   FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"),
   FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"),
+  QCTabs = c("GEO", "GEOniv", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK"), 
+  QCVals = c("TELLER", "NEVNER", "RATE", "RATE.n", "SMR", "MEIS", "NORM", "MALTALL", "sumTELLER", "sumNEVNER", "PREDTELLER", "sumPREDTELLER"),
   KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"),
   # DesignKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","INNVKAT","LANDBAK","TAB1","TAB2","TAB3"),
   # OmkKols=c("GEOniv","AARl","AARh","KJONN","ALDERl","ALDERh","UTDANN","INNVKAT","LANDBAK"),
@@ -2960,9 +2964,11 @@ LagKUBE <- function(KUBEid,
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
+    globs$KubeDirQc <- globs$KubeDirQC_KH
   } else {
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
+    globs$KubeDirQc <- globs$KubeDirQC_NH
   }
 
 
@@ -3653,75 +3659,80 @@ LagKUBE <- function(KUBEid,
 
     # LAYOUT
     utkols <- c(tabs, OutVar)
-    NESSTAR <- copy(KUBE)
+    ALLVIS <- copy(KUBE)
 
     # SKJUL HELE TUPPELET
     # FLAGG PER VARIABEL KAN/BØR VURDERES!
     # Litt tricky å finne riktig ".f"-kolloner. Må ikke ta med mBEFc f.eks fra BEF fila dersom denne er irrelevant
-    fvars <- intersect(names(NESSTAR), paste(union(globs$NesstarOutputDef, OutVar), ".f", sep = ""))
+    fvars <- intersect(names(ALLVIS), paste(union(globs$NesstarOutputDef, OutVar), ".f", sep = ""))
     # fvars<-intersect(names(NESSTAR),c(OrgKubeKolNames[grepl(".f$",OrgKubeKolNames)],"NORM.f","SMR.f"))
-    NESSTAR[, SPVFLAGG := 0]
+    ALLVIS[, SPVFLAGG := 0]
     if (length(fvars) > 0) {
       # Dette er unødvendig krongelete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, ønskes SPVFLAGG=1
-      NESSTAR[, tSPV1 := eval(parse(text = paste("pmax(", paste(lapply(fvars, function(x) {
+      ALLVIS[, tSPV1 := eval(parse(text = paste("pmax(", paste(lapply(fvars, function(x) {
         paste(x, "*(", x, "!=2)", sep = "")
       }), collapse = ","), ",na.rm = TRUE)", sep = "")))]
-      NESSTAR[, tSPV2 := eval(parse(text = paste("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)", sep = "")))]
-      NESSTAR[, SPVFLAGG := ifelse(tSPV1 == 0, tSPV2, tSPV1)]
-      NESSTAR[, c("tSPV1", "tSPV2") := NULL]
-      NESSTAR[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
+      ALLVIS[, tSPV2 := eval(parse(text = paste("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)", sep = "")))]
+      ALLVIS[, SPVFLAGG := ifelse(tSPV1 == 0, tSPV2, tSPV1)]
+      ALLVIS[, c("tSPV1", "tSPV2") := NULL]
+      ALLVIS[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
     }
-    NESSTAR[is.na(SPVFLAGG), SPVFLAGG := 0]
-    NESSTAR[, SPVFLAGG := mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
+    ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
+    ALLVIS[, SPVFLAGG := mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
 
 
     # Filtrer bort GEO som ikke skal rapporteres
     KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
-    NESSTAR <- NESSTAR[GEO %in% globs$UtGeoKoder]
+    ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
     # NESSTAR<-NESSTAR[!grepl("99|9900$|1902\\d{2}|5401\\d{2}|03011[67]",GEO),]
 
     # Filtrer bort uønskede tabs
     if ("ALDER" %in% names(KUBE)) {
-      NESSTAR <- NESSTAR[!ALDER %in% c("999_999", "888_888"), ]
+      ALLVIS <- ALLVIS[!ALDER %in% c("999_999", "888_888"), ]
     }
-    if ("KJONN" %in% names(NESSTAR)) {
-      NESSTAR <- NESSTAR[!KJONN %in% c(8, 9), ]
+    if ("KJONN" %in% names(ALLVIS)) {
+      ALLVIS <- ALLVIS[!KJONN %in% c(8, 9), ]
     }
 
-    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = NESSTAR, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
+    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
 
-    NESSTAR <- NESSTAR[, c(utkols, "SPVFLAGG"), with = FALSE]
+    # Create QC KUBE based on the censored ALLVIS kube
+    # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
+    
+    QC <- LagQCKube(KUBEid = KUBEid,
+                    KUBE = ALLVIS,
+                    kubedims = tabs,
+                    kubevals = OutVar,
+                    batchdate = batchdate,
+                    globs = globs)
+    
+    # Filter ALLVIS KUBE
+    ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
 
     if (tmpbryt == 2) {
       print("TMPBRYT=2")
-      return(list(raaKUBE0 = raaKUBE0, raaKUBE = raaKUBE, raaKUBE2 = raaKUBE2, raaKUBE3 = raaKUBE3, KUBE = KUBE, TNF = TNF, NESSTAR = NESSTAR))
+      return(list(raaKUBE0 = raaKUBE0, raaKUBE = raaKUBE, raaKUBE2 = raaKUBE2, raaKUBE3 = raaKUBE3, KUBE = KUBE, TNF = TNF, ALLVIS = ALLVIS))
     }
 
     cat("---------------------KUBE FERDIG")
-    CompForrigeKube <- 0
-    ForKub <- FinnDatertKube(KUBEid, silent = TRUE)
-    if (!is.logical(ForKub)) {
-      # CompForrigeKube<-SammenlignKuber(KUBE,FinnDatertKube(KUBEid))
-      #       if (is.logical(CompForrigeKube$check) && CompForrigeKube$check==TRUE){
-      #           cat("    (identisk med forrige daterte versjon)\n")
-      #       } else {
-      #         cat("\nAVVIK FRA FORRIGE daterte versjon:\n")
-      #         print(CompForrigeKube$checkm)
-      #         cat("--------------\n")
-      #       }
-    } else {
-      cat("      (Ingen eldre vesjon å sammenligne med)\n")
-      CompForrigeKube <- NA
-    }
-    # Ad hoc redigering
-    ##################################################################
-
-    # FRISKVIK
-    ################################################################
-
-
+    # CompForrigeKube <- 0
+    # ForKub <- FinnDatertKube(KUBEid, silent = TRUE)
+    # if (!is.logical(ForKub)) {
+    #   # CompForrigeKube<-SammenlignKuber(KUBE,FinnDatertKube(KUBEid))
+    #   #       if (is.logical(CompForrigeKube$check) && CompForrigeKube$check==TRUE){
+    #   #           cat("    (identisk med forrige daterte versjon)\n")
+    #   #       } else {
+    #   #         cat("\nAVVIK FRA FORRIGE daterte versjon:\n")
+    #   #         print(CompForrigeKube$checkm)
+    #   #         cat("--------------\n")
+    #   #       }
+    # } else {
+    #   cat("      (Ingen eldre versjon å sammenligne med)\n")
+    #   CompForrigeKube <- NA
+    # }
+    
     # RESULTAT<-(list(TNF=TNF,STN=STNc,STNP=STNP,KUBE=KUBE))
-    RESULTAT <- list(KUBE = KUBE, NESSTAR = NESSTAR, CFK = CompForrigeKube)
+    RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   }
   # SKRIV RESULTAT
   path <- globs$path
@@ -3739,11 +3750,12 @@ LagKUBE <- function(KUBEid,
         utfild <- gsub("(.*)/R/(.*)", "\\1/csv/\\2", utfild)
         utfild <- gsub("(.*)\\.rds$", "\\1.csv", utfild)
         print(utfild)
-        write.table(NESSTAR, file = utfild, sep = ";", na = "", row.names = FALSE)
+        fwrite(ALLVIS, file = utfild, sep = ";")
       }
     }
   }
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
+  cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   return(RESULTAT)
 }
 
@@ -3884,8 +3896,9 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         kastkols <- setdiff(globs$FriskvikVals, "MALTALL")
         FRISKVIK[, (kastkols) := NA]
       }
-
-
+      
+      # HER KAN EN SISTE SJEKK AV PRIKKING LEGGES, (SPVFLAGG > 0, FriskvikVals = NA)
+      
       FRISKVIK <- FRISKVIK[, c(globs$FriskvikTabs, globs$FriskvikVals), with = FALSE]
 
       versjonert <- TRUE
@@ -6959,6 +6972,38 @@ find_dims <- function(dt, spec){
   alldims <- c(standarddims, tabdims)
   # Extract column names from dt included in dimension list
   names(dt)[names(dt) %in% alldims]
+}
+
+#' LagQCkube
+#' 
+#' Saves QC kube containing standard columns defined in globs, and extra cols existing in the specific KUBE
+#'
+#' @param KUBEid 
+#' @param KUBE 
+#' @param batchdate 
+#' @param globs 
+#' @param kubedims 
+#' @param kubevals 
+LagQCKube <- function(KUBEid,
+                      KUBE,
+                      kubedims,
+                      kubevals,
+                      batchdate = batchdate,
+                      globs = globs){
+  QC <- copy(KUBE)
+  qccols <- c(globs$QCTabs,setdiff(kubedims, globs$QCTabs),
+              globs$QCVals,setdiff(kubevals, globs$QCVals),
+              "SPVFLAGG")
+  qcmisscols <- setdiff(qccols, names(QC))
+  if (length(qcmisscols > 0)) {
+    QC[, (qcmisscols) := NA]
+  }
+  QC <- QC[, ..qccols]
+  
+  utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
+  fwrite(QC, file = utfilq, sep = ";")
+  cat("KVALITETSKONTROLLKUBE SKREVET:\n", utfilq, "\n")
+  return(QC)
 }
 
 # Easier to check with sum by converting valid col value to 1
