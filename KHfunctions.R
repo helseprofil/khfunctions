@@ -402,9 +402,11 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   }
 
   if (modus == "KH") {
+    globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
     } else {
+      globs$KubeDir <- globs$KubeDir_NH
       globs$KubeDirNy <- globs$KubeDirNy_NH
       globs$KubeDirDat <- globs$KubeDirDat_NH
     }
@@ -2613,7 +2615,7 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
   is_kh_debug()
 
   batchdate <- SettKHBatchDate()
-  loggfile <- paste(globs$path, "/", globs$KubeDir, "LOGG/", batchdate, ".txt", sep = "")
+  loggfile <- paste(globs$path, "/", globs$KubeDir, "/LOGG/", batchdate, ".txt", sep = "")
   sink(loggfile, split = TRUE)
   cat("BATCH:", batchdate, "\n")
   for (KUBEid in KUBEidA) {
