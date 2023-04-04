@@ -128,9 +128,11 @@ globglobs <- list(
   ## KHlogg="STYRING/KHlogg.mdb",
   StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
+  KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA",
   KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R",
   KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT/R",
   KubeDirQC_NH = "PRODUKTER/KUBER/NORGESHELSA/QC",
+  KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA",
   KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R",
   KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R",
   KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC",
@@ -488,7 +490,9 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
 }
 
-#
+# Definer KHglobs
+KHglobs <- SettGlobs()
+
 FinnGlobs <- function() {
   is_kh_debug()
   
@@ -501,9 +505,6 @@ FinnGlobs <- function() {
   }
   return(globs)
 }
-
-# Definer KHglobs
-KHglobs <- FinnGlobs()
 
 # KHglobs<-SettGlobs()
 
@@ -2962,10 +2963,12 @@ LagKUBE <- function(KUBEid,
   kube_spec(spec = KUBEdscr, dims = NA)
   
   if (KUBEdscr$MODUS == "KH") {
+    globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
     globs$KubeDirDat <- globs$KubeDirDat_KH
     globs$KubeDirQc <- globs$KubeDirQC_KH
   } else {
+    globs$KubeDir <- globs$KubeDir_NH
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$KubeDirQc <- globs$KubeDirQC_NH
@@ -3693,12 +3696,12 @@ LagKUBE <- function(KUBEid,
     if ("KJONN" %in% names(ALLVIS)) {
       ALLVIS <- ALLVIS[!KJONN %in% c(8, 9), ]
     }
-
+    
+    # Create FRISKVIK indicators, based on the censored ALLVIS kube
     LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
 
     # Create QC KUBE based on the censored ALLVIS kube
     # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
-    
     QC <- LagQCKube(KUBEid = KUBEid,
                     KUBE = ALLVIS,
                     kubedims = tabs,
@@ -3897,9 +3900,10 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         FRISKVIK[, (kastkols) := NA]
       }
       
-      # HER KAN EN SISTE SJEKK AV PRIKKING LEGGES, (SPVFLAGG > 0, FriskvikVals = NA)
+      # ALLTID prikk MEIS dersom SPVFLAGG > 0. Denne skal ut i profiler, og kan ikke være uprikket. 
+      FRISKVIK[SPVFLAGG > 0, MEIS := NA]
       
-      FRISKVIK <- FRISKVIK[, c(globs$FriskvikTabs, globs$FriskvikVals), with = FALSE]
+      FRISKVIK <- FRISKVIK[, mget(c(globs$FriskvikTabs, globs$FriskvikVals))]
 
       versjonert <- TRUE
       # SKRIV UT
