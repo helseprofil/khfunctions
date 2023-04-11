@@ -1,56 +1,9 @@
-#################################################################
-# ENDRINGSLOGG
-##########################################################
-# 20190927:
-# Endret 1601->5001 og 1902->5401 i linje 1591
-# FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|4601|5401)",GEO),c("GEO","FYLKE"):=list("999999","99")]
-# Dette er forstatt en meget dårlig løsning. Bør ikke være hardkodet!
-# Har lagt inn det jeg tror er løsningen, men ikke slått på denne nå.
-#
-# Lagt til/endret filter for å luke vekk geokoder som ikke skal rapporteres (ca 3324)
-# Bruker attributtet TYP som filter
-# Lagt til UtGeoKoder=GeoKoder[TYP=="0"]$GEO i globs
-# KUBE<-KUBE[GEO %in% globs$UtGeoKoder[TYP=="0"]$GEO]
-# NESSTAR<-NESSTAR[GEO %in% globs$UtGeoKoder[TYP=="0"]$GEO]
-
-# 20190827:
-# delkols<-globs$DefDesign$DelKols[[del]] flyttet opp til linje 5095 i FinnRedesign
-# Fjernet unntak for D_develop_predtype=="DIR" samme sted
-# Her var/er det en del rot. Unntaket var egentlig en oppretting av at ting gikk feil over
-# Så vidt jeg skjønner skal det være delkols<-globs$DefDesign$DelKols[[del]] gjennom hele FinnRedsign.
-# Det er forstatt for mye dilldall rundt det
-
-# Vi endrer i ny branch - æøå
-
-# 20190821:
-# defpaths flyttet opp for synlighet
-# Xls2R.KH endret: readxl og read_excel erstatter gammel Xls2TmpCsv.
-# Dirty løsning for integrereing av Direkte standardisering tatt inn
-#   D_develop_predtype="IND" er gammel hovedløsning med indirekte standardisering
-#   D_develop_predtype="DIR" er quick fix for direkte standardisering
-#   Se kommentarer på enkeltpunktene for mer antydninger om hva som må gjøres for å fikse dette mer solid
-
-
-# 20190627:
-# GEOstdAAR=globs$KHaargang i RektangulariserKUBE og KNRHarm
-# TO-DO: Legg til feilmelding om GEO som kastes ved KNRharm!!!
-
-
-# version 0.2.4 Flere viktige oppstramminger/feilretting i detaljreging. Særlig i FinnSumOverAar
-# og behandling av VAL.f=9 og VAL.f=-1
-# Naboprikking (nå VAL.f=4) leder ikke til skjuling
-# NYEKOL_RAD_postMA for variabler av type dekningsgrad som trengs å tas etter årssnitt (blir snitt/snitt)
-
-# 0.2.3.1: Generalisert NaboAno til betinget
-
 library(epitools)
 library(RODBC) # Brukes for kommunikasjon med Access-tabeller og lesing av xls/xlsx
 library(DBI)
 library(foreign) # Brukes ved lesing av SPSS, dBF
-# library(gdata)  #Brukes ved lesing av xls/xlsx filer
 library(sas7bdat) # brukes ved lesing av SAS filer
 library(XML)
-## library(reshape2)  #melt brukes til wide->long
 library(zoo) # na.locf for ? sette inn for NA i innrykket originaltabulering
 library(plyr) # mapvalues for omkoding
 library(sqldf)
@@ -61,11 +14,7 @@ library(readxl)
 library(fs)
 ## library(bat2bat) # https://github.com/helseprofil/bat2bat
 
-# khPackages <- c(
-#   "RODBC", "DBI", "foreign", "sas7bdat", "XML", "zoo", "plyr", "sqldf",
-#   "stringr", "intervals", "data.table", "readxl", "fs", "epitools",
-#   "orgdata"
-# )
+# Load show-functions.R (ybk)
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
 kh_source(repo = "khfunctions", branch = "master", file = "show-functions.R", encoding = "latin1")
 
@@ -102,8 +51,6 @@ if (useTest) {
   if (runtest && isFALSE(noLog)) stop("Finnes ikke KHlogg.mdb fil i ", defpaths)
 }
 
-
-
 ## RUN LOCAL
 ## This is needed in run_local function
 if (!exists("setLocal")) setLocal <- FALSE
@@ -113,19 +60,14 @@ if ((setLocal)) {
   dbLogFile <- setLogFile
 }
 
-
 # GLOBAL FIXED PARAMETERS, leses bare av SettGlobs, bakes så inn i globs
 # Merk at alle elementer angitt i denne lista vil være tilgjengelig i alle hovedrutiner, og evt (mindre robust) i KHglobs
-# globsglobs<-list(....)
-############################################## ----
 globglobs <- list(
   HOVEDmodus = "NH",
   KHaargang = 2023,
   KHgeoniv = "K",
   KHdbname = dbNameFile,
-  ## KHdbname="STYRING/KHELSA.mdb",
   KHlogg = dbLogFile,
-  ## KHlogg="STYRING/KHlogg.mdb",
   StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
   StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
   KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA",
@@ -367,26 +309,12 @@ SettKodeBokGn <- function() {
   return(KBGn)
 }
 
-############################################################ 1
 # TO-DO: ----
-#
-#  SPESIALBEHANDLING AV FILGRUPPE i LagFilgruppe (til slutt) F.EKS. IMPUTER NPR
-#        evt også mulighet for å kjøre en STATA .do der (bare navn på do er parameter). Skriv til tmp STATA fil, kjør do, les inn i R. Endelig lagring skjer etterpå, som vanlig
-#
-#
-#
-#
-#
-#
-#
-#
+# SPESIALBEHANDLING AV FILGRUPPE i LagFilgruppe (til slutt) F.EKS. IMPUTER NPR
+# evt også mulighet for å kjøre en STATA .do der (bare navn på do er parameter). 
+# Skriv til tmp STATA fil, kjør do, les inn i R. Endelig lagring skjer etterpå, som vanlig
 
-########################################################## 1
-# TRINN 0: INITIERING
-#
-########################################################## 1
-
-#
+# TRINN 0: INITIERING ----
 SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   is_kh_debug()
   
@@ -528,12 +456,9 @@ ListAlleOriginalFiler <- function(globs = FinnGlobs()) {
   sqlSave(globs$log, Filer, "ALLEFILER", rownames = FALSE)
 }
 
-##########################################################
-# TRINN 1: STABLING AV ORIGINALFILER I FILGRUPPE-FILER
+# TRINN 1: STABLING AV ORIGINALFILER I FILGRUPPE-FILER ----
 #         Gir ferdige stablede filer i \\StablaFilGrupper
-##########################################################
 
-#
 LagFilgruppe <- function(gruppe,
                          batchdate = SettKHBatchDate(),
                          globs = FinnGlobs(),
@@ -667,8 +592,6 @@ LagFilgruppe <- function(gruppe,
       }
     }
 
-
-    ######################################################
     # EVT SPESIALBEHANDLING
     if (!is.na(FGP$RSYNT_PRE_FGLAGRING)) {
       synt <- gsub("\\\r", "\\\n", FGP$RSYNT_PRE_FGLAGRING)
@@ -765,7 +688,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   is_kh_debug()
   
   klokke <- proc.time()
-  ######################################################
   # INNLESING
   filn <- filbesk$filn
   cat("\n#################\nLAGER TABELL FRA FIL:\n", filn, "\n")
@@ -778,7 +700,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     print(head(DF))
   }
 
-  #   ######################################################
   #   #EVT SPESIALBEHANDLING
   #   if (!is.na(filbesk$RSYNT1)){
   #     filbesk$RSYNT1<-gsub("\\\r","\\\n",filbesk$RSYNT1)
@@ -786,11 +707,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   #   }
   # cat("\nETTER INNLES\n#############################\n")
 
-
-
   if (ok == 1) {
 
-    ######################################################
     # Omdøp kolonnenavn.
     # NB: for oversiktelighet i parameterfila gjøres dette både før og etter reshape
     # Dvs: kolonnenavn generert i reshape tillates å avvike fra standardnavn, disse endres etterpå
@@ -801,10 +719,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     HarCols <- HarCols[HarCols %in% names(DF)]
     # Sett standard kolonnenavn
     names(DF) <- mapvalues(names(DF), HarCols, names(HarCols))
-
-
-
-    ######################################################
 
     # EVT INNFYLLING AV TABULATOR N?R DENNE ER INNRYKKET
     if (!is.na(filbesk$FYLLTAB)) {
@@ -862,7 +776,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       }
     }
 
-    ######################################################
     # EVT SPESIALBEHANDLING
     if (!is.na(filbesk$RSYNT2)) {
       synt <- gsub("\\\r", "\\\n", filbesk$RSYNT2)
@@ -899,7 +812,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
 
   if (ok == 1) {
 
-    ######################################################
     # Omdøp kolonnenavn, runde 2.
 
     # Finn kolonner spesifisert i filbesk
@@ -977,9 +889,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     DF <- as.data.frame(DF[, eval(parse(text = lp)), by = tabkols])
   }
 
-
-
-  ######################################################
   # SKILL EVT UT SOM EGEN FUNKSJON
   # Nullstill logg
   if ("KODEBOKpre" %in% names(dumps)) {
@@ -1001,7 +910,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     DF[is.na(DF)] <- ""
 
     ## TABS
-    ## ------------------------------------------------------------
     ## KOPI_KOL will use the TAB1:TAB3 and defined in
     ## INNLESING tabel KOPI_KOL column with Existing_col=New_col
     ## New_col should be defined in one of the TABs
@@ -1043,7 +951,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
 
     ## GEO
-    ## -----------------------------------------------------------------------
     # RENSK GEO (Alle er legit inntil videre??? Eller kod til 9999???)
     if ("GEO" %in% names(DF)) {
       org <- setNames(as.data.frame(table(DF$GEO, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
@@ -1222,9 +1129,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         DF[, val] <- NULL
         DF <- setNames(DF, mapvalues(names(DF), valomk, val))
 
-        #########################
         # DEVELOP20191219
-        #########################
 
         reskaler <- as.numeric(filbesk[[eval(paste("SKALA", "_", val, sep = ""))]])
 
@@ -1236,19 +1141,12 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       TilFilLogg(filbesk$KOBLID, paste(val, "OK", sep = "_"), valok, batchdate = batchdate, globs = globs)
     }
 
-
-
-
-
-
-
     default.stringsAsFactors <- TRUE
     Kols <- c(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(DF)], names(DF)[grepl("^VAL\\d+(\\.(f|a)|)$", names(DF))])
     if (echo == TRUE) {
       print(Kols)
       cat("Nest siste trinn\n#########################\n")
     }
-
 
     # print(filbesk)
     # kAN KRÆSJE VED UKJENT KOLNAVN!
@@ -1423,10 +1321,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
     #  cat("FACTOR i DF <",paste(names(des[des=="factor"]),collapse="><"),">, det er ugreit\n",sep="")
     # }
 
-
     TilFilLogg(filbesk$KOBLID, "modINNLESh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
-
-
 
     if ("RSYNT1pre" %in% names(dumps)) {
       for (format in dumps[["RSYNT1pre"]]) {
@@ -1447,7 +1342,6 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
       }
     }
 
-    ######################################################
     # EVT SPESIALBEHANDLING
     if (!is.na(filbesk$RSYNT1)) {
       synt <- gsub("\\\r", "\\\n", filbesk$RSYNT1)
@@ -1505,10 +1399,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
   return(list(DF = DF, ok = ok))
 }
 
-
-
-# Funksjoner brukt i innlesing
-##########################################################
+# Funksjoner brukt i innlesing ----
 
 ## get_index_col <- function(xcols, val){
 ##   # xcols - colnames for data.frame
@@ -1522,7 +1413,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
 ##   return(mhi)
 ## }
 
-#
+
 KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", sep = ";", quote = "\"", dec = ".", fill = FALSE, encoding = "unknown", blank.lines.skip = FALSE, na.strings = c("NA"), brukfread = TRUE, ...) {
   is_kh_debug()
   
@@ -1537,7 +1428,7 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
   return(csvT)
 }
 
-#
+
 cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = FinnGlobs(), ...) {
   # Ved bruk av undertabeller med titler som ikke står i egen kolonne
   # Lager egen kolonne av undertitler som blir ekta TAB
@@ -1626,7 +1517,6 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
   return(DF)
 }
 
-#
 LesMultiHead <- function(mhstr) {
   # Leser parameterstreng for multihead og gjør om til relevante variable
   # Velger å kalle på denne funksjonen ved behov for samme inputstreng heller enn å porssessere strengen en gang og sende bitene rundt
@@ -1649,8 +1539,6 @@ LesMultiHead <- function(mhstr) {
   return(list(rader = rader, sep = sep, colnames = colnames, varname = varname))
 }
 
-#
-#
 Xls2R.KH.Gammel <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
   is_kh_debug()
   
@@ -1749,7 +1637,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
   }
   return(list(DF = DF, ok = ok, err = err))
 }
-#
+
 Xls2TmpCsv <- function(xlsfil, sheet, globs = FinnGlobs()) {
   # Calls on VB-script that converts sheet in xlsfil to csv
   # Should use tempdir()?
@@ -1765,7 +1653,7 @@ Xls2TmpCsv <- function(xlsfil, sheet, globs = FinnGlobs()) {
   return(paste(globs$path, "/", globs$binDir, "/tmpfiler/XLStoCSVconverterTmpCsv", ".csv", sep = ""))
 }
 
-#
+
 ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   # Reshape av DELF basert på parametre i filbesk
   is_kh_debug()
@@ -1819,11 +1707,9 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Fin
   return(list(DF = DELF, ok = ok))
 }
 
-
 # VASK AV TAB-kolonner og VAl-kolonner
-##########################################################
-subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
 
+subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
 
 KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = FinnGlobs()) {
   is_kh_debug()
@@ -1881,56 +1767,6 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
     return(list(omk = omk, subsant = subsant))
   }
 }
-# KBomkod<-function(org,type,filbesk,valsubs=FALSE,batchdate=NULL,globs=FinnGlobs()) {
-#   datef<-format(Sys.time(), "#%Y-%m-%d#")
-#   if (!is.null(batchdate)){
-#     datef<-format(strptime(batchdate, "%Y-%m-%d-%H-%M"),"#%Y-%m-%d#")
-#   }
-#   omk<-org
-#   kbf<-paste(type,"kb",sep="")
-#   sql<-paste("SELECT TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE
-#                 FELTTYPE='",type,
-#                 "' AND FILGRUPPE='",filbesk$FILGRUPPE,
-#                 "' AND (DELID='",filbesk$DELID,"' OR DELID='FELLES')",
-#                 " AND VERSJONFRA<=",datef,
-#                 " AND VERSJONTIL>",datef,sep="")
-#   kbok<-sqlQuery(globs$dbh,sql,as.is=TRUE)
-#   kbok[is.na(kbok)]<-""
-#   subsant<-data.frame(ORG=character(0),KBOMK=character(0),OMK=character(0),FREQ=integer(0),OK=integer(0))
-#   if (nrow(kbok)>0){
-#     KBsubs<-subset(kbok,TYPE=="SUB")   #Regulæruttrykk
-#     KB<-subset(kbok,TYPE=="KB")       #Oppslagsliste
-#
-#     #For verdifeltene må omkoding tas før regexp for riktig eksport til LOGG_kODEBOK
-#     #For andre må regexp tas før omoding for riktig resultat, derfor litt omstendelig før
-#     if (valsubs==TRUE){
-#       omk2<-mapvalues(omk,KB$ORGKODE,KB$NYKODE,warn_missing = FALSE)
-#       tmp<-data.table(ORG=omk[omk!=omk2],KBOMK=omk2[omk!=omk2],key=c("ORG","KBOMK"))
-#       if (nrow(tmp)>0){
-#         tmp<-as.data.frame(table(tmp,useNA="ifany"),stringsAsFactors=FALSE)
-#         subsant<-rbind(subsant,data.frame(ORG=tmp$ORG,KBOMK=tmp$KBOMK,OMK=tmp$KBOMK,FREQ=tmp$Freq,OK=1,stringsAsFactors=FALSE))
-#       }
-#       omk<-omk2
-#     }
-#     i<-1
-#     while (i<=nrow(KBsubs)){
-#       KBsub<-KBsubs[i,]
-#       omk<-sub(KBsub$ORGKODE,KBsub$NYKODE,omk)
-#       if (valsubs==TRUE){
-#         subsant<-rbind(subsant,data.frame(ORG=KBsub,KBOMK="<SUB>",OMK="<SUB>",FREQ=length(grepl(KBsub,omk)),OK=1))
-#       }
-#       i<-i+1
-#     }
-#     if (valsubs==FALSE){
-#       omk<-mapvalues(omk,KB$ORGKODE,KB$NYKODE,warn_missing = FALSE)
-#     }
-#   }
-#   if (valsubs==FALSE){
-#     return(omk)
-#   } else {
-#     return(list(omk=omk,subsant=subsant))
-#   }
-# }
 
 GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
@@ -2233,10 +2069,7 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   return(aar)
 }
 
-
-
-# Diverse prosedyrer for INNLESING-trinnet
-###########################################
+# Diverse prosedyrer for INNLESING-trinnet ----
 
 SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
   is_kh_debug()
@@ -2291,7 +2124,6 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       DUB[, antKp := 0]
     }
 
-
     # Hold ##99-geokoder utenom. Her blir det lagd dubeltter når to illegitime KNR blir samme ##99 etc
     DUBg <- subset(DUB, !grepl("99$", GEO))
     if (nrow(DUBg) > 0) {
@@ -2326,7 +2158,6 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     # Legg til resterende kolonner
     # Må ha ok kolonnenavn til database
     setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
-
 
     tmp <- sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
     tmp2 <- tmp
@@ -2382,8 +2213,6 @@ FullDuplikatSjekk <- function(globs = FinnGlobs()) {
   return(FGRapport)
 }
 
-
-#
 LesFilNo <- function(id, y = "", globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -2398,7 +2227,6 @@ LesFilNo <- function(id, y = "", globs = FinnGlobs()) {
   return(LesFil(filbesk, globs = globs)$DF)
 }
 
-#
 LagTabellFraFilNo <- function(id, batchdate = SettKHBatchDate(), y = "", globs = FinnGlobs(), echo = FALSE) {
   is_kh_debug()
   
@@ -2407,7 +2235,6 @@ LagTabellFraFilNo <- function(id, batchdate = SettKHBatchDate(), y = "", globs =
   return(LagTabellFraFil(filbesk, FGP = FGP, globs = globs, echo = echo))
 }
 
-#
 FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -2468,7 +2295,6 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
   return(c(resultat, list(ok = ok)))
 }
 
-#
 FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), test = runtest, testID = testfiles) {
   is_kh_debug()
   
@@ -2492,15 +2318,13 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
   fb <- sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
 
   ## Picking up files path that is refered to in ORIGINALFILER
-  ## --------------------------------------------------------
+  
   if (test) {
     fb <- subset(fb, KOBLID %in% testID)
   }
 
   invisible(fb)
 }
-
-#
 
 FinnFilBeskFilid <- function(filid, batchdate = NULL, globs = FinnGlobs()) {
   is_kh_debug()
@@ -2535,7 +2359,6 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = FinnGlobs()) {
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
 }
 
-#
 TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
@@ -2554,7 +2377,6 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
   # cat("********\n",tmp,"__________\n")
 }
 
-#
 SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
@@ -2574,10 +2396,7 @@ SVcloneRecord <- function(dbh, table, koblid) {
   sqlQuery(dbh, sql)
 }
 
-##########################################################
-# TRINN 2:
-#
-##########################################################
+# TRINN 2 ----
 
 # BUFFER<-SetBuffer(filer=c("NPR","DAAR","BEFOLK","RESEPT"))
 
@@ -2595,7 +2414,6 @@ SetBuffer <- function(filer = c("BEFOLK"), globs = FinnGlobs()) {
   }
   return(BUFFER)
 }
-
 
 readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
   is_kh_debug()
@@ -2662,7 +2480,6 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
         FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
         cat(" og etter", dim(FIL), "\n")
       }
-
 
       orgkols <- copy(names(FIL))
       if (grepl("\\S", FilterDscr$KOLLAPSdeler)) {
@@ -2949,7 +2766,6 @@ LagKUBE <- function(KUBEid,
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
 
   # Les inn nødvendig informasjon om filene involvert (skilt ut i egen funksjon for lesbarhet)
-  ##################################################
   Finfo <- SettFilInfoKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, globs = globs)
   KUBEdscr <- Finfo$KUBEdscr
   TNPdscr <- Finfo$TNPdscr
@@ -2976,9 +2792,7 @@ LagKUBE <- function(KUBEid,
     globs$KubeDirQc <- globs$KubeDirQC_NH
   }
 
-
   # TRINN 1 LAG TNF
-  ####################################################
   if (drop_TN == 0) {
     cat("******LAGER TNF\n")
     TNtab <- LagTNtabell(filer, FilDesL, FGPs, TNPdscr, KUBEdscr = KUBEdscr, rapport = rapport, globs = globs)
@@ -2995,7 +2809,6 @@ LagKUBE <- function(KUBEid,
     cat("------FERDIG TNF\n")
   }
 
-
   if (bare_TN == 1) {
     RESULTAT <- list(KUBE = TNF, TNPdscr = TNPdscr)
   }
@@ -3003,7 +2816,6 @@ LagKUBE <- function(KUBEid,
   if (KUBEdscr$REFVERDI_VP == "P" && bare_TN == 0) {
     print("*****PREDIKER!!!")
     # Må først finne design for (den syntetiske) koblinga ST, SN og PN
-    ################################################
 
     # Bruk PREDfilter på ST og evt SN
     # Finn så FellesTab for disse
@@ -3050,7 +2862,6 @@ LagKUBE <- function(KUBEid,
     cat("***Lager PN\n")
     PNrd <- FinnRedesign(FilDesL[[filer["PN"]]], STNPFd, globs = globs)
     PN <- OmkodFil(FinnFilT(filer["PN"]), PNrd, globs = globs)
-    # PN<-GeoHarm(PN,vals=FGPs[[filer["PN"]]]$vals,globs=globs)  #Trenger vel ikke det, den er GeoHarm i Klargjør, trenger ikke rektangularisere her
 
     if (!(is.na(TNPdscr$PREDNEVNERFIL) | TNPdscr$PREDNEVNERFIL == "")) {
       PredNevnerKol <- gsub("^(.*):(.*)", "\\2", TNPdscr$PREDNEVNERFIL)
@@ -3129,7 +2940,6 @@ LagKUBE <- function(KUBEid,
       }
 
       # FINN MEISskala Merk at dette gjelder både ved REFVERDI_VP=P og =V
-      ########################################################################
 
       if (KUBEdscr$REFVERDI_VP == "P") {
         VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
@@ -3143,7 +2953,6 @@ LagKUBE <- function(KUBEid,
         VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
         VF <- VF[, c(VFtabkols, "MEISskala"), with = FALSE]
 
-
         setkeyv(KUBE, VFtabkols)
         setkeyv(VF, VFtabkols)
         KUBE <- VF[KUBE]
@@ -3156,15 +2965,10 @@ LagKUBE <- function(KUBEid,
       print(unique(KUBE$MEISskala))
     }
 
-
-
-
-
     # Finn "snitt" for ma-år.
     # DVs, egentlig lages forløpig bare summer, snitt settes etter prikking under
     # Snitt tolerer missing av type .f=1 ("random"), men bare noen få anonyme .f>1, se KHaggreger
     # Rapporterer variabelspesifikk VAL.n som angir antall år brukt i summen når NA holdt utenom
-    ################################################################### 3
 
     setkeyv(KUBE, c("AARl", "AARh"))
     aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
@@ -3191,7 +2995,6 @@ LagKUBE <- function(KUBEid,
       KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(NA)]
       KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(3)]
     }
-
 
     ma_satt <- 0
     orgintMult <- 1
@@ -3234,7 +3037,6 @@ LagKUBE <- function(KUBEid,
       KUBE[, eval(parse(text = lp))]
     }
 
-
     if (FGPs[[filer["T"]]][["B_STARTAAR"]] > 0) {
       valK <- FinnValKols(names(KUBE))
       KUBE[GEOniv == "B" & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (valK) := NA]
@@ -3255,21 +3057,17 @@ LagKUBE <- function(KUBEid,
         AARl < FGPs[[nameFGP]][[selectedCol]], (paste0(valK, ".f")) := 9]
     }
 
-
     if ("maKUBE0" %in% names(dumps)) {
       for (format in dumps[["maKUBE0"]]) {
         DumpTabell(KUBE, paste(KUBEid, "maKUBE0", sep = "_"), globs = globs, format = format)
       }
     }
 
-    raaKUBE <- copy(KUBE)
     # Anonymiser og skjul
-    ##################################################################
-
+    
     # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt
     # Se KHaggreger!
     raaKUBE <- copy(KUBE)
-
 
     # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
     if (ma_satt == 1) {
@@ -3350,10 +3148,7 @@ LagKUBE <- function(KUBEid,
       }
     }
 
-
-    ####################################################
     # LAYOUT
-    #################################################### 3
 
     if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
       for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
@@ -3361,7 +3156,6 @@ LagKUBE <- function(KUBEid,
       }
     }
 
-    ######################################################
     # EVT SPESIALBEHANDLING
 
     if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
@@ -3389,8 +3183,6 @@ LagKUBE <- function(KUBEid,
       }
     }
 
-
-
     if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) {
       for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
         DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpost", sep = "_"), globs = globs, format = format)
@@ -3415,7 +3207,6 @@ LagKUBE <- function(KUBEid,
         KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
       }
     }
-
 
     # Legg til manglende kolonner for homogen behandling under
     missKol <- setdiff(unlist(lapply(c("TELLER", "NEVNER", "RATE", "PREDTELLER"), function(x) {
@@ -3448,8 +3239,6 @@ LagKUBE <- function(KUBEid,
       KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPdscr$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
     }
 
-
-
     if (grepl("\\S", KUBEdscr$MTKOL)) {
       maltall <- KUBEdscr$MTKOL
       KUBE[, eval(parse(text = paste("MALTALL:=", KUBEdscr$MTKOL, sep = "")))]
@@ -3467,7 +3256,6 @@ LagKUBE <- function(KUBEid,
       cat("Meisskala3:\n")
       print(unique(KUBE$MEISskala))
       print(KUBE)
-
 
       # SETT SMR og MEIS
 
@@ -3494,7 +3282,6 @@ LagKUBE <- function(KUBEid,
     }
 
     # FINN "LANDSNORMAL". Merk at dette gjelder både ved REFVERDI_VP=P og =V
-    ########################################################################
 
     if (D_develop_predtype == "DIR") {
       # Midlertidig dirty løsning
@@ -3566,8 +3353,7 @@ LagKUBE <- function(KUBEid,
       }
     }
 
-
-    # SETT UTKOLONNER
+    # SETT UTKOLONNER FOR ALLVISKUBE
     if (!(is.na(KUBEdscr$NESSTARTUPPEL) | KUBEdscr$NESSTARTUPPEL == "")) {
       NstarTup <- unlist(str_split(KUBEdscr$NESSTARTUPPEL, ","))
     } else if (KUBEdscr$REFVERDI_VP == "P") {
@@ -3576,8 +3362,6 @@ LagKUBE <- function(KUBEid,
       NstarTup <- character(0)
     }
     OutVar <- globs$NesstarOutputDef[NstarTup]
-
-
 
     if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
       hjelpeVar <- unlist(str_split(KUBEdscr$EKSTRAVARIABLE, ","))
@@ -3601,7 +3385,6 @@ LagKUBE <- function(KUBEid,
       tabs <- setdiff(tabs, "KJONN")
     }
 
-    ######################################################
     # EVT SPESIALBEHANDLING
 
     # Start with Stata Prikking
@@ -3618,7 +3401,7 @@ LagKUBE <- function(KUBEid,
       }
     }
     
-    # Lage stataspec og overskrive helseprofil/kubespec.csv som inkluderer DIMS 
+    # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
     dims <- find_dims(dt = KUBE, spec = FGPs)
     stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
     
@@ -3685,12 +3468,10 @@ LagKUBE <- function(KUBEid,
     ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
     ALLVIS[, SPVFLAGG := mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
 
-
     # Filtrer bort GEO som ikke skal rapporteres
     KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
     ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
-    # NESSTAR<-NESSTAR[!grepl("99|9900$|1902\\d{2}|5401\\d{2}|03011[67]",GEO),]
-
+    
     # Filtrer bort uønskede tabs
     if ("ALDER" %in% names(KUBE)) {
       ALLVIS <- ALLVIS[!ALDER %in% c("999_999", "888_888"), ]
@@ -3720,23 +3501,7 @@ LagKUBE <- function(KUBEid,
     }
 
     cat("---------------------KUBE FERDIG")
-    # CompForrigeKube <- 0
-    # ForKub <- FinnDatertKube(KUBEid, silent = TRUE)
-    # if (!is.logical(ForKub)) {
-    #   # CompForrigeKube<-SammenlignKuber(KUBE,FinnDatertKube(KUBEid))
-    #   #       if (is.logical(CompForrigeKube$check) && CompForrigeKube$check==TRUE){
-    #   #           cat("    (identisk med forrige daterte versjon)\n")
-    #   #       } else {
-    #   #         cat("\nAVVIK FRA FORRIGE daterte versjon:\n")
-    #   #         print(CompForrigeKube$checkm)
-    #   #         cat("--------------\n")
-    #   #       }
-    # } else {
-    #   cat("      (Ingen eldre versjon å sammenligne med)\n")
-    #   CompForrigeKube <- NA
-    # }
     
-    # RESULTAT<-(list(TNF=TNF,STN=STNc,STNP=STNP,KUBE=KUBE))
     RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   }
   # SKRIV RESULTAT
@@ -3763,7 +3528,6 @@ LagKUBE <- function(KUBEid,
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   return(RESULTAT)
 }
-
 
 FinnRedesignForFilter <- function(ORGd, Filter, globs = FinnGlobs()) {
   is_kh_debug()
@@ -3809,7 +3573,6 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
 
 
   ## FHP and Oppveksprofile (OVP) folders specification
-  ## -------------------------------------------------
   profile <- FVdscr$PROFILTYPE
 
   switch(profile,
@@ -3824,8 +3587,6 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       setDir_F <- globs$ovpDir_F
     }
   )
-
-
 
   for (modus in moduser) {
     if (modus %in% c("K", "F", "B")) {
@@ -3842,20 +3603,6 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         FriskVDir <- setDir_F
         GEOfilter <- c("F", "L")
       }
-
-
-      ## ## orignal code
-      ## if (modus=="K"){
-      ##   FriskVDir<-globs$FriskVDir_K
-      ##   GEOfilter<-c("K","F","L")
-      ## } else if (modus=="B"){
-      ##   FriskVDir<-globs$FriskVDir_B
-      ##   GEOfilter<-c("B","K","F","L")
-      ## } else if (modus=="F"){
-      ##   FriskVDir<-globs$FriskVDir_F
-      ##   GEOfilter<-c("F","L")
-      ## }
-
 
       # FILTRER RADER
       filterA <- "(GEOniv %in% GEOfilter)"
@@ -3877,7 +3624,6 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       }
       filter <- paste(filterA, collapse = " & ")
       FRISKVIK <- subset(KUBE, eval(parse(text = filter)))
-
 
       defrows <- nrow(subset(KHglobs$GeoKoder, FRA <= aargang & TIL > aargang & TYP == "O" & GEOniv %in% GEOfilter))
       if (nrow(FRISKVIK) != defrows) {
@@ -3918,15 +3664,6 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         utfiln <- paste0(setPath, FVdscr$INDIKATOR, "_", batchdate, ".csv")
         cat("-->> FRISKVIK EKSPORT:", utfiln, "\n")
         data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
-
-
-        ## BELOW is the original code
-        ## --------------------------
-        ## #utfiln<-paste(globs$path,"/",globs$FriskVDir,aargang,"/stata/",indikator,"_",batchdate,".dta",sep="")
-        ## utfiln<-paste(globs$path,"/",FriskVDir,aargang,"/csv/",FVdscr$INDIKATOR,"_",batchdate,".csv",sep="")
-        ## cat("FRISKVIK EKSPORT:",utfiln,"\n")
-        ## write.table(FRISKVIK,file=utfiln,sep=';',row.names = FALSE)
-        ## #write.dta(FRISKVIK,file=utfiln)
       }
     } else {
       cat("ADVARSEL!!!!!!!! modus ", modus, "i FRISKVIK støttes ikke\n")
@@ -3996,10 +3733,6 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, na.rm 
   }
   return(UT)
 }
-
-
-
-
 
 FinnSnittOverAar <- function(KUBE, ma = 1, AntYMiss = 0, globs = FinnGlobs()) {
   is_kh_debug()
@@ -4313,8 +4046,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
   rektangularisert <- 0
   geoharmonisert <- 1 # Bygg ut til at de ikke trenger være geoharm fra KlargjørFil
 
-
-
   RDT <- FinnRedesign(FilDesL[[filer[TT]]], TNdes, globs = globs)
   if (nrow(RDT$Udekk) > 0) {
     KHerr("UDEKKA i RDT")
@@ -4330,7 +4061,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     }
     cat("Lager NF fra", filer[NN], "\n")
     NF <- OmkodFil(FinnFilT(filer[NN]), RDN, globs = globs, echo = 1)
-
 
     # NF<-GeoHarm(NF,vals=FGPs[[filer[NN]]]$vals,globs=globs)
   }
@@ -4352,7 +4082,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
       cat("Kaster ", length(setdiff(kast, kastTell)), "99-koder ved rektangulerisering.\n")
     }
 
-
     setkeyv(KubeDRekt, intersect(names(KubeDRekt), names(TF)))
     setkeyv(TF, intersect(names(KubeDRekt), names(TF)))
     TF <- TF[KubeDRekt]
@@ -4371,8 +4100,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     } else {
       TNF <- TF
     }
-
-
 
     rektangularisert <- 1
     cat("--TNF ferdig merget med KUBEd, dim(TNF)", dim(TNF), "\n")
@@ -4402,8 +4129,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     cat("--TNF ferdig, har ikke nevner, så TNF<-TF\n")
   }
 
-
-
   # Evt prossesering av nye kolonner etter merge/design
   if (!(is.na(TNPdscr$NYEKOL_RAD) | TNPdscr$NYEKOL_RAD == "")) {
     FGPtnf <- FGPs[[filer[TT]]]
@@ -4422,7 +4147,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     cat("Siste filtrering av TNF, hadde dim(TNF)", dimorg, "fik dim(TNF)", dim(TNF), "\n")
   }
 
-
   # Siste felles trinn for alle
   # SETT TELLER OG NEVNER navn
   TNnames <- names(TNF)
@@ -4435,7 +4159,6 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
 
   return(list(TNF = TNF, KUBEd = KUBEd))
 }
-
 
 FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
   is_kh_debug()
@@ -4452,8 +4175,6 @@ FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
   }
   return(FT)
 }
-
-
 
 # Finn Kubedesign fra parametre i KUBEdscr og orignalt design ORGd
 # Essensielt bare en parsing av parametre
@@ -4528,7 +4249,6 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   }
   return(Deler)
 }
-
 
 FinnFilN <- function(filstr, versjonert = FALSE, batch = NA, globs = FinnGlobs()) {
   is_kh_debug()
@@ -4605,7 +4325,6 @@ FinnFilT <- function(...) {
   return(FinnFil(...)$FT)
 }
 
-
 FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -4624,7 +4343,6 @@ FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
   }
   return(KUBE)
 }
-
 
 GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, FDesign = list(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = globs$KHaargang) {
   is_kh_debug()
@@ -4660,8 +4378,6 @@ GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, FDesign = list(), batch
   FIL[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]
   return(FIL)
 }
-
-
 
 KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   is_kh_debug()
@@ -4976,8 +4692,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
   amax <- FGP$amax
 
   # Modifiser syntaks pstrorg
-  ##########################
-
+  
   # Rydd i "feil syntaks"
   # NB: takler ikke "|" (or) i pstrorg
 
@@ -4995,9 +4710,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
   pstrorg <- gsub("AAR *(={1,2}) *(\\d+)$", "AARl==\\2 & AARh==\\2", pstrorg)
 
   # Klipp opp pstrorg
-  ##########################
-
-
+  
   # Finn kolonner involvert i pstrorg
   alletabs <- str_replace(unlist(str_split(pstrorg, " *& *")), "^(\\w*?) *(%in%.*|==.*| *$)", "\\1")
 
@@ -5006,7 +4719,6 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
   # subsetstr<-gsub("&+","&",subsetstr)
   subsetstr <- gsub("^ *\\w+ *(&|$)|(^|&) *\\w+ *$", "", pstrorg, perl = TRUE)
   subsetstr <- gsub("& *\\w+ *&", "&", subsetstr, perl = TRUE)
-
 
   # Splitt i kolonnenavn og verdi
   subtabs <- str_replace(unlist(str_split(subsetstr, " *& *")), "^(\\w+) *(%in%.*|==.*)", "\\1")
@@ -5165,7 +4877,6 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
   return(TNF)
 }
 
-#
 OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
   is_kh_debug()
   
@@ -5440,24 +5151,6 @@ OmkodFilFraDesign <- function(Fil, Design, FGP = list(amin = 0, amax = 120), rap
   return(OmkodFil(Fil, RD, rapport = rapport, globs = globs))
 }
 
-# OmkodFilFraPart<-function(Fil,Part,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
-#   Dorg<-FinnDesign(Fil,FGP=FGP,globs=globs)
-#   KB<-subset(FinnRedesign(Dorg,ModifiserDesign(Part,Dorg,globs=globs),globs=globs)$FULL,PRI==0)
-#   return(OmkodFil(Fil,KB))
-# }
-#
-#
-# OmkodFilFraDesign<-function(Fil,Design,FGP=list(amin=0,amax=120),globs=FinnGlobs()){
-#   Dorg<-FinnDesign(Fil,FGP=FGP,globs=globs)
-#   KB<-subset(FinnRedesign(Dorg,Design,globs=globs)$FULL,PRI==0)
-#   return(OmkodFil(Fil,KB))
-# }
-
-
-
-#####################################################################################
-
-
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -5572,8 +5265,6 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   gc()
   return(Design)
 }
-
-
 
 FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), ReturnerFullFull = FALSE, globs = FinnGlobs(), prios = globs$DefDesign, KB = globs$KB, IntervallHull = globs$DefDesign$IntervallHull, AggPri = globs$DefDesign$AggPri, echo = 0) {
   is_kh_debug()
@@ -6041,9 +5732,7 @@ FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utc
   return(result)
 }
 
-
-####################################################################################
-# Tekniske hjelperutiner
+# Tekniske hjelperutiner ----
 
 DekkerInt <- function(FRA, TIL) {
   is_kh_debug()
@@ -6766,7 +6455,6 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
 }
 
 
-#############################################
 SammelignAarganger <- function(globs = FinnGlobs(), aar1 = globs$KHaargang, aar2 = globs$KHaargang - 1, modus = "KH") {
   is_kh_debug()
   
@@ -6892,10 +6580,7 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
   }
 }
 
-## --------
 ## Stata prikking do file
-## --------
-
 do_stata_prikk <- function(dt, spc, batchdate, globs, test = FALSE){
   is_kh_debug()
 
@@ -7043,14 +6728,8 @@ var_num <- function(x){
   return(x)
 }
 
-#############################################
-
-## ---------------------
-## Backup filer
-## ---------------------
 
 ## Backup filer
-## ---------------
 backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, ...) {
   is_kh_debug()
   
@@ -7071,7 +6750,6 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
   switch(valgFil,
 
          ## Access Tabell
-         ## -------------
          "mdb" = {
            styrpath <- file.path(defpaths[1], "STYRING")
            styrpath_b <- file.path(defpaths[1], "STYRING", "VERSJONSARKIV")
@@ -7102,7 +6780,6 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
          },
 
          ## KHFunction
-         ## ----------
          "fun" = {
            binpath <- file.path(defpaths[1], "BIN")
            binpath_b <- file.path(defpaths[1], "BIN", "VERSJONSARKIV")
@@ -7139,9 +6816,8 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
 }
 
 
-###############################
+
 ## GODKJENT MAPPE
-###############################
 ## inspak <- function(pkg){
 ##   nypkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
 ##   if (length(nypkg))
