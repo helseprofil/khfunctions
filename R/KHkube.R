@@ -773,35 +773,57 @@ LagKUBE <- function(KUBEid,
       return(list(raaKUBE0 = raaKUBE0, raaKUBE = raaKUBE, raaKUBE2 = raaKUBE2, raaKUBE3 = raaKUBE3, KUBE = KUBE, TNF = TNF, ALLVIS = ALLVIS))
     }
     
-    cat("---------------------KUBE FERDIG")
+    cat("---------------------KUBE FERDIG\n\n")
     
     RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   }
   # SKRIV RESULTAT
   path <- globs$path
-  printR <- TRUE
-  if (printR) {
-    utfiln <- paste(path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
-    # save(Filgruppe,file=utfiln)
-    print(utfiln)
-    saveRDS(KUBE, file = utfiln)
-    if (versjonert == TRUE) {
-      utfild <- paste(path, "/", globs$KubeDirDat, "/", KUBEid, "_", batchdate, ".rds", sep = "")
-      # cat("Kopierer datert",utfild, "jasdkljasl",globs$KubeDirDat,"\n")
-      file.copy(utfiln, utfild)
-      if (csvcopy == TRUE) {
-        utfild <- gsub("(.*)/R/(.*)", "\\1/csv/\\2", utfild)
-        utfild <- gsub("(.*)\\.rds$", "\\1.csv", utfild)
-        print(utfild)
-        fwrite(ALLVIS, file = utfild, sep = ";")
-      }
-    }
+  
+  cat("SAVING FILES:\n")
+  ## Write .rds file to NYESTE/R
+  utfiln <- paste(path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
+  saveRDS(KUBE, file = utfiln)
+  cat("\n", utfiln)
+  
+  ## If versjonert, Write .rds file to DATERT/R (copy from NYESTE)
+  if (versjonert == TRUE) {
+    utfilv <- paste(path, "/", globs$KubeDirDat, "/R/", KUBEid, "_", batchdate, ".rds", sep = "")
+    file.copy(utfiln, utfilv)
+    cat("\n", utfilv)
   }
+  
+  ## If csvcopy, Write .csv file to DATERT/csv, and QC kube to QC
+  if (csvcopy == TRUE) {
+    utfild <- paste(path, "/", globs$KubeDirDat, "/csv/", KUBEid, "_", batchdate, ".csv", sep = "")
+    fwrite(ALLVIS, file = utfild, sep = ";")
+    cat("\n", utfild)
+    
+    utfilq <- paste(path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
+    fwrite(QC, file = utfilq, sep = ";")
+    cat("\n", utfilq)
+  }
+  
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   return(RESULTAT)
 }
 
+#' LagFlereKuber
+#' 
+#' Wrapper aroung LagKUBE, allowing for more than one KUBE to be made simultaneously
+#'
+#' @param KUBEidA 
+#' @param versjonert 
+#' @param csvcopy 
+#' @param globs 
+#' @param dumps 
+#' @param ... 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
   is_kh_debug()
   
@@ -815,6 +837,18 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
   sink()
 }
 
+#' LagKubeDatertCsv
+#' 
+#' Wrapper around LagKUBE, with default options to save output files
+#'
+#' @param KUBEID 
+#' @param dumps 
+#' @param ... 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
   is_kh_debug()
   invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
