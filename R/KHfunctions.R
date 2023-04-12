@@ -117,6 +117,10 @@
 #   XLScols = as.vector(sapply(c("", as.vector(paste(sapply(c("", LETTERS[]), paste, LETTERS[], sep = "")))), paste, LETTERS[], sep = ""))
 # )
 
+# Set debugging to inactive
+show_functions <- FALSE
+show_arguments <- FALSE
+
 #' is_kh_debug (ybk)
 #' 
 #' Debugging all other functions in the project
