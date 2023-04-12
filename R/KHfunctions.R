@@ -4355,7 +4355,7 @@ FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
   if (is.na(batch)) {
     filn <- paste(globs$path, "/", globs$KubeDirNy, fila, ".rds", sep = "")
   } else {
-    filn <- paste(globs$path, "/", globs$KubeDirDat, fila, "_", batch, ".rds", sep = "")
+    filn <- paste(globs$path, "/", globs$KubeDirDat, "/R/", fila, "_", batch, ".rds", sep = "")
   }
   KUBE <- data.table()
   if (file.access(filn, mode = 0) == -1) {
@@ -5895,7 +5895,7 @@ KonverterKUBER <- function(Format = "CSV", versjonert = FALSE, globs = FinnGlobs
   # Rmappe<-paste(globs$path,"/",globs$KubeDirNy,sep="")
   Rmappe <- globs$KubeDirNy
   if (versjonert == TRUE) {
-    Rmappe <- globs$KubeDirDat
+    Rmappe <- paste0(globs$KubeDirDat, "/R/")
   }
   Utmappe <- gsub("/R/", paste("/", Format, "/", sep = ""), Rmappe)
   KonverterRMappe(Rmappe = Rmappe, Utmappe = Utmappe, Format = Format, globs = globs)
@@ -6089,7 +6089,7 @@ SjekkVersjoner <- function(commoncols = FALSE, dropcols = character(0)) {
   is_kh_debug()
   
   globs <- FinnGlobs()
-  path <- paste(globs$path, "/", globs$KubeDirDat, sep = "")
+  path <- paste(globs$path, "/", globs$KubeDirDat, "/R/", sep = "")
   setwd(path)
   Filer <- setNames(as.data.frame(list.files(include.dirs = FALSE), stringsAsFactors = FALSE), c("FILNAVN"))
   Filer$KUBE <- gsub("(.*)_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}\\.rds", "\\1", Filer$FILNAVN)
@@ -6126,7 +6126,7 @@ FinnDatertKube <- function(KUBEid, batch = NA, silent = FALSE, hist = 0) {
   is_kh_debug()
   
   globs <- FinnGlobs()
-  path <- paste(globs$path, "/", globs$KubeDirDat, sep = "")
+  path <- paste(globs$path, "/", globs$KubeDirDat, "/R/", sep = "")
   # Finner nyeste daterte versjon om ikke batcdate er gitt
   if (is.na(batch)) {
     orgwd <- getwd()
