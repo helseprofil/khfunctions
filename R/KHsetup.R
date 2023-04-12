@@ -15,10 +15,10 @@ library(readxl)
 library(fs)
 
 # Load setup scripts
-kh_source(repo = "khfunctions", branch = "master", file = "KHpaths.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "master", file = "KHglobs.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "master", file = "KHkube.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHpaths.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHglobs.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHfunctions.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHkube.R", encoding = "latin1")
 
 
 # Set debugging to inactive
