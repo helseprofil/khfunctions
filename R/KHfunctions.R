@@ -6715,9 +6715,6 @@ LagQCKube <- function(KUBEid,
   }
   QC <- QC[, ..qccols]
   
-  utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
-  fwrite(QC, file = utfilq, sep = ";")
-  cat("KVALITETSKONTROLLKUBE SKREVET:\n", utfilq, "\n")
   return(QC)
 }
 
