@@ -1,3 +1,4 @@
+# Global parameters, starting point for SettGlobs()/FinnGlobs()
 globglobs <- list(
   HOVEDmodus = "NH",
   KHaargang = 2023,
@@ -200,14 +201,11 @@ FinnStataExe <- function() {
   return(list(Exe = Exe, Vers = Vers))
 }
 
-
 SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   is_kh_debug()
   
-  # Setter globale parametre
-  # Disse er faste over hver kjøring og endres normalt bare ved systemoppdatering/-migrering
-  # Merk at globs$dbh ikke lukkes av seg selv, dermed kan det bli rot med gamle slike om FinnGlobs brukes for mye
-  # Bruk evy odbcCloseAll() for å rydde absolutt alle
+  # Close all active connections to avoid many connection open simultaneously
+  RODBC::odbcCloseAll()
   
   # Les globglobs (se topp av fil)
   globs <- globglobs
