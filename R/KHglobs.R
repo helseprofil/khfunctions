@@ -87,7 +87,6 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
     }
   }
   
-  
   UBeting <- Deler$DEL[Deler$OMKODbet == "U"]
   BetingOmk <- Deler$DEL[Deler$OMKODbet == "B"]
   BetingF <- Deler$DEL[Deler$OMKODbet == "F"]
@@ -97,8 +96,6 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
   DesignKols <- c(unlist(DelKols[c(UBeting, BetingOmk)]))
   DesignKolsF <- c(DesignKols, unlist(DelKols[BetingF]))
   DesignKolsFA <- c(DesignKolsF, setdiff(unlist(DelKolsF[c(UBeting, BetingOmk)]), unlist(DelKols[c(UBeting, BetingOmk)])))
-  
-  
   
   return(
     list(
@@ -139,6 +136,8 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
         KBD <- cbind(KBD, data.frame(ORGKODEl = integer(0), ORGKODEh = integer(0), NYKODEl = integer(0), NYKODEh = integer(0)))
       }
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
+      # Warning NAs introduced by coercion
+      # Tries to turn character vector into integer, where e.g. LANDBAK = 1c -> NA
       KBD$ORGKODE <- as.integer(KBD$ORGKODE)
       KBD$NYKODE <- as.integer(KBD$NYKODE)
     }
@@ -156,6 +155,8 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
 
 SettLegitimeKoder <- function(globs = FinnGlobs()) {
   is_kh_debug()
+  
+  # Produces warning: In data.frame(..., check.names = FALSE) : NAs introduced by coercion
   
   Koder <- sqlQuery(globs$dbh, "SELECT * FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE)
   KodeL <- list()
@@ -201,7 +202,7 @@ FinnStataExe <- function() {
   return(list(Exe = Exe, Vers = Vers))
 }
 
-SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
+SettGlobs <- function(path = "", modus = NA) {
   is_kh_debug()
   
   # Close all active connections to avoid many connection open simultaneously
@@ -223,50 +224,39 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
     globs$KubeDirDat <- globs$KubeDirDat_NH
   }
   
-  KHdbname <- globs$KHdbname
-  # Sett path om denne ikker er oppgitt:
+  dbFile <- globs$KHdbname
+  logFile <- globs$KHlogg
   
+  # If path is not provided, set it to defpath
+  if (path == "" & file.exists(paste(defpath, dbFile, sep = "/"))) {
+    path <- defpath
+    cat("Setter path = ", path, "\n")
+  }
+  
+  # If path is not given, and defpath is not found, print warning
   if (path == "") {
-    if (file.exists(paste(getwd(), KHdbname, sep = "/"))) {
-      path <- getwd()
-      if (gibeskjed == TRUE) {
-        cat("Setter path = ", path, " fra getwd()\n")
-      }
-    } else {
-      i <- 1
-      while (path == "" & i <= length(defpaths)) {
-        if (file.exists(paste(defpaths[i], KHdbname, sep = "/"))) {
-          path <- defpaths[i]
-          cat("Setter path=", path, "fra defpaths\n")
-        }
-        i <- i + 1
-      }
-    }
-    if (path == "") {
       cat(globs$stjstr, "******KRITISK FEIL: path ikke funnet\n******Har du tilgang til F:/?", globs$stjstr, sep = "")
-    }
-  } else if (!file.exists(paste(path, KHdbname, sep = "/"))) {
+  }
+  
+  # if path does not contain db file, print error and set path = ""
+  if (isFALSE(file.exists(paste(path, dbFile, sep = "/")))) {
     cat(globs$stjstr, "******KRITISK FEIL: path har ikke hovedfila", KHdbname, globs$stjstr, sep = "")
     path <- ""
   }
   
-  if (path != "") {
-    
+  # If local path is set:
+  if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
     ## Use other location of KHELSA.mdb and KHlogg.mdb
     ## This is needed due to constant crash with unstable network
-    dbFile <- globs$KHdbname
-    logFile <- globs$KHlogg
-    
-    if (exists("setLocalPath", envir = .GlobalEnv)) {
-      path <- setLocalPath
-    }
-    
+    path <- setLocalPath
+  }
+  
+  # If path is valid, connect to database and reset path to rawPath for global parameters to work
+  if(path != ""){
     # Sys.getenv("R_ARCH")   gir "/x64"eller "/i386"
     KHOc <- odbcConnectAccess2007(paste(path, dbFile, sep = "/"))
-    # KHOc<-odbcConnectAccess(paste(path,KHdbname,sep="/"))
     KHLc <- odbcConnectAccess2007(paste(path, logFile, sep = "/"))
     
-    ## OBS!! Have to reset path to original for all the other globs use
     path <- rawPath
   }
   
@@ -287,7 +277,6 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   # Må legge til de som ikke omkodes for å lette bruk i merge
   # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
   
-  
   # GK til bydel. Bør konsolideres med KnrHarm
   GkBHarm <- data.table(sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
   
@@ -301,13 +290,10 @@ SettGlobs <- function(path = "", modus = NA, gibeskjed = FALSE) {
   return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
 }
 
-# Definer KHglobs
-KHglobs <- SettGlobs()
-
+#' Hjelperutine, bruker KHglobs eller SettGlobs()
 FinnGlobs <- function() {
   is_kh_debug()
   
-  # Hjelperutine, kjekk å brukes som default. Bruker KHglobs eller setter denne
   globs <- NA
   if (exists("KHglobs")) {
     globs <- KHglobs
@@ -316,3 +302,6 @@ FinnGlobs <- function() {
   }
   return(globs)
 }
+
+# Definer KHglobs
+KHglobs <- SettGlobs()
