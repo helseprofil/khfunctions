@@ -1,15 +1,6 @@
 # Set paths
-
-defpaths <- c(
-  "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON",
-  ## "F:/Prosjekter/Kommunehelsa/PRODUKSJON",
-  "F:/Prosjekter/Kommunehelsa/PRODUKSJON/DEVELOP",
-  "F:/Prosjekter/Kommunehelsa/Data og databehandling/kbDEV",
-  "J:/FHI/PRODUKSJON",
-  "J:/kbDEV"
-)
-
-rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+# Need defpath to be distinct from rawPath to not break test and local modus
+defpath <- rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
 dbNameFile <- "STYRING/KHELSA.mdb"
 dbLogFile <- "STYRING/KHlogg.mdb"
 
@@ -21,7 +12,7 @@ testfiles <- NULL
 useTest <- FALSE
 if (exists("testpath") && exists("testdb")) useTest <- TRUE
 if (useTest) {
-  defpaths <- testpath
+  defpath <- testpath
   dbNameFile <- testdb
   dbLogFile <- "KHlogg.mdb"
   noLog <- fs::file_exists(file.path(defpaths, dbLogFile))
@@ -29,10 +20,10 @@ if (useTest) {
 }
 
 ## RUN LOCAL
-## This is needed in run_local function
+## This is needed in run_local() function (sets setLocal == TRUE)
 if (!exists("setLocal")) setLocal <- FALSE
 if ((setLocal)) {
-  defpaths <- setLocalPath
+  defpath <- setLocalPath
   dbNameFile <- setDBFile
   dbLogFile <- setLogFile
 }
