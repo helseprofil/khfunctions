@@ -123,6 +123,11 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
 SettKodeBokGlob <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
+  # Produces warning: NAs introduced by coercion
+  # Happens when DefDesign$Delformat[del] == "integer", for dimensions where some values 
+  # are not possible to convert to integer (e.g. LANDBAK = "1c").
+  # Probably benign as these values are already recoded 
+  
   OmkodD <- sqlQuery(globs$dbh, "SELECT * FROM KH_OMKOD
                             UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE)
   KB <- list()
@@ -136,8 +141,6 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
         KBD <- cbind(KBD, data.frame(ORGKODEl = integer(0), ORGKODEh = integer(0), NYKODEl = integer(0), NYKODEh = integer(0)))
       }
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
-      # Warning NAs introduced by coercion
-      # Tries to turn character vector into integer, where e.g. LANDBAK = 1c -> NA
       KBD$ORGKODE <- as.integer(KBD$ORGKODE)
       KBD$NYKODE <- as.integer(KBD$NYKODE)
     }
@@ -157,6 +160,8 @@ SettLegitimeKoder <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
   # Produces warning: In data.frame(..., check.names = FALSE) : NAs introduced by coercion
+  # Happens when DefDesign$Delformat[del] == "integer", for dimensions where some values 
+  # are not possible to convert to integer (e.g. "1c").
   
   Koder <- sqlQuery(globs$dbh, "SELECT * FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE)
   KodeL <- list()
