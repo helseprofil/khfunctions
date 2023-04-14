@@ -2205,106 +2205,104 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
   return(Deler)
 }
 
-
-
-SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
-  is_kh_debug()
-  
-  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  KUBEdscr <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
-  if ((is.na(KUBEdscr$TNP) | KUBEdscr$TNP == "")) {
-    ok <- 0
-    err <- "Feltet TNP ikke satt!"
-  } else {
-    TNPdscr <- sqlQuery(globs$dbh, paste("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", KUBEdscr$TNP, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE)
-  }
-
-  filer <- character(0)
-  if ((is.na(TNPdscr$TELLERFIL) | TNPdscr$TELLERFIL == "")) {
-    ok <- 0
-    err <- "Feltet TELLERFIL ikke satt!"
-  } else {
-    filer["T"] <- TNPdscr$TELLERFIL
-  }
-  if (!(is.na(TNPdscr$NEVNERFIL) | TNPdscr$NEVNERFIL == "")) {
-    filer["N"] <- TNPdscr$NEVNERFIL
-  }
-
-
-  # Evt ekstrafiler med info for standardisering
-  if (KUBEdscr$REFVERDI_VP == "P") {
-    if (!(is.na(TNPdscr$PREDNEVNERFIL) | TNPdscr$PREDNEVNERFIL == "")) {
-      filer["PN"] <- gsub("^(.*):(.*)", "\\1", TNPdscr$PREDNEVNERFIL)
-    } else if (!is.na(TNPdscr$NEVNERFIL)) {
-      filer["PN"] <- TNPdscr$NEVNERFIL
-    } else {
-      filer["PN"] <- TNPdscr$TELLERFIL
-    }
-    if (!(is.na(TNPdscr$STANDARDTNFIL) | TNPdscr$STANDARDTNFIL == "")) {
-      STNPdscr <- sqlQuery(globs$dbh, paste("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNPdscr$STANDARDTNFIL, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE)
-      if ((is.na(STNPdscr$TELLERFIL) | STNPdscr$TELLERFIL == "")) {
-        ok <- 0
-        err <- "Feltet TELLERFIL ikke satt!"
-      } else {
-        filer["ST"] <- STNPdscr$TELLERFIL
-      }
-      if (!(is.na(STNPdscr$NEVNERFIL) | STNPdscr$NEVNERFIL == "")) {
-        filer["SN"] <- STNPdscr$NEVNERFIL
-      } else {
-        filer["SN"] <- STNPdscr$TELLERFIL
-      }
-    } else {
-      STNPdscr <- TNPdscr
-      filer["ST"] <- filer["T"]
-      if (!is.na(filer["N"])) {
-        filer["SN"] <- filer["N"]
-      }
-    }
-  } else {
-    STNPdscr <- list()
-  }
-  # Denne er ikke så veldig robust for feilspesifkasjon, men den brukes ikke annet til de enkleste tilfellene
-  PredFilter <- SettPredFilter(KUBEdscr$REFVERDI, globs = globs)
-
-  # Sett Tab-filter
-  # For å redusere ressursbruk er det viktig at lange lister med unødvendige ETAB blir barert bort tidlig
-  TabConds <- character(0)
-  TabFSubTT <- ""
-  for (tab in names(KUBEdscr)[grepl("^TAB\\d+$", names(KUBEdscr))]) {
-    if (!(is.na(KUBEdscr[[tab]]) || KUBEdscr[[tab]] == "")) {
-      tablist <- KUBEdscr[[tab]]
-      tab0 <- paste(tab, "_0", sep = "")
-      if (!(is.null(KUBEdscr[[tab0]]) || is.na(KUBEdscr[[tab0]]) || KUBEdscr[[tab0]] == "")) {
-        tablist <- KUBEdscr[[tab0]]
-      }
-      minus <- grepl("^-\\[", tablist)
-      tablist <- gsub("^-\\[(.*)\\]$", "\\1", tablist)
-      tablist <- paste("\"", gsub(",", "\",\"", tablist), "\"", sep = "")
-      tabcond <- paste("(", tab, " %in% c(", tablist, "))", sep = "")
-      if (minus) {
-        tabcond <- paste("!", tabcond, sep = "")
-      }
-      TabConds <- c(TabConds, tabcond)
-    }
-    TabFSubTT <- paste(TabConds, collapse = " & ")
-  }
-
-  FGPs <- list()
-  FilDesL <- list()
-  tmpBUFFER <- character(0)
-  for (fil in unique(filer)) {
-    TabFSub <- ifelse(fil == filer["T"], TabFSubTT, "")
-    FILinfo <- KlargjorFil(fil, TabFSub = TabFSub, KUBEid = KUBEid, versjonert = versjonert, FILbatch = NA, batchdate = batchdate, globs = globs)
-    FGPs[[fil]] <- FILinfo$FGP
-    FilDesL[[fil]] <- FILinfo$FILd
-
-    if (FILinfo$TilBuffer == 1) {
-      tmpBUFFER <- c(tmpBUFFER, fil)
-    }
-    # FilDesL[[fil]]<-FinnDesign(FinnFilT(fil,batch=batchdate,globs=globs),FGP=FGPs[[fil]],globs=globs)
-  }
-  return(list(KUBEdscr = KUBEdscr, TNPdscr = TNPdscr, filer = filer, PredFilter = PredFilter, STNPdscr = STNPdscr, FGPs = FGPs, FilDesL = FilDesL, tmpBUFFER = tmpBUFFER))
-}
+# SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
+#   is_kh_debug()
+#   
+#   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+#   KUBEdscr <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
+#   if ((is.na(KUBEdscr$TNP) | KUBEdscr$TNP == "")) {
+#     ok <- 0
+#     err <- "Feltet TNP ikke satt!"
+#   } else {
+#     TNPdscr <- sqlQuery(globs$dbh, paste("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", KUBEdscr$TNP, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE)
+#   }
+# 
+#   filer <- character(0)
+#   if ((is.na(TNPdscr$TELLERFIL) | TNPdscr$TELLERFIL == "")) {
+#     ok <- 0
+#     err <- "Feltet TELLERFIL ikke satt!"
+#   } else {
+#     filer["T"] <- TNPdscr$TELLERFIL
+#   }
+#   if (!(is.na(TNPdscr$NEVNERFIL) | TNPdscr$NEVNERFIL == "")) {
+#     filer["N"] <- TNPdscr$NEVNERFIL
+#   }
+# 
+# 
+#   # Evt ekstrafiler med info for standardisering
+#   if (KUBEdscr$REFVERDI_VP == "P") {
+#     if (!(is.na(TNPdscr$PREDNEVNERFIL) | TNPdscr$PREDNEVNERFIL == "")) {
+#       filer["PN"] <- gsub("^(.*):(.*)", "\\1", TNPdscr$PREDNEVNERFIL)
+#     } else if (!is.na(TNPdscr$NEVNERFIL)) {
+#       filer["PN"] <- TNPdscr$NEVNERFIL
+#     } else {
+#       filer["PN"] <- TNPdscr$TELLERFIL
+#     }
+#     if (!(is.na(TNPdscr$STANDARDTNFIL) | TNPdscr$STANDARDTNFIL == "")) {
+#       STNPdscr <- sqlQuery(globs$dbh, paste("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNPdscr$STANDARDTNFIL, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE)
+#       if ((is.na(STNPdscr$TELLERFIL) | STNPdscr$TELLERFIL == "")) {
+#         ok <- 0
+#         err <- "Feltet TELLERFIL ikke satt!"
+#       } else {
+#         filer["ST"] <- STNPdscr$TELLERFIL
+#       }
+#       if (!(is.na(STNPdscr$NEVNERFIL) | STNPdscr$NEVNERFIL == "")) {
+#         filer["SN"] <- STNPdscr$NEVNERFIL
+#       } else {
+#         filer["SN"] <- STNPdscr$TELLERFIL
+#       }
+#     } else {
+#       STNPdscr <- TNPdscr
+#       filer["ST"] <- filer["T"]
+#       if (!is.na(filer["N"])) {
+#         filer["SN"] <- filer["N"]
+#       }
+#     }
+#   } else {
+#     STNPdscr <- list()
+#   }
+#   # Denne er ikke så veldig robust for feilspesifkasjon, men den brukes ikke annet til de enkleste tilfellene
+#   PredFilter <- SettPredFilter(KUBEdscr$REFVERDI, globs = globs)
+# 
+#   # Sett Tab-filter
+#   # For å redusere ressursbruk er det viktig at lange lister med unødvendige ETAB blir barert bort tidlig
+#   TabConds <- character(0)
+#   TabFSubTT <- ""
+#   for (tab in names(KUBEdscr)[grepl("^TAB\\d+$", names(KUBEdscr))]) {
+#     if (!(is.na(KUBEdscr[[tab]]) || KUBEdscr[[tab]] == "")) {
+#       tablist <- KUBEdscr[[tab]]
+#       tab0 <- paste(tab, "_0", sep = "")
+#       if (!(is.null(KUBEdscr[[tab0]]) || is.na(KUBEdscr[[tab0]]) || KUBEdscr[[tab0]] == "")) {
+#         tablist <- KUBEdscr[[tab0]]
+#       }
+#       minus <- grepl("^-\\[", tablist)
+#       tablist <- gsub("^-\\[(.*)\\]$", "\\1", tablist)
+#       tablist <- paste("\"", gsub(",", "\",\"", tablist), "\"", sep = "")
+#       tabcond <- paste("(", tab, " %in% c(", tablist, "))", sep = "")
+#       if (minus) {
+#         tabcond <- paste("!", tabcond, sep = "")
+#       }
+#       TabConds <- c(TabConds, tabcond)
+#     }
+#     TabFSubTT <- paste(TabConds, collapse = " & ")
+#   }
+# 
+#   FGPs <- list()
+#   FilDesL <- list()
+#   tmpBUFFER <- character(0)
+#   for (fil in unique(filer)) {
+#     TabFSub <- ifelse(fil == filer["T"], TabFSubTT, "")
+#     FILinfo <- KlargjorFil(fil, TabFSub = TabFSub, KUBEid = KUBEid, versjonert = versjonert, FILbatch = NA, batchdate = batchdate, globs = globs)
+#     FGPs[[fil]] <- FILinfo$FGP
+#     FilDesL[[fil]] <- FILinfo$FILd
+# 
+#     if (FILinfo$TilBuffer == 1) {
+#       tmpBUFFER <- c(tmpBUFFER, fil)
+#     }
+#     # FilDesL[[fil]]<-FinnDesign(FinnFilT(fil,batch=batchdate,globs=globs),FGP=FGPs[[fil]],globs=globs)
+#   }
+#   return(list(KUBEdscr = KUBEdscr, TNPdscr = TNPdscr, filer = filer, PredFilter = PredFilter, STNPdscr = STNPdscr, FGPs = FGPs, FilDesL = FilDesL, tmpBUFFER = tmpBUFFER))
+# }
 
 
 
@@ -3317,67 +3315,67 @@ FinnSnittOverAar <- function(KUBE, ma = 1, AntYMiss = 0, globs = FinnGlobs()) {
   return(maKUBE)
 }
 
-# Bør nok konsolidere SettPredFilter og SettNaboAnoSpec, bør være greit å gjøre dette
-SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
-  is_kh_debug()
-  PredFilter <- list()
-  Pcols <- character(0)
-
-  # D-develop
-  D_develop_predtype <- "IND"
-  if (grepl("AAR", refvstr)) {
-    D_develop_predtype <- "DIR"
-  }
-
-  # Må utvikles til å lese KUBEdscr$REFVERDI
-  if (is.null(refvstr) || is.na(refvstr)) {
-    PredFilter <- list(Gn = data.frame(GEOniv = "L"))
-  } else {
-    refvstr <- gsub("(.*)ALDER=='*ALLE'*(.*)", paste("\\1", "ALDER==", FGP$amin, "_", FGP$amax, "\\2", sep = ""), refvstr)
-    for (del in names(globs$DefDesign$DelKolN)) {
-      delN <- globs$DefDesign$DelKolN[del]
-      if (globs$DefDesign$DelType[del] == "COL") {
-        if (grepl(paste("(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$)", sep = ""), refvstr)) {
-          Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
-          val <- gsub(paste(".*(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$).*", sep = ""), "\\2", refvstr)
-          if (globs$DefDesign$DelFormat[del] == "integer") {
-            PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "=", as.integer(val), ",stringsAsFactors=FALSE)", sep = "")))
-          } else {
-            PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "=\"", val, "\",stringsAsFactors=FALSE)", sep = "")))
-          }
-        }
-      } else if (globs$DefDesign$DelType[del] == "INT") {
-        if (grepl(paste("(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr) &&
-          grepl(paste("(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
-          Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
-          vall <- gsub(paste(".*(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&).*", sep = ""), "\\2", refvstr)
-          valh <- gsub(paste(".*(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&).*", sep = ""), "\\2", refvstr)
-          PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)", sep = "")))
-        } else if (grepl(paste("(^|\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
-          intval1 <- as.integer(gsub(paste("(^|.*\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", refvstr))
-          intval <- c(intval1, intval1)
-          # Gammelt: kunne ha f.eks. AAR='2012_2014'. Dette blir for dillete mot annen bruk, må da ha "AARl='2012' & AARh='2014'"
-          # intval<-as.integer(unlist(str_split(gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr),"_")))
-          # if (length(intval)==1){intval<-c(intval,intval)}
-
-          # Gammelt, feil?
-          # val<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr)
-          # refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
-          #          paste("\\1", paste(delN,"l",sep=""),"==\\2 &"," \\1 ",paste(delN,"l",sep=""),"==\\2"," \\3",sep=""),refvstr)
-          # refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
-          #              paste("\\1",paste(delN,"l",sep=""),"==",intval[1]," & ",paste(delN,"h",sep=""),"==",intval[2],"\\3",sep=""),refvstr)
-
-          # Litt shaky her. For AAR kan man ikke sette 'AARl=y & AARh=y' fordi det vil krasje med AARs intervall ved snitt
-          # Derfor bare 'AARl=y'
-          refvstr <- gsub(paste(delN, "=", sep = ""), paste(delN, "l=", sep = ""), refvstr)
-          Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
-          PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "l=", intval[1], ",", delN, "h=", intval[2], ",stringsAsFactors=FALSE)", sep = "")))
-        }
-      }
-    }
-  }
-  return(list(Design = PredFilter, PfiltStr = refvstr, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
-}
+# # Bør nok konsolidere SettPredFilter og SettNaboAnoSpec, bør være greit å gjøre dette
+# SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+#   is_kh_debug()
+#   PredFilter <- list()
+#   Pcols <- character(0)
+# 
+#   # D-develop
+#   D_develop_predtype <- "IND"
+#   if (grepl("AAR", refvstr)) {
+#     D_develop_predtype <- "DIR"
+#   }
+# 
+#   # Må utvikles til å lese KUBEdscr$REFVERDI
+#   if (is.null(refvstr) || is.na(refvstr)) {
+#     PredFilter <- list(Gn = data.frame(GEOniv = "L"))
+#   } else {
+#     refvstr <- gsub("(.*)ALDER=='*ALLE'*(.*)", paste("\\1", "ALDER==", FGP$amin, "_", FGP$amax, "\\2", sep = ""), refvstr)
+#     for (del in names(globs$DefDesign$DelKolN)) {
+#       delN <- globs$DefDesign$DelKolN[del]
+#       if (globs$DefDesign$DelType[del] == "COL") {
+#         if (grepl(paste("(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$)", sep = ""), refvstr)) {
+#           Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
+#           val <- gsub(paste(".*(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$).*", sep = ""), "\\2", refvstr)
+#           if (globs$DefDesign$DelFormat[del] == "integer") {
+#             PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "=", as.integer(val), ",stringsAsFactors=FALSE)", sep = "")))
+#           } else {
+#             PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "=\"", val, "\",stringsAsFactors=FALSE)", sep = "")))
+#           }
+#         }
+#       } else if (globs$DefDesign$DelType[del] == "INT") {
+#         if (grepl(paste("(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr) &&
+#           grepl(paste("(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
+#           Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
+#           vall <- gsub(paste(".*(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&).*", sep = ""), "\\2", refvstr)
+#           valh <- gsub(paste(".*(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&).*", sep = ""), "\\2", refvstr)
+#           PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)", sep = "")))
+#         } else if (grepl(paste("(^|\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
+#           intval1 <- as.integer(gsub(paste("(^|.*\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", refvstr))
+#           intval <- c(intval1, intval1)
+#           # Gammelt: kunne ha f.eks. AAR='2012_2014'. Dette blir for dillete mot annen bruk, må da ha "AARl='2012' & AARh='2014'"
+#           # intval<-as.integer(unlist(str_split(gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr),"_")))
+#           # if (length(intval)==1){intval<-c(intval,intval)}
+# 
+#           # Gammelt, feil?
+#           # val<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr)
+#           # refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
+#           #          paste("\\1", paste(delN,"l",sep=""),"==\\2 &"," \\1 ",paste(delN,"l",sep=""),"==\\2"," \\3",sep=""),refvstr)
+#           # refvstr<-gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),
+#           #              paste("\\1",paste(delN,"l",sep=""),"==",intval[1]," & ",paste(delN,"h",sep=""),"==",intval[2],"\\3",sep=""),refvstr)
+# 
+#           # Litt shaky her. For AAR kan man ikke sette 'AARl=y & AARh=y' fordi det vil krasje med AARs intervall ved snitt
+#           # Derfor bare 'AARl=y'
+#           refvstr <- gsub(paste(delN, "=", sep = ""), paste(delN, "l=", sep = ""), refvstr)
+#           Pcols <- c(Pcols, globs$DefDesign$DelKolsF[[del]])
+#           PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "l=", intval[1], ",", delN, "h=", intval[2], ",stringsAsFactors=FALSE)", sep = "")))
+#         }
+#       }
+#     }
+#   }
+#   return(list(Design = PredFilter, PfiltStr = refvstr, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
+# }
 
 SettPredFilterGml <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
   is_kh_debug()
