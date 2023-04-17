@@ -1,3 +1,5 @@
+## All functions only used in LagKUBE
+
 #' SettFilInfoKUBE (kb)
 #' 
 #' Read ACCESS, extracts information needed in LagKUBE
@@ -190,6 +192,134 @@ SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = Fi
   return(list(Design = PredFilter, PfiltStr = refvstr, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
 }
 
+KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
+  is_kh_debug()
+  TilBuffer <- 0
+  if (!exists("BUFFER")) {
+    .GlobalEnv$BUFFER <- list()
+  }
+  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+  
+  FilterDscr <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM FILFILTRE WHERE FILVERSJON='", FilVers, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
+  
+  # Har oppsatt filter
+  if (length(FilterDscr$FILVERSJON) > 0) {
+    FGP <- FinnFilgruppeParametre(FilterDscr$ORGFIL, batchdate = batchdate, globs = globs)
+    if (is.null(BUFFER[[FilVers]])) {
+      if (!is.na(FilterDscr$SUBSET)) {
+        if (FilterDscr$SUBSET != "") {
+          if (TabFSub != "") {
+            TabFSub <- paste(TabFSub, FilterDscr$SUBSET, sep = " & ")
+          } else {
+            TabFSub <- FilterDscr$SUBSET
+          }
+        }
+      }
+      
+      FILn <- FinnFil(FilterDscr$ORGFIL, batch = FILbatch, versjonert = versjonert)
+      FIL <- FILn$FT
+      sqlQuery(globs$log, paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '", KUBEid, "_", batchdate, "','", FilterDscr$ORGFIL, "_", FILn$batch, "'", sep = ""))
+      if (TabFSub != "") {
+        # print("ASKJDLKJASLDKJL  TabFSub")
+        cat("Filtrer med tab-filter, før er dim(FIL)", dim(FIL))
+        FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
+        cat(" og etter", dim(FIL), "\n")
+      }
+      
+      orgkols <- copy(names(FIL))
+      if (grepl("\\S", FilterDscr$KOLLAPSdeler)) {
+        cat("Før aggregering er dim(FIL)", dim(FIL))
+        tabkols <- FinnTabKols(names(FIL))
+        setkeyv(FIL, tabkols)
+        kolldel <- unlist(str_split(FilterDscr$KOLLAPSdeler, ","))
+        kolldelN <- unlist(globs$DefDesign$DelKolsF[kolldel])
+        # FIL[,(kolldelN):=NULL]
+        FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
+        FIL <- FIL[, lapply(.SD, sum), by = tabkols]
+        FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
+        FIL <- FIL[, orgkols, with = FALSE]
+        cat(" og etter", dim(FIL), "\n")
+      }
+      
+      if (!(is.na(FilterDscr$NYEKOL_KOL_preRAD) | FilterDscr$NYEKOL_KOL_preRAD == "")) {
+        FIL <- LeggTilNyeVerdiKolonner(FIL, FilterDscr$NYEKOL_KOL_preRAD, slettInf = TRUE)
+      }
+      Filter <- SettFilterDesign(FilterDscr, bruk0 = FALSE, FGP = FGP, globs = globs)
+      if (length(Filter) > 0) {
+        FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = Filter)), globs = globs, echo = 1)
+      }
+      
+      if (FilterDscr$GEOHARM == 1) {
+        rektiser <- ifelse(FilterDscr$REKTISER == 1, 1, 0)
+        FIL <- GeoHarm(FIL, vals = FGP$vals, rektiser = rektiser, batchdate = batchdate, globs = globs)
+      }
+      if (!(is.na(FilterDscr$NYETAB) | FilterDscr$NYETAB == "")) {
+        FIL <- AggregerRader(FIL, FilterDscr$NYETAB, FGP = FGP)
+      }
+      
+      if (grepl("\\S", FilterDscr$NYEKOL_RAD)) {
+        FIL <- LeggTilSumFraRader(FIL, FilterDscr$NYEKOL_RAD, FGP = FGP, globs = globs)
+      }
+      if (!(is.na(FilterDscr$NYEKOL_KOL) | FilterDscr$NYEKOL_KOL == "")) {
+        FIL <- LeggTilNyeVerdiKolonner(FIL, FilterDscr$NYEKOL_KOL, slettInf = TRUE)
+      }
+      
+      if (!(is.na(FilterDscr$NYKOLSmerge) | FilterDscr$NYKOLSmerge == "")) {
+        NY <- eval(parse(text = FilterDscr$NYKOLSmerge))
+        tabK <- intersect(FinnTabKols(names(NY)), FinnTabKols(names(FIL)))
+        setkeyv(NY, tabK)
+        setkeyv(FIL, tabK)
+        FIL <- NY[FIL]
+      }
+      
+      # FF_RSYNT1
+      if (!(is.na(FilterDscr$FF_RSYNT1) | FilterDscr$FF_RSYNT1 == "")) {
+        FilterDscr$FF_RSYNT1 <- gsub("\\\r", "\\\n", FilterDscr$FF_RSYNT1)
+        rsynt1err <- try(eval(parse(text = FilterDscr$FF_RSYNT1)), silent = TRUE)
+        print("***AD HOC MANIPULERING\n")
+        if (class(rsynt1err) == "try-error") {
+          print(rsynt1err)
+        }
+      }
+      
+      .GlobalEnv$BUFFER[[FilVers]] <- FIL
+      TilBuffer <- 1
+    }
+    # Bruk ferdig lagret versjon
+    else {
+      FIL <- copy(BUFFER[[FilVers]])
+      print(FilVers)
+      # print(BUFFERbatch)
+      if (versjonert == TRUE) {
+        # sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilterDscr$ORGFIL,"_",BUFFERbatch[[FilVers]],"'",sep=""))
+      }
+    }
+  }
+  # Har ikke oppsatt filter, bruk rå
+  else {
+    FILn <- FinnFil(FilVers, versjonert = versjonert, batch = FILbatch)
+    FIL <- FILn$FT
+    # sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilVers,"_",FILn$batch,"'",sep=""))
+    
+    if (TabFSub != "") {
+      cat("Filtrer med tab-filter, før er dim(FIL)", dim(FIL))
+      FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
+      cat(" og etter", dim(FIL), "\n")
+    }
+    FGP <- FinnFilgruppeParametre(FilVers, batchdate = batchdate, globs = globs)
+    if (GeoHarmDefault == 1) {
+      FIL <- GeoHarm(FIL, vals = FGP$vals, rektiser = FALSE, batchdate = batchdate, globs = globs)
+    }
+    .GlobalEnv$BUFFER[[FilVers]] <- FIL
+    # .GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
+    TilBuffer <- 1
+  }
+  
+  
+  FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
+  gc()
+  return(list(FIL = FIL, FGP = FGP, FILd = FILd, TilBuffer = TilBuffer))
+}
 
 ## Stata prikking do file
 #' do_stata_prikk (ybk)

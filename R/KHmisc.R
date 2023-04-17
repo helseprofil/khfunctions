@@ -1,0 +1,1 @@
+# General functions used in the data processing, both in LagKUBE and LagFilgruppe
