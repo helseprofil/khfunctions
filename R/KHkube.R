@@ -13,7 +13,7 @@
 #' @param globs global parameters, defaults to FinnGlobs()
 #' @param echo 
 #' @param dumps
-#' @param skriv should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
+#' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param ... 
 #'
 #' @examples
@@ -29,7 +29,7 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    skriv = TRUE,
+                    write = TRUE,
                     ...) {
   
   is_kh_debug()
@@ -752,8 +752,10 @@ LagKUBE <- function(KUBEid,
       ALLVIS <- ALLVIS[!KJONN %in% c(8, 9), ]
     }
     
-    # Create FRISKVIK indicators, based on the censored ALLVIS kube
-    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
+    # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
+    if(isTRUE(write)){
+      LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
+    }
     
     # Create QC KUBE based on the censored ALLVIS kube
     # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
@@ -774,11 +776,12 @@ LagKUBE <- function(KUBEid,
     
     cat("---------------------KUBE FERDIG\n\n")
     
+    # Save RESULTAT to global env
     RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   }
   
-  # SKRIV RESULTAT
-  if(isTRUE(skriv)){
+  # If write = TRUE, save output files
+  if(isTRUE(write)){
     cat("SAVING FILES:\n")
     ## Write .rds file to NYESTE/R
     utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
