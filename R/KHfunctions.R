@@ -5324,11 +5324,11 @@ KHsum <- function(x) {
   return(sum)
 }
 
-SettKHBatchDate <- function() {
-  is_kh_debug()
-  
-  format(Sys.time(), "%Y-%m-%d-%H-%M")
-}
+# SettKHBatchDate <- function() {
+#   is_kh_debug()
+#   
+#   format(Sys.time(), "%Y-%m-%d-%H-%M")
+# }
 
 DFHeadToString <- function(innDF, topn = 10) {
   is_kh_debug()
