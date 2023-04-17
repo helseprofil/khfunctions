@@ -9,11 +9,11 @@
 #' @param bare_TN 
 #' @param drop_TN 
 #' @param tmpbryt 
-#' @param FullUt 
 #' @param csvcopy 
-#' @param globs 
+#' @param globs global parameters, defaults to FinnGlobs()
 #' @param echo 
-#' @param dumps 
+#' @param dumps
+#' @param skriv should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param ... 
 #'
 #' @examples
@@ -25,10 +25,12 @@ LagKUBE <- function(KUBEid,
                     bare_TN = 0,
                     drop_TN = 0,
                     tmpbryt = 0,
-                    FullUt = 0,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
-                    echo = 0, dumps = list(), ...) {
+                    echo = 0, 
+                    dumps = list(), 
+                    skriv = TRUE,
+                    ...) {
   
   is_kh_debug()
   
@@ -776,29 +778,30 @@ LagKUBE <- function(KUBEid,
   }
   
   # SKRIV RESULTAT
-  
-  cat("SAVING FILES:\n")
-  ## Write .rds file to NYESTE/R
-  utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
-  saveRDS(KUBE, file = utfiln)
-  cat("\n", utfiln)
-  
-  ## If versjonert, Write .rds file to DATERT/R (copy from NYESTE)
-  if (versjonert == TRUE) {
-    utfilv <- paste(globs$path, "/", globs$KubeDirDat, "/R/", KUBEid, "_", batchdate, ".rds", sep = "")
-    file.copy(utfiln, utfilv)
-    cat("\n", utfilv)
-  }
-  
-  ## If csvcopy, Write .csv file to DATERT/csv, and QC kube to QC
-  if (csvcopy == TRUE) {
-    utfild <- paste(globs$path, "/", globs$KubeDirDat, "/csv/", KUBEid, "_", batchdate, ".csv", sep = "")
-    fwrite(ALLVIS, file = utfild, sep = ";")
-    cat("\n", utfild)
+  if(isTRUE(skriv)){
+    cat("SAVING FILES:\n")
+    ## Write .rds file to NYESTE/R
+    utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
+    saveRDS(KUBE, file = utfiln)
+    cat("\n", utfiln)
     
-    utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
-    fwrite(QC, file = utfilq, sep = ";")
-    cat("\n", utfilq)
+    ## If versjonert, Write .rds file to DATERT/R (copy from NYESTE)
+    if (versjonert == TRUE) {
+      utfilv <- paste(globs$path, "/", globs$KubeDirDat, "/R/", KUBEid, "_", batchdate, ".rds", sep = "")
+      file.copy(utfiln, utfilv)
+      cat("\n", utfilv)
+    }
+    
+    ## If csvcopy, Write .csv file to DATERT/csv, and QC kube to QC
+    if (csvcopy == TRUE) {
+      utfild <- paste(globs$path, "/", globs$KubeDirDat, "/csv/", KUBEid, "_", batchdate, ".csv", sep = "")
+      fwrite(ALLVIS, file = utfild, sep = ";")
+      cat("\n", utfild)
+      
+      utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
+      fwrite(QC, file = utfilq, sep = ";")
+      cat("\n", utfilq)
+    }
   }
   
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
