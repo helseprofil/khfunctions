@@ -1,4 +1,4 @@
-# TRINN 1: STABLING AV ORIGINALFILER I FILGRUPPE-FILER ----
+# TRINN 1: STABLING AV ORIGINALFILER I FILGRUPPE-FILER
 #         Gir ferdige stablede filer i \\StablaFilGrupper
 
 #' LagFilgruppe (kb)
