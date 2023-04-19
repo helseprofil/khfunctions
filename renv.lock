@@ -132,6 +132,16 @@
       "Hash": "0d297d01734d2bcea40197bd4971a764",
       "Requirements": []
     },
+    "collapse": {
+      "Package": "collapse",
+      "Version": "1.9.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "8f6e1c5fc24bc09d73eb3cfc7a8e3845",
+      "Requirements": [
+        "Rcpp"
+      ]
+    },
     "cpp11": {
       "Package": "cpp11",
       "Version": "0.4.3",
@@ -155,6 +165,16 @@
       "Repository": "CRAN",
       "Hash": "b9b912b41064aaa79270f24d123c887d",
       "Requirements": []
+    },
+    "diffobj": {
+      "Package": "diffobj",
+      "Version": "0.3.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "bcaa8b95f8d7d01a5dedfd959ce88ab8",
+      "Requirements": [
+        "crayon"
+      ]
     },
     "ellipsis": {
       "Package": "ellipsis",
@@ -425,14 +445,18 @@
     },
     "stringr": {
       "Package": "stringr",
-      "Version": "1.4.0",
+      "Version": "1.5.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "0759e6b6c0957edb1311028a49a35e76",
+      "Hash": "671a4d384ae9d32fc47a14e98bfa3dc8",
       "Requirements": [
+        "cli",
         "glue",
+        "lifecycle",
         "magrittr",
-        "stringi"
+        "rlang",
+        "stringi",
+        "vctrs"
       ]
     },
     "tibble": {
