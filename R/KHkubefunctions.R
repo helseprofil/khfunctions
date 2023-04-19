@@ -522,6 +522,111 @@ RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = Sett
   return(REKT)
 }
 
+#' FiltrerTab (kb)
+#'
+#' @param FT 
+#' @param KubeD 
+#' @param globs 
+FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  orgkols <- names(FT)
+  for (del in names(KubeD)) {
+    tKOLS <- globs$DefDesign$DelKols[[del]]
+    if (all(tKOLS %in% names(FT))) {
+      KubeD[[del]] <- KubeD[[del]][, tKOLS, with = FALSE] # Burde være unødvendig, men noen ganger har HAR-kolonner blitt med
+      setkeyv(FT, tKOLS)
+      setkeyv(KubeD[[del]], tKOLS)
+      FT <- FT[KubeD[[del]], nomatch = 0]
+    }
+  }
+  return(FT)
+}
+
+#' FinnKubeDesignB (kb)
+#'
+#' @param KUBEdscr 
+#' @param ORGd 
+#' @param FGP 
+#' @param globs 
+FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  KubeD <- list(
+    TMP = FinnKubeDesign(KUBEdscr, ORGd, bruk0 = TRUE, FGP = FGP, globs = globs),
+    MAIN = FinnKubeDesign(KUBEdscr, ORGd, bruk0 = FALSE, FGP = FGP, globs = globs)
+  )
+}
+
+#' FinnKubeDesign (kb)
+#'
+#' @param KUBEdscr 
+#' @param ORGd 
+#' @param bruk0 
+#' @param FGP 
+#' @param globs 
+FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  Deler <- list()
+  for (del in names(globs$DefDesign$DelKolN)) {
+    # for (del in names(unlist(globs$DefDesign$DelKolN[ORGd$OmkDeler]))){
+    # if (del %in% names(ORGd$Part) | grepl("^T\\d$",del)){
+    if (del %in% names(ORGd$Part)) {
+      # Les liste
+      koldel <- globs$DefDesign$DelKolN[del]
+      koldel0 <- paste(koldel, "_0", sep = "")
+      
+      if (bruk0 == TRUE && !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != "") {
+        delListStr <- KUBEdscr[[koldel0]]
+      } else {
+        delListStr <- KUBEdscr[[koldel]]
+      }
+      if (!(is.null(delListStr) || is.na(delListStr) || delListStr == "")) {
+        minus <- grepl("^-\\[", delListStr)
+        delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
+        delListA <- unlist(str_split(delListStr, ","))
+        if (globs$DefDesign$DelType[del] == "INT") {
+          if (del == "A") {
+            delListA <- gsub("ALLE", paste(FGP$amin, "_", FGP$amax, sep = ""), delListA)
+            delListA <- gsub("^_(\\d+)", paste(FGP$amin, "_\\1", sep = ""), delListA)
+            delListA <- gsub("(\\d+)_$", paste("\\1_", FGP$amax, sep = ""), delListA)
+          }
+          delListA <- gsub("^(\\d+)$", "\\1_\\1", delListA)
+          delListA <- as.data.table(matrix(as.integer(str_split_fixed(delListA, "_", 2)), ncol = 2))
+        } else if (globs$DefDesign$DelFormat[del] == "integer") {
+          delListA <- as.integer(delListA)
+        } else if (globs$DefDesign$DelFormat[del] == "numeric") {
+          delListA <- as.numeric(delListA)
+        }
+        listDT <- setnames(as.data.table(delListA), globs$DefDesign$DelKols[[del]])
+        if (minus == TRUE) {
+          setkeyv(listDT, key(ORGd$Part[[del]]))
+          Deler[[del]] <- ORGd$Part[[del]][!listDT, ]
+        } else {
+          Deler[[del]] <- listDT
+        }
+      } else if (globs$DefDesign$DelType[del] == "INT") {
+        delN <- globs$DefDesign$DelKolN[del]
+        start <- KUBEdscr[[paste(delN, "_START", sep = "")]]
+        stopp <- KUBEdscr[[paste(delN, "_STOP", sep = "")]]
+        if (!(is.null(start) | is.null(stopp))) {
+          if (stopp >= start) {
+            Deler[[del]] <- subset(ORGd$Part[[del]], eval(parse(text = paste(delN, "l>=", start, " & ", delN, "h<=", stopp, sep = ""))))
+          } else {
+            cat("FEIL!!!!!!!! kan ikke ha start ", start, "> stopp ", stopp, "\n")
+          }
+        } else {
+          Deler[[del]] <- ORGd$Part[[del]]
+        }
+      } else {
+        Deler[[del]] <- ORGd$Part[[del]]
+      }
+    }
+  }
+  return(Deler)
+}
+
 #' FinnFellesTab (kb)
 #'
 #' @param DF1 
@@ -550,6 +655,82 @@ FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs(), echo = 0) {
   cat(" Ferdig i FinnFellesTab\n")
   gc()
   return(list(Dekk = Dekk12, FDes = FDes))
+}
+
+#' SettFilterDesign (kb)
+#'
+#' @param KUBEdscr 
+#' @param OrgParts 
+#' @param bruk0 
+#' @param FGP 
+#' @param globs 
+SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  Deler <- list()
+  for (del in names(globs$DefDesign$DelKolN)) {
+    # for (del in names(unlist(globs$DefDesign$DelKolN[ORGd$OmkDeler]))){
+    # if (del %in% names(ORGd$Part) | grepl("^T\\d$",del)){
+    # Les liste
+    koldel <- globs$DefDesign$DelKolN[del]
+    koldel0 <- paste(koldel, "_0", sep = "")
+    
+    if (bruk0 == TRUE && !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != "") {
+      delListStr <- KUBEdscr[[koldel0]]
+    } else {
+      delListStr <- KUBEdscr[[koldel]]
+    }
+    if (!(is.null(delListStr) || is.na(delListStr) || delListStr == "")) {
+      delListStr <- gsub("^ *| *$", "", delListStr)
+      minus <- grepl("^-\\[", delListStr)
+      delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
+      delListA <- unlist(str_split(delListStr, ","))
+      if (globs$DefDesign$DelType[del] == "INT") {
+        if (del == "A") {
+          delListA <- gsub("ALLE", paste(FGP$amin, "_", FGP$amax, sep = ""), delListA)
+          delListA <- gsub("^_(\\d+)", paste(FGP$amin, "_\\1", sep = ""), delListA)
+          delListA <- gsub("(\\d+)_$", paste("\\1_", FGP$amax, sep = ""), delListA)
+        }
+        delListA <- gsub("^(\\d+)$", "\\1_\\1", delListA)
+        delListA <- as.data.table(matrix(as.integer(str_split_fixed(delListA, "_", 2)), ncol = 2))
+      } else if (globs$DefDesign$DelFormat[del] == "integer") {
+        delListA <- as.integer(delListA)
+      } else if (globs$DefDesign$DelFormat[del] == "numeric") {
+        delListA <- as.numeric(delListA)
+      }
+      listDT <- setnames(as.data.table(delListA), globs$DefDesign$DelKols[[del]])
+      if (minus == TRUE) {
+        if (!is.null(OrgParts[[del]])) {
+          setkeyv(listDT, names(listDT))
+          setkeyv(OrgParts[[del]], names(listDT))
+          Deler[[del]] <- OrgParts[[del]][!listDT, ]
+        } else {
+          print("**********************KAN IKKE BRUKE -[liste] i SettFilterDesign når ikke OrgParts")
+        }
+      } else {
+        Deler[[del]] <- listDT
+      }
+    } else if (globs$DefDesign$DelType[del] == "INT") {
+      start <- KUBEdscr[[paste(koldel, "_START", sep = "")]]
+      stopp <- KUBEdscr[[paste(koldel, "_STOP", sep = "")]]
+      if (!(is.null(start) | is.null(stopp))) {
+        if (!(is.na(start) | is.na(stopp))) {
+          if (!(start == "" | stopp == "")) {
+            if (stopp >= start) {
+              if (!is.null(OrgParts[[del]])) {
+                Deler[[del]] <- subset(OrgParts[[del]], eval(parse(text = paste(koldel, "l>=", start, " & ", koldel, "h<=", stopp, sep = ""))))
+              } else {
+                # Deler[[del]]<-setNames(as.data.frame(cbind(start:stopp,start:stopp)),paste(koldel,c("l","h"),sep=""))
+              }
+            } else {
+              cat("FEIL!!!!!!!! kan ikke ha start ", start, "> stopp ", stopp, "\n")
+            }
+          }
+        }
+      }
+    }
+  }
+  return(Deler)
 }
 
 #' FinnRedesign (kb)
@@ -863,6 +1044,184 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   
   gc()
   return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
+}
+
+#' FinnKodebokIntervaller (kb)
+#'
+#' @param FRA 
+#' @param TIL 
+#' @param storst 
+#' @param delnavn 
+#' @param echo 
+FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", echo = 0) {
+  is_kh_debug()
+  
+  # I tilfelle input er data.table
+  FRA <- as.data.frame(FRA)
+  TIL <- as.data.frame(TIL)
+  # Bruk Intrevals-klassen
+  utcolnavn <- c(names(FRA), paste(names(FRA), "_omk", sep = ""), paste(delnavn, "_pri", sep = ""))
+  TILi <- Intervals(TIL, type = "Z")
+  FRAi <- Intervals(FRA, type = "Z")
+  if (storst == TRUE) {
+    # Gir høyest prioritet til å bruke/beholde store intervaller
+    sorter <- order(size(FRAi), decreasing = TRUE)
+  } else {
+    # Gir høyest prioritet til å bruke små intervaller og aggregger opp. Brukes ved aldersstandardisering
+    sorter <- order(size(FRAi))
+  }
+  
+  # sorter<-order(size(FRAi))
+  FRAi <- FRAi[sorter]
+  FRA <- FRA[sorter, ]
+  # Finn kandidater, dvs inkluderte "underintrevaller"
+  KAND <- interval_included(TILi, FRAi)
+  if (class(KAND) == "matrix") { # Irriterende bug(?) i interval når TILi har dim 1 eller KAND er n*m
+    # KAND<-list(KAND)
+    KAND <- split(KAND, rep(1:ncol(KAND), each = nrow(KAND)))
+  }
+  if (echo == 1) {
+    print(KAND)
+  }
+  
+  # Finn intern overlapp i FRA
+  OVLP <- interval_overlap(FRAi, FRAi)
+  if (echo == 1) {
+    print(OVLP)
+  }
+  
+  # Initier tom kodebok
+  KODEBOK0 <- as.data.frame(setNames(replicate(length(utcolnavn), integer(0), simplify = F), utcolnavn))
+  KODEBOK <- KODEBOK0
+  # Må loope over alle TIL. Kan dette vektoriseres? Kanskje ikke så mye å vinne?
+  for (i in 1:nrow(TIL)) {
+    result <- list("pri" = 0, "KODEBOK" = KODEBOK0)
+    result <- FinnKodebokForEtIntervall(KAND[[i]], FRA, TIL[i, ], OVLP, 0, result, utcolnavn)
+    # ???????? ok==1???????  Dette skal vel aldri skje????
+    #     if (result$ok==0){
+    #       result$KODEBOK<-rbind(result$KODEBOK,as.data.frame(setNames(list(NA_integer_,NA_integer_,TIL[i,1],TIL[i,2],0,1),utcolnavn)))
+    #     }
+    # print(result$KODEBOK)
+    KODEBOK <- rbind(KODEBOK, result$KODEBOK)
+  }
+  return(KODEBOK)
+}
+
+#' FinnKodebokForEtIntervall (kb)
+#'
+#' @param Find 
+#' @param FRA 
+#' @param TILint 
+#' @param OVLP 
+#' @param letn 
+#' @param result 
+#' @param utcolnavn 
+FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utcolnavn) {
+  is_kh_debug()
+  
+  if (DekkerInt(FRA[Find, ], TILint)) {
+    jobb <- Find[Find > letn]
+    if (length(jobb) > 0) {
+      # Må unngå jobbing på alle esoteriske kombinasjoner ved mye overlap
+      if (result$pri < 6) {
+        letn <- jobb[1]
+        # cat("Let videres med letn",letn,"\n")
+        result <- FinnKodebokForEtIntervall(Find[!(Find %in% OVLP[[letn]]) | Find == letn], FRA, TILint, OVLP, letn, result, utcolnavn)
+        # LEt videre uten letn
+        result <- FinnKodebokForEtIntervall(Find[Find != letn], FRA, TILint, OVLP, letn, result, utcolnavn)
+      }
+    } else {
+      result$KODEBOK <- rbind(result$KODEBOK, setNames(cbind(FRA[Find, ], TILint, result$pri), utcolnavn))
+      result$pri <- result$pri + 1
+    }
+  } else {
+    # Sett diff/residual
+    if (nrow(FRA[Find, ]) > 0) {
+      miss <- setNames(as.data.frame(interval_difference(Intervals(TILint, type = "Z"), Intervals(FRA[Find, ], type = "Z"))), names(FRA))
+    } else {
+      miss <- setNames(as.data.frame(TILint), names(FRA))
+    }
+    # Ta bare med dersom residual er ny
+    miss <- miss[!apply(miss, 1, paste, collapse = "_") %in% apply(FRA, 1, paste, collapse = "_"), ]
+    if (nrow(miss) > 0) {
+      FRA <- rbind(FRA, miss)
+      Find <- c(Find, nrow(FRA))
+      OVLP <- interval_overlap(Intervals(FRA, type = "Z"), Intervals(FRA, type = "Z"))
+      result <- FinnKodebokForEtIntervall(Find, FRA, TILint, OVLP, letn, result, utcolnavn)
+    }
+  }
+  return(result)
+}
+
+#' handle_udekk (ybk)
+#'
+#' @param FULL 
+#' @param namesFULL 
+#' @param TempFile 
+handle_udekk <- function(FULL, namesFULL, TempFile){
+  is_kh_debug()
+  Udekk <- readRDS(TempFile)
+  setkeyv(Udekk, namesFULL)
+  Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
+  setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
+  return(Udekk)
+}
+
+#' SettPartDekk (kb)
+#'
+#' @param KB 
+#' @param del 
+#' @param har 
+#' @param betcols 
+#' @param globs 
+#' @param IntervallHull 
+SettPartDekk <- function(KB, del = "", har = paste(del, "_HAR", sep = ""), betcols = character(0), globs = FinnGlobs(), IntervallHull = globs$DefDesign$IntervallHull) {
+  is_kh_debug()
+  
+  OmkPriCols <- names(KB)[grepl("_(omk|pri)$", names(KB))]
+  delKolN <- globs$DefDesign$DelKolN[del]
+  bycols <- c(OmkPriCols, betcols)
+  
+  if (del %in% names(IntervallHull)) {
+    # haroblcond<-paste(del,"_HAR==1 & ",del,"_obl==1",sep="")
+    haroblcond <- paste(har, "==1 | ", del, "_obl==0", sep = "")
+    DekkInt <- paste("sum((", haroblcond, ")*(1+", delKolN, "h-", delKolN, "l))", sep = "")
+    NTOT <- paste("sum(", haroblcond, ")", sep = "")
+    oblcond <- paste(del, "_obl==1", sep = "")
+    # TotInt<-paste("sum((",oblcond,")*(1+",delKolN,"h_omk-",delKolN,"l_omk))",sep="")
+    TotInt <- paste("1+", delKolN, "h_omk-", delKolN, "l_omk", sep = "")
+    NHAR <- paste("sum(", oblcond, ")", sep = "")
+    # Sett hjelpevariablene
+    eval(parse(text = paste(
+      "KB[,c(\"DekkInt\",\"FRADELER\",\"NHAR\",\"TotInt\",\"NTOT\"):=list(", DekkInt, ",.N,", NTOT, ",", TotInt, ",", NHAR, "),by=bycols]",
+      sep = ""
+    )))
+    # Sjekk om dekning tilfrestiller krav satt i
+    eval(parse(text = paste(
+      "KB[,\"", del, "_Dekk\":=as.integer(", IntervallHull[[del]], "),by=bycols]",
+      sep = ""
+    )))
+    IntRapp <- 0
+    if (IntRapp == 1 & del == "A" & "AARl" %in% names(KB)) {
+      print("PARTDEKKK")
+      print(IntervallHull[[del]])
+      print(KB)
+    }
+    
+    
+    KB[, c("DekkInt", "NHAR", "TotInt", "NTOT", "FRADELER") := NULL]
+    # Kast hjelpekolonnner
+    # KB[,c("DekkInt","NHAR","TotInt","NTOT","DEKKok"):=NULL]
+  } else {
+    eval(parse(text = paste(
+      "KB[,", del, "_Dekk:=as.integer(!any(", har, "==0 & ",
+      del, "_obl==1)),by=bycols]",
+      sep = ""
+    )))
+  }
+  
+  gc()
+  return(KB)
 }
 
 #' FinnRedesignForFilter (kb)
@@ -1184,6 +1543,119 @@ LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), gl
   return(TNF)
 }
 
+#' EkstraherRadSummer (kb)
+#'
+#' @param FIL 
+#' @param pstrorg 
+#' @param FGP 
+#' @param globs 
+EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  setDT(FIL)
+  amin <- FGP$amin
+  amax <- FGP$amax
+  
+  # Modifiser syntaks pstrorg
+  
+  # Rydd i "feil syntaks"
+  # NB: takler ikke "|" (or) i pstrorg
+  
+  pstrorg <- gsub("(?<!=)=(?!=)", "==", pstrorg, perl = TRUE)
+  pstrorg <- gsub(" *== *(?=c\\()", " %in% ", pstrorg, perl = TRUE)
+  
+  # Standard "alle"-verdier
+  pstrorg <- gsub("(^ *|& *)ALDER( *&| *$)", "ALDER==\\1\"ALLE\"\\2", pstrorg)
+  pstrorg <- gsub("(^ *|& *)(KJONN|UTD|LAND|INNVKAT)( *&| *$)", "\\1\\2==0\\3", pstrorg)
+  
+  # Intervaller
+  # Er det mulig å abstrahere her, dvs å ta alle "INT"-deler med samme syntaks???
+  pstrorg <- gsub("ALDER *(={1,2}) *\"*ALLE\"*", paste("ALDERl==", amin, " & ALDERh==", amax, sep = ""), pstrorg)
+  pstrorg <- gsub("ALDER *(={1,2}) *(\\d+)$", "ALDERl==\\2 & ALDERh==\\2", pstrorg)
+  pstrorg <- gsub("AAR *(={1,2}) *(\\d+)$", "AARl==\\2 & AARh==\\2", pstrorg)
+  
+  # Klipp opp pstrorg
+  
+  # Finn kolonner involvert i pstrorg
+  alletabs <- str_replace(unlist(str_split(pstrorg, " *& *")), "^(\\w*?) *(%in%.*|==.*| *$)", "\\1")
+  
+  # Fjern de som ikke er del av subset betingelse
+  # subsetstr<-gsub("(?<=[&^]) *\\w+ *(?=[&$])","",pstrorg,perl=TRUE)
+  # subsetstr<-gsub("&+","&",subsetstr)
+  subsetstr <- gsub("^ *\\w+ *(&|$)|(^|&) *\\w+ *$", "", pstrorg, perl = TRUE)
+  subsetstr <- gsub("& *\\w+ *&", "&", subsetstr, perl = TRUE)
+  
+  # Splitt i kolonnenavn og verdi
+  subtabs <- str_replace(unlist(str_split(subsetstr, " *& *")), "^(\\w+) *(%in%.*|==.*)", "\\1")
+  subvals <- str_replace(unlist(str_split(subsetstr, " *& *")), "^.*(%in% *|== *)(\\w+)", "\\2")
+  subvals <- setNames(subvals, subtabs)
+  # Filtrer til de som er aktuelle for omkoding
+  subvals <- subvals[names(subvals) %in% globs$DefDesign$DesignKols]
+  
+  # Omkod disse
+  if (length(subvals) > 0) {
+    # For omkodbare kolonner må disse omkodes til søkte verdier (for generalitet må det omkodes selv om disse finnes)
+    OmkParts <- list()
+    for (del in names(globs$DefDesign$DelKols)) {
+      if (all(globs$DefDesign$DelKols[[del]] %in% names(subvals))) {
+        dvals <- subvals[globs$DefDesign$DelKols[[del]]]
+        if (KHglobs$DefDesign$DelFormat[[del]] == "integer") {
+          dvals <- setNames(as.integer(dvals), names(dvals))
+        }
+        OmkParts[[del]] <- setNames(data.frame(matrix(dvals, ncol = length(dvals))), names(dvals))
+      } else if (any(globs$DefDesign$DelKols[[del]] %in% names(subvals))) {
+        print("VARSKU HER!!!!!!!!!!!!!!! FEIL i EkstraherRadSummer!")
+      }
+    }
+    # omk[,]<-as.numeric(omk[,])
+    # omkD<-FinnDesign(omk,amin=amin,amax=amax,globs=globs)
+    print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
+    FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = OmkParts)), globs = globs, echo = 1)
+  }
+  if (subsetstr != "") {
+    FIL <- eval(parse(text = paste("subset(FIL,", subsetstr, ")", sep = "")))
+  }
+  # cat("ALLEtabs: ",alletabs," names(FIL): ",names(FIL), "SETT: ",names(FIL)[!names(FIL) %in% alletabs],"\n")
+  # print(alletabs)
+  # print(head(FIL[,names(FIL)[!names(FIL) %in% alletabs],with=FALSE]))
+  FIL <- KHaggreger(FIL[, !names(FIL) %in% alletabs, with = FALSE], globs = globs)
+  return(FIL)
+}
+
+#' AggregerRader (kb)
+#'
+#' @param FG 
+#' @param nyeexpr 
+#' @param FGP 
+AggregerRader <- function(FG, nyeexpr, FGP) {
+  is_kh_debug()
+  
+  if (!(is.na(nyeexpr) || nyeexpr == "")) {
+    nytabs <- unlist(str_split(nyeexpr, ";"))
+    for (nytab in nytabs) {
+      # PARSING av syntaks
+      nylab <- gsub("^\\[(.*?)\\]=.*", "\\1", nytab)
+      subexp <- gsub(".*\\]=\\{(.*)\\}", "\\1", nytab)
+      if (grepl("%in%|==", subexp)) {
+        tab <- gsub("^ *(.*) *(%in%|==).*", "\\1", subexp)
+      } else {
+        tab <- gsub("^ *(.*) *$", "\\1", subexp)
+        subexp <- TRUE
+      }
+      if (!tab %in% names(FG)) {
+        tabE <- names(FGP)[which(FGP == tab)]
+        subexp <- gsub("^ *tab(.*)", paste(tabE, "\\1", sep = ""), subexp)
+        tab <- tabE
+      }
+      FG2 <- eval(parse(text = paste("subset(FG,", subexp, ")", sep = "")))
+      FG2 <- KHaggreger(FG2[, setdiff(names(FG), tab), with = FALSE])
+      FG2[, eval(parse(text = paste(tab, ":='", nylab, "'", sep = "")))]
+      FG <- rbind(FG, FG2[, names(FG), with = FALSE])
+    }
+  }
+  return(FG)
+}
+
 #' OmkodFilFraPart (kb)
 #'
 #' @param Fil 
@@ -1200,6 +1672,63 @@ OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), rapport
   Dmod <- ModifiserDesign(Part, Dorg, globs = globs)
   RD <- FinnRedesign(Dorg, Dmod, globs = globs, echo = echo)
   return(OmkodFil(Fil, RD, rapport = rapport, globs = globs))
+}
+
+#' ModifiserDesign (kb)
+#'
+#' @param Nytt 
+#' @param Org 
+#' @param globs 
+ModifiserDesign <- function(Nytt, Org = list(), globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  Nkombs <- 1
+  for (del in names(Org$Part)) {
+    Nkombs <- Nkombs * nrow(Org$Part[[del]])
+  }
+  
+  
+  for (del in names(Nytt)) {
+    delT <- as.data.table(Nytt[[del]])
+    delT[, paste(del, "_HAR", sep = "")] <- 1
+    Org$Part[[del]] <- delT
+    Nkombs <- Nkombs * nrow(delT)
+  }
+  
+  if (any(grepl("_HAR", names(Org$OmkDesign)))) {
+    cat("************************************************************\n*\n*  OBSN NOE RART MED ModifiserDesign HAR\n*\n*********************************\n")
+  }
+  
+  omkDeler <- intersect(names(Nytt), c(globs$DefDesign$UBeting, globs$DefDesign$BetingOmk))
+  if (length(omkDeler) > 0) {
+    NyKols <- unlist(globs$DefDesign$DelKols[omkDeler])
+    NyKols <- intersect(names(Org$OmkDesign), NyKols)
+    OmkDesignGmlKols <- setdiff(names(Org$OmkDesign), c(NyKols, "HAR"))
+    delerlist <- paste("as.data.frame(Nytt[[\"", names(Nytt), "\"]])", sep = "", collapse = ",")
+    # Skal beholdes
+    if (length(OmkDesignGmlKols) > 0) {
+      OmkDesGml <- Org$OmkDesign[, c(OmkDesignGmlKols, "HAR"), with = FALSE]
+      setkeyv(OmkDesGml, OmkDesignGmlKols)
+      OmkDesGml <- OmkDesGml[, list(HAR = max(HAR)), by = OmkDesignGmlKols]
+      delerlist <- paste(delerlist, ",as.data.frame(OmkDesGml)", sep = "")
+    }
+    OmkDesNy <- data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+    if (length(OmkDesignGmlKols) == 0) {
+      OmkDesNy[, HAR := 1]
+    }
+    OmkKols <- globs$DefDesign$DesignKols[globs$DefDesign$DesignKols %in% names(OmkDesNy)]
+    setkeym(OmkDesNy, OmkKols)
+    Org[["OmkDesign"]] <- OmkDesNy
+  }
+  # Merk, det gir bare mening å bruke denne for å lage et TIL-design, da trengs ikke de følgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design må også disse endres. Det er en klønete operasjon (og som vel knapt er veldefinert)
+  # Kan altså IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  
+  Org[["Design"]] <- NULL
+  Org[["SKombs"]] <- NULL
+  Org[["FKombs"]] <- NULL
+  
+  return(Org)
 }
 
 #' FinnSumOverAar (kb)
@@ -1345,6 +1874,91 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_d
     FG <- rbind(FGt, FGr)
   }
   return(FG)
+}
+
+#' SettNaboAnoSpec (kb)
+#'
+#' @param ovkatspec 
+#' @param FGP 
+#' @param globs 
+SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+  is_kh_debug()
+  Foverkat <- list()
+  if (!(is.null(ovkatspec) || is.na(ovkatspec))) {
+    specs <- unlist(str_split(ovkatspec, ";"))
+    i <- 1
+    for (spec in specs) {
+      if (grepl("\\[(.*?)\\]=\\[.*\\]", spec)) {
+        subcond <- gsub("^\\[(.*?)\\]=\\[.*\\]", "\\1", spec)
+        subcond <- paste("(", subcond, ")", sep = "")
+        ovkatstr <- gsub("^\\[(.*?)\\]=\\[(.*)\\]", "\\2", spec)
+      } else {
+        subcond <- "TRUE"
+        ovkatstr <- spec
+      }
+      
+      overkat <- list()
+      ovkatstr <- gsub("([^=]+)=([^=]+)", "\\1==\\2", ovkatstr)
+      ovkatstr <- gsub("(.*)ALDER=='*ALLE'*(.*)", paste("\\1", "ALDER==", FGP$amin, "_", FGP$amax, "\\2", sep = ""), ovkatstr)
+      ovkatstr <- gsub("(.*)ALDER=='*(\\d+)_('| )(.*)", paste("\\1", "ALDER==\\2_", FGP$amax, "\\3\\4", sep = ""), ovkatstr)
+      for (del in names(globs$DefDesign$DelKolN)) {
+        delN <- globs$DefDesign$DelKolN[del]
+        if (globs$DefDesign$DelType[del] == "COL") {
+          if (grepl(paste("(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$)", sep = ""), ovkatstr)) {
+            over <- gsub(paste(".*(^|\\&) *(", delN, " *== *'*.*?'*) *(\\&|$).*", sep = ""), "\\2", ovkatstr)
+            overkat[[del]] <- list(over = over, kols = delN)
+          }
+        } else if (globs$DefDesign$DelType[del] == "INT") {
+          if (grepl(paste("(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&)", sep = ""), ovkatstr) &&
+              grepl(paste("(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&)", sep = ""), ovkatstr)) {
+            overl <- gsub(paste(".*(^|\\&) *(", delN, "l *== *'*.*?)'* *($|\\&).*", sep = ""), "\\2", ovkatstr)
+            overh <- gsub(paste(".*(^|\\&) *(", delN, "h *== *'*.*?)'* *($|\\&).*", sep = ""), "\\2", ovkatstr)
+            overkat[[del]] <- list(over = paste(overl, overh, sep = " & "), kols = paste(delN, c("l", "h"), sep = ""))
+          } else if (grepl(paste("(^|\\&) *", delN, " *== *'*(.*?)'* *($|\\&)", sep = ""), ovkatstr)) {
+            intval <- unlist(str_split(gsub(paste("(^|.*\\&) *", delN, " *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", ovkatstr), "_"))
+            if (length(intval) == 1) {
+              intval <- c(intval, intval)
+            }
+            over <- paste(paste(delN, "l", sep = ""), "==", intval[1], " & ", paste(delN, "h", sep = ""), "==", intval[2], sep = "")
+            overkat[[del]] <- list(over = over, kols = paste(delN, c("l", "h"), sep = ""))
+          }
+        }
+      }
+      Foverkat[[i]] <- list(subcond = subcond, overkat = overkat)
+      i <- i + 1
+    }
+  }
+  return(Foverkat)
+}
+
+#' DekkerInt (kb)
+#'
+#' @param FRA 
+#' @param TIL 
+DekkerInt <- function(FRA, TIL) {
+  is_kh_debug()
+  
+  # Sjekker at hele intervallet TIL[,1]-TIL[,2] dekkes av intervallene i FRA
+  # Bryr seg ikke om overlapp her, det gjøres andre steder
+  # Kompakt, men effektiv syntaks
+  return(all(TIL[, 1]:TIL[, 2] %in% unlist(mapply(seq, FRA[, 1], FRA[, 2]))))
+}
+
+#' DFHeadToString (kb)
+#'
+#' @param innDF 
+#' @param topn 
+DFHeadToString <- function(innDF, topn = 10) {
+  is_kh_debug()
+  
+  # Bruker data.table print for summary
+  DT <- data.table(innDF)
+  optdef <- getOption("width") # Sett bred output
+  options(width = 250)
+  head <- paste(capture.output(print(print(DT, topn = topn))), collapse = "\n")
+  head <- sub("NULL$", "", head)
+  options(width = optdef)
+  return(head)
 }
 
 ## Stata prikking do file

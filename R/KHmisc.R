@@ -394,3 +394,457 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   gc()
   return(Design)
 }
+
+#' KHaggreger (kb)
+#'
+#' @param FIL 
+#' @param vals 
+#' @param snitt 
+#' @param globs 
+KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  orgclass <- class(FIL)
+  orgcols <- names(FIL)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.table(FIL)
+  }
+  orgkeys <- key(FIL)
+  tabnames <- globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(FIL)]
+  # tabnames<-names(FIL)[!grepl("^VAL\\d+(f|)$",names(FIL))]
+  valkols <- names(FIL)[!names(FIL) %in% tabnames]
+  valkols <- valkols[!grepl("\\.(f|a)", valkols)]
+  valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
+  setkeym(FIL, tabnames) # Sjekk om key ok for å effektivisere?
+  
+  if (snitt == FALSE) {
+    lp <- paste("list(",
+                paste(valkols, "=sum(", valkols, "),",
+                      valkols, ".f=max(", valkols, ".f),",
+                      valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
+                      sep = "", collapse = ","
+                ),
+                ")",
+                sep = ""
+    )
+    FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+  } else {
+    # Sett også hjelpestørrelser for vurdering av snitt
+    lp <- paste("list(",
+                paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
+                      valkols, ".f=max(", valkols, ".f),",
+                      valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
+                      valkols, ".fn1=sum(", valkols, ".f==1),",
+                      valkols, ".fn3=sum(", valkols, ".f>1),",
+                      valkols, ".n=.N",
+                      sep = "", collapse = ","
+                ),
+                ")",
+                sep = ""
+    )
+    FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+    # Anonymiser, trinn 1
+    # Filtrer snitt som ikke skal brukes pga for mye anonymt
+    anon_tot_tol <- 0.2
+    lp <- paste("FILa[,':='(",
+                paste(valkols, "=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
+                      valkols, ".f=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
+                      sep = "", collapse = ","
+                ),
+                ")]",
+                sep = ""
+    )
+    eval(parse(text = lp))
+    
+    FILa <- FILa[, c(orgcols, paste(valkols, ".n", sep = "")), with = FALSE]
+  }
+  vals <- vals[valkols]
+  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
+    x$sumbar == 0
+  }))]
+  for (val in valkols) {
+    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
+      eval(parse(text = paste(
+        "FILa[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        sep = ""
+      )))
+    }
+  }
+  setkeym(FIL, orgkeys)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.frame(FIL)
+  }
+  return(FILa)
+}
+
+ht2 <- function(x, n = 3) {
+  is_kh_debug()
+  
+  rbind(head(x, n), tail(x, n))
+}
+
+#' FinnFilGruppeFraKoblid (kb)
+#'
+#' @param koblid 
+#' @param globs 
+FinnFilGruppeFraKoblid <- function(koblid, globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
+}
+
+#' SkrivKBLogg (kb)
+#'
+#' @param KB 
+#' @param type 
+#' @param filbesk 
+#' @param gruppe 
+#' @param batchdate 
+#' @param globs 
+SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+  is_kh_debug()
+  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
+  sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
+}
+
+#' SVcloneRecord (kb)
+#'
+#' @param dbh 
+#' @param table 
+#' @param koblid 
+SVcloneRecord <- function(dbh, table, koblid) {
+  is_kh_debug()
+  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
+  felt <- paste(design, collapse = ",")
+  feltm <- sub("SV", "'V' AS SV", felt)
+  sql <- paste(
+    "INSERT INTO ", table, "(", felt, ")",
+    "SELECT ", feltm, "FROM ", table,
+    "WHERE KOBLID=", koblid, "AND SV='S'"
+  )
+  sqlQuery(dbh, sql)
+}
+
+#' readRDS_KH (kb)
+#'
+#' @param file 
+#' @param IDKOLS 
+#' @param ... 
+readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
+  is_kh_debug()
+  FIL <- readRDS(file, ...)
+  if (IDKOLS == FALSE) {
+    if ("KOBLID" %in% names(FIL)) {
+      FIL$KOBLID <- NULL
+    }
+    if ("ROW" %in% names(FIL)) {
+      FIL$ROW <- NULL
+    }
+  }
+  return(FIL)
+}
+
+#' TilFilLogg (kb)
+#'
+#' @param koblid 
+#' @param felt 
+#' @param verdi 
+#' @param batchdate 
+#' @param globs 
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+  is_kh_debug()
+  # Sjekk om finnes rad for filid, eller lag ny
+  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
+    print("**************Hvorfor er jeg egentlig her?*********************'")
+    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
+    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid), sep = "")
+    sqlQuery(globs$log, upd)
+  }
+  if (is.character(verdi)) {
+    verdi <- paste("'", verdi, "'", sep = "")
+    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig sær \n i Access!
+  }
+  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
+  tmp <- sqlQuery(globs$log, upd)
+  # cat("********\n",tmp,"__________\n")
+}
+
+#' LesMultiHead (kb)
+#'
+#' @param mhstr 
+LesMultiHead <- function(mhstr) {
+  # Leser parameterstreng for multihead og gjør om til relevante variable
+  # Velger å kalle på denne funksjonen ved behov for samme inputstreng heller enn å porssessere strengen en gang og sende bitene rundt
+  # Finn evt angitt separator (trengs bare settes dersom det er snakk om en originalt pastet rad med annen seaprator enn "|"
+  is_kh_debug()
+  
+  if (grepl("sep=\".\"", mhstr)) {
+    sep <- sub(".*,sep=\"(.)\"", "\\1", mhstr)
+    mhstr <- sub("(.*),sep=\".\"", "\\1", mhstr)
+  } else {
+    sep <- "&"
+  }
+  # Les inn rader som inneholder deler
+  eval(parse(text = paste("mh<-c(", mhstr, ")")))
+  colnames <- names(mh)
+  # Sett paste av tabnavn. Denne blir senere splitta til kolonnenavn
+  varname <- paste(names(mh), collapse = "_")
+  # Fjern rader som er duplikater, dvs som allerede er pastet sammen originalt
+  rader <- mh[!duplicated(mh)]
+  return(list(rader = rader, sep = sep, colnames = colnames, varname = varname))
+}
+
+#' FinnFil (kb)
+#'
+#' @param FILID 
+#' @param versjonert 
+#' @param batch 
+#' @param ROLLE 
+#' @param TYP 
+#' @param IDKOLS 
+#' @param globs 
+FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = FinnGlobs()) {
+  is_kh_debug()
+  
+  FT <- data.frame()
+  if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
+    FT <- copy(BUFFER[[FILID]])
+    cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
+  } else {
+    if (!is.na(batch)) {
+      filn <- paste(globs$path, "/", globs$StablaDirDat, "/", FILID, "_", batch, ".rds", sep = "")
+    } else if (versjonert == TRUE) {
+      orgwd <- getwd()
+      path <- paste(globs$path, "/", globs$StablaDirDat, sep = "")
+      setwd(path)
+      Filer <- unlist(list.files(include.dirs = FALSE))
+      Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
+      if (length(Filer) > 0) {
+        filn <- paste(path, "/", Filer[order(Filer)][length(Filer)], sep = "")
+        batch <- gsub(".*_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", "\\1", Filer[order(Filer)][length(Filer)])
+      } else {
+        filn <- paste(path, "/", FILID, ".rds", sep = "")
+      }
+      setwd(orgwd)
+    } else {
+      filn <- paste(globs$path, "/", globs$StablaDirNy, "/", FILID, ".rds", sep = "")
+      print(filn)
+    }
+    if (file.access(filn, mode = 0) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes ikke\n")
+    } else if (file.access(filn, mode = 4) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes, men lar seg ikke lese\n")
+    } else {
+      FT <- readRDS_KH(filn, IDKOLS = IDKOLS)
+      cat("Lest inn ", ROLLE, "FIL ", FILID, " (", dim(FT)[1], " x ", dim(FT)[2], "), batch=", batch, "\n", sep = "")
+    }
+  }
+  return(list(FT = as.data.table(FT), batch = batch))
+}
+
+#' FinnFilT (kb)
+#'
+#' @param ... 
+FinnFilT <- function(...) {
+  is_kh_debug()
+  
+  return(FinnFil(...)$FT)
+}
+
+## expand.grid.df <- function(...) {
+##   is_kh_debug()
+
+##   # Hjelpefunksjon, se http://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames
+##   # Finnes også en i reshape, men ikke i reshape2, så bruker ikke denne
+##   # Skjønner ikke helt syntaksen, men funker utmerket
+##   Reduce(function(...) merge(..., by = NULL), list(...))
+## }
+
+## Try to handle problem with "memory exhausted (limit reached?)" the solution above
+#' expand.grid.df (kb/ybk)
+#'
+#' @param ... 
+expand.grid.df <- function(...) {
+  is_kh_debug()
+  
+  DFs <- list(...)
+  
+  ddt <- lapply(DFs, function(x) is(x, "data.table"))
+  dx <- which(ddt == 0)
+  
+  if (length(dx) > 0){
+    for (i in dx){
+      DFs[[i]] <- data.table::as.data.table(DFs[[i]])
+    }
+  }
+  
+  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  
+  for (i in seq_along(DFs))
+    names(DFs)[i] <- paste0("data", i)
+  
+  DFlength <- length(DFs)
+  DFnames <- names(DFs)
+  
+  res <- DFs[[1L]][rows[[1L]]]
+  DFs[[1L]] <- NULL
+  for (i in seq_len(DFlength)[-1L]){
+    x <- DFnames[i]
+    res <- res[, c(.SD, DFs[[x]][rows[[i]]])]
+    DFs[[x]] <- NULL
+  }
+  
+  rm(DFs, rows)
+  gc()
+  data.table::setDF(res)
+}
+
+#' setkeym (kb)
+#'
+#' @param DTo 
+#' @param keys 
+setkeym <- function(DTo, keys) {
+  is_kh_debug()
+  
+  # Forøsk på å speede opp når setkeyv brukes for å sikre key(DTo)=keys
+  if (!("data.table" %in% class(DTo) && identical(key(DTo), keys))) {
+    setDT(DTo)
+    setkeyv(DTo, keys)
+  }
+}
+
+#' godkjent (ybk)
+#'
+#' @param profil 
+#' @param modus 
+#' @param aar 
+#' @param ... 
+godkjent <- function(profil = c("FHP", "OVP"),
+                     modus = globglobs$KHgeoniv,
+                     aar = globglobs$KHaar, ...) {
+  is_kh_debug()
+  
+  profil <- match.arg(profil)
+  
+  modusFolder <- switch(modus,
+                        F = "NH",
+                        "KH"
+  )
+  
+  bruker <- Sys.info()[["user"]]
+  message(
+    "\n********\n  Kopiering av filer for ",
+    profil[1], " og geonivå ", modus, " for ",
+    aar, " begynner nå. Gjennomført av ", bruker, "\n********\n"
+  )
+  
+  ## Get connection to DB
+  mdb_file <- file.path(defpath, globglobs$KHdbname)
+  conn <- RODBC::odbcDriverConnect(paste0(
+    "Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",
+    mdb_file
+  ))
+  
+  tblCols <- c("PROFILTYPE", "INDIKATOR", "KUBE_NAVN", "MODUS", "AARGANG")
+  tblName <- "FRISKVIK"
+  sqlFrisk <- glue::glue_sql("SELECT {`tblCols`*}
+                      FROM {`tblName`}
+                      WHERE {`tblCols[5]`} = {aar}", .con = DBI::ANSI())
+  
+  tbl_fsk <- RODBC::sqlQuery(conn, sqlFrisk)
+  
+  tblCols <- c("KUBE_NAVN", "VERSJON_PROFILAAR_GEO", "OK_PROFILAAR_GEO")
+  tblName <- paste0(modusFolder, aar, "_KUBESTATUS")
+  sqlKube <- glue::glue_sql("SELECT {`tblCols`*} from {`tblName`}", .con = DBI::ANSI())
+  
+  tbl_kube <- RODBC::sqlQuery(conn, sqlKube)
+  
+  invisible(sapply(list(tbl_fsk, tbl_kube), setDT))
+  
+  ## merge tabels
+  rawAlle <- tbl_fsk[tbl_kube, on = "KUBE_NAVN"]
+  
+  ## filter data
+  utTYP <- profil[1]
+  
+  tblAlle <- rawAlle[PROFILTYPE == utTYP, ] %>%
+    .[MODUS == modus, ] %>%
+    .[OK_PROFILAAR_GEO == 1, ]
+  
+  
+  ## Create filenames
+  fileNames <- tblAlle[, filename := paste0(INDIKATOR, "_", VERSJON_PROFILAAR_GEO, ".csv")][["filename"]]
+  
+  ## Root folder where the file is
+  pathRoot <- defpath
+  
+  ## Path for Profile
+  pathProfil <- switch(utTYP,
+                       "FHP" = c(
+                         globglobs$FriskVDir_F,
+                         globglobs$FriskVDir_K,
+                         globglobs$FriskVDir_B
+                       ),
+                       "OVP" = c(
+                         globglobs$ovpDir_F,
+                         globglobs$ovpDir_K,
+                         globglobs$ovpDir_B
+                       )
+  )
+  
+  ## Geolevels
+  modeProfil <- c("F", "K", "B")
+  indMode <- grep(modus, modeProfil, ignore.case = TRUE)
+  
+  ## Get correct path to profil
+  pathDir <- pathProfil[indMode]
+  
+  ## Current date style to create folder
+  batchdate <- SettKHBatchDate()
+  
+  fileRoot <- paste0(pathRoot, "/", pathDir, aar)
+  fileFrom <- file.path(fileRoot, "CSV")
+  fileTo <- file.path(fileRoot, "GODKJENT", batchdate)
+  
+  ## Check if folder exists else create
+  if (!fs::dir_exists(fileTo)) fs::dir_create(fileTo)
+  
+  ## Group files to those that succeed or fail
+  fileOK <- list()
+  fileKO <- list()
+  
+  for (i in fileNames) {
+    outFile <- file.path(fileFrom, i)
+    inFile <- file.path(fileTo, i)
+    
+    outMsg <- tryCatch(
+      {
+        fs::file_copy(outFile, inFile, overwrite = TRUE)
+      },
+      error = function(err) err
+    )
+    
+    if (inherits(outMsg, "error")) {
+      message("\n --> OPS! Finner ikke filen: ", i, "\n")
+      fileKO[i] <- i
+      next
+    } else {
+      message("Kopierer filen: ", i)
+      fileOK[i] <- i
+    }
+  }
+  
+  message(
+    "\n**********\n", " ",
+    length(fileOK),
+    " filer ble kopiert til ",
+    fileTo, "\n"
+  )
+  
+  message(
+    "----------\n", " ",
+    length(fileKO),
+    " filer finnes ikke i ",
+    fileFrom, "\n**********\n"
+  )
+}
