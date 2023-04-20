@@ -2184,25 +2184,30 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
   }
 }
 
-#' LagQCkube (vl)
+#' LagQCKube (vl)
 #' 
-#' Saves QC kube containing standard columns defined in globs, 
-#' and extra cols existing in the specific KUBE
-LagQCKube <- function(KUBEid,
-                      KUBE,
-                      kubedims,
-                      kubevals,
-                      batchdate = batchdate,
-                      globs = globs){
-  QC <- copy(KUBE)
-  qccols <- c(globs$QCTabs,setdiff(kubedims, globs$QCTabs),
-              globs$QCVals,setdiff(kubevals, globs$QCVals),
-              "SPVFLAGG")
-  qcmisscols <- setdiff(qccols, names(QC))
-  if (length(qcmisscols > 0)) {
-    QC[, (qcmisscols) := NA]
-  }
-  QC <- QC[, ..qccols]
+#' Adds uncensored columns sumTELLER/sumNEVNER/RATE.n to the ALLVISkube
+#'
+#' @param allvis Censored ALLVIs kube
+#' @param uprikk Uncensored KUBE
+#' @param allvistabs Dimensions included in ALLVIS kube
+#' @param allvisvals All columns 
+#' @param globs defaults to FinnGlobs() 
+LagQCKube <- function(allvis,
+                      kube,
+                      allvistabs,
+                      allvisvals,
+                      globs = FinnGlobs()){
+  is_kh_debug()
   
-  return(QC)
+  QC <- copy(allvis)[, mget(c(allvistabs, allvisvals, "SPVFLAGG"))]
+  uprikk <- copy(kube)[, mget(c(allvistabs, globs$QCVals))]
+  
+  for(val in globs$QCVals){
+    name <- paste0(val, "_uprikk")
+    newcol <- paste0("i.", val)
+    QC[uprikk, (name) := get(newcol), on = allvistabs]
+  }
+  
+  return(QC[])
 }
