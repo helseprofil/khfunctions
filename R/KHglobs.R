@@ -31,8 +31,7 @@ globglobs <- list(
   NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"),
   FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"),
   FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"),
-  QCTabs = c("GEO", "GEOniv", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK"), 
-  QCVals = c("TELLER", "NEVNER", "RATE", "RATE.n", "SMR", "MEIS", "NORM", "MALTALL", "sumTELLER", "sumNEVNER", "PREDTELLER", "sumPREDTELLER"),
+  QCVals = c("sumTELLER", "sumNEVNER", "RATE.n"),
   KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"),
   binDir = "bin",
   tmpfilerpath = "bin\tmpfiler",
@@ -269,7 +268,7 @@ SettGlobs <- function(path = "", modus = NA) {
   
   GeoNavn <- data.table(sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
   GeoKoder <- data.table(sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
-  UtGeoKoder <- GeoKoder[TYP == "O"]$GEO
+  UtGeoKoder <- GeoKoder[TYP == "O" & TIL == 9999]$GEO
   KnrHarm <- data.table(sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   TKNR <- data.table(sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   HELSEREG <- data.table(sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
