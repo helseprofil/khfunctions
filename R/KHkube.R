@@ -49,6 +49,14 @@ LagKUBE <- function(KUBEid,
   FilDesL <- Finfo$FilDesL
   KUBEd <- list()
   
+  # If write = TRUE, save ACCESS specs
+  if(isTRUE(write)){
+    cat("Saving ACCESS specs to file:\n")
+    utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
+    fwrite(KUBEdscr, file = utfils, sep = ";")
+    cat("\n", utfils)
+  }
+  
   # Lage og eksportere USER/helseprofil/kubespec.csv
   kube_spec(spec = KUBEdscr, dims = NA)
   
@@ -717,6 +725,16 @@ LagKUBE <- function(KUBEid,
       }
     }
     
+    # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
+    KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
+    
+    if ("ALDER" %in% names(KUBE)) {
+      KUBE <- KUBE[!ALDER %in% c("999_999", "888_888"), ]
+    }
+    if ("KJONN" %in% names(KUBE)) {
+      KUBE <- KUBE[!KJONN %in% c(8, 9), ]
+    }
+    
     # LAYOUT
     utkols <- c(tabs, OutVar)
     ALLVIS <- copy(KUBE)
@@ -744,14 +762,6 @@ LagKUBE <- function(KUBEid,
     KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
     ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
     
-    # Filtrer bort uønskede tabs
-    if ("ALDER" %in% names(KUBE)) {
-      ALLVIS <- ALLVIS[!ALDER %in% c("999_999", "888_888"), ]
-    }
-    if ("KJONN" %in% names(ALLVIS)) {
-      ALLVIS <- ALLVIS[!KJONN %in% c(8, 9), ]
-    }
-    
     # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
     if(isTRUE(write)){
       LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
@@ -759,11 +769,10 @@ LagKUBE <- function(KUBEid,
     
     # Create QC KUBE based on the censored ALLVIS kube
     # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
-    QC <- LagQCKube(KUBEid = KUBEid,
-                    KUBE = ALLVIS,
-                    kubedims = tabs,
-                    kubevals = OutVar,
-                    batchdate = batchdate,
+    QC <- LagQCKube(allvis = ALLVIS,
+                    kube = KUBE,
+                    allvistabs = tabs,
+                    allvisvals = OutVar,
                     globs = globs)
     
     # Filter ALLVIS KUBE
@@ -782,7 +791,7 @@ LagKUBE <- function(KUBEid,
   
   # If write = TRUE, save output files
   if(isTRUE(write)){
-    cat("SAVING FILES:\n")
+    cat("SAVING OUTPUT FILES:\n")
     ## Write .rds file to NYESTE/R
     utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
     saveRDS(KUBE, file = utfiln)
