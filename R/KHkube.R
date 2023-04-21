@@ -49,17 +49,6 @@ LagKUBE <- function(KUBEid,
   FilDesL <- Finfo$FilDesL
   KUBEd <- list()
   
-  # If write = TRUE, save ACCESS specs
-  if(isTRUE(write)){
-    cat("Saving ACCESS specs to file:\n")
-    utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
-    fwrite(KUBEdscr, file = utfils, sep = ";")
-    cat("\n", utfils)
-  }
-  
-  # Lage og eksportere USER/helseprofil/kubespec.csv
-  kube_spec(spec = KUBEdscr, dims = NA)
-  
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
@@ -70,6 +59,18 @@ LagKUBE <- function(KUBEid,
     globs$KubeDirNy <- globs$KubeDirNy_NH
     globs$KubeDirDat <- globs$KubeDirDat_NH
     globs$KubeDirQc <- globs$KubeDirQC_NH
+  }
+  
+  # Lage og eksportere USER/helseprofil/kubespec.csv
+  kube_spec(spec = KUBEdscr, dims = NA)
+  
+  # If write = TRUE, save ACCESS specs
+  if(isTRUE(write)){
+    cat("Saving ACCESS specs to file:\n")
+    utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
+    specs <- GetAccessSpecs(kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, datef = datef, globs = globs)
+    fwrite(specs, file = utfils, sep = ";")
+    cat("\n", utfils)
   }
   
   # TRINN 1 LAG TNF

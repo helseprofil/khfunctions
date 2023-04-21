@@ -2211,3 +2211,71 @@ LagQCKube <- function(allvis,
   
   return(QC[])
 }
+
+#' GetAccessSpecs (vl)
+#'
+#' @param kuber 
+#' @param tnp 
+#' @param filgrupper 
+#' @param STPNdscr 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+GetAccessSpecs <- function(kuber, 
+                           tnp,
+                           filgrupper,
+                           stnp,
+                           datef,
+                           globs = FinnGlobs()){
+  
+  meltdscr <- function(dscr, name = NULL){
+    if(is.null(name)){
+      name <- deparse(substitute(dscr))
+    }
+    d <- as.data.table(dscr)
+    d[, names(d) := lapply(.SD, as.character)]
+    d <- melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
+    d[, Tabell := name]
+    setcolorder(d, "Tabell")
+  }
+  
+  # Extract KUBER, TNP_PROD, and STNP specs
+  specs <- rbindlist(list(meltdscr(kuber, name = "KUBER"),
+                          meltdscr(tnp, name = "TNP_PROD")))
+  
+  if(length(stnp) > 0){
+    specs <- rbindlist(list(specs,
+                            meltdscr(stnp, name = "STANDARD TNP")))
+  }
+  
+  # Add FILGRUPPER and FILFILTRE specs
+  # Read FILFILTRE table
+  FilterDscr <- as.data.table(sqlQuery(globs$dbh, paste("SELECT * FROM FILFILTRE WHERE VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
+  
+  for(i in names(filgrupper)){
+    
+    fgp <- filgrupper[[i]]
+    # Columns after "from "vals" are created in FinnFilgruppeParametre()
+    # We only want to extract the access specs
+    end = which(names(fgp) == "vals")-1
+    fgp <- fgp[1:end]
+    
+    specs <- rbindlist(list(specs,
+                            meltdscr(fgp, name = paste0("FILGRUPPER: ", i))))
+    
+    # Add FILFILTRE table if used
+    
+    if(i %in% FilterDscr$FILVERSJON){
+      
+      filfiltre <- FilterDscr[FILVERSJON == i]
+      
+      specs <- rbindlist(list(specs,
+                              meltdscr(filfiltre, name = paste0("FILFILTRE: ", i))))
+      
+    }
+  }
+  
+  return(specs)
+}
