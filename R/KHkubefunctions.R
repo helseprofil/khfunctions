@@ -2169,7 +2169,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       versjonert <- TRUE
       # SKRIV UT
       if (versjonert == TRUE) {
-        setPath <- paste(globs$path, "/", FriskVDir, aargang, "/csv/", sep = "")
+        setPath <- paste(globs$path, "/", FriskVDir, "/", aargang, "/csv/", sep = "")
         
         ## Check path if doesn't exist so create
         if (!fs::dir_exists(setPath)) fs::dir_create(setPath)
