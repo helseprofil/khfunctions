@@ -688,36 +688,6 @@ YAlagMerge <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGl
   return(FG)
 }
 
-# not used
-YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGlobs()) {
-  is_kh_debug()
-  
-  setDT(FG)
-  orgkols <- names(FG)
-  ltag <- function(lag) {
-    ltag <- ""
-    if (lag > 0) {
-      ltag <- paste("m", abs(lag), sep = "")
-    } else if (lag < 0) {
-      ltag <- paste("p", abs(lag), sep = "")
-    }
-    return(ltag)
-  }
-  FGl <- copy(FG)
-  FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
-  FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
-  setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
-  tabkols <- setdiff(names(FGl), FinnValKolsF(names(FG)))
-  lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
-  setnames(FGl, unlist(lapply(vals, function(x) {
-    paste(x, c("", ".f", ".a"), sep = "")
-  })), lvals)
-  FGl <- FGl[, c(tabkols, lvals), with = FALSE]
-  setkeyv(FG, tabkols)
-  setkeyv(FGl, tabkols)
-  return(FGl)
-}
-
 # Not used
 # http://ctszkin.com/2012/03/11/generating-a-laglead-variables/
 shift <- function(x, shift_by) {
