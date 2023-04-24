@@ -53,8 +53,12 @@ globglobs <- list(
   XLScols = as.vector(sapply(c("", as.vector(paste(sapply(c("", LETTERS[]), paste, LETTERS[], sep = "")))), paste, LETTERS[], sep = ""))
 )
 
-# Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
-# Se tabell KH_DELER
+#' SettDefDesignKH (kb)
+#' 
+#' Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
+#' Se tabell KH_DELER
+#'
+#' @param globs 
 SettDefDesignKH <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -119,6 +123,9 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
   )
 }
 
+#' SettKodeBokGlob (kb)
+#'
+#' @param globs 
 SettKodeBokGlob <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -155,6 +162,9 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
   return(KB)
 }
 
+#' SettLegitimeKoder (kb)
+#'
+#' @param globs 
 SettLegitimeKoder <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
@@ -193,7 +203,9 @@ SettTotalKoder <- function(globs = FinnGlobs()) {
   return(TotKoder)
 }
 
-## Find the most recent version of locally installed Stata
+#' FinnStataExe (ybk)
+#'
+#' Find the most recent version of locally installed Stata
 FinnStataExe <- function() {
   stata_bin <- "StataSE-64.exe"
   program_path <- c("C:/Program Files/", "C:/Program Files (x86)/")
@@ -206,6 +218,10 @@ FinnStataExe <- function() {
   return(list(Exe = Exe, Vers = Vers))
 }
 
+#' SettGlobs (kb)
+#'
+#' @param path 
+#' @param modus 
 SettGlobs <- function(path = "", modus = NA) {
   is_kh_debug()
   
@@ -294,6 +310,8 @@ SettGlobs <- function(path = "", modus = NA) {
   return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
 }
 
+#' FinnGlobs (kb)
+#'
 #' Hjelperutine, bruker KHglobs eller SettGlobs()
 FinnGlobs <- function() {
   is_kh_debug()
