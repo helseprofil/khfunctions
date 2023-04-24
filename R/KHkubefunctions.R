@@ -1964,8 +1964,8 @@ DFHeadToString <- function(innDF, topn = 10) {
 ## Stata prikking do file
 #' do_stata_prikk (ybk)
 #' 
-#' Function to censor the data using the STATA method (JRM)#'
-do_stata_prikk <- function(dt, spc, batchdate, globs, test = FALSE){
+#' Function to censor the data using the STATA method (JRM)
+do_stata_prikk <- function(dt, spc, batchdate, globs){
   is_kh_debug()
   
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")

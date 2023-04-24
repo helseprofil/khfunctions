@@ -29,8 +29,7 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    write = TRUE,
-                    ...) {
+                    write = TRUE) {
   
   is_kh_debug()
   
@@ -667,14 +666,6 @@ LagKUBE <- function(KUBEid,
     }
     
     # EVT SPESIALBEHANDLING
-    
-    # Start with Stata Prikking
-    .args <- list(...) #only applicable when testing the function
-    if (any(names(.args) == "test")) {
-      test = .args[["test"]]
-    } else {
-      test = FALSE
-    }
     
     if ("STATAPRIKKpre" %in% names(dumps)) {
       for (format in dumps[["STATAPRIKKpre"]]) {
