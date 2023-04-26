@@ -106,7 +106,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
@@ -572,7 +572,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
         } else if (format == "HTML") {
           INNLES <- try(eval(parse(text = paste("DF<-readHTMLTable(doc=filn,as.data.frame = TRUE,stringsAsFactors=FALSE", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = ""))), silent = TRUE)
         }
-        if (class(INNLES) == "try-error") {
+        if ("try-error" %in% class(INNLES)) {
           innleserr <- INNLES
           ok <- 0
         } else {
@@ -684,7 +684,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
@@ -890,7 +890,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
   }
   if (ok == 1) {
     INNLES <- try(as.data.frame(read_excel(xlsfil, sheet = ark, col_names = FALSE, col_types = "text", skip = 0, na = na.strings)))
-    if (class(INNLES) == "try-error") {
+    if ("try-error" %in% class(INNLES)) {
       err <- INNLES
       ok <- 0
     } else {

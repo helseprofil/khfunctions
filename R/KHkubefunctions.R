@@ -277,7 +277,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
         FilterDscr$FF_RSYNT1 <- gsub("\\\r", "\\\n", FilterDscr$FF_RSYNT1)
         rsynt1err <- try(eval(parse(text = FilterDscr$FF_RSYNT1)), silent = TRUE)
         print("***AD HOC MANIPULERING\n")
-        if (class(rsynt1err) == "try-error") {
+        if ("try-error" %in% class(rsynt1err)) {
           print(rsynt1err)
         }
       }
@@ -1076,7 +1076,7 @@ FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", ech
   FRA <- FRA[sorter, ]
   # Finn kandidater, dvs inkluderte "underintrevaller"
   KAND <- interval_included(TILi, FRAi)
-  if (class(KAND) == "matrix") { # Irriterende bug(?) i interval når TILi har dim 1 eller KAND er n*m
+  if ("matrix" %in% class(KAND)) { # Irriterende bug(?) i interval når TILi har dim 1 eller KAND er n*m
     # KAND<-list(KAND)
     KAND <- split(KAND, rep(1:ncol(KAND), each = nrow(KAND)))
   }

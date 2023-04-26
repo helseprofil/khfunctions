@@ -453,7 +453,7 @@ LagKUBE <- function(KUBEid,
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
@@ -701,7 +701,7 @@ LagKUBE <- function(KUBEid,
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
