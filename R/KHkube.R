@@ -29,8 +29,7 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    write = TRUE,
-                    ...) {
+                    write = TRUE) {
   
   is_kh_debug()
   
@@ -454,7 +453,7 @@ LagKUBE <- function(KUBEid,
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
@@ -668,14 +667,6 @@ LagKUBE <- function(KUBEid,
     
     # EVT SPESIALBEHANDLING
     
-    # Start with Stata Prikking
-    .args <- list(...) #only applicable when testing the function
-    if (any(names(.args) == "test")) {
-      test = .args[["test"]]
-    } else {
-      test = FALSE
-    }
-    
     if ("STATAPRIKKpre" %in% names(dumps)) {
       for (format in dumps[["STATAPRIKKpre"]]) {
         DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpre", sep = "_"), globs = globs, format = format)
@@ -710,7 +701,7 @@ LagKUBE <- function(KUBEid,
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if (class(rsynterr) == "try-error") {
+        if ("try-error" %in% class(rsynterr)) {
           ok <- 0
           error <- rsynterr
         }
