@@ -1,18 +1,18 @@
 # Load packages
-library(epitools)
+library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
 library(RODBC)
 library(DBI)
 library(foreign)
 library(sas7bdat)
 library(XML)
 library(zoo)
-library(plyr) # count, 
+library(plyr) 
 library(sqldf)
 library(stringr)
 library(intervals)
 library(data.table)
 library(readxl)
-library(fs) # dir_exists, dir_create, file_copy, file_exists, file_delete
+library(fs)
 library(collapse)
 
 # Set debugging to inactive

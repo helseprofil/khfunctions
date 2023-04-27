@@ -64,7 +64,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
     TABELL[TABELL == ""] <- " " # STATA støtter ikke "empty-string"
     names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 tåler ikke numeriske kolonnenavn
     names(TABELL) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-    write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
+    foreign::write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
   }
 }
 
@@ -89,7 +89,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   # DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
   names(TABLE) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n til _
   # DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
-  write.dta(TABLE, tmpdta)
+  foreign::write.dta(TABLE, tmpdta)
   # file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
@@ -114,7 +114,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     log_start <- which(grepl(paste("do", tmpdo), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
   } else {
-    TABLE <- read.dta(tmpdta)
+    TABLE <- foreign::read.dta(tmpdta)
   }
   # Reverserer omforminger for å kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
@@ -124,7 +124,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   # file.remove(tmpdo,tmpdta,tmplog)
   setwd(wdOrg)
   if (tableTYP == "DT") {
-    setDT(TABLE)
+    data.table::setDT(TABLE)
   }
   return(list(TABLE = TABLE, feil = feil))
 }
@@ -235,12 +235,12 @@ FinnTabKolsKUBE <- function(allnames, globs = FinnGlobs()) {
 LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALSE) {
   is_kh_debug()
   
-  TNF <- copy(TNF) # Får uønsket warning om self.reference under om ikke gjør slik
-  setDT(TNF)
+  TNF <- data.table::copy(TNF) # Får uønsket warning om self.reference under om ikke gjør slik
+  data.table::setDT(TNF)
   valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
   # FinnValKols(names(TNF))
   if (!(is.na(NYEdscr) | NYEdscr == "")) {
-    for (nycolexpr in unlist(str_split(NYEdscr, ";"))) {
+    for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
       nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
       expr <- gsub("^(.*?)=(.*)$", "\\2", nycolexpr)
       invKols <- valKols[sapply(valKols, FUN = function(x) {
@@ -286,9 +286,9 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
-    FIL <- data.table(FIL)
+    FIL <- data.table::data.table(FIL)
   }
-  keyorg <- key(FIL)
+  keyorg <- data.table::key(FIL)
   # Sett defdesign
   DelKols <- globs$DefDesign$DelKols
   UBeting <- globs$DefDesign$UBeting
@@ -328,16 +328,16 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
   for (del in Deler) {
     kols <- DelKols[[del]]
-    setkeyv(ObsDesign, kols)
+    data.table::setkeyv(ObsDesign, kols)
     # SETT HAR
-    Design[["Part"]][[del]] <- data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
   }
   
   # Fyll evt hull i aldersintervaller
   # Bør generaliserer til INT !!!
   if (globs$DefDesign$AMissAllow == TRUE) {
     if ("A" %in% names(Design$Part)) {
-      mangler <- interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+      mangler <- intervals::interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
       if (nrow(mangler) > 0) {
         mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
         #         if (max(mangler$ALDERl)>=95){
@@ -350,7 +350,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   
   # Finn fullt design, dvs kryssing av alle partielle.
   delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
-  FullDesign <- data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
   setkeym(ObsDesign, names(ObsDesign))
   setkeym(FullDesign, names(ObsDesign))
   # Sett HAR=1 om denne finnes i fakttisk design
@@ -377,10 +377,10 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
       for (k in komb) {
         kols <- c(kols, DelKols[[k]])
       }
-      setkeyv(ObsDesign, kols)
-      setkeyv(FullDesign, kols)
-      kombFull <- data.table(unique(FullDesign[, kols, with = FALSE]))
-      kombObs <- data.table(unique(ObsDesign[, kols, with = FALSE]))
+      data.table::setkeyv(ObsDesign, kols)
+      data.table::setkeyv(FullDesign, kols)
+      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
+      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
       kombFull[, HAR := 0]
       kombFull[kombObs, HAR := 1]
       kombn <- paste("bet", del, sep = "")
@@ -407,9 +407,9 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   orgclass <- class(FIL)
   orgcols <- names(FIL)
   if (identical(orgclass, "data.frame")) {
-    FIL <- data.table(FIL)
+    FIL <- data.table::data.table(FIL)
   }
-  orgkeys <- key(FIL)
+  orgkeys <- data.table::key(FIL)
   tabnames <- globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(FIL)]
   # tabnames<-names(FIL)[!grepl("^VAL\\d+(f|)$",names(FIL))]
   valkols <- names(FIL)[!names(FIL) %in% tabnames]
@@ -608,7 +608,7 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
   
   FT <- data.frame()
   if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
-    FT <- copy(BUFFER[[FILID]])
+    FT <- data.table::copy(BUFFER[[FILID]])
     cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
   } else {
     if (!is.na(batch)) {
@@ -639,7 +639,7 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
       cat("Lest inn ", ROLLE, "FIL ", FILID, " (", dim(FT)[1], " x ", dim(FT)[2], "), batch=", batch, "\n", sep = "")
     }
   }
-  return(list(FT = as.data.table(FT), batch = batch))
+  return(list(FT = data.table::as.data.table(FT), batch = batch))
 }
 
 #' FinnFilT (kb)
@@ -708,8 +708,8 @@ setkeym <- function(DTo, keys) {
   
   # Forøsk på å speede opp når setkeyv brukes for å sikre key(DTo)=keys
   if (!("data.table" %in% class(DTo) && identical(key(DTo), keys))) {
-    setDT(DTo)
-    setkeyv(DTo, keys)
+    data.table::setDT(DTo)
+    data.table::setkeyv(DTo, keys)
   }
 }
 
@@ -724,7 +724,7 @@ setkeym <- function(DTo, keys) {
 YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGlobs()) {
   is_kh_debug()
   
-  setDT(FG)
+  data.table::setDT(FG)
   orgkols <- names(FG)
   ltag <- function(lag) {
     ltag <- ""
@@ -735,18 +735,18 @@ YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGlob
     }
     return(ltag)
   }
-  FGl <- copy(FG)
+  FGl <- data.table::copy(FG)
   FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
   FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
-  setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
+  data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
   tabkols <- setdiff(names(FGl), FinnValKolsF(names(FG)))
   lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
-  setnames(FGl, unlist(lapply(vals, function(x) {
+  data.table::setnames(FGl, unlist(lapply(vals, function(x) {
     paste(x, c("", ".f", ".a"), sep = "")
   })), lvals)
   FGl <- FGl[, c(tabkols, lvals), with = FALSE]
-  setkeyv(FG, tabkols)
-  setkeyv(FGl, tabkols)
+  data.table::setkeyv(FG, tabkols)
+  data.table::setkeyv(FGl, tabkols)
   return(FGl)
 }
 

@@ -71,8 +71,8 @@ LagFilgruppe <- function(gruppe,
   Filgruppe <- data.frame()
   if (FGP$ok == 1) {
     # Rydd gammel logg
-    sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
-    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
+    RODBC::sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
+    RODBC::sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
     # Finn parameterbeskrivelse av delfilene
     delfiler <- FinnFilBeskGruppe(gruppe, batchdate = batchdate, globs = globs)
     if (nrow(delfiler) > 0) {
@@ -91,7 +91,7 @@ LagFilgruppe <- function(gruppe,
         # LagTabell
         DF <- LagTabellFraFil(filbesk, FGP, batchdate = batchdate, diagnose = diagnose, globs = globs, versjonert = versjonert, dumps = dumps)
         # Stable delfiler
-        Filgruppe <- rbind.fill(Filgruppe, DF)
+        Filgruppe <- plyr::rbind.fill(Filgruppe, DF)
         
         
         # Stopp klokke, skriv tid og feillogg
@@ -109,7 +109,7 @@ LagFilgruppe <- function(gruppe,
     if (nrow(Filgruppe) > 0 & diagnose == 1) {
       # Finn og rapporter duplikater
       HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = KHglobs)
-      sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
+      RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
       
       # Sjekk design
       FGd <- FinnDesign(Filgruppe, FGP = FGP)
@@ -118,18 +118,18 @@ LagFilgruppe <- function(gruppe,
       subset(FGd$Design, HAR != 1)
       
       FGdT <- FGd$Design
-      sqlQuery(globs$log, paste("DELETE * FROM DESIGN WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
+      RODBC::sqlQuery(globs$log, paste("DELETE * FROM DESIGN WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
       # Legg til resterende kolonner
-      tmp <- sqlQuery(globs$log, "SELECT * FROM DESIGN WHERE FILGRUPPE=''")
+      tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DESIGN WHERE FILGRUPPE=''")
       tmp[1:nrow(FGdT), ] <- NA
       tmp[, names(FGdT)] <- FGdT
       tmp$FILGRUPPE <- gruppe
       tmp$BATCH <- batchdate
       tmp$SV <- "S"
-      sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+      RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       if (versjonert == TRUE) {
         tmp$SV <- "V"
-        sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+        RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       }
     }
     # Sett (eksterne) kolonnenavn
@@ -139,7 +139,7 @@ LagFilgruppe <- function(gruppe,
         names(Filgruppe) <- gsub(paste("^", val, "(\\.[fa]|)$", sep = ""), paste(FGP[[valn]], "\\1", sep = ""), names(Filgruppe))
       }
     }
-    FGP1 <- copy(Filgruppe)
+    FGP1 <- data.table::copy(Filgruppe)
     
     if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) {
       for (format in dumps[["RSYNT_PRE_FGLAGRINGpre"]]) {
@@ -180,7 +180,7 @@ LagFilgruppe <- function(gruppe,
     }
     
     # Datostempel
-    sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
+    RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
     
     # SKRIV RESULTAT
     path <- globs$path
@@ -226,8 +226,8 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   # SKall rundt LagFilGruppe, lager og lagrer evt til fil
   # Default er å ta alle grupper, ellers angis ønsket batch i filgrupper-argumentet
   if (length(filgrupper) == 0) {
-    # filgrupper<-as.matrix(sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
-    filgrupper <- as.matrix(sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
+    # filgrupper<-as.matrix(RODBC::sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
+    filgrupper <- as.matrix(RODBC::sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
   }
   cat("BATCH:", batchdate, "\n")
   # HOVEDLOOP

@@ -32,14 +32,14 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
     HarCols <- HarCols[HarCols %in% names(DF)]
     # Sett standard kolonnenavn
-    names(DF) <- mapvalues(names(DF), HarCols, names(HarCols))
+    names(DF) <- plyr::mapvalues(names(DF), HarCols, names(HarCols))
     
     # EVT INNFYLLING AV TABULATOR N?R DENNE ER INNRYKKET
     if (!is.na(filbesk$FYLLTAB)) {
       TAB <- as.character(read.csv(text = filbesk$FYLLTAB, header = FALSE, stringsAsFactors = FALSE))
       if (all(TAB %in% names(DF))) {
         DF[, TAB][DF[, TAB] == ""] <- NA
-        DF[, TAB] <- na.locf(DF[, TAB], na.rm = FALSE)
+        DF[, TAB] <- zoo::na.locf(DF[, TAB], na.rm = FALSE)
       } else {
         TilFilLogg(filbesk$KOBLID, "FYLLTABERR", paste("Kolonner", paste(TAB[!TAB %in% names(DF)], collapse = ","), " finnes ikke", sep = ""), batchdate = batchdate, globs = globs)
         ok <- 0
@@ -81,7 +81,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     # Må splitte evt kolonne fra MULTIHEAD
     if (!is.na(filbesk$MULTIHEAD)) {
       mhl <- LesMultiHead(filbesk$MULTIHEAD)
-      DF[, mhl$colnames] <- str_split_fixed(DF[, mhl$varname], mhl$sep, 2)
+      DF[, mhl$colnames] <- stringr::str_split_fixed(DF[, mhl$varname], mhl$sep, 2)
     }
     
     if ("RSYNT2pre" %in% names(dumps)) {
@@ -132,7 +132,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
     HarCols <- HarCols[HarCols %in% names(DF)]
     # Sett standard kolonnenavn
-    names(DF) <- mapvalues(names(DF), HarCols, names(HarCols))
+    names(DF) <- plyr::mapvalues(names(DF), HarCols, names(HarCols))
     
     # Finn kolonner med standardverdi ('<.*>' i filbesk)
     DefVCols <- kolorgs[grepl("^<.*>", filbesk[kolorgs])]
@@ -183,16 +183,16 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   
   
   if (!is.na(filbesk$GRUNNKRETS) && filbesk$GRUNNKRETS == 1) {
-    setDT(DF)
-    setkeyv(DF, "GEO")
-    setkeyv(globs$GkBHarm, "GK")
+    data.table::setDT(DF)
+    data.table::setkeyv(DF, "GEO")
+    data.table::setkeyv(globs$GkBHarm, "GK")
     DF <- globs$GkBHarm[DF]
     DF[is.na(Bydel2004), Bydel2004 := paste(substr(GK, 1, 4), "00", sep = "")]
     DF[, GK := NULL]
-    setnames(DF, "Bydel2004", "GEO")
+    data.table::setnames(DF, "Bydel2004", "GEO")
     tabkols <- names(DF)[!grepl("^VAL\\d$", names(DF))]
     valkols <- names(DF)[grepl("^VAL\\d$", names(DF))]
-    setkeyv(DF, tabkols)
+    data.table::setkeyv(DF, tabkols)
     lp <- paste("list(",
                 paste(valkols, "=as.character(sum(as.numeric(", valkols, ")))",
                       sep = "", collapse = ","
@@ -210,7 +210,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), globs = globs, format = format)
     }
   }
-  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
   if (ok == 1) {
     colClass <- sapply(DF, class)
     if (any(colClass != "character")) {
@@ -260,7 +260,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         tabKB$OMK <- gsub("XXXKASTXXX", "-", tabKB$KBOMK)
         tabKB$OK <- 1
         SkrivKBLogg(KB = tabKB, type = tab, filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-        DF[, tab] <- mapvalues(DF[, tab], tabKB$ORG, tabKB$OMK, warn_missing = FALSE)
+        DF[, tab] <- plyr::mapvalues(DF[, tab], tabKB$ORG, tabKB$OMK, warn_missing = FALSE)
       }
     }
     
@@ -273,9 +273,9 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       SkrivKBLogg(KB = geo, type = "GEO", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "GEO_ok", ifelse(0 %in% geo$OK, 0, 1), batchdate = batchdate, globs = globs)
       
-      DF$GEOniv <- mapvalues(DF$GEO, geo$ORG, geo$GEOniv, warn_missing = FALSE)
-      DF$FYLKE <- mapvalues(DF$GEO, geo$ORG, geo$FYLKE, warn_missing = FALSE)
-      DF$GEO <- mapvalues(DF$GEO, geo$ORG, geo$OMK, warn_missing = FALSE) # NB: rekkefølge har betydning
+      DF$GEOniv <- plyr::mapvalues(DF$GEO, geo$ORG, geo$GEOniv, warn_missing = FALSE)
+      DF$FYLKE <- plyr::mapvalues(DF$GEO, geo$ORG, geo$FYLKE, warn_missing = FALSE)
+      DF$GEO <- plyr::mapvalues(DF$GEO, geo$ORG, geo$OMK, warn_missing = FALSE) # NB: rekkefølge har betydning
     }
     # RENSK ALDER
     # Sett intervall for alder ALLE
@@ -290,10 +290,10 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       
       SkrivKBLogg(KB = alder, type = "ALDER", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(globs$alder_illeg %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
-      DF$ALDERl <- as.integer(mapvalues(DF$ALDER, alder$ORG, alder$LO, warn_missing = FALSE))
-      DF$ALDERh <- as.integer(mapvalues(DF$ALDER, alder$ORG, alder$HI, warn_missing = FALSE))
-      # DF$ALDERl<-as.numeric(mapvalues(DF$ALDER,alder$ORG,alder$LO,warn_missing = FALSE))
-      # DF$ALDERh<-as.numeric(mapvalues(DF$ALDER,alder$ORG,alder$HI,warn_missing = FALSE))
+      DF$ALDERl <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$LO, warn_missing = FALSE))
+      DF$ALDERh <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$HI, warn_missing = FALSE))
+      # DF$ALDERl<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$LO,warn_missing = FALSE))
+      # DF$ALDERh<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$HI,warn_missing = FALSE))
     }
     
     
@@ -305,7 +305,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       SkrivKBLogg(KB = kjonn, type = "KJONN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(globs$kjonn_illeg %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
-      DF$KJONN <- as.integer(mapvalues(DF$KJONN, kjonn$ORG, kjonn$OMK, warn_missing = FALSE))
+      DF$KJONN <- as.integer(plyr::mapvalues(DF$KJONN, kjonn$ORG, kjonn$OMK, warn_missing = FALSE))
     }
     
     # AAR TIL INTERVALL
@@ -320,8 +320,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       # Kast der AAR koder til "-" (må ta det her og ikek generelle under pga intervall)
       DF <- subset(DF, !AAR %in% subset(aar, OMK == "-")$ORG)
       
-      DF$AARl <- as.integer(mapvalues(DF$AAR, aar$ORG, aar$LO, warn_missing = FALSE))
-      DF$AARh <- as.integer(mapvalues(DF$AAR, aar$ORG, aar$HI, warn_missing = FALSE))
+      DF$AARl <- as.integer(plyr::mapvalues(DF$AAR, aar$ORG, aar$LO, warn_missing = FALSE))
+      DF$AARh <- as.integer(plyr::mapvalues(DF$AAR, aar$ORG, aar$HI, warn_missing = FALSE))
     }
     
     
@@ -333,7 +333,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       SkrivKBLogg(KB = utdann, type = "UTDANN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(globs$utdann_illeg %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
-      DF$UTDANN <- as.integer(mapvalues(DF$UTDANN, utdann$ORG, utdann$OMK, warn_missing = FALSE))
+      DF$UTDANN <- as.integer(plyr::mapvalues(DF$UTDANN, utdann$ORG, utdann$OMK, warn_missing = FALSE))
     }
     
     
@@ -345,7 +345,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       SkrivKBLogg(KB = innvkat, type = "INNVKAT", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(globs$innvkat_illeg %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
-      DF$INNVKAT <- as.integer(mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
+      DF$INNVKAT <- as.integer(plyr::mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
     }
     
     
@@ -357,7 +357,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       SkrivKBLogg(KB = landbak, type = "LANDBAK", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(globs$landbak_illeg %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
-      DF$LANDBAK <- as.integer(mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
+      DF$LANDBAK <- as.integer(plyr::mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
     }
     
     if ("KODEBOKpost" %in% names(dumps)) {
@@ -430,9 +430,9 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
           # valKB$kbNUM[valKB$FLAG>0]<-0
           
           # if(valok==0){print(valKB)}
-          DF[nonNum, valomk] <- as.numeric(mapvalues(DF[nonNum, val], valKB$ORG, valKB$kbNUM, warn_missing = FALSE))
-          # DF[nonNum,valomk]<-suppressWarnings(as.numeric(mapvalues(DF[nonNum,val],valKB$ORG,valKB$kbNUM,warn_missing = FALSE)))
-          DF[nonNum, valf] <- as.integer(mapvalues(DF[nonNum, val], valKB[, "ORG"], valKB[, "FLAG"], warn_missing = FALSE))
+          DF[nonNum, valomk] <- as.numeric(plyr::mapvalues(DF[nonNum, val], valKB$ORG, valKB$kbNUM, warn_missing = FALSE))
+          # DF[nonNum,valomk]<-suppressWarnings(as.numeric(plyr::mapvalues(DF[nonNum,val],valKB$ORG,valKB$kbNUM,warn_missing = FALSE)))
+          DF[nonNum, valf] <- as.integer(plyr::mapvalues(DF[nonNum, val], valKB[, "ORG"], valKB[, "FLAG"], warn_missing = FALSE))
         }
         
         if (nrow(valKBut) > 0) {
@@ -441,7 +441,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         
         
         DF[, val] <- NULL
-        DF <- setNames(DF, mapvalues(names(DF), valomk, val))
+        DF <- setNames(DF, plyr::mapvalues(names(DF), valomk, val))
         
         # DEVELOP20191219
         
@@ -528,8 +528,8 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
   
   
   # Initier log
-  sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
-  sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID), "'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID), "'", sep = ""))
   
   # Sjekk om fil eksisterer
   if (file.access(filn, mode = 0) == -1) {
@@ -562,15 +562,15 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
           expr <- paste("KHCsvread(filn", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = "")
           INNLES <- try(eval(parse(text = expr)), silent = TRUE)
         } else if (format == "SPSS") {
-          INNLES <- try(as.data.frame(read.spss(file = filn, use.value.labels = FALSE, max.value.labels = 0), stringsAsFactors = FALSE), silent = TRUE)
+          INNLES <- try(as.data.frame(foreign::read.spss(file = filn, use.value.labels = FALSE, max.value.labels = 0), stringsAsFactors = FALSE), silent = TRUE)
           # ALternativ metode: T<-spss.get(file=fil)
         } else if (format == "DBF") {
           # DEV sl? av Field name: '***NULL***' changed to: 'X...NULL...'
-          INNLES <- try(suppressMessages(read.dbf(file = filn, as.is = TRUE)), silent = TRUE)
+          INNLES <- try(suppressMessages(foreign::read.dbf(file = filn, as.is = TRUE)), silent = TRUE)
         } else if (format == "SAS") {
-          INNLES <- try(read.sas7bdat(file = filn), silent = TRUE)
+          INNLES <- try(sas7bdat::read.sas7bdat(file = filn), silent = TRUE)
         } else if (format == "HTML") {
-          INNLES <- try(eval(parse(text = paste("DF<-readHTMLTable(doc=filn,as.data.frame = TRUE,stringsAsFactors=FALSE", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = ""))), silent = TRUE)
+          INNLES <- try(eval(parse(text = paste("DF<-XML::readHTMLTable(doc=filn,as.data.frame = TRUE,stringsAsFactors=FALSE", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = ""))), silent = TRUE)
         }
         if ("try-error" %in% class(INNLES)) {
           innleserr <- INNLES
@@ -601,7 +601,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
     # Sett header manuelt
     # IKKE robust for feil parameter
     if (!is.na(filbesk$MANHEADER)) {
-      mh <- unlist(str_split(filbesk$MANHEADER, "="))
+      mh <- unlist(stringr::str_split(filbesk$MANHEADER, "="))
       mh[1] <- gsub("\\[|\\]", "", mh[1])
       
       ## Use old colnames to specify for new colnames with index or regex
@@ -740,7 +740,7 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
     brukfread <- FALSE
   }
   if (brukfread == TRUE) {
-    csvT <- as.data.frame(fread(filn, header = FALSE, skip = 0, colClasses = "character", sep = sep, na.strings = na.strings))
+    csvT <- as.data.frame(data.table::fread(filn, header = FALSE, skip = 0, colClasses = "character", sep = sep, na.strings = na.strings))
   } else {
     csvT <- as.data.frame(read.csv(filn, header = FALSE, skip = 0, colClasses = "character", sep = sep, quote = quote, dec = dec, fill = TRUE, encoding = encoding, blank.lines.skip = FALSE, na.strings = na.strings))
   }
@@ -769,13 +769,13 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
   is_kh_debug()
   
   if (!is.na(filbesk$UNDERTABLOK)) {
-    utl <- unlist(str_split(filbesk$UNDERTABLOK, ":"))
-    loks <- as.numeric(unlist(str_split(utl[3], ",")))
-    offsets <- as.numeric(unlist(str_split(utl[4], ",")))
+    utl <- unlist(stringr::str_split(filbesk$UNDERTABLOK, ":"))
+    loks <- as.numeric(unlist(stringr::str_split(utl[3], ",")))
+    offsets <- as.numeric(unlist(stringr::str_split(utl[4], ",")))
     nytab <- character(nrow(DF))
     nytab[loks + offsets] <- DF[loks, as.numeric(utl[2])]
     nytab[nytab == ""] <- NA
-    nytab <- na.locf(nytab, na.rm = FALSE)
+    nytab <- zoo::na.locf(nytab, na.rm = FALSE)
     DF <- cbind(DF, nytab, stringsAsFactors = FALSE)
   }
   
@@ -822,7 +822,7 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
     headers <- DF[mhl$rader, ]
     headers[headers == ""] <- NA
     # Fyll inn ved "sparse" utfylling, slik som ved "innrykket" tabulering i kolonner
-    headers <- na.locf(t(headers), na.rm = FALSE)
+    headers <- zoo::na.locf(t(headers), na.rm = FALSE)
     # Paste sammen
     headstr <- apply(headers, 1, paste, collapse = mhl$sep)
     # Sett nye kolonnenavn for de som dekkes av headstr,
@@ -865,12 +865,12 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
   ok <- 1
   DF <- data.frame()
   # step 1: Validate sheetname with fuzzy match
-  # rdbh<-odbcConnectExcel2007(xlsfil)
-  # rdbh<-odbcConnectExcel(xlsfil)
-  # tables<-sqlTables(rdbh)$TABLE_NAME
+  # rdbh<-RODBC::odbcConnectExcel2007(xlsfil)
+  # rdbh<-RODBC::odbcConnectExcel(xlsfil)
+  # tables<-RODBC::sqlTables(rdbh)$TABLE_NAME
   # close(rdbh)
   
-  tables <- excel_sheets(xlsfil)
+  tables <- readxl::excel_sheets(xlsfil)
   
   tables <- gsub("\'", "", tables)
   tables <- gsub("\\$", "", tables) # Something is strange with resepct to $ in R's regexp-syntax, but should work
@@ -889,7 +889,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
     }
   }
   if (ok == 1) {
-    INNLES <- try(as.data.frame(read_excel(xlsfil, sheet = ark, col_names = FALSE, col_types = "text", skip = 0, na = na.strings)))
+    INNLES <- try(as.data.frame(readxl::read_excel(xlsfil, sheet = ark, col_names = FALSE, col_types = "text", skip = 0, na = na.strings)))
     if ("try-error" %in% class(INNLES)) {
       err <- INNLES
       ok <- 0
@@ -914,12 +914,12 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
   
   dbh <- globs$dbh
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  FGPaktiv <- as.integer(sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+  FGPaktiv <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                                    "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                         ",
                                                    sep = ""
   ), as.is = TRUE))
-  FGPfinnes <- as.integer(sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
+  FGPfinnes <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
   ok <- 0
   resultat <- list()
   if (FGPfinnes == 0) {
@@ -928,7 +928,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
     KHerr(paste("Filgruppe", gruppe, "finnes, men er satt inaktiv. Droppes."))
   } else {
     ok <- 1
-    FGP <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+    FGP <- as.list(RODBC::sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                              "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                           ",
                                              sep = ""
@@ -936,7 +936,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
     # Sette endelig default alder ALLE
     # Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
     amin <- 0
-    amax <- as.numeric(sqlQuery(dbh, "SELECT ALDinf FROM HOVEDPARAMETREg")[1])
+    amax <- as.numeric(RODBC::sqlQuery(dbh, "SELECT ALDinf FROM HOVEDPARAMETREg")[1])
     # Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
     if (!is.na(FGP$ALDER_ALLE)) {
       if (grepl("^\\d+_(\\d+|)$", FGP$ALDER_ALLE)) {
@@ -996,7 +996,7 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
               AND ORIGINALFILER.IBRUKTIL>", datef, "
               AND INNLESING.VERSJONFRA<=", datef, "
               AND INNLESING.VERSJONTIL>", datef, sep = "")
-  fb <- sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
+  fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
   
   ## Picking up files path that is refered to in ORIGINALFILER
   
@@ -1021,9 +1021,9 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
   
   HarDuplikater <- 0
   if (identical(class(FG), "data.frame")) {
-    FG <- data.table(FG)
+    FG <- data.table::data.table(FG)
   }
-  orgkeys <- key(FG)
+  orgkeys <- data.table::key(FG)
   tabkols <- globs$DefDesign$DesignKolsFA
   tabkols <- tabkols[tabkols %in% names(FG)]
   valkols <- FinnValKols(names(FG))
@@ -1031,7 +1031,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
   
   dubi <- duplicated(FG)
   
-  DUB <- data.table()
+  DUB <- data.table::data.table()
   result <- c(ANTdNO = 0, fANTV1 = 0, ANTdNOp = 0, fANTV1p = 0, ANTdNOg = 0, fANTV1g = 0)
   # dubi<-duplicated(FG[,tabkols,with=FALSE])
   if (any(dubi)) {
@@ -1057,8 +1057,8 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       )))
       DUBp[, antVp := length(unique(dNOp)), by = tabkols]
       DUBp[, antKp := length(unique(KOBLID)), by = tabkols]
-      setkeyv(DUB, names(DUB))
-      setkeyv(DUBp, names(DUB))
+      data.table::setkeyv(DUB, names(DUB))
+      data.table::setkeyv(DUBp, names(DUB))
       DUB <- DUBp[DUB]
       DUB[is.na(dNOp), dNOp := 0]
       DUB[is.na(antVp), antVp := 0]
@@ -1078,8 +1078,8 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       )))
       DUBg[, antVg := length(unique(dNOg)), by = tabkols]
       DUBg[, antKg := length(unique(KOBLID)), by = tabkols]
-      setkeyv(DUB, names(DUB))
-      setkeyv(DUBg, names(DUB))
+      data.table::setkeyv(DUB, names(DUB))
+      data.table::setkeyv(DUBg, names(DUB))
       DUB <- DUBg[DUB]
       DUB[is.na(dNOg), dNOg := 0]
       DUB[is.na(antVg), antVg := 0]
@@ -1099,12 +1099,12 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     result <- c(ANTdNO = ANTdNO, fANTV1 = fANTV1, ANTdNOp = ANTdNOp, fANTV1p = fANTV1p, ANTdNOg = ANTdNOg, fANTV1g = fANTV1g)
     
     # Skriv dubletter til logg
-    sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
+    RODBC::sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
     # Legg til resterende kolonner
     # Må ha ok kolonnenavn til database
-    setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
+    data.table::setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
     
-    tmp <- sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
+    tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
     tmp2 <- tmp
     tmp[1:nrow(DUB), ] <- NA
     tmp[, intersect(names(tmp), names(DUB))] <- DUB[, intersect(names(tmp), names(DUB)), with = FALSE]
@@ -1118,13 +1118,13 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       print(DUB)
     }
     if (nrow(DUB) < 1000) {
-      sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+      RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
       if (echo >= 1) {
         cat("Ferdig dublogg\n")
       }
       if (versjonert == TRUE) {
         tmp$SV <- "V"
-        sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+        RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
       }
     }
   }
@@ -1228,7 +1228,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
                " AND VERSJONTIL>", datef,
                sep = ""
   )
-  kbok <- sqlQuery(globs$dbh, sql, as.is = TRUE)
+  kbok <- RODBC::sqlQuery(globs$dbh, sql, as.is = TRUE)
   kbok[is.na(kbok)] <- ""
   subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
   if (nrow(kbok) > 0) {
@@ -1253,11 +1253,11 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
         if (!is.na(freq)) {
           subsant <- rbind(subsant, data.frame(ORG = KB$ORGKODE, KBOMK = KB$NYKODE, OMK = KB$NYKODE, FREQ = freq, OK = 1))
           # tmp2<-as.data.frame(table(DF$GEO,useNA="ifany"),stringsAsFactors=FALSE)
-          omk <- mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
+          omk <- plyr::mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
         }
       }
     } else {
-      omk <- mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
+      omk <- plyr::mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
     }
   }
   
@@ -1283,7 +1283,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   } else {
     geo$KBOMK <- KBomkod(geo$ORG, type = "GEO", filbesk = filbesk, batchdate = batchdate, globs = globs)
     if (!is.na(filbesk$TKNR)) {
-      suppressWarnings(geo$KBOMK[geo$ORG == geo$KBOMK] <- mapvalues(geo$ORG[geo$ORG == geo$KBOMK], globs$TKNR$ORGKODE, globs$TKNR$NYKODE, warn_missing = FALSE))
+      suppressWarnings(geo$KBOMK[geo$ORG == geo$KBOMK] <- plyr::mapvalues(geo$ORG[geo$ORG == geo$KBOMK], globs$TKNR$ORGKODE, globs$TKNR$NYKODE, warn_missing = FALSE))
     }
   }
   geo$OMK <- geo$KBOMK
@@ -1310,9 +1310,9 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   # Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
   UGeo <- data.frame(NAVN = geo$OMK[!grepl("^\\d+$", geo$OMK)])
   if (nrow(UGeo) > 0) {
-    GeoNavn <- sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
-    omk <- sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN")
-    geo$OMK <- mapvalues(geo$OMK, omk$NAVN, omk$GEO, warn_missing = FALSE)
+    GeoNavn <- RODBC::sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
+    omk <- sqldf::sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN")
+    geo$OMK <- plyr::mapvalues(geo$OMK, omk$NAVN, omk$GEO, warn_missing = FALSE)
   }
   
   
@@ -1338,14 +1338,14 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   # Sjekk om legitime 99-ukjente
   ukjent <- ukjent[ukjent99 %in% globs$GeoKoder$GEO]
   ukjent99 <- ukjent99[ukjent99 %in% globs$GeoKoder$GEO]
-  geo$OMK <- mapvalues(geo$OMK, ukjent, ukjent99, warn_missing = FALSE)
+  geo$OMK <- plyr::mapvalues(geo$OMK, ukjent, ukjent99, warn_missing = FALSE)
   
   ukjent <- geo$OMK[!(geo$OMK %in% c(globs$GeoKoder$GEO, "-"))]
   heltukjent <- ukjent
   heltukjent[nchar(ukjent) == 6] <- 999999
   heltukjent[nchar(ukjent) == 4] <- 9999
   heltukjent[nchar(ukjent) == 2] <- 99
-  geo$OMK <- mapvalues(geo$OMK, ukjent, heltukjent, warn_missing = FALSE)
+  geo$OMK <- plyr::mapvalues(geo$OMK, ukjent, heltukjent, warn_missing = FALSE)
   
   # Sett GEOniv
   geo$GEOniv <- as.character(NA)
@@ -1436,11 +1436,11 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
   alder$OK[!okformat] <- 0
   
   # Sett intervall
-  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
+  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
   alder$OMK[alder$HI < alder$LO] <- globs$alder_illeg
   alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(globs$alder_illeg, globs$alder_ukjent))] <- globs$alder_illeg
-  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
+  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   return(alder)
 }
 
@@ -1608,9 +1608,9 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   aar$OK[!okformat] <- 0
   
   # Sett intervall
-  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
+  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
   aar$OMK[aar$HI < aar$LO] <- globs$aar_illeg
-  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
+  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   return(aar)
 }
