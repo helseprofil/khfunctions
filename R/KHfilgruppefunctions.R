@@ -210,7 +210,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), globs = globs, format = format)
     }
   }
-  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
   if (ok == 1) {
     colClass <- sapply(DF, class)
     if (any(colClass != "character")) {
@@ -528,8 +528,8 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
   
   
   # Initier log
-  sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
-  sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID), "'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID), "'", sep = ""))
   
   # Sjekk om fil eksisterer
   if (file.access(filn, mode = 0) == -1) {
@@ -865,9 +865,9 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
   ok <- 1
   DF <- data.frame()
   # step 1: Validate sheetname with fuzzy match
-  # rdbh<-odbcConnectExcel2007(xlsfil)
-  # rdbh<-odbcConnectExcel(xlsfil)
-  # tables<-sqlTables(rdbh)$TABLE_NAME
+  # rdbh<-RODBC::odbcConnectExcel2007(xlsfil)
+  # rdbh<-RODBC::odbcConnectExcel(xlsfil)
+  # tables<-RODBC::sqlTables(rdbh)$TABLE_NAME
   # close(rdbh)
   
   tables <- excel_sheets(xlsfil)
@@ -914,12 +914,12 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
   
   dbh <- globs$dbh
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  FGPaktiv <- as.integer(sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+  FGPaktiv <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                                    "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                         ",
                                                    sep = ""
   ), as.is = TRUE))
-  FGPfinnes <- as.integer(sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
+  FGPfinnes <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
   ok <- 0
   resultat <- list()
   if (FGPfinnes == 0) {
@@ -928,7 +928,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
     KHerr(paste("Filgruppe", gruppe, "finnes, men er satt inaktiv. Droppes."))
   } else {
     ok <- 1
-    FGP <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+    FGP <- as.list(RODBC::sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                              "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                           ",
                                              sep = ""
@@ -936,7 +936,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
     # Sette endelig default alder ALLE
     # Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
     amin <- 0
-    amax <- as.numeric(sqlQuery(dbh, "SELECT ALDinf FROM HOVEDPARAMETREg")[1])
+    amax <- as.numeric(RODBC::sqlQuery(dbh, "SELECT ALDinf FROM HOVEDPARAMETREg")[1])
     # Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
     if (!is.na(FGP$ALDER_ALLE)) {
       if (grepl("^\\d+_(\\d+|)$", FGP$ALDER_ALLE)) {
@@ -996,7 +996,7 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
               AND ORIGINALFILER.IBRUKTIL>", datef, "
               AND INNLESING.VERSJONFRA<=", datef, "
               AND INNLESING.VERSJONTIL>", datef, sep = "")
-  fb <- sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
+  fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
   
   ## Picking up files path that is refered to in ORIGINALFILER
   
@@ -1099,12 +1099,12 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     result <- c(ANTdNO = ANTdNO, fANTV1 = fANTV1, ANTdNOp = ANTdNOp, fANTV1p = fANTV1p, ANTdNOg = ANTdNOg, fANTV1g = fANTV1g)
     
     # Skriv dubletter til logg
-    sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
+    RODBC::sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
     # Legg til resterende kolonner
     # Må ha ok kolonnenavn til database
     setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
     
-    tmp <- sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
+    tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
     tmp2 <- tmp
     tmp[1:nrow(DUB), ] <- NA
     tmp[, intersect(names(tmp), names(DUB))] <- DUB[, intersect(names(tmp), names(DUB)), with = FALSE]
@@ -1118,13 +1118,13 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       print(DUB)
     }
     if (nrow(DUB) < 1000) {
-      sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+      RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
       if (echo >= 1) {
         cat("Ferdig dublogg\n")
       }
       if (versjonert == TRUE) {
         tmp$SV <- "V"
-        sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+        RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
       }
     }
   }
@@ -1228,7 +1228,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
                " AND VERSJONTIL>", datef,
                sep = ""
   )
-  kbok <- sqlQuery(globs$dbh, sql, as.is = TRUE)
+  kbok <- RODBC::sqlQuery(globs$dbh, sql, as.is = TRUE)
   kbok[is.na(kbok)] <- ""
   subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
   if (nrow(kbok) > 0) {
@@ -1310,7 +1310,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   # Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
   UGeo <- data.frame(NAVN = geo$OMK[!grepl("^\\d+$", geo$OMK)])
   if (nrow(UGeo) > 0) {
-    GeoNavn <- sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
+    GeoNavn <- RODBC::sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
     omk <- sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN")
     geo$OMK <- mapvalues(geo$OMK, omk$NAVN, omk$GEO, warn_missing = FALSE)
   }
