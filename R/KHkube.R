@@ -677,7 +677,7 @@ LagKUBE <- function(KUBEid,
     dims <- find_dims(dt = KUBE, spec = FGPs)
     stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
     
-    KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs, test = test)
+    KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs)
     
     if ("STATAPRIKKpost" %in% names(dumps)) {
       for (format in dumps[["STATAPRIKKpost"]]) {
