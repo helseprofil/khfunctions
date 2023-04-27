@@ -456,7 +456,7 @@ SettPredFilterGml <- function(refvstr, FGP = list(amin = 0, amax = 120), globs =
           valh <- gsub(paste(".*(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&).*", sep = ""), "\\2", refvstr)
           PredFilter[[del]] <- eval(parse(text = paste("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)", sep = "")))
         } else if (grepl(paste("(^|\\&) *", delN, " *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
-          intval <- as.integer(unlist(str_split(gsub(paste("(^|.*\\&) *", delN, " *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", refvstr), "_")))
+          intval <- as.integer(unlist(stringr::str_split(gsub(paste("(^|.*\\&) *", delN, " *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", refvstr), "_")))
           if (length(intval) == 1) {
             intval <- c(intval, intval)
           }

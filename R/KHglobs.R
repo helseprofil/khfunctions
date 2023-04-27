@@ -63,7 +63,7 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
   is_kh_debug()
   
   Deler <- RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_DELER", as.is = TRUE, stringsAsFactors = FALSE)
-  # DelKols<-lapply(as.list(setNames(Deler$DelKols, Deler$DEL)),function(x){unlist(str_split(x,pattern=","))})
+  # DelKols<-lapply(as.list(setNames(Deler$DelKols, Deler$DEL)),function(x){unlist(stringr::str_split(x,pattern=","))})
   # Tilrettelegging for enkle oppslag:
   DelKolN <- setNames(Deler$DelKol, Deler$DEL)
   DelKolE <- setNames(Deler$DelKolE, Deler$DEL)
@@ -83,7 +83,7 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
       DelKolsF[[del]] <- DelKols[[del]]
     }
     if (!(is.na(DelKolE[[del]]) | DelKolE[[del]] == "")) {
-      DelKolsF[[del]] <- c(DelKolsF[[del]], unlist(str_split(DelKolE[[del]], ",")))
+      DelKolsF[[del]] <- c(DelKolsF[[del]], unlist(stringr::str_split(DelKolE[[del]], ",")))
     }
     for (kol in DelKols[[del]]) {
       KolsDel[[kol]] <- del
@@ -156,7 +156,7 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
     kbdnames <- gsub("NYKODE(h|l|)", paste(globs$DefDesign$DelKolN[del], "\\1_omk", sep = ""), kbdnames)
     kbdnames <- gsub("PRI_OMKOD", paste(del, "_pri", sep = ""), kbdnames)
     kbdnames <- gsub("OBLIG", paste(del, "_obl", sep = ""), kbdnames)
-    setnames(KBD, names(KBD), kbdnames)
+    data.table::setnames(KBD, names(KBD), kbdnames)
     KB[[del]] <- KBD[, names(KBD)[!names(KBD) %in% c("ID", "DEL")]]
   }
   return(KB)
@@ -177,7 +177,7 @@ SettLegitimeKoder <- function(globs = FinnGlobs()) {
   for (del in unique(Koder$DEL)) {
     KodeD <- subset(Koder, DEL == del)
     if (globs$DefDesign$DelType[del] == "INT") {
-      KodeD <- cbind(KodeD, setNames(matrix(as.integer(str_split_fixed(KodeD$KODE, "_", 2)), ncol = 2), globs$DefDesign$DelKols[[del]]))
+      KodeD <- cbind(KodeD, setNames(matrix(as.integer(stringr::str_split_fixed(KodeD$KODE, "_", 2)), ncol = 2), globs$DefDesign$DelKols[[del]]))
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
       KodeD <- setNames(cbind(KodeD, as.integer(KodeD$KODE)), c(names(KodeD), globs$DefDesign$DelKols[[del]]))
     } else if (globs$DefDesign$DelFormat[del] == "character") {
@@ -282,12 +282,12 @@ SettGlobs <- function(path = "", modus = NA) {
   
   globs <- c(globs, list(dbh = KHOc, log = KHLc, path = path))
   
-  GeoNavn <- data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
-  GeoKoder <- data.table(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
+  GeoNavn <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
+  GeoKoder <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
   UtGeoKoder <- GeoKoder[TYP == "O" & TIL == 9999]$GEO
-  KnrHarm <- data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
-  TKNR <- data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  HELSEREG <- data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  KnrHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  TKNR <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
+  HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
   # Gjelder også for soner
   KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
     paste(x, "00", sep = "")
@@ -298,7 +298,7 @@ SettGlobs <- function(path = "", modus = NA) {
   # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
   
   # GK til bydel. Bør konsolideres med KnrHarm
-  GkBHarm <- data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
+  GkBHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
   
   globs$DefDesign <- SettDefDesignKH(globs = globs)
   globs$KB <- SettKodeBokGlob(globs = globs)

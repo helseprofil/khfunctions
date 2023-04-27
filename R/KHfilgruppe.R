@@ -91,7 +91,7 @@ LagFilgruppe <- function(gruppe,
         # LagTabell
         DF <- LagTabellFraFil(filbesk, FGP, batchdate = batchdate, diagnose = diagnose, globs = globs, versjonert = versjonert, dumps = dumps)
         # Stable delfiler
-        Filgruppe <- rbind.fill(Filgruppe, DF)
+        Filgruppe <- plyr::rbind.fill(Filgruppe, DF)
         
         
         # Stopp klokke, skriv tid og feillogg
@@ -139,7 +139,7 @@ LagFilgruppe <- function(gruppe,
         names(Filgruppe) <- gsub(paste("^", val, "(\\.[fa]|)$", sep = ""), paste(FGP[[valn]], "\\1", sep = ""), names(Filgruppe))
       }
     }
-    FGP1 <- copy(Filgruppe)
+    FGP1 <- data.table::copy(Filgruppe)
     
     if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) {
       for (format in dumps[["RSYNT_PRE_FGLAGRINGpre"]]) {

@@ -9,12 +9,12 @@
 SammelignAarganger <- function(globs = FinnGlobs(), aar1 = globs$KHaargang, aar2 = globs$KHaargang - 1, modus = "KH") {
   is_kh_debug()
   
-  KUBE1 <- as.data.table(sqlQuery(globs$dbh, paste("SELECT KUBE_NAVN, VERSJON FROM ", modus, aar1, "_KUBESTATUS", sep = ""), stringsAsFactors = F))
-  KUBE2 <- as.data.table(sqlQuery(globs$dbh, paste("SELECT KUBE_NAVN, VERSJON FROM ", modus, aar2, "_KUBESTATUS", sep = ""), stringsAsFactors = F))
-  setkey(KUBE1, "KUBE_NAVN")
-  setkey(KUBE2, "KUBE_NAVN")
+  KUBE1 <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT KUBE_NAVN, VERSJON FROM ", modus, aar1, "_KUBESTATUS", sep = ""), stringsAsFactors = F))
+  KUBE2 <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT KUBE_NAVN, VERSJON FROM ", modus, aar2, "_KUBESTATUS", sep = ""), stringsAsFactors = F))
+  data.table::setkey(KUBE1, "KUBE_NAVN")
+  data.table::setkey(KUBE2, "KUBE_NAVN")
   PAR <- merge(KUBE1, KUBE2, by = "KUBE_NAVN", suffixes = c("1", "2"))
-  setnames(PAR, c("KUBE_NAVN"), c("KUBE_NAVN1"))
+  data.table::setnames(PAR, c("KUBE_NAVN"), c("KUBE_NAVN1"))
   PAR[, KUBE_NAVN2 := KUBE_NAVN1]
   SammenlignKubePar(PAR, modus = modus, globs = globs)
 }
@@ -37,8 +37,8 @@ SammenlignKubePar <- function(PAR, modus = NA, globs = FinnGlobs()) {
       tabs1 <- FinnTabKolsKUBE(names(KUBE1))
       tabs2 <- FinnTabKolsKUBE(names(KUBE2))
       if (nrow(KUBE1) > 0 & nrow(KUBE2) & length(setdiff(tabs1, tabs2)) == 0) {
-        setkeyv(KUBE1, tabs1)
-        setkeyv(KUBE2, tabs1)
+        data.table::setkeyv(KUBE1, tabs1)
+        data.table::setkeyv(KUBE2, tabs1)
         # VERSJON 1 INNER JOIN
         KOMP <- KUBE2[KUBE1]
         
@@ -88,8 +88,8 @@ SettKubedirs <- function(globs, modus = NA) {
 TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tabs = character(0), globs = FinnGlobs()) {
   is_kh_debug()
   
-  ## KUBE1<-as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
-  ## KUBE2<-as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
+  ## KUBE1<-data.table::as.data.table(read.csv(kube1filnavn,header=TRUE,sep=";"))
+  ## KUBE2<-data.table::as.data.table(read.csv(kube2filnavn,header=TRUE,sep=";"))
   
   fileD <- fs::file_exists(c(kube1filnavn, kube2filnavn))
   if (sum(fileD) != 2) {
@@ -125,8 +125,8 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
   
   
   if (length(setdiff(tabs1, tabs2)) == 0 && nrow(KUBE1) > 0 && nrow(KUBE2) > 0) {
-    setkeyv(KUBE1, tabs1)
-    setkeyv(KUBE2, tabs1)
+    data.table::setkeyv(KUBE1, tabs1)
+    data.table::setkeyv(KUBE2, tabs1)
     # VERSJON 1 INNER JOIN
     KOMP <- KUBE2[KUBE1]
     
@@ -158,7 +158,7 @@ FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
   } else {
     filn <- paste(globs$path, "/", globs$KubeDirDat, "/R/", fila, "_", batch, ".rds", sep = "")
   }
-  KUBE <- data.table()
+  KUBE <- data.table::data.table()
   if (file.access(filn, mode = 0) == -1) {
     cat("KRITISK FEIL: ", filn, " finnes ikke\n")
   } else if (file.access(filn, mode = 4) == -1) {
@@ -247,7 +247,7 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
                                    ON KH2015v2014.KH2015_KUBE = KH2015_KUBESTATUS.KUBE_NAVN
                                    WHERE KH2015_KUBE='", kube, "'", sep = ""), stringsAsFactors = FALSE)[1, ]
   F2015 <- FinnKubeT(kube, batch = KLenke$BATCH)
-  F2014 <- as.data.table(read.csv(KLenke$KH2014FIL, sep = ";", stringsAsFactors = FALSE))
+  F2014 <- data.table::as.data.table(read.csv(KLenke$KH2014FIL, sep = ";", stringsAsFactors = FALSE))
   if (echo == TRUE) {
     print("F2014:")
     print(F2014)
@@ -271,12 +271,12 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
   if (!is.na(K15dscr$ALDER_ALLE)) {
     alle <- K15dscr$ALDER_ALLE
   }
-  allev <- unlist(str_split(alle, "_"))
+  allev <- unlist(stringr::str_split(alle, "_"))
   if (!is.null(F2014$ALDER)) {
     F2014$ALDER <- as.character(F2014$ALDER)
     if (!is.na(KLenke$Alder14TOM)) {
       int <- which(grepl("_", F2014$ALDER))
-      atmp <- unlist(str_split(F2014$ALDER[int], "_"))
+      atmp <- unlist(stringr::str_split(F2014$ALDER[int], "_"))
       F2014$ALDER[int] <- paste(atmp[1], "_", as.integer(atmp[2]) - 1, sep = "")
     }
     F2014$ALDER <- gsub("^_(\\d+)$", paste(allev[1], "_", "\\1", sep = ""), F2014$ALDER)
@@ -285,8 +285,8 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
   } else {
     F2014$ALDER <- alle
   }
-  setnames(F2014, names(F2014), gsub("_MA\\d+$", "", names(F2014)))
-  setnames(F2014, names(F2014), gsub("RATE\\d+$", "RATE", names(F2014)))
+  data.table::setnames(F2014, names(F2014), gsub("_MA\\d+$", "", names(F2014)))
+  data.table::setnames(F2014, names(F2014), gsub("RATE\\d+$", "RATE", names(F2014)))
   Ftab15 <- intersect(FellesTabs, names(F2015))
   Ftab14 <- intersect(FellesTabs, names(F2014))
   Ftab <- intersect(Ftab15, Ftab14)
@@ -296,20 +296,20 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
   tabs15 <- tabs15[!(is.na(tabs15) | tabs15 == "NA")]
   
   if (length(tabs15) > 0 & length(tabs14) == length(tabs15)) {
-    setnames(F2014, tabs14, tabs15)
+    data.table::setnames(F2014, tabs14, tabs15)
   }
   
   for (tab in c("TAB1", "TAB2")) {
     tabT <- paste(tab, "map_14", sep = "")
     if (!is.na(KLenke[1, tabT])) {
-      tab1415 <- unlist(str_split(KLenke[1, tabT], ","))
+      tab1415 <- unlist(stringr::str_split(KLenke[1, tabT], ","))
       tabT <- paste(tab, "org_14", sep = "")
-      tab1414 <- unlist(str_split(KLenke[1, tabT], ","))
+      tab1414 <- unlist(stringr::str_split(KLenke[1, tabT], ","))
       tab15n <- as.character(K15dscr[tab])
       F2014 <- data.frame(F2014)
       print(tab15n)
-      F2014[, tab15n] <- as.character(mapvalues(F2014[, tab15n], tab1414, tab1415))
-      setDT(F2014)
+      F2014[, tab15n] <- as.character(plyr::mapvalues(F2014[, tab15n], tab1414, tab1415))
+      data.table::setDT(F2014)
     }
   }
   
@@ -321,10 +321,10 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
   Ftab <- c(Ftab, tabs15)
   
   if (!is.na(KLenke$TELLER14)) {
-    setnames(F2014, KLenke$TELLER14, "TELLER")
+    data.table::setnames(F2014, KLenke$TELLER14, "TELLER")
   }
   if (!is.na(KLenke$MALTALL14)) {
-    setnames(F2014, KLenke$MALTALL14, "MALTALL")
+    data.table::setnames(F2014, KLenke$MALTALL14, "MALTALL")
   }
   valcols <- c("TELLER", "NEVNER", "RATE", "MALTALL", "SMR", "MEIS", "SPVFLAGG")
   valcols14 <- intersect(valcols, names(F2014))
@@ -435,7 +435,7 @@ SammenlignKuber <- function(V1, V2, FULL = TRUE, streng = TRUE, comparecols = ch
   mismatch <- integer(0)
   if (streng == TRUE & length(tabdiff) > 0) {
     cat("Kan ikke sammenligne KUBER når følgende kolonner ikker er i begge:", tabdiff, "\n")
-    V12 <- data.table(0)
+    V12 <- data.table::data.table(0)
   } else {
     if (length(tabdiff) > 0) {
       Tab <- intersect(Tab1, Tab2)
@@ -446,8 +446,8 @@ SammenlignKuber <- function(V1, V2, FULL = TRUE, streng = TRUE, comparecols = ch
     if (length(comparecols) == 0) {
       comparecols <- intersect(setdiff(names(V1), Tab1), setdiff(names(V2), Tab2))
     }
-    setkeyv(V1, Tab)
-    setkeyv(V2, Tab)
+    data.table::setkeyv(V1, Tab)
+    data.table::setkeyv(V2, Tab)
     V1 <- V1[eval(parse(text = paste("order(", Tab, ")", sep = ""))), c(Tab, comparecols), with = FALSE]
     V2 <- V2[eval(parse(text = paste("order(", Tab, ")", sep = ""))), c(Tab, comparecols), with = FALSE]
     
@@ -475,7 +475,7 @@ SammenlignKuber <- function(V1, V2, FULL = TRUE, streng = TRUE, comparecols = ch
     err <- err[!is.na(comp)]
     checkm <- paste(names(V1)[comp], ":", err)
     
-    V12 <- data.table(0)
+    V12 <- data.table::data.table(0)
     if (FULL == TRUE) {
       V12 <- merge(V1, V2, all = TRUE, by = Tab, suffixes = c("_1", "_2"))
       colorder <- c(Tab, unlist(lapply(comparecols, function(x) {

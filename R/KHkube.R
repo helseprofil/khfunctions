@@ -68,7 +68,7 @@ LagKUBE <- function(KUBEid,
     cat("Saving ACCESS specs to file:\n")
     utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
     specs <- GetAccessSpecs(kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, datef = datef, globs = globs)
-    fwrite(specs, file = utfils, sep = ";")
+    data.table::fwrite(specs, file = utfils, sep = ";")
     cat("\n", utfils)
   }
   
@@ -117,7 +117,7 @@ LagKUBE <- function(KUBEid,
     STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = FGPs[[filer["ST"]]], globs = globs)
     cat("---Satt felles design ST,SN,PN\n")
     
-    STN <- copy(LagTNtabell(filer, FilDesL, FGPs, STNPdscr, TT = "ST", NN = "SN", Design = STNFd, rapport = rapport, globs = globs)$TNF)
+    STN <- data.table::copy(LagTNtabell(filer, FilDesL, FGPs, STNPdscr, TT = "ST", NN = "SN", Design = STNFd, rapport = rapport, globs = globs)$TNF)
     
     # Fjern PredFilter$Pkols
     STN[, (PredFilter$Pkols) := NULL]
@@ -149,7 +149,7 @@ LagKUBE <- function(KUBEid,
       PredNevnerKol <- TNPdscr$NEVNERKOL
     }
     PNnames <- gsub(paste("^", PredNevnerKol, "(\\.f|\\.a|)$", sep = ""), "PREDNEVNER\\1", names(PN))
-    setnames(PN, names(PN), PNnames)
+    data.table::setnames(PN, names(PN), PNnames)
     soppelkols <- setdiff(names(PN), c(FinnTabKols(names(PN)), paste("PREDNEVNER", c("", ".f", ".a"), sep = "")))
     if (length(soppelkols) > 0) {
       PN[, (soppelkols) := NULL]
@@ -158,8 +158,8 @@ LagKUBE <- function(KUBEid,
     # return(list(STN=STN,PN=PN))
     cat("******Lager STNP, dette kan bli en stor tabell før kollaps til PT\n")
     commonkols <- intersect(FinnTabKols(names(PN)), FinnTabKols(names(STN)))
-    setkeyv(STN, commonkols)
-    setkeyv(PN, commonkols)
+    data.table::setkeyv(STN, commonkols)
+    data.table::setkeyv(PN, commonkols)
     mismatch <- nrow(STN[!PN, allow.cartesian = TRUE])
     if (mismatch > 0) {
       cat("!!!!!ADVARSEL: Mismatch i STN[PN,] på ", mismatch, "kolonner\n")
@@ -184,15 +184,15 @@ LagKUBE <- function(KUBEid,
     
     # Merge PT med TNF til ferdig kube
     tabkols <- FinnTabKols(names(TNF))
-    setkeyv(TNF, tabkols)
-    setkeyv(PT, tabkols)
+    data.table::setkeyv(TNF, tabkols)
+    data.table::setkeyv(PT, tabkols)
     KUBE <- PT[TNF]
     KUBE <- SettMergeNAs(KUBE, FGPs[[filer[TT]]]$vals)
     cat("Før merge KUBE<-PT[TNF] er dim(TNF)", orgdim, " og etter merge dim(KUBE)", dim(KUBE), "\n")
     cat("------FERDIG MED PREDIKSJON\n")
     fullresult <- list(KUBE = KUBE, STN = STN, TNF = TNF, PN = PN, PT = PT, RD = RD, STNPFd = STNPFd)
   } else {
-    KUBE <- copy(TNF)
+    KUBE <- data.table::copy(TNF)
     fullresult <- list(TNF = TNF)
   }
   # Fjern temporære BUFFER filer
@@ -207,7 +207,7 @@ LagKUBE <- function(KUBEid,
   }
   
   if (tmpbryt > 0) {
-    raaKUBE0 <- copy(KUBE)
+    raaKUBE0 <- data.table::copy(KUBE)
   }
   if (tmpbryt == 1) {
     return(fullresult)
@@ -233,8 +233,8 @@ LagKUBE <- function(KUBEid,
         VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
         VF <- VF[, c(VFtabkols, "MEISskala"), with = FALSE]
         
-        setkeyv(KUBE, VFtabkols)
-        setkeyv(VF, VFtabkols)
+        data.table::setkeyv(KUBE, VFtabkols)
+        data.table::setkeyv(VF, VFtabkols)
         KUBE <- VF[KUBE]
       } else {
         KUBE[, MEISskala := NA_real_]
@@ -250,7 +250,7 @@ LagKUBE <- function(KUBEid,
     # Snitt tolerer missing av type .f=1 ("random"), men bare noen få anonyme .f>1, se KHaggreger
     # Rapporterer variabelspesifikk VAL.n som angir antall år brukt i summen når NA holdt utenom
     
-    setkeyv(KUBE, c("AARl", "AARh"))
+    data.table::setkeyv(KUBE, c("AARl", "AARh"))
     aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
     int_lengde <- as.integer(unique(KUBE[, AARh - AARl + 1]))
     if (length(int_lengde) > 1) {
@@ -347,7 +347,7 @@ LagKUBE <- function(KUBEid,
     
     # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt
     # Se KHaggreger!
-    raaKUBE <- copy(KUBE)
+    raaKUBE <- data.table::copy(KUBE)
     
     # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
     if (ma_satt == 1) {
@@ -403,7 +403,7 @@ LagKUBE <- function(KUBEid,
       }
     }
     
-    raaKUBE2 <- copy(KUBE)
+    raaKUBE2 <- data.table::copy(KUBE)
     # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
     SvakAndelAvSerieGrense <- 0.5
     HullAndelAvSerieGrense <- 0.2
@@ -421,7 +421,7 @@ LagKUBE <- function(KUBEid,
       KUBE[SKJUL == 1, c("RATE", "RATE.f") := list(NA, 3)]
       KUBE[, c("SVAK", "HULL", "SKJUL", "AntAar") := NULL]
     }
-    raaKUBE3 <- copy(KUBE)
+    raaKUBE3 <- data.table::copy(KUBE)
     if ("anoKUBE4" %in% names(dumps)) {
       for (format in dumps[["anoKUBE4"]]) {
         DumpTabell(KUBE, paste(KUBEid, "anoKUBE4", sep = "_"), globs = globs, format = format)
@@ -583,10 +583,10 @@ LagKUBE <- function(KUBEid,
     if (D_develop_predtype == "IND") {
       VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
       if (maltall %in% c("TELLER", "RATE")) {
-        setnames(VF, c(paste(maltall, c("", ".f", ".a", ".n"), sep = ""), "SMRtmp"), c(paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"))
+        data.table::setnames(VF, c(paste(maltall, c("", ".f", ".a", ".n"), sep = ""), "SMRtmp"), c(paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"))
         VF <- VF[, c(VFtabkols, paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"), with = FALSE]
       } else {
-        setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
+        data.table::setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
         VF <- VF[, c(VFtabkols, "NORM", "NORMSMR"), with = FALSE]
       }
     } else {
@@ -594,8 +594,8 @@ LagKUBE <- function(KUBEid,
       VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), c("GEOniv", "GEO", "FYLKE"))
       VF <- VF[, c(VFtabkols, "lopendeMEISref"), with = FALSE]
     }
-    setkeyv(KUBE, VFtabkols)
-    setkeyv(VF, VFtabkols)
+    data.table::setkeyv(KUBE, VFtabkols)
+    data.table::setkeyv(VF, VFtabkols)
     
     KUBE <- VF[KUBE]
     
@@ -628,14 +628,14 @@ LagKUBE <- function(KUBEid,
     etabs <- character(0)
     for (etab in names(KUBE)[grepl("^TAB\\d+$", names(KUBE))]) {
       if (grepl("\\S", FGP[[etab]])) {
-        setnames(KUBE, etab, FGP[[etab]])
+        data.table::setnames(KUBE, etab, FGP[[etab]])
         etabs <- c(etabs, FGP[[etab]])
       }
     }
     
     # SETT UTKOLONNER FOR ALLVISKUBE
     if (!(is.na(KUBEdscr$NESSTARTUPPEL) | KUBEdscr$NESSTARTUPPEL == "")) {
-      NstarTup <- unlist(str_split(KUBEdscr$NESSTARTUPPEL, ","))
+      NstarTup <- unlist(stringr::str_split(KUBEdscr$NESSTARTUPPEL, ","))
     } else if (KUBEdscr$REFVERDI_VP == "P") {
       NstarTup <- c("T", "RATE", "SMR", "MEIS")
     } else {
@@ -644,14 +644,14 @@ LagKUBE <- function(KUBEid,
     OutVar <- globs$NesstarOutputDef[NstarTup]
     
     if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
-      hjelpeVar <- unlist(str_split(KUBEdscr$EKSTRAVARIABLE, ","))
+      hjelpeVar <- unlist(stringr::str_split(KUBEdscr$EKSTRAVARIABLE, ","))
       OutVar <- c(OutVar, hjelpeVar)
     }
     
     KHtabs <- c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK")
     tabs <- c(KHtabs, etabs)
     if (!(is.na(KUBEdscr$DIMDROPP) | KUBEdscr$DIMDROPP == "")) {
-      dimdropp <- unlist(str_split(KUBEdscr$DIMDROPP, ","))
+      dimdropp <- unlist(stringr::str_split(KUBEdscr$DIMDROPP, ","))
       tabs <- setdiff(tabs, dimdropp)
     }
     
@@ -729,7 +729,7 @@ LagKUBE <- function(KUBEid,
     
     # LAYOUT
     utkols <- c(tabs, OutVar)
-    ALLVIS <- copy(KUBE)
+    ALLVIS <- data.table::copy(KUBE)
     
     # SKJUL HELE TUPPELET
     # FLAGG PER VARIABEL KAN/BØR VURDERES!
@@ -748,7 +748,7 @@ LagKUBE <- function(KUBEid,
       ALLVIS[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
     }
     ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
-    ALLVIS[, SPVFLAGG := mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
+    ALLVIS[, SPVFLAGG := plyr::mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
     
     # Filtrer bort GEO som ikke skal rapporteres
     KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
@@ -799,11 +799,11 @@ LagKUBE <- function(KUBEid,
     ## If csvcopy, Write .csv file to DATERT/csv, and QC kube to QC
     if (csvcopy == TRUE) {
       utfild <- paste(globs$path, "/", globs$KubeDirDat, "/csv/", KUBEid, "_", batchdate, ".csv", sep = "")
-      fwrite(ALLVIS, file = utfild, sep = ";")
+      data.table::fwrite(ALLVIS, file = utfild, sep = ";")
       cat("\n", utfild)
       
       utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
-      fwrite(QC, file = utfilq, sep = ";")
+      data.table::fwrite(QC, file = utfilq, sep = ";")
       cat("\n", utfilq)
     }
   }
