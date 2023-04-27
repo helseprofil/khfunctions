@@ -64,7 +64,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
     TABELL[TABELL == ""] <- " " # STATA støtter ikke "empty-string"
     names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 tåler ikke numeriske kolonnenavn
     names(TABELL) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-    write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
+    foreign::write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
   }
 }
 
@@ -89,7 +89,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   # DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
   names(TABLE) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n til _
   # DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
-  write.dta(TABLE, tmpdta)
+  foreign::write.dta(TABLE, tmpdta)
   # file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
@@ -114,7 +114,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     log_start <- which(grepl(paste("do", tmpdo), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
   } else {
-    TABLE <- read.dta(tmpdta)
+    TABLE <- foreign::read.dta(tmpdta)
   }
   # Reverserer omforminger for å kunne skrive til STATA
   TABLE[TABLE == " "] <- ""

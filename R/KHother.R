@@ -190,7 +190,7 @@ KonverterRMappe <- function(Rmappe, Utmappe, Format = "csv", globs = FinnFlobs) 
       write.table(TABELL, file = filen, sep = ";", row.names = FALSE)
       cat("CSV til", filen, "\n")
     } else if (tolower(Format) == "stata") {
-      write.dta(TABELL, file = paste(globs$path, "/", Utmappe, filn, ".dta", sep = ""))
+      foreign::write.dta(TABELL, file = paste(globs$path, "/", Utmappe, filn, ".dta", sep = ""))
     }
   }
 }

@@ -562,11 +562,11 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
           expr <- paste("KHCsvread(filn", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = "")
           INNLES <- try(eval(parse(text = expr)), silent = TRUE)
         } else if (format == "SPSS") {
-          INNLES <- try(as.data.frame(read.spss(file = filn, use.value.labels = FALSE, max.value.labels = 0), stringsAsFactors = FALSE), silent = TRUE)
+          INNLES <- try(as.data.frame(foreign::read.spss(file = filn, use.value.labels = FALSE, max.value.labels = 0), stringsAsFactors = FALSE), silent = TRUE)
           # ALternativ metode: T<-spss.get(file=fil)
         } else if (format == "DBF") {
           # DEV sl? av Field name: '***NULL***' changed to: 'X...NULL...'
-          INNLES <- try(suppressMessages(read.dbf(file = filn, as.is = TRUE)), silent = TRUE)
+          INNLES <- try(suppressMessages(foreign::read.dbf(file = filn, as.is = TRUE)), silent = TRUE)
         } else if (format == "SAS") {
           INNLES <- try(read.sas7bdat(file = filn), silent = TRUE)
         } else if (format == "HTML") {
