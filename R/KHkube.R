@@ -763,7 +763,7 @@ LagKUBE <- function(KUBEid,
     ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
     
     # Create QC KUBE based on the censored ALLVIS kube
-    # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
+    # Contain all the full ALLVIS kuve + uncensored TELLER/NEVNER/sumTELLER/sumNEVNER/RATE.n
     QC <- LagQCKube(allvis = ALLVIS,
                     allvistabs = tabs, 
                     kube = KUBE,
