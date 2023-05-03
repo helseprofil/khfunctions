@@ -759,16 +759,15 @@ LagKUBE <- function(KUBEid,
       LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
     }
     
+    # Filter ALLVIS KUBE
+    ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
+    
     # Create QC KUBE based on the censored ALLVIS kube
     # Contain all QCTabs (globs) + extra dimensions in KUBE (tabs), all QCVals (globs), + extra vals in kube (OutVar), and SPVFLAGG
     QC <- LagQCKube(allvis = ALLVIS,
+                    allvistabs = tabs, 
                     kube = KUBE,
-                    allvistabs = tabs,
-                    allvisvals = OutVar,
                     globs = globs)
-    
-    # Filter ALLVIS KUBE
-    ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
     
     if (tmpbryt == 2) {
       print("TMPBRYT=2")

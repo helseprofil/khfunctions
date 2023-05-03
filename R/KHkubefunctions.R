@@ -2194,20 +2194,16 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
 #' @param allvisvals All columns 
 #' @param globs defaults to FinnGlobs() 
 LagQCKube <- function(allvis,
-                      kube,
                       allvistabs,
-                      allvisvals,
+                      kube,
                       globs = FinnGlobs()){
   is_kh_debug()
   
-  QC <- data.table::copy(allvis)[, mget(c(allvistabs, allvisvals, "SPVFLAGG"))]
+  QC <- data.table::copy(allvis)
   uprikk <- data.table::copy(kube)[, mget(c(allvistabs, globs$QCVals))]
+  data.table::setnames(uprikk, globs$QCVals, paste0(globs$QCVals, "_uprikk"))
   
-  for(val in globs$QCVals){
-    name <- paste0(val, "_uprikk")
-    newcol <- paste0("i.", val)
-    QC[uprikk, (name) := get(newcol), on = allvistabs]
-  }
+  QC <- QC[uprikk, on = allvistabs]
   
   return(QC[])
 }
