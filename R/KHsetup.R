@@ -25,13 +25,13 @@ if(isFALSE(exists("kh_source"))){
 }
 
 # Load setup scripts (paths, global parameters, functions) to enable all functionality
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHmisc.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHpaths.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHglobs.R", encoding = "latin1")
-# kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHfunctions.R", encoding = "latin1")
-#kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHgraveyard.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHfilgruppefunctions.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHfilgruppe.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHkubefunctions.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHkube.R", encoding = "latin1")
-kh_source(repo = "khfunctions", branch = "allviskube", file = "R/KHother.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHmisc.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHpaths.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHglobs.R", encoding = "latin1")
+# kh_source(repo = "khfunctions", branch = "master", file = "R/KHfunctions.R", encoding = "latin1")
+#kh_source(repo = "khfunctions", branch = "master", file = "R/KHgraveyard.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHfilgruppefunctions.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHfilgruppe.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHkubefunctions.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHkube.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHother.R", encoding = "latin1")
