@@ -59,10 +59,10 @@
     },
     "XML": {
       "Package": "XML",
-      "Version": "3.99-0.12",
+      "Version": "3.99-0.14",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "b83df448ba12cfafbbb0726450745d08",
+      "Hash": "e5c8af79df616c135b21eaeb1dc6bc5c",
       "Requirements": []
     },
     "bit": {
@@ -131,6 +131,16 @@
       "Repository": "CRAN",
       "Hash": "0d297d01734d2bcea40197bd4971a764",
       "Requirements": []
+    },
+    "collapse": {
+      "Package": "collapse",
+      "Version": "1.9.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "8f6e1c5fc24bc09d73eb3cfc7a8e3845",
+      "Requirements": [
+        "Rcpp"
+      ]
     },
     "cpp11": {
       "Package": "cpp11",
@@ -425,14 +435,18 @@
     },
     "stringr": {
       "Package": "stringr",
-      "Version": "1.4.0",
+      "Version": "1.5.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "0759e6b6c0957edb1311028a49a35e76",
+      "Hash": "671a4d384ae9d32fc47a14e98bfa3dc8",
       "Requirements": [
+        "cli",
         "glue",
+        "lifecycle",
         "magrittr",
-        "stringi"
+        "rlang",
+        "stringi",
+        "vctrs"
       ]
     },
     "tibble": {
