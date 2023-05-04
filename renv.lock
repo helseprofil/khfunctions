@@ -132,6 +132,16 @@
       "Hash": "0d297d01734d2bcea40197bd4971a764",
       "Requirements": []
     },
+    "collapse": {
+      "Package": "collapse",
+      "Version": "1.9.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "8f6e1c5fc24bc09d73eb3cfc7a8e3845",
+      "Requirements": [
+        "Rcpp"
+      ]
+    },
     "cpp11": {
       "Package": "cpp11",
       "Version": "0.4.3",
