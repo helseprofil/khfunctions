@@ -52,10 +52,22 @@ Ved oppstart av prosjektet, skal siste versjoner av funksjonene automatisk hente
 #+begin_src r
 rm(list = ls())
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "master", file = "R/KHsetup.R", encoding = "latin1")
 #+end_src
 
 Betingelsen er at du har installert alle pakkene som trengs.
+
+* Bruk gammel versjon (pre allviskubeoppdatering)
+
+For å bruke gammel versjon før oppdatering til allviskube, kjør kodene nedenfor:
+
+#+begin_src r
+rm(list = ls())
+source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+kh_source(repo = "khfunctions", branch = "masterpreallvis", file = "KHfunctions.R", encoding = "latin1")
+#+end_src
+
+
 
 * Bruk spesifikk testbranch
 
@@ -64,7 +76,7 @@ Ved testing av ny funksjonalitet, må følgende kode kjøres for å bruke aktuell te
 #+begin_src r
 rm(list = ls())
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "NAVN PÅ TEST BRANCH", file = "KHfunctions.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "NAVN PÅ TESTBRANCH", file = "R/KHsetup.R", encoding = "latin1")
 #+end_src
 
 
