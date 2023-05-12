@@ -29,7 +29,7 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    write = TRUE) {
+                    write = FALSE) {
   
   is_kh_debug()
   
@@ -816,7 +816,7 @@ LagKUBE <- function(KUBEid,
 #' 
 #' Wrapper aroung LagKUBE, allowing for more than one KUBE to be made simultaneously
 #'
-LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), ...) {
+LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), write = FALSE, ...) {
   is_kh_debug()
   
   batchdate <- SettKHBatchDate()
@@ -824,7 +824,7 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
   sink(loggfile, split = TRUE)
   cat("BATCH:", batchdate, "\n")
   for (KUBEid in KUBEidA) {
-    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps, ...)
+    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps, write = write, ...)
   }
   sink()
 }
@@ -835,5 +835,5 @@ LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = 
 #'
 LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
   is_kh_debug()
-  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, ...))
+  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, write = TRUE, ...))
 }
