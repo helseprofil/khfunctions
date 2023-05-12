@@ -1,70 +1,78 @@
-# Oppdatering 7.oktober: Siden linjene under nå skal kjøres automatisk ved oppstart av prosjektet, 
-# skal det ikke lenger være nødvendig å gjøre dette manuelt. De er derfor kommentert bort, men kan 
-# gjenopprettes for å kjøres ved behov (dersom alle funksjonene ikke ligger i Environment)
-#---------------------------------------------------------------------------------------------
-# NB: Alle kommandoer under krever at linja under kj?res en gang ved oppstart
+# Oppdatert 12.05.2023
+
+# Funksjonene er lastet inn, men husk å restarte prosjektet for å være sikker på at du har siste versjoner.
+
+# GAMMEL VERSJON:
+# Må du bruke versjonen av khfunctions før omlegging til allviskube, kan du kommentere ut og kjøre følgende:
 # rm(list = ls())
 # source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-# kh_source(repo = "khfunctions", branch = "master", file = "KHfunctions.R", encoding = "latin1")
+# kh_source(repo = "khfunctions", branch = "masterpreallvis", file = "KHfunctions.R", encoding = "latin1")
 
+# GJELDENDE VERSJON:
+# For å laste inn den gjeldende versjonen av funksjonene skal det holde å restarte prosjektet. 
+# Hvis dette ikke skulle fungere, kan du kommentere ut og kjøre følgende:
+# rm(list = ls())
+# source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
+# kh_source(repo = "khfunctions", branch = "master", file = "R/KHsetup.R", encoding = "latin1")
 
-# Denne mÃ¥ ogsÃ¥ ofte kjÃ¸res ved oppstart. Setter opp ODBC.
-KHglobs <- SettGlobs()
-
+# Laste inn BEF_GKa i buffer, kan være nyttig om man skal lage flere kuber, ellers ikke nødvendig
 BUFFER <- list(BEF_GKa = KlargjorFil("BEF_GKa", versjonert = TRUE)$FIL)
-# BUFFER<-list(BEF_GKa=FinnFilT("BEF_GK_Ta"))
 
+# LagFilgruppe
+LagFilgruppe("FILGRUPPENAVN", versjonert = TRUE)
 
-#---------------------------------------------------------------------------------------------
-#*********************************************************************************************
-# Kj?r innlesing:
+# LagKube
 
+## Bare lokalt, lager et objekt som heter RESULTAT, som inneholder full kube, QC-kube og ALLVIS-kube
+LagKUBE("KUBENAVN")
 
-LagFilgruppe("VOLD_ANMELDTE", versjonert = TRUE)
+## Lagrer daterte CSV-kopier til QC og ALLVIS, ACCESS-specs, og Friskvikfiler
+## Lagrer også objektet RESULTAT
+LagKubeDatertCsv("KUBENAVN")
 
-#*********************************************************************************************
-# LAGE EN NY KUBE (datert), med kopi i csv
-k <- LagKubeDatertCsv("INNTULIKHET")
+# DIVERSE VERKTØY:
 
-# LAGE EN NY KUBE, uten csv-kopi (f.eks. for bare ? f? en fildump - se neste avsnitt)
-k <- LagKUBE("RFU_NH_ROYK_5_fildumpdummy")
-
-#*********************************************************************************************
-# DIVERSE VERKT?Y:
-
-#---------------------------------------------------------------------------------------------
-# Lage runtimedump
-# Liste over dumppunkter: F:\Forskningsprosjekter\PDB 2455 - Helseprofiler og til_\PRODUKSJON\DOK\DUMPPUNKTER.docx
+# Lage fildumper
 # Dump lagres alltid i F:\Forskningsprosjekter\PDB 2455 - Helseprofiler og til_\PRODUKSJON\RUNTIMEDUMP\
+# For å lagre dump, lag først objektet "dumps" med formatet dumpnavn = format, som eksempel under. 
 
-dumps <- list() #-> Ingen dump
+dumps <- list(STATAPRIKKpre = "CSV", STATAPRIKKpost = "STATA", RSYNT_POSTPROSESSpost = c("CSV", "STATA"))
+dumps <- list() # Dette gir ingen dumper
 
-# Bestille dumppunkter - eksempler
-# Prinsipp: -- dumppunkt="type datafil" --
-dumps <- list(maKUBE0 = "CSV", RSYNT2pre = c("CSV", "STATA"))
-dumps <- list(KUBE_SLUTTREDIGERpost = "STATA")
+# Deretter må du i kube- eller filgruppekjøringen bruke følgende
+LagKubeDatertCsv("KUBENAVN", dumps = dumps)
 
-# Dump i innlesingen
-FG <- LagFilgruppe("KEISERSNITT_NH", versjonert = TRUE, dumps = dumps)
+# Liste over tilgjengelige dumppunkter
 
-# Dump i kubeproduksjonen
-k <- LagKUBE("DAAR_RUSTAB_ANTALL", dumps = dumps)
+# LagFilgruppe
+## RSYNT_PRE_FGLAGRINGpre
+## RSYNT_PRE_FGLAGRINGpost
+## RESHAPEpre
+## RESHAPEpost
+## RSYNT2pre
+## RSYNT2post
+## KODEBOKpre
+## KODEBOKpost
+## RSYNT1pre
+## RSYNT1post
 
-# Du kan ogs? lage dump i alle RSYNT-punkter, ved ? legge inn en "lagre fil"-kommando som RSYNT.
+# LagKUBE
+## raaKUBE0
+## maKUBE0
+## anoKUBE1
+## anoKUBE2
+## anoKUBE3
+## anoKUBE4
+## KUBE_SLUTTREDIGERpre
+## KUBE_SLUTTREDIGERpost
+## STATAPRIKKpre
+## STATAPRIKKpost # Rett før postprosess, kan brukes som postprosess-pre.
+## RSYNT_POSTPROSESSpost
 
-#---------------------------------------------------------------------------------------------
 
-# TIPS OM SPESIALVERSJONER AV LÃ˜YPA:
-
-# - KjÃ¸re lokalt, det vil si kopiere styringsdatabasen til egen PC for Ã¥ slippe
-# nettverksproblemer med ODBC.
-# Ã…pne R-script "run-local.R" i samme katalog.
-
-# - KjÃ¸re innlesing av bare Ã©n ORGfil, mens man utarbeider innlesingsspec:
-# Ã…pne R-script "run-test.R" i samme katalog
-# (eller se https://github.com/helseprofil/khfunctions/blob/master/run-test.R)
-
-#---------------------------------------------------------------------------------------------
+#######################################################
+#### HERFRA ER FILEN IKKE OPPDATERT FRA TIDLIGERE #####
+#######################################################
 
 # TA BACKUP AV STYRINGSDATABASEN:
 backup("KHELSA.mdb")
