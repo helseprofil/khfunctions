@@ -13,5 +13,5 @@ For at funksjonene skal fungere er man også avhengig av Access-databasen og fle
 
 # Installasjon, oppdatering og brukerguider
 
-All informasjon du trenger om prosjektet ligger [her](https://helseprofil.github.io/faq-khfunctions.html), under menyen "FAQ KHvalitetskontroll"
+All informasjon du trenger om prosjektet ligger [her](https://helseprofil.github.io/manual/faq-khfunctions.html), under menyen "FAQ KHfunctions"
 
