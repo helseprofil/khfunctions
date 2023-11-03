@@ -4,6 +4,7 @@ if(version$major >= 4 & version$minor >= 2){
 }
 
 # Load packages
+library(conflicted)
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
 library(RODBC)
 library(DBI)
@@ -19,6 +20,13 @@ library(data.table)
 library(readxl)
 library(fs)
 library(collapse)
+
+# Solve conflicts
+conflicted::conflict_prefer("as.Date", "zoo", quiet = T)
+conflicted::conflict_prefer("as.Date.numeric", "zoo", quiet = T)
+conflicted::conflict_prefer("empty", "intervals", quiet = T)
+conflicted::conflict_prefer("join", "collapse", quiet = T)
+conflicted::conflict_prefer("D", "collapse", quiet = T)
 
 # Set debugging to inactive
 show_functions <- FALSE
