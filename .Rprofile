@@ -5,4 +5,4 @@
 source("renv/activate.R")
 
 source("https://raw.githubusercontent.com/helseprofil/misc/main/utils.R")
-kh_source(repo = "khfunctions", branch = "master", file = "R/KHsetup.R", encoding = "latin1")
+kh_source(repo = "khfunctions", branch = "R4.3", file = "R/KHsetup.R", encoding = "latin1")
