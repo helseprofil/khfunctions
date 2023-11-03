@@ -1,3 +1,8 @@
+# Set encoding for R>=4.2
+if(version$major >= 4 & version$minor >= 2){
+  Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
+}
+
 # Load packages
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
 library(RODBC)
