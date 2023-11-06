@@ -7,11 +7,11 @@
 [![GitHub repo size](https://img.shields.io/github/repo-size/helseprofil/khfunctions)](https://github.com/helseprofil/khfunctions)
 
 
-KHfunctions er Hovedhjernen til dataprosessering for folkehelseprofilene. Koden er hovedsakelig utviklet og skrevet av [Kåre Bævre](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/). Prosjektet ble videre utviklet og vedlikeholdt av [Yusman Bin Kamaleri](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/yusman-bin-kamaleri/) frem til høsten 2022. 
+KHfunctions er hovedhjernen til dataprosessering for folkehelseprofilene. Koden er hovedsakelig utviklet og skrevet av [Kåre Bævre](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/). Prosjektet ble videre utviklet og vedlikeholdt av [Yusman Bin Kamaleri](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/yusman-bin-kamaleri/) fra 2020 frem til høsten 2022. 
 
 For at funksjonene skal fungere er man også avhengig av Access-databasen og flere STATA-filer. Disse er ikke inkludert i GitHub. 
 
 # Installasjon, oppdatering og brukerguider
 
-All informasjon du trenger om prosjektet ligger [her](https://helseprofil.github.io/faq-khfunctions.html), under menyen "FAQ KHvalitetskontroll"
+All informasjon du trenger om prosjektet ligger [her](https://helseprofil.github.io/manual/faq-khfunctions.html), under menyen "FAQ KHfunctions"
 

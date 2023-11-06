@@ -1,7 +1,7 @@
 # Global parameters, starting point for SettGlobs()/FinnGlobs()
 globglobs <- list(
   HOVEDmodus = "NH",
-  KHaargang = 2023,
+  KHaargang = 2024,
   KHgeoniv = "K",
   KHdbname = dbNameFile,
   KHlogg = dbLogFile,
