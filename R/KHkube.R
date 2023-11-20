@@ -446,20 +446,16 @@ LagKUBE <- function(KUBEid,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
-          ok <- 0
+          stop("Something went wrong in STATA, SLUTTREDIGER", RES$feil, sep = "\n")
         } else {
           KUBE <- RES$TABLE
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
         if ("try-error" %in% class(rsynterr)) {
-          ok <- 0
-          error <- rsynterr
+          print(rsynterr)
+          stop("Something went wrong in R, SLUTTREDIGER")
         }
-      }
-      if (ok == 0) {
-        print(error)
       }
     }
     
@@ -688,26 +684,20 @@ LagKUBE <- function(KUBEid,
     # Start RSYNT_postprosess
     if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
       synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
-      error <- ""
-      ok <- 1
       if (grepl("<STATA>", synt)) {
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          ok <- 0
-          stop("Noe gikk galt i kjøring av STATA", RES$feil, sep = "\n")
+          stop("Something went wrong in STATA, RSYNT_POSTPROSESS", RES$feil, sep = "\n")
         } else {
           KUBE <- RES$TABLE
         }
       } else {
         rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
         if ("try-error" %in% class(rsynterr)) {
-          ok <- 0
-          error <- rsynterr
+          print(rsynterr)
+          stop("Something went wrong in R, RSYNT_POSTPROSESS")
         }
-      }
-      if (ok == 0) {
-        print(error)
       }
     }
     
