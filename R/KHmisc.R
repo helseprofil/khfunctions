@@ -839,7 +839,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   ## Current date style to create folder
   batchdate <- SettKHBatchDate()
   
-  fileRoot <- paste0(pathRoot, "/", pathDir, aar)
+  fileRoot <- paste0(pathRoot, "/", pathDir, "/", aar)
   fileFrom <- file.path(fileRoot, "CSV")
   fileTo <- file.path(fileRoot, "GODKJENT", batchdate)
   
