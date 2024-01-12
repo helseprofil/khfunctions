@@ -35,8 +35,7 @@ show_arguments <- FALSE
 # Load setup scripts (paths, global parameters, functions) to enable all functionality
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHmisc.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHpaths.R", encoding = "latin1")
-# Temporarily removed as connection to access is not working
-# source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHglobs.R", encoding = "latin1")
+source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHglobs.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfilgruppefunctions.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfilgruppe.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkubefunctions.R", encoding = "latin1")
