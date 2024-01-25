@@ -6,6 +6,7 @@ if(version$major >= 4 & version$minor >= 2){
 # Load packages
 library(conflicted)
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
+library(httr2)
 library(RODBC)
 library(DBI)
 library(foreign)
