@@ -342,8 +342,8 @@ LagKUBE <- function(KUBEid,
         .years <- 2019:2022
         } 
       .geos <- c("1508", "1580")
-      KUBE[GEOniv == "K" & GEO %in% .geos &  AARl %in% .years, (valK) := NA]
-      KUBE[GEOniv == "K" & GEO %in% .geos &  AARl %in% .years, (paste0(valK, ".f")) := 9]
+      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
     }
     
     if ("maKUBE0" %in% names(dumps)) {
