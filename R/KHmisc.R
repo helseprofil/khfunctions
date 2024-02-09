@@ -927,7 +927,7 @@ usebranch <- function(branch){
     tryCatch({
       new_lockfile <- readLines("https://raw.githubusercontent.com/helseprofil/khfunctions/master/renv.lock")
       
-      if (identical(readLines("renv.lock"), new_lockfiles)) {
+      if (identical(readLines("renv.lock"), new_lockfile)) {
         return(invisible(NULL))
       } else {
         choice <- menu(choices = c("Yes", "No"), 
