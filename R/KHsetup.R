@@ -10,8 +10,10 @@ if(version$major >= 4 & version$minor >= 2){
   # Check if the master branch is active
   b <- system("git branch --show-current", intern = TRUE)
   if(b != "master"){
-    message("You are not on the master branch, keep on the good dev work!")
+    message("\nYou are not on the master branch, keep on the good dev work!")
     return(invisible(NULL))
+  } else {
+    message("\nYou are on the master branch, ready for production!")
   }
   
   # Check if an update is necessary
@@ -21,17 +23,17 @@ if(version$major >= 4 & version$minor >= 2){
       return(invisible(NULL))
     } else {
       choice <- menu(choices = c("Yes", "No"), 
-                     title = "renv.lock update available. Overwrite local file?")
+                     title = "\nPackage versions updated. Get latest lockfile from GitHub?")
       if (choice == 1) {
         writeLines(new_lockfile, "renv.lock") 
-        message("renv.lock updated, update to latest package versions.")
+        message("\nrenv.lock updated, please update to latest package versions.")
         renv::restore()
       } else {
-        message("Skipping renv.lock update, your package versions differ from the project.")
+        message("\nSkipping renv.lock update, your package versions differ from what's specified on GitHub")
       }
     }
   }, error = function(e) {
-    message("Could not fetch renv.lock from the repository. Check URL and connectivity.")
+    message("\nCould not fetch renv.lock from the repository, try restarting the project")
   })
 }
 
