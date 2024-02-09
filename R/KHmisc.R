@@ -886,7 +886,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   )
 }
 
-#' usebranch
+#' usebranch (VL)
 #' 
 #' use to test other branches, loads all functions from a specified branch
 #'
@@ -907,4 +907,39 @@ usebranch <- function(branch){
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
   cat("\nLoaded functions from branch: ", branch)
+}
+
+#' .updatelockfile (VL)
+#' 
+#' Helper function to automatically fetch the lastest renv.lock from github
+#' Used in KHsetup.R
+#'
+.updatelockfile <- function(){
+  
+  # Check if the master branch is active
+  b <- system("git branch --show-current", intern = TRUE)
+  if()
+  
+  # Check if an update is necessary
+    tryCatch({
+      new_lockfile <- readLines("https://raw.githubusercontent.com/helseprofil/khfunctions/master/renv.lock")
+      
+      if (identical(readLines("renv.lock"), new_lockfiles)) {
+        return(invisible(NULL))
+      } else {
+        choice <- menu(choices = c("Yes", "No"), 
+                       title = "renv.lock update available. Overwrite local file?")
+        
+        if (choice == 1) {
+          writeLines(new_lockfile, "renv.lock") 
+          message("renv.lock updated, update to latest package versions.")
+          renv::restore()
+        } else {
+          message("Skipping renv.lock update, your package versions differ from the project.")
+        }
+      }
+      
+    }, error = function(e) {
+      message("Could not fetch renv.lock from the repository. Check URL and connectivity.")
+    })
 }
