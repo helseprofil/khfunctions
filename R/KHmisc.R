@@ -918,7 +918,10 @@ usebranch <- function(branch){
   
   # Check if the master branch is active
   b <- system("git branch --show-current", intern = TRUE)
-  if()
+  if(b != "master"){
+    message("You are not on the master branch, keep on the good dev work!")
+    return(invisible(NULL))
+  }
   
   # Check if an update is necessary
     tryCatch({
