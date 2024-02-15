@@ -428,6 +428,8 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+    # Avoid renaming of colnames from data.table > 1.15.0
+    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
   } else {
     # Sett også hjelpestørrelser for vurdering av snitt
     lp <- paste("list(",
@@ -443,6 +445,8 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+    # Avoid renaming of colnames from data.table > 1.15.0
+    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
     # Anonymiser, trinn 1
     # Filtrer snitt som ikke skal brukes pga for mye anonymt
     anon_tot_tol <- 0.2
