@@ -410,7 +410,8 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
     FIL <- data.table::data.table(FIL)
   }
   orgkeys <- data.table::key(FIL)
-  tabnames <- globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(FIL)]
+  # Avoid renaming of colnames from data.table > 1.15.0 by coercing to unnamed vector
+  tabnames <- as.character(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(FIL)])
   # tabnames<-names(FIL)[!grepl("^VAL\\d+(f|)$",names(FIL))]
   valkols <- names(FIL)[!names(FIL) %in% tabnames]
   valkols <- valkols[!grepl("\\.(f|a)", valkols)]
@@ -428,8 +429,6 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
-    # Avoid renaming of colnames from data.table > 1.15.0
-    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
   } else {
     # Sett også hjelpestørrelser for vurdering av snitt
     lp <- paste("list(",
@@ -445,8 +444,7 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
-    # Avoid renaming of colnames from data.table > 1.15.0
-    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
+    
     # Anonymiser, trinn 1
     # Filtrer snitt som ikke skal brukes pga for mye anonymt
     anon_tot_tol <- 0.2
