@@ -327,14 +327,23 @@ LagKUBE <- function(KUBEid,
     nameFGP <- filer["T"]
     selectedCol <- "DK2020_STARTAAR"
     if (FGPs[[nameFGP]][[selectedCol]] > 0) {
-      mergedCounty <- as.character(c(5055, 5056, 5059, 1806, 1875))
       valK <- FinnValKols(names(KUBE))
+      mergedCounty <- as.character(c(5055, 5056, 5059, 1806, 1875))
       KUBE[GEOniv == "K" &
              GEO %chin% mergedCounty &
              AARl < FGPs[[nameFGP]][[selectedCol]], (valK) := NA]
       KUBE[GEOniv == "K" &
              GEO %chin% mergedCounty &
              AARl < FGPs[[nameFGP]][[selectedCol]], (paste0(valK, ".f")) := 9]
+      
+      # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
+      .years <- 2020:2023
+      if(KUBEid == "VALGDELTAKELSE"){
+        .years <- 2019:2022
+        } 
+      .geos <- c("1508", "1580")
+      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
     }
     
     if ("maKUBE0" %in% names(dumps)) {

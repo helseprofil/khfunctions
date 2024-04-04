@@ -428,6 +428,8 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+    # Avoid renaming of colnames from data.table > 1.15.0
+    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
   } else {
     # Sett også hjelpestørrelser for vurdering av snitt
     lp <- paste("list(",
@@ -443,6 +445,8 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
                 sep = ""
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
+    # Avoid renaming of colnames from data.table > 1.15.0
+    setnames(FILa, names(tabnames), tabnames, skip_absent = T)
     # Anonymiser, trinn 1
     # Filtrer snitt som ikke skal brukes pga for mye anonymt
     anon_tot_tol <- 0.2
@@ -884,4 +888,27 @@ godkjent <- function(profil = c("FHP", "OVP"),
     " filer finnes ikke i ",
     fileFrom, "\n**********\n"
   )
+}
+
+#' usebranch (VL)
+#' 
+#' use to test other branches, loads all functions from a specified branch
+#'
+#' @param branch 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+usebranch <- function(branch){
+  rm(list = lsf.str(all.names = T))
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHpaths.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppe.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkubefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
+  cat("\nLoaded functions from branch: ", branch)
 }
