@@ -2,8 +2,11 @@
 .lastvers <- "30.04.2024"
 
 # Find latest local update date
+.localvers <- character()
+if(exists("R/KHupdate")){
 .localvers <- grep(".lastvers <-", readLines("R/KHupdate.R", n = 3), value = T)
 .localvers <- sub(".*(\\d{2}.\\d{2}.\\d{4}).*", "\\1", .localvers)
+} 
 
 if(length(.localvers) == 0){
   .localvers <- "unknown"
