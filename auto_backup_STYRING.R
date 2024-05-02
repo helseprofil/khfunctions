@@ -13,8 +13,8 @@ backup <- function(profilaargang, filename = "KHELSA.mdb", force = FALSE, ...){
   require(RODBC)
   date <- format(Sys.time(), "%Y%m%d%H%M")
 
-  styrpath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/STYRING"
-  styrpath_b <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON/STYRING/VERSJONSARKIV"
+  styrpath <- "O:/Prosjekt/FHP/PRODUKSJON/STYRING"
+  styrpath_b <- "O:/Prosjekt/FHP/PRODUKSJON/STYRING/VERSJONSARKIV"
   styroldfiles <- list.files(path = styrpath_b)
 
   KHkildeFN <- paste(styrpath, filename, sep = "/")
