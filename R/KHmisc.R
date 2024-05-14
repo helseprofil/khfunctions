@@ -89,7 +89,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   # DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
   names(TABLE) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n til _
   # DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
-  foreign::write.dta(TABLE, tmpdta)
+  # foreign::write.dta(TABLE, tmpdta)
+  haven::write_dta(TABLE, tmpdta)
   # file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
@@ -114,7 +115,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     log_start <- which(grepl(paste("do", tmpdo), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
   } else {
-    TABLE <- foreign::read.dta(tmpdta)
+    # TABLE <- foreign::read.dta(tmpdta)
+    TABLE <- haven::read_dta(tmpdta, encoding = "UTF-8")
   }
   # Reverserer omforminger for å kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
