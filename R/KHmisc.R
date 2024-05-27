@@ -63,7 +63,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
   } else if (format == "STATA") {
     TABELL[TABELL == ""] <- " " # STATA støtter ikke "empty-string"
     names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 tåler ikke numeriske kolonnenavn
-    names(TABELL) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+    names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
     foreign::write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
   }
 }
@@ -86,10 +86,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
   TABLE[TABLE == ""] <- " " # STATA støtter ikke "empty-string"
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
-  # DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
-  names(TABLE) <- gsub("^(.*)\\.([afn])$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n til _
-  # DEVELOP: try(write.dta), if error then write.csv. Må da også sette tmpdta<-tmpcsv og evt opsjoner i STATAs use tmpdta
-  # foreign::write.dta(TABLE, tmpdta)
+  names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   haven::write_dta(TABLE, tmpdta)
   # file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
   sink(tmpdo)
@@ -115,14 +112,12 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     log_start <- which(grepl(paste("do", tmpdo), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
   } else {
-    # TABLE <- foreign::read.dta(tmpdta)
     TABLE <- haven::read_dta(tmpdta, encoding = "UTF-8")
   }
   # Reverserer omforminger for å kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
-  # DEVELOP: STATAPRIKK slå av neste linje om det ikke funker
-  names(TABLE) <- gsub("^(.*)_([afn])$", "\\1.\\2", names(TABLE)) # Endre .a, .f, .n til _
+  names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
   # file.remove(tmpdo,tmpdta,tmplog)
   setwd(wdOrg)
   if (tableTYP == "DT") {
