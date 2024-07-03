@@ -47,3 +47,5 @@ source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfil
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkubefunctions.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkube.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHother.R", encoding = "latin1")
+
+message('KHfunctions is set up to work on HDIR-systems\n\nTo use on FHI, run `usebranch("FHI")` in the console')
