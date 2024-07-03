@@ -1,6 +1,6 @@
 # Set paths
 # Need defpath to be distinct from rawPath to not break test and local modus
-defpath <- rawPath <- "F:/Forskningsprosjekter/PDB 2455 - Helseprofiler og til_/PRODUKSJON"
+defpath <- rawPath <- "O:/Prosjekt/FHP/PRODUKSJON"
 dbNameFile <- "STYRING/KHELSA.mdb"
 dbLogFile <- "STYRING/KHlogg.mdb"
 
