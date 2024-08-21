@@ -6,8 +6,9 @@ dbLogFile <- "STYRING/KHlogg.mdb"
 
 # Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
 .useTest <- function(){
-  dbNameFile <<- "STYRING/test/KHELSA.mdb"
-  dbLogFile <<- "STYRING/test/KHlogg.mdb"
+  TESTMODUS <<- TRUE
+  dbNameFile <<- "STYRING/test/KHELSAtest.mdb"
+  dbLogFile <<- "STYRING/test/KHloggtest.mdb"
   source("./R/KHglobs.R")
 }
 
