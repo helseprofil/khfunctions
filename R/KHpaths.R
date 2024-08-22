@@ -4,14 +4,6 @@ defpath <- rawPath <- "O:/Prosjekt/FHP/PRODUKSJON"
 dbNameFile <- "STYRING/KHELSA.mdb"
 dbLogFile <- "STYRING/KHlogg.mdb"
 
-# Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
-.useTest <- function(){
-  TESTMODUS <<- TRUE
-  dbNameFile <<- "STYRING/test/KHELSAtest.mdb"
-  dbLogFile <<- "STYRING/test/KHloggtest.mdb"
-  source("./R/KHglobs.R")
-}
-
 ## TEST MODUS
 ## Change path and dbFile if specified globally else use default
 ## use in testmodus or local run

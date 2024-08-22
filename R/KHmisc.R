@@ -907,3 +907,48 @@ usebranch <- function(branch){
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
   cat("\nLoaded functions from branch: ", branch)
 }
+
+#' uselocal (VL)
+#' for development
+uselocal <- function(test = F){
+  rm(list = lsf.str(all.names = T))
+  source("./R/KHmisc.R", encoding = "latin1")
+  source("./R/KHpaths.R", encoding = "latin1")
+  if(test) .useTest()
+  if(!test) source("./R/KHglobs.R", encoding = "latin1")
+  source("./R/KHfilgruppefunctions.R", encoding = "latin1")
+  source("./R/KHfilgruppe.R", encoding = "latin1")
+  source("./R/KHkubefunctions.R", encoding = "latin1")
+  source("./R/KHkube.R", encoding = "latin1")
+  source("./R/KHother.R", encoding = "latin1")
+  cat("\nLoaded local functions")
+}
+
+# Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
+#' .useTest (VL)
+.useTest <- function(){
+  TESTMODUS <<- TRUE
+  dbNameFile <<- "STYRING/test/KHELSAtest.mdb"
+  dbLogFile <<- "STYRING/test/KHloggtest.mdb"
+  source("./R/KHglobs.R")
+}
+
+
+#' .SetKubeParameters (VL)
+#'
+#' for testing LagKUBE, store all the parameters to global env
+#' @param KUBEid name of kube to test on
+.SetKubeParameters <- function(KUBEid){
+  KUBEid <<- KUBEid
+  lagRapport <<- 0
+  batchdate <<- SettKHBatchDate()
+  versjonert <<- FALSE
+  bare_TN <<- 0
+  drop_TN <<- 0
+  tmpbryt <<- 0
+  csvcopy <<- FALSE
+  globs <<- FinnGlobs()
+  echo <<- 0
+  dumps <<- list()
+  write <<- FALSE
+}

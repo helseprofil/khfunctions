@@ -461,6 +461,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     TNF <- LeggTilNyeVerdiKolonner(TNF, TNPdscr$NYEKOL_KOL, slettInf = TRUE)
   }
   
+  # FUNGERER NED HIT, MÅ SJEKKE FiltrerTab() for hvorfor det krasjer der.
   dimorg <- dim(TNF)
   TNF <- FiltrerTab(TNF, KUBEd$MAIN, globs = globs)
   if (!identical(dimorg, dim(TNF))) {

@@ -212,7 +212,7 @@ LagKUBE <- function(KUBEid,
   if (tmpbryt == 1) {
     return(fullresult)
   }
-  if (bare_TN == 0) {
+  if (bare_TN == 0) { # Denne kjører til bunnen!!!
     if (D_develop_predtype == "DIR") {
       # Sett skala for teller (må gjøres før rate brukes i MEISskala)
       if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
