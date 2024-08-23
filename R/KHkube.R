@@ -319,8 +319,8 @@ LagKUBE <- function(KUBEid,
     
     if (FGPs[[filer["T"]]][["B_STARTAAR"]] > 0) {
       valK <- FinnValKols(names(KUBE))
-      KUBE[GEOniv == "B" & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (valK) := NA]
-      KUBE[GEOniv == "B" & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (paste(valK, ".f", sep = "")) := 9]
+      KUBE[GEOniv %in% c("B", "V") & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (valK) := NA]
+      KUBE[GEOniv %in% c("B", "V") & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (paste(valK, ".f", sep = "")) := 9]
     }
     
     ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
