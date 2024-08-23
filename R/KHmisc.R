@@ -950,5 +950,5 @@ uselocal <- function(test = F){
   globs <<- FinnGlobs()
   echo <<- 0
   dumps <<- list()
-  write <<- FALSE
+  assign("write", FALSE, envir = .GlobalEnv)
 }

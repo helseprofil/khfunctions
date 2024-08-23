@@ -335,7 +335,6 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 #' @param globs 
 LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, rapport = list(), globs = FinnGlobs()) {
   is_kh_debug()
-  KUBEd <- list()
   
   # Finn initiellt design før evt lesing av KUBEdscr, dette for å kunne godta tomme angivelser der (gir default fra InitDes)
   if (is.null(Design)) {
@@ -402,8 +401,9 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
       cat("Kaster ", length(setdiff(kast, kastTell)), "99-koder ved rektangulerisering.\n")
     }
     
-    data.table::setkeyv(KubeDRekt, intersect(names(KubeDRekt), names(TF)))
-    data.table::setkeyv(TF, intersect(names(KubeDRekt), names(TF)))
+    keyvars <- intersect(names(KubeDRekt), names(TF))
+    data.table::setkeyv(KubeDRekt, keyvars)
+    data.table::setkeyv(TF, keyvars)
     TF <- TF[KubeDRekt]
     cat("REktangularisering TF, dim(KUBEd)", dim(KubeDRekt), "dim(TF)", dim(TF), "\n")
     TF <- SettMergeNAs(TF, FGPs[[filer[TT]]]$vals)
@@ -506,14 +506,14 @@ RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = Sett
   }
   delerliste <- paste(delDFstr, collapse = ",")
   DELER <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerliste, ")", sep = ""))))
-  DELER <- DELER[, delkolsA, with = FALSE]
+  DELER <- DELER[, ..delkolsA]
   REKT <- data.table::data.table()
   # Switch for TYP=="O" ??
   for (Gn in KubeD[["Gn"]][["GEOniv"]]) {
     GEOK <- subset(globs$GeoKoder, FRA <= GEOstdAAR & TIL > GEOstdAAR & GEOniv == Gn)
     
     # FYLKE
-    subfylke <- which(GEOK$GEOniv %in% c("G", "S", "K", "F", "B"))
+    subfylke <- which(GEOK$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
     GEOK$FYLKE <- NA
     GEOK$FYLKE[subfylke] <- substr(GEOK$GEO[subfylke], 1, 2)
     GEOK$FYLKE[GEOK$GEOniv %in% c("H", "L")] <- "00"
