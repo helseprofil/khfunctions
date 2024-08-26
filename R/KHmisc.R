@@ -927,6 +927,7 @@ uselocal <- function(test = F){
 # Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
 #' .useTest (VL)
 .useTest <- function(){
+  RODBC::odbcCloseAll()
   TESTMODUS <<- TRUE
   dbNameFile <<- "STYRING/test/KHELSAtest.mdb"
   dbLogFile <<- "STYRING/test/KHloggtest.mdb"
