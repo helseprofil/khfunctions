@@ -1,5 +1,5 @@
 # Last update on GitHub
-.lastvers <- "29.07.2024"
+.lastvers <- "2024.09.02"
 
 # Find latest local update date
 .localvers <- character()
