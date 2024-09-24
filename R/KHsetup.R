@@ -3,9 +3,6 @@ if(version$major >= 4 & version$minor >= 2){
   Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
 }
 
-# Look for updates to renv.lock and update packages
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHupdate.R", encoding = "latin1")
-
 # Load packages
 library(conflicted)
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
