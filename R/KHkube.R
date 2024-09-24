@@ -67,7 +67,7 @@ LagKUBE <- function(KUBEid,
   if(isTRUE(write)){
     cat("Saving ACCESS specs to file:\n")
     utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
-    specs <- GetAccessSpecs(kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, datef = datef, globs = globs)
+    specs <- GetAccessSpecs(KUBEid = KUBEid, kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, datef = datef, globs = globs)
     data.table::fwrite(specs, file = utfils, sep = ";")
     cat("\n", utfils)
   }

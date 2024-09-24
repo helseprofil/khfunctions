@@ -2208,18 +2208,16 @@ LagQCKube <- function(allvis,
   return(QC[])
 }
 
-#' GetAccessSpecs (vl)
+#' @title GetAccessSpecs (vl)
 #'
 #' @param kuber 
 #' @param tnp 
 #' @param filgrupper 
 #' @param STPNdscr 
-#'
 #' @return
 #' @export
-#'
-#' @examples
-GetAccessSpecs <- function(kuber, 
+GetAccessSpecs <- function(KUBEid,
+                           kuber, 
                            tnp,
                            filgrupper,
                            stnp,
@@ -2270,6 +2268,15 @@ GetAccessSpecs <- function(kuber,
       specs <- data.table::rbindlist(list(specs,
                               meltdscr(filfiltre, name = paste0("FILFILTRE: ", i))))
     }
+  }
+  
+  # Add FRISKVIK
+  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT * FROM FRISKVIK WHERE AARGANG=", globs$KHaargang, "AND KUBE_NAVN='", KUBEid, "'", sep = ""), as.is = TRUE))
+  
+  for(i in Friskvik$ID){
+    friskvikindikator <- Friskvik[ID == i]
+    specs <- data.table::rbindlist(list(specs,
+                                        meltdscr(friskvikindikator, name = paste0("FRISKVIK:ID-", i))))
   }
   
   return(specs)
