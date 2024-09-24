@@ -50,5 +50,5 @@ if(length(.localvers) == 0){
   }
 }
 
-.updateproject(lu = .lastvers,
-               loc = .localvers)
+# .updateproject(lu = .lastvers,
+#                loc = .localvers)

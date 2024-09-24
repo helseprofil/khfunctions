@@ -29,6 +29,10 @@ LagFilgruppe <- function(gruppe,
                          localDir = setLocal) {
   is_kh_debug()
   
+  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
+  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  on.exit(RODBC::odbcCloseAll(), add = TRUE)
+  
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
   ## for selecting the file to be processed
   lineMsg <- "\n---------------------------\n"

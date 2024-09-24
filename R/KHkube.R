@@ -30,8 +30,11 @@ LagKUBE <- function(KUBEid,
                     echo = 0, 
                     dumps = list(), 
                     write = FALSE) {
-  
   is_kh_debug()
+  
+  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
+  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
