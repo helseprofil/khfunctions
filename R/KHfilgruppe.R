@@ -211,8 +211,8 @@ LagFilgruppe <- function(gruppe,
     }
   }
   
-  ## return(Filgruppe)
-  ht2(Filgruppe)
+  return(Filgruppe)
+  # ht2(Filgruppe)
 }
 
 #' LagFlereFilgrupper (kb)
