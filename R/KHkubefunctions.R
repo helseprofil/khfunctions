@@ -2282,3 +2282,36 @@ GetAccessSpecs <- function(KUBEid,
   
   return(specs)
 }
+
+fix_geo_special <- function(d, 
+                            FGP = FGPs, 
+                            id = KUBEid){
+  
+  valK <- FinnValKols(names(d))
+  bydelstart <- FGPs[[filer["T"]]][["B_STARTAAR"]]
+  
+  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
+  dk2020start <-  FGPs[[filer["T"]]][["DK2020_STARTAAR"]]
+  
+  if (bydelstart > 0) {
+    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
+    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste(valK, ".f", sep = "")) := 9]
+  }
+  
+  ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
+  if (dk2020start > 0) {
+    
+    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
+    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
+    
+    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
+    .years <- 2020:2023
+    if(id == "VALGDELTAKELSE"){
+      .years <- 2019:2022
+    } 
+    .geos <- c("1508", "1580")
+    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
+  }
+  return(d)
+}
