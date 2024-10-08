@@ -88,11 +88,11 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   haven::write_dta(TABLE, tmpdta)
-  # file.create(tmpdo,overwrite=TRUE,showWarnings=FALSE)
+  
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
   cat(script, "\n")
-  # cat("save ",tmpdta,", replace\n",sep="")
+
   if (globs$StataVers < 12) {
     cat("save ", tmpdta, ",  replace\n", sep = "")
   } else if (globs$StataVers %in% 12:13) {
@@ -101,11 +101,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     cat("saveold ", tmpdta, ", version(11) replace\n", sep = "")
   }
   sink()
-  # system(paste("\"",globs$StataExe,"\" /e do",tmpdo,"\n",sep=""),intern=TRUE)
   statacall <- paste("\"", globs$StataExe, "\" /e do ", tmpdo, " \n", sep = "")
   system(statacall, intern = TRUE)
-  # system(paste("\"C:\\Program Files (x86)\\Stata11\\StataSE-64.exe\"","/e do",tmpdo,"\n"),intern=TRUE)
-  # system(paste("StataSE-64 /e do",tmpdo,"\n"),intern=TRUE)
   log <- readLines(tmplog)
   feil <- ""
   if (log[length(log)] != "end of do-file") {
@@ -118,7 +115,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
-  # file.remove(tmpdo,tmpdta,tmplog)
+  # delete data file
+  file.remove(tmpdta)
   setwd(wdOrg)
   if (tableTYP == "DT") {
     data.table::setDT(TABLE)
