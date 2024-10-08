@@ -78,12 +78,12 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
 KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
   
-  tmpdir <- paste(globs$path, "/", globs$BUFFERdir, "/", sep = "")
+  tmpdir <- file.path(fs::path_home(), "helseprofil")
   wdOrg <- getwd()
   setwd(tmpdir)
-  tmpdo <- paste("STATAtmp_", batchdate, ".do", sep = "")
-  tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
-  tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
+  tmpdo <- paste("STATAtmp_", ".do", sep = "")
+  tmpdta <- paste("STATAtmp_", ".dta", sep = "")
+  tmplog <- paste("STATAtmp_", ".log", sep = "")
   TABLE[TABLE == ""] <- " " # STATA støtter ikke "empty-string"
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
