@@ -335,7 +335,6 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 #' @param globs 
 LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, rapport = list(), globs = FinnGlobs()) {
   is_kh_debug()
-  KUBEd <- list()
   
   # Finn initiellt design før evt lesing av KUBEdscr, dette for å kunne godta tomme angivelser der (gir default fra InitDes)
   if (is.null(Design)) {
@@ -402,8 +401,9 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
       cat("Kaster ", length(setdiff(kast, kastTell)), "99-koder ved rektangulerisering.\n")
     }
     
-    data.table::setkeyv(KubeDRekt, intersect(names(KubeDRekt), names(TF)))
-    data.table::setkeyv(TF, intersect(names(KubeDRekt), names(TF)))
+    keyvars <- intersect(names(KubeDRekt), names(TF))
+    data.table::setkeyv(KubeDRekt, keyvars)
+    data.table::setkeyv(TF, keyvars)
     TF <- TF[KubeDRekt]
     cat("REktangularisering TF, dim(KUBEd)", dim(KubeDRekt), "dim(TF)", dim(TF), "\n")
     TF <- SettMergeNAs(TF, FGPs[[filer[TT]]]$vals)
@@ -461,6 +461,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     TNF <- LeggTilNyeVerdiKolonner(TNF, TNPdscr$NYEKOL_KOL, slettInf = TRUE)
   }
   
+  # FUNGERER NED HIT, MÅ SJEKKE FiltrerTab() for hvorfor det krasjer der.
   dimorg <- dim(TNF)
   TNF <- FiltrerTab(TNF, KUBEd$MAIN, globs = globs)
   if (!identical(dimorg, dim(TNF))) {
@@ -505,14 +506,14 @@ RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = Sett
   }
   delerliste <- paste(delDFstr, collapse = ",")
   DELER <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerliste, ")", sep = ""))))
-  DELER <- DELER[, delkolsA, with = FALSE]
+  DELER <- DELER[, ..delkolsA]
   REKT <- data.table::data.table()
   # Switch for TYP=="O" ??
   for (Gn in KubeD[["Gn"]][["GEOniv"]]) {
     GEOK <- subset(globs$GeoKoder, FRA <= GEOstdAAR & TIL > GEOstdAAR & GEOniv == Gn)
     
     # FYLKE
-    subfylke <- which(GEOK$GEOniv %in% c("G", "S", "K", "F", "B"))
+    subfylke <- which(GEOK$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
     GEOK$FYLKE <- NA
     GEOK$FYLKE[subfylke] <- substr(GEOK$GEO[subfylke], 1, 2)
     GEOK$FYLKE[GEOK$GEOniv %in% c("H", "L")] <- "00"
@@ -2208,18 +2209,16 @@ LagQCKube <- function(allvis,
   return(QC[])
 }
 
-#' GetAccessSpecs (vl)
+#' @title GetAccessSpecs (vl)
 #'
 #' @param kuber 
 #' @param tnp 
 #' @param filgrupper 
 #' @param STPNdscr 
-#'
 #' @return
 #' @export
-#'
-#' @examples
-GetAccessSpecs <- function(kuber, 
+GetAccessSpecs <- function(KUBEid,
+                           kuber, 
                            tnp,
                            filgrupper,
                            stnp,
@@ -2272,5 +2271,47 @@ GetAccessSpecs <- function(kuber,
     }
   }
   
+  # Add FRISKVIK
+  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT * FROM FRISKVIK WHERE AARGANG=", globs$KHaargang, "AND KUBE_NAVN='", KUBEid, "'", sep = ""), as.is = TRUE))
+  
+  for(i in Friskvik$ID){
+    friskvikindikator <- Friskvik[ID == i]
+    specs <- data.table::rbindlist(list(specs,
+                                        meltdscr(friskvikindikator, name = paste0("FRISKVIK:ID-", i))))
+  }
+  
   return(specs)
+}
+
+#' @fix_geo_special
+#' @description Manuall handle bydel startaar, DK2020 and AALESUND/HARAM
+fix_geo_special <- function(d, 
+                            specs, 
+                            id = KUBEid){
+  
+  valK <- FinnValKols(names(d))
+  bydelstart <- specs[["B_STARTAAR"]]
+  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
+  dk2020start <- specs[["DK2020_STARTAAR"]]
+  
+  if (!is.na(bydelstart) && bydelstart > 0) {
+    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
+    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste(valK, ".f", sep = "")) := 9]
+  }
+  
+  ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
+  if (!is.na(dk2020start) && dk2020start > 0) {
+    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
+    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
+    
+    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
+    .years <- 2020:2023
+    if(id == "VALGDELTAKELSE"){
+      .years <- 2019:2022
+    } 
+    .geos <- c("1508", "1580")
+    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
+  }
+  return(d)
 }

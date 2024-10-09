@@ -3,10 +3,6 @@ if(version$major >= 4 & version$minor >= 2){
   Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
 }
 
-# Look for updates to renv.lock and update packages
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHupdate.R", encoding = "latin1")
-renv::restore(prompt = F)
-
 # Load packages
 library(conflicted)
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
@@ -47,5 +43,3 @@ source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfil
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkubefunctions.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkube.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHother.R", encoding = "latin1")
-
-message('KHfunctions is set up to work on HDIR-systems\n\nTo use on FHI, run `usebranch("FHI")` in the console')

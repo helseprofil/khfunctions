@@ -1,5 +1,5 @@
 # Last update on GitHub
-.lastvers <- "29.07.2024"
+.lastvers <- "2024.09.02"
 
 # Find latest local update date
 .localvers <- character()
@@ -50,5 +50,5 @@ if(length(.localvers) == 0){
   }
 }
 
-.updateproject(lu = .lastvers,
-               loc = .localvers)
+# .updateproject(lu = .lastvers,
+#                loc = .localvers)
