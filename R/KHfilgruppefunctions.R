@@ -172,6 +172,10 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
     
     # KAST USPESIFISERTE KOLONNER
+    # Fiks for levekaar
+    harlevekaar <- FALSE
+    if("LEVEL" %in% names(DF) && "levekaar" %in% unique(DF$LEVEL)) harlevekaar <- TRUE
+    
     DF <- DF[, names(DF)[names(DF) %in% kolorgs]]
   }
   
@@ -268,7 +272,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     # RENSK GEO (Alle er legit inntil videre??? Eller kod til 9999???)
     if ("GEO" %in% names(DF)) {
       org <- setNames(as.data.frame(table(DF$GEO, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
-      geo <- GEOvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      geo <- GEOvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs, harlevekaar = harlevekaar)
       
       SkrivKBLogg(KB = geo, type = "GEO", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
       TilFilLogg(filbesk$KOBLID, "GEO_ok", ifelse(0 %in% geo$OK, 0, 1), batchdate = batchdate, globs = globs)
@@ -529,7 +533,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
   
   # Initier log
   RODBC::sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
-  RODBC::sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID), "'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID, globs = globs), "'", sep = ""))
   
   # Sjekk om fil eksisterer
   if (file.access(filn, mode = 0) == -1) {
@@ -1274,7 +1278,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), harlevekaar = F) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1315,7 +1319,6 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
     geo$OMK <- plyr::mapvalues(geo$OMK, omk$NAVN, omk$GEO, warn_missing = FALSE)
   }
   
-  
   if (grepl("4", filbesk$SONER)) {
     geo$OMK[nchar(geo$OMK) == 4] <- paste(geo$OMK[nchar(geo$OMK) == 4], "00", sep = "")
   }
@@ -1334,6 +1337,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   ukjent99 <- gsub("^(\\d{2})\\d{2}$", paste("\\1", "99", sep = ""), ukjent99) # Ukjent kommune
   ukjent99 <- sub("^(\\d{2})(\\d{2})00$", paste("\\1", "9900", sep = ""), ukjent99) # Ukjent bydel
   ukjent99 <- sub("^(\\d{4})([1-9]\\d|0[1-9])$", paste("\\1", "99", sep = ""), ukjent99) # Ukjent bydel
+  ukjent99 <- sub("^(\\d{6})([1-9]\\d|0[1-9])$", paste("\\1", "99", sep = ""), ukjent99)
   
   # Sjekk om legitime 99-ukjente
   ukjent <- ukjent[ukjent99 %in% globs$GeoKoder$GEO]
@@ -1342,6 +1346,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   
   ukjent <- geo$OMK[!(geo$OMK %in% c(globs$GeoKoder$GEO, "-"))]
   heltukjent <- ukjent
+  heltukjent[nchar(ukjent) == 9] <- 99999999
   heltukjent[nchar(ukjent) == 6] <- 999999
   heltukjent[nchar(ukjent) == 4] <- 9999
   heltukjent[nchar(ukjent) == 2] <- 99
@@ -1349,7 +1354,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   
   # Sett GEOniv
   geo$GEOniv <- as.character(NA)
-  geo$GEOniv[nchar(geo$OMK) == 8] <- "G"
+  geo$GEOniv[nchar(geo$OMK) == 8] <- ifelse(harlevekaar, "V", "G")
   if (grepl("6", filbesk$SONER)) {
     geo$GEOniv[nchar(geo$OMK) == 6] <- "S"
   } else {
@@ -1377,7 +1382,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   }
   # Sett fylke
   geo$FYLKE <- NA
-  subfylke <- which(geo$GEOniv %in% c("G", "S", "K", "F", "B"))
+  subfylke <- which(geo$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
   geo$FYLKE[subfylke] <- substr(geo$OMK[subfylke], 1, 2)
   geo$FYLKE[geo$GEOniv %in% c("H", "L")] <- "00"
   

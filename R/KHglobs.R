@@ -307,6 +307,7 @@ SettGlobs <- function(path = "", modus = NA) {
   Stata <- FinnStataExe()
   globs$StataExe <- Stata$Exe
   globs$StataVers <- Stata$Vers
+  RODBC::odbcCloseAll()
   return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
 }
 
@@ -327,3 +328,4 @@ FinnGlobs <- function() {
 
 # Definer KHglobs
 KHglobs <- SettGlobs()
+RODBC::odbcCloseAll()

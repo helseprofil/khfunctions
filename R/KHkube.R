@@ -2,22 +2,20 @@
 #' 
 #' The main function of the production line, producing the files going to FHI Statistikk and public health profiles
 #'
-#' @param KUBEid 
+#' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param lagRapport 
 #' @param batchdate 
 #' @param versjonert 
 #' @param bare_TN 
 #' @param drop_TN 
 #' @param tmpbryt 
-#' @param csvcopy 
+#' @param csvcopy Save a CSV-copy?
 #' @param globs global parameters, defaults to FinnGlobs()
 #' @param echo 
-#' @param dumps
+#' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
+#' @param alarm if TRUE, plays a sound when done
 #' @param ... 
-#'
-#' @examples
-#' LagKUBE("ENEFHIB")
 LagKUBE <- function(KUBEid,
                     lagRapport = 0,
                     batchdate = SettKHBatchDate(),
@@ -29,9 +27,14 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    write = FALSE) {
-  
+                    write = FALSE,
+                    alarm = FALSE,
+                    ...) {
   is_kh_debug()
+  
+  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
+  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
@@ -212,7 +215,10 @@ LagKUBE <- function(KUBEid,
   if (tmpbryt == 1) {
     return(fullresult)
   }
-  if (bare_TN == 0) {
+  
+  #### kjører til bunnen herfra #####
+  
+  if (bare_TN == 0) { 
     if (D_develop_predtype == "DIR") {
       # Sett skala for teller (må gjøres før rate brukes i MEISskala)
       if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
@@ -317,34 +323,8 @@ LagKUBE <- function(KUBEid,
       KUBE[, eval(parse(text = lp))]
     }
     
-    if (FGPs[[filer["T"]]][["B_STARTAAR"]] > 0) {
-      valK <- FinnValKols(names(KUBE))
-      KUBE[GEOniv == "B" & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (valK) := NA]
-      KUBE[GEOniv == "B" & AARl < FGPs[[filer["T"]]][["B_STARTAAR"]], (paste(valK, ".f", sep = "")) := 9]
-    }
-    
-    ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
-    nameFGP <- filer["T"]
-    selectedCol <- "DK2020_STARTAAR"
-    if (FGPs[[nameFGP]][[selectedCol]] > 0) {
-      valK <- FinnValKols(names(KUBE))
-      mergedCounty <- as.character(c(5055, 5056, 5059, 1806, 1875))
-      KUBE[GEOniv == "K" &
-             GEO %chin% mergedCounty &
-             AARl < FGPs[[nameFGP]][[selectedCol]], (valK) := NA]
-      KUBE[GEOniv == "K" &
-             GEO %chin% mergedCounty &
-             AARl < FGPs[[nameFGP]][[selectedCol]], (paste0(valK, ".f")) := 9]
-      
-      # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-      .years <- 2020:2023
-      if(KUBEid == "VALGDELTAKELSE"){
-        .years <- 2019:2022
-        } 
-      .geos <- c("1508", "1580")
-      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-      KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
-    }
+    # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
+    fix_geo_special(d = KUBE, specs = FGPs[[filer["T"]]], id = KUBEid)
     
     if ("maKUBE0" %in% names(dumps)) {
       for (format in dumps[["maKUBE0"]]) {
@@ -808,6 +788,7 @@ LagKUBE <- function(KUBEid,
   
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  if(alarm) try(beepr::beep(1))
   return(RESULTAT)
 }
 
