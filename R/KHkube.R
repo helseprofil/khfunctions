@@ -2,22 +2,20 @@
 #' 
 #' The main function of the production line, producing the files going to FHI Statistikk and public health profiles
 #'
-#' @param KUBEid 
+#' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param lagRapport 
 #' @param batchdate 
 #' @param versjonert 
 #' @param bare_TN 
 #' @param drop_TN 
 #' @param tmpbryt 
-#' @param csvcopy 
+#' @param csvcopy Save a CSV-copy?
 #' @param globs global parameters, defaults to FinnGlobs()
 #' @param echo 
-#' @param dumps
+#' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
+#' @param alarm if TRUE, plays a sound when done
 #' @param ... 
-#'
-#' @examples
-#' LagKUBE("ENEFHIB")
 LagKUBE <- function(KUBEid,
                     lagRapport = 0,
                     batchdate = SettKHBatchDate(),
@@ -29,7 +27,9 @@ LagKUBE <- function(KUBEid,
                     globs = FinnGlobs(),
                     echo = 0, 
                     dumps = list(), 
-                    write = FALSE) {
+                    write = FALSE,
+                    alarm = FALSE,
+                    ...) {
   is_kh_debug()
   
   globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
@@ -324,7 +324,7 @@ LagKUBE <- function(KUBEid,
     }
     
     # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
-    fix_geo_special(d = KUBE)
+    fix_geo_special(d = KUBE, specs = FGPs[[filer["T"]]], id = KUBEid)
     
     if ("maKUBE0" %in% names(dumps)) {
       for (format in dumps[["maKUBE0"]]) {
@@ -788,6 +788,7 @@ LagKUBE <- function(KUBEid,
   
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  if(alarm) try(beepr::beep(1))
   return(RESULTAT)
 }
 

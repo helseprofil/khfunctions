@@ -2283,24 +2283,24 @@ GetAccessSpecs <- function(KUBEid,
   return(specs)
 }
 
+#' @fix_geo_special
+#' @description Manuall handle bydel startaar, DK2020 and AALESUND/HARAM
 fix_geo_special <- function(d, 
-                            FGP = FGPs, 
+                            specs, 
                             id = KUBEid){
   
   valK <- FinnValKols(names(d))
-  bydelstart <- FGPs[[filer["T"]]][["B_STARTAAR"]]
-  
+  bydelstart <- specs[["B_STARTAAR"]]
   dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
-  dk2020start <-  FGPs[[filer["T"]]][["DK2020_STARTAAR"]]
+  dk2020start <- specs[["DK2020_STARTAAR"]]
   
-  if (bydelstart > 0) {
+  if (!is.na(bydelstart) && bydelstart > 0) {
     d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
     d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste(valK, ".f", sep = "")) := 9]
   }
   
   ## Quick fix for special case of merged kommune in 2020 implementing the same principle as B_STARTAAR
-  if (dk2020start > 0) {
-    
+  if (!is.na(dk2020start) && dk2020start > 0) {
     d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
     d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
     
