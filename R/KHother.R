@@ -233,8 +233,7 @@ KonverterStablaFilgrupper <- function(Format = "CSV", globs = FinnGlobs()) {
 #' @param kube 
 #' @param batchdate 
 #' @param globs 
-#' @param echo 
-KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs(), echo = FALSE) {
+KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
   is_kh_debug()
   
   KH2014dir <- "F:/Prosjekter/Kommunehelsa/Data og databehandling/Databehandling/2014/csvNESSTAR"
@@ -248,12 +247,6 @@ KH2014v2015 <- function(kube, batchdate = SettKHBatchDate(), globs = FinnGlobs()
                                    WHERE KH2015_KUBE='", kube, "'", sep = ""), stringsAsFactors = FALSE)[1, ]
   F2015 <- FinnKubeT(kube, batch = KLenke$BATCH)
   F2014 <- data.table::as.data.table(read.csv(KLenke$KH2014FIL, sep = ";", stringsAsFactors = FALSE))
-  if (echo == TRUE) {
-    print("F2014:")
-    print(F2014)
-    print("F2015:")
-    print(F2015)
-  }
   # print(F2014)
   # print(sapply(F2014,class))
   F2014$AAR <- as.character(F2014$AAR)
@@ -356,7 +349,7 @@ FullKH2014v2015 <- function(escape = character(0), globs = FinnGlobs()) {
   
   kuber <- sqlQuery(globs$dbh, "SELECT KH2015_KUBE FROM KH2015v2014", stringsAsFactors = FALSE)[, 1]
   for (kube in setdiff(kuber[!is.na(kuber)], escape)) {
-    try(KH2014v2015(kube, globs = globs, echo = FALSE))
+    try(KH2014v2015(kube, globs = globs))
   }
 }
 

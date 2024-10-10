@@ -3,41 +3,30 @@
 #' The main function of the production line, producing the files going to FHI Statistikk and public health profiles
 #'
 #' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
-#' @param lagRapport 
 #' @param batchdate 
 #' @param versjonert 
-#' @param bare_TN 
-#' @param drop_TN 
-#' @param tmpbryt 
 #' @param csvcopy Save a CSV-copy?
 #' @param globs global parameters, defaults to FinnGlobs()
-#' @param echo 
 #' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
 #' @param ... 
 LagKUBE <- function(KUBEid,
-                    lagRapport = 0,
-                    batchdate = SettKHBatchDate(),
                     versjonert = FALSE,
-                    bare_TN = 0,
-                    drop_TN = 0,
-                    tmpbryt = 0,
                     csvcopy = FALSE,
                     globs = FinnGlobs(),
-                    echo = 0, 
                     dumps = list(), 
                     write = FALSE,
                     alarm = FALSE,
                     ...) {
+
   is_kh_debug()
+  batchdate <- SettKHBatchDate()
+  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   
   globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
   globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
-  
-  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  rapport <- list(KUBE = KUBEid, lagRapport = lagRapport)
   
   # Les inn nødvendig informasjon om filene involvert (skilt ut i egen funksjon for lesbarhet)
   Finfo <- SettFilInfoKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, globs = globs)
@@ -49,7 +38,6 @@ LagKUBE <- function(KUBEid,
   STNPdscr <- Finfo$STNPdscr
   FGPs <- Finfo$FGPs
   FilDesL <- Finfo$FilDesL
-  KUBEd <- list()
   
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
@@ -76,27 +64,20 @@ LagKUBE <- function(KUBEid,
   }
   
   # TRINN 1 LAG TNF
-  if (drop_TN == 0) {
-    cat("******LAGER TNF\n")
-    TNtab <- LagTNtabell(filer, FilDesL, FGPs, TNPdscr, KUBEdscr = KUBEdscr, rapport = rapport, globs = globs)
-    TNF <- TNtab$TNF
-    
-    KUBEd <- TNtab$KUBEd
-    if (TNPdscr$NEVNERKOL != "-") {
-      TNF <- LeggTilNyeVerdiKolonner(TNF, "RATE={TELLER/NEVNER}")
-    }
-    if (echo == 1) {
-      cat("TNF:\n")
-      print(TNF)
-    }
-    cat("------FERDIG TNF\n")
-  }
   
-  if (bare_TN == 1) {
-    RESULTAT <- list(KUBE = TNF, TNPdscr = TNPdscr)
+  cat("******LAGER TNF\n")
+  TNtab <- LagTNtabell(filer, FilDesL, FGPs, TNPdscr, KUBEdscr = KUBEdscr, globs = globs)
+  TNF <- TNtab$TNF
+  
+  KUBEd <- TNtab$KUBEd
+  if (TNPdscr$NEVNERKOL != "-") {
+    TNF <- LeggTilNyeVerdiKolonner(TNF, "RATE={TELLER/NEVNER}")
   }
+  cat("------FERDIG TNF\n")
+  
+  
   # Prediker referanseverdi om dette er etterspurt
-  if (KUBEdscr$REFVERDI_VP == "P" && bare_TN == 0) {
+  if (KUBEdscr$REFVERDI_VP == "P") {
     print("*****PREDIKER!!!")
     # Må først finne design for (den syntetiske) koblinga ST, SN og PN
     
@@ -120,7 +101,7 @@ LagKUBE <- function(KUBEid,
     STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = FGPs[[filer["ST"]]], globs = globs)
     cat("---Satt felles design ST,SN,PN\n")
     
-    STN <- data.table::copy(LagTNtabell(filer, FilDesL, FGPs, STNPdscr, TT = "ST", NN = "SN", Design = STNFd, rapport = rapport, globs = globs)$TNF)
+    STN <- data.table::copy(LagTNtabell(filer, FilDesL, FGPs, STNPdscr, TT = "ST", NN = "SN", Design = STNFd, globs = globs)$TNF)
     
     # Fjern PredFilter$Pkols
     STN[, (PredFilter$Pkols) := NULL]
@@ -180,7 +161,7 @@ LagKUBE <- function(KUBEid,
     kastkols <- setdiff(names(STNP), c(FinnTabKols(names(STNP)), "PREDTELLER", "PREDTELLER.f", "PREDTELLER.a"))
     STNP[, (kastkols) := NULL]
     cat(" og etter mergre dim(STNP)", dim(STNP), "\n")
-    PT <- OmkodFil(STNP, RD, globs = globs, echo = 1)
+    PT <- OmkodFil(STNP, RD, globs = globs)
     cat("-----PREDTELLER (PT) ferdig med dim(PT)", dim(PT), "\n")
     cat("***Merger med TNF\n")
     orgdim <- dim(TNF)
@@ -209,556 +190,542 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  if (tmpbryt > 0) {
-    raaKUBE0 <- data.table::copy(KUBE)
-  }
-  if (tmpbryt == 1) {
-    return(fullresult)
-  }
+  raaKUBE0 <- data.table::copy(KUBE)
   
-  #### kjører til bunnen herfra #####
-  
-  if (bare_TN == 0) { 
-    if (D_develop_predtype == "DIR") {
-      # Sett skala for teller (må gjøres før rate brukes i MEISskala)
-      if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-        KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+  if (D_develop_predtype == "DIR") {
+    # Sett skala for teller (må gjøres før rate brukes i MEISskala)
+    if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
+      KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+    }
+    
+    # FINN MEISskala Merk at dette gjelder både ved REFVERDI_VP=P og =V
+    
+    if (KUBEdscr$REFVERDI_VP == "P") {
+      VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
+      # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
+      if (nrow(VF) == 0) {
+        cat("************************************\nNOE RART MED PredFilter, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
+        VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer["T"]]], globs = globs)
       }
       
-      # FINN MEISskala Merk at dette gjelder både ved REFVERDI_VP=P og =V
+      VF[, MEISskala := RATE]
+      VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
+      VF <- VF[, c(VFtabkols, "MEISskala"), with = FALSE]
       
-      if (KUBEdscr$REFVERDI_VP == "P") {
-        VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
-        # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
-        if (nrow(VF) == 0) {
-          cat("************************************\nNOE RART MED PredFilter, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
-          VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer["T"]]], globs = globs)
-        }
-        
-        VF[, MEISskala := RATE]
-        VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
-        VF <- VF[, c(VFtabkols, "MEISskala"), with = FALSE]
-        
-        data.table::setkeyv(KUBE, VFtabkols)
-        data.table::setkeyv(VF, VFtabkols)
-        KUBE <- VF[KUBE]
-      } else {
-        KUBE[, MEISskala := NA_real_]
+      data.table::setkeyv(KUBE, VFtabkols)
+      data.table::setkeyv(VF, VFtabkols)
+      KUBE <- VF[KUBE]
+    } else {
+      KUBE[, MEISskala := NA_real_]
+    }
+    
+    print("D-develop")
+    cat("Meisskala1:\n")
+    print(unique(KUBE$MEISskala))
+  }
+  
+  # Finn "snitt" for ma-år.
+  # DVs, egentlig lages forløpig bare summer, snitt settes etter prikking under
+  # Snitt tolerer missing av type .f=1 ("random"), men bare noen få anonyme .f>1, se KHaggreger
+  # Rapporterer variabelspesifikk VAL.n som angir antall år brukt i summen når NA holdt utenom
+  
+  data.table::setkeyv(KUBE, c("AARl", "AARh"))
+  aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
+  int_lengde <- as.integer(unique(KUBE[, AARh - AARl + 1]))
+  if (length(int_lengde) > 1) {
+    KHerr(paste("!!!!!!HAR ULIKE LENGDER PÅ INTERVALLER!!"))
+  }
+  
+  # Må "balansere" NA i teller og nevner slik sumrate og sumnevner balanserer  (Bedre/enklere å gjøre det her enn i KHaggreger)
+  # Kunne med god grunn satt SPVFLAGG her og så bare operert med denne som en egenskap for hele linja i det som kommer
+  # Men for å ha muligheten for å håndtere de forskjellige varibalene ulikt og i full detalj lar jeg det stå mer generelt
+  # Slik at dataflyten støtter en slik endring
+  
+  tuppel <- intersect(c("TELLER", "NEVNER", "RATE"), names(KUBE))
+  tuppel.f <- paste(tuppel, ".f", sep = "")
+  fmax <- paste("pmax(", paste(tuppel.f, collapse = ","), ")", sep = "")
+  if (length(tuppel) > 0) {
+    KUBE[eval(parse(text = fmax)) > 0, (tuppel) := list(NA)]
+    KUBE[eval(parse(text = fmax)) > 0, (tuppel.f) := eval(parse(text = fmax))]
+    # Om enkeltobservasjoner ikke skal brukes, men samtidig tas ut av alle summeringer
+    # kan man ha satt VAL=0,VAL.f=-1
+    # Dette vil ikke ødelegge summer der tallet inngår. Tallet selv, eller sumemr av kun slike tall, settes nå til NA
+    # Dette brukes f.eks når SVANGERROYK ekskluderer Oslo, Akershus. Dette er skjuling, så VAL.f=3
+    KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(NA)]
+    KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(3)]
+  }
+  
+  ma_satt <- 0
+  orgintMult <- 1
+  if (KUBEdscr$MOVAV > 1) {
+    if (any(aar$AARl != aar$AARh)) {
+      KHerr(paste("Kan ikke sette snitt (ma=", ma, ") når det er intervaller i originaldata", sep = ""))
+    } else {
+      ma <- KUBEdscr$MOVAV
+      
+      # Finner evt hull i år for hele designet
+      AntYMiss <- max(aar$AARl) - min(aar$AARl) + 1 - length(aar$AARl)
+      if (AntYMiss > 0) {
+        cat("Setter SumOverAar med AntYMiss=", AntYMiss, "\n")
       }
+      maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, na.rm = TRUE, report_lpsvars = TRUE, globs = globs)
       
-      print("D-develop")
-      cat("Meisskala1:\n")
-      print(unique(KUBE$MEISskala))
-    }
-    
-    # Finn "snitt" for ma-år.
-    # DVs, egentlig lages forløpig bare summer, snitt settes etter prikking under
-    # Snitt tolerer missing av type .f=1 ("random"), men bare noen få anonyme .f>1, se KHaggreger
-    # Rapporterer variabelspesifikk VAL.n som angir antall år brukt i summen når NA holdt utenom
-    
-    data.table::setkeyv(KUBE, c("AARl", "AARh"))
-    aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
-    int_lengde <- as.integer(unique(KUBE[, AARh - AARl + 1]))
-    if (length(int_lengde) > 1) {
-      KHerr(paste("!!!!!!HAR ULIKE LENGDER PÅ INTERVALLER!!"))
-    }
-    
-    # Må "balansere" NA i teller og nevner slik sumrate og sumnevner balanserer  (Bedre/enklere å gjøre det her enn i KHaggreger)
-    # Kunne med god grunn satt SPVFLAGG her og så bare operert med denne som en egenskap for hele linja i det som kommer
-    # Men for å ha muligheten for å håndtere de forskjellige varibalene ulikt og i full detalj lar jeg det stå mer generelt
-    # Slik at dataflyten støtter en slik endring
-    
-    tuppel <- intersect(c("TELLER", "NEVNER", "RATE"), names(KUBE))
-    tuppel.f <- paste(tuppel, ".f", sep = "")
-    fmax <- paste("pmax(", paste(tuppel.f, collapse = ","), ")", sep = "")
-    if (length(tuppel) > 0) {
-      KUBE[eval(parse(text = fmax)) > 0, (tuppel) := list(NA)]
-      KUBE[eval(parse(text = fmax)) > 0, (tuppel.f) := eval(parse(text = fmax))]
-      # Om enkeltobservasjoner ikke skal brukes, men samtidig tas ut av alle summeringer
-      # kan man ha satt VAL=0,VAL.f=-1
-      # Dette vil ikke ødelegge summer der tallet inngår. Tallet selv, eller sumemr av kun slike tall, settes nå til NA
-      # Dette brukes f.eks når SVANGERROYK ekskluderer Oslo, Akershus. Dette er skjuling, så VAL.f=3
-      KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(NA)]
-      KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(3)]
-    }
-    
-    ma_satt <- 0
-    orgintMult <- 1
-    if (KUBEdscr$MOVAV > 1) {
-      if (any(aar$AARl != aar$AARh)) {
-        KHerr(paste("Kan ikke sette snitt (ma=", ma, ") når det er intervaller i originaldata", sep = ""))
-      } else {
-        ma <- KUBEdscr$MOVAV
-        
-        # Finner evt hull i år for hele designet
-        AntYMiss <- max(aar$AARl) - min(aar$AARl) + 1 - length(aar$AARl)
-        if (AntYMiss > 0) {
-          cat("Setter SumOverAar med AntYMiss=", AntYMiss, "\n")
-        }
-        maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, na.rm = TRUE, report_lpsvars = TRUE, globs = globs)
-        
-        # sett rate på nytt
-        if (TNPdscr$NEVNERKOL != "-") {
-          maKUBE <- LeggTilNyeVerdiKolonner(maKUBE, "RATE={TELLER/NEVNER}")
-          if (D_develop_predtype == "DIR") {
-            if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-              maKUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
-            }
+      # sett rate på nytt
+      if (TNPdscr$NEVNERKOL != "-") {
+        maKUBE <- LeggTilNyeVerdiKolonner(maKUBE, "RATE={TELLER/NEVNER}")
+        if (D_develop_predtype == "DIR") {
+          if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
+            maKUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
           }
         }
-        ma_satt <- 1
-        # maKUBE<-maKUBE[,names(maKUBE)[!grepl(".n$",names(maKUBE))],with=FALSE]  #Kast .n kolonner, ferdig med disse
-        KUBE <- maKUBE
       }
-    } else {
-      # Må legge til VAL.n for regning under når orignale periodesummer, evt n=1 når originale snitt
-      valkols <- FinnValKols(names(KUBE))
-      orgint_n <- int_lengde[1]
-      n <- orgint_n
-      if (!is.na(FGPs[[filer["T"]]]$ValErAarsSnitt)) {
-        n <- 1
-        orgintMult <- orgint_n
-      }
-      lp <- paste("KUBE[,c(\"", paste(valkols, ".n", collapse = "\",\"", sep = ""), "\"):=list(", n, ")]", sep = "")
-      KUBE[, eval(parse(text = lp))]
+      ma_satt <- 1
+      # maKUBE<-maKUBE[,names(maKUBE)[!grepl(".n$",names(maKUBE))],with=FALSE]  #Kast .n kolonner, ferdig med disse
+      KUBE <- maKUBE
     }
-    
-    # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
-    fix_geo_special(d = KUBE, specs = FGPs[[filer["T"]]], id = KUBEid)
-    
-    if ("maKUBE0" %in% names(dumps)) {
-      for (format in dumps[["maKUBE0"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "maKUBE0", sep = "_"), globs = globs, format = format)
-      }
+  } else {
+    # Må legge til VAL.n for regning under når orignale periodesummer, evt n=1 når originale snitt
+    valkols <- FinnValKols(names(KUBE))
+    orgint_n <- int_lengde[1]
+    n <- orgint_n
+    if (!is.na(FGPs[[filer["T"]]]$ValErAarsSnitt)) {
+      n <- 1
+      orgintMult <- orgint_n
     }
-    
-    # Anonymiser og skjul
-    
-    # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt
-    # Se KHaggreger!
-    raaKUBE <- data.table::copy(KUBE)
-    
-    # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
-    if (ma_satt == 1) {
-      valkols <- FinnValKols(names(KUBE))
-      anon_tot_tol <- 0.2
-      
-      lp <- paste("KUBE[,':='(",
-                  paste(valkols, "=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
-                        valkols, ".f=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
-                        sep = "", collapse = ","
-                  ),
-                  ")]",
-                  sep = ""
-      )
-      eval(parse(text = lp))
-    }
-    
-    if ("anoKUBE1" %in% names(dumps)) {
-      for (format in dumps[["anoKUBE1"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "anoKUBE1", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # Anonymiser, trinn 2 Ekte anonymisering basert på liten teller, liten nevner og liten N-T
-    if (!(is.na(KUBEdscr$PRIKK_T) | KUBEdscr$PRIKK_T == "")) {
-      # T<=PRIKK_T
-      cat("T-PRIKKER", nrow(subset(KUBE, TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
-      KUBE[TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
-      # N-T<=PRIKK_T
-      cat("N-T-PRIKKER", nrow(subset(KUBE, NEVNER - TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
-      KUBE[NEVNER - TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0 & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
-    }
-    
-    if (!(is.na(KUBEdscr$PRIKK_N) | KUBEdscr$PRIKK_N == "")) {
-      # N<PRIKK_N
-      cat("N-PRIKKER", nrow(subset(KUBE, NEVNER <= KUBEdscr$PRIKK_N)), "rader\n")
-      KUBE[NEVNER <= KUBEdscr$PRIKK_N & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
-    }
-    
-    if ("anoKUBE2" %in% names(dumps)) {
-      for (format in dumps[["anoKUBE2"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "anoKUBE2", sep = "_"), globs = globs, format = format)
-      }
-    }
-    # Anonymiser trinn 3. Anonymiser naboer
-    if (!(is.na(KUBEdscr$OVERKAT_ANO) | KUBEdscr$OVERKAT_ANO == "")) {
-      # DEVELOP: BRuk .f=4 her slik at ikke slår ut i HULL under
-      KUBE <- AnonymiserNaboer(KUBE, KUBEdscr$OVERKAT_ANO, FGP = FGPs[[filer[["T"]]]], D_develop_predtype, globs = globs)
-    }
-    if ("anoKUBE3" %in% names(dumps)) {
-      for (format in dumps[["anoKUBE3"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "anoKUBE3", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    raaKUBE2 <- data.table::copy(KUBE)
-    # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
-    SvakAndelAvSerieGrense <- 0.5
-    HullAndelAvSerieGrense <- 0.2
-    
-    if (!(is.na(KUBEdscr$STATTOL_T) | KUBEdscr$STATTOL_T == "")) {
-      tabkols <- setdiff(intersect(names(KUBE), globs$DefDesign$DesignKolsFA), c(globs$DefDesign$DelKols[["Y"]]))
-      KUBE[TELLER.f < 9, AntAar := .N, by = tabkols]
-      KUBE[TELLER.f < 9, SVAK := sum(is.na(TELLER) | TELLER <= KUBEdscr$STATTOL_T), by = tabkols]
-      KUBE[TELLER.f < 9, HULL := sum(TELLER.f == 3), by = tabkols]
-      KUBE[TELLER.f < 9, SKJUL := ifelse(SVAK / AntAar > SvakAndelAvSerieGrense | HULL / AntAar > HullAndelAvSerieGrense, 1, 0)]
-      
-      
-      cat("Skjuler", nrow(subset(KUBE, SKJUL == 1)), "rader\n")
-      KUBE[SKJUL == 1, c("TELLER", "TELLER.f") := list(NA, 3)]
-      KUBE[SKJUL == 1, c("RATE", "RATE.f") := list(NA, 3)]
-      KUBE[, c("SVAK", "HULL", "SKJUL", "AntAar") := NULL]
-    }
-    raaKUBE3 <- data.table::copy(KUBE)
-    if ("anoKUBE4" %in% names(dumps)) {
-      for (format in dumps[["anoKUBE4"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "anoKUBE4", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # LAYOUT
-    
-    if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
-      for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpre", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # EVT SPESIALBEHANDLING
-    
-    if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
-      synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
-      error <- ""
-      ok <- 1
-      if (grepl("<STATA>", synt)) {
-        synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-        RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-        if (RES$feil != "") {
-          stop("Something went wrong in STATA, SLUTTREDIGER", RES$feil, sep = "\n")
-        } else {
-          KUBE <- RES$TABLE
-        }
-      } else {
-        rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if ("try-error" %in% class(rsynterr)) {
-          print(rsynterr)
-          stop("Something went wrong in R, SLUTTREDIGER")
-        }
-      }
-    }
-    
-    if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) {
-      for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpost", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # mapvalues(KUBE$SPVFLAGG,c(0,1,2,3),c(0,2,1,3),warn_missing = FALSE)     #BRUKER 1='.",2='.." i NESSTAR
-    
-    OrgKubeKolNames <- names(KUBE)
-    
-    # Alle kolonner settes for alle KUBER uavhengig av om TELLER, NEVNER, RATE, MALTALL, PRED=V/P etc
-    if (!"NEVNER" %in% names(KUBE)) {
-      KUBE[, NEVNER := NA]
-    }
-    if (!"RATE" %in% names(KUBE)) {
-      KUBE[, RATE := NA]
-    }
-    
-    if (D_develop_predtype != "DIR") {
-      # Sett skala for teller
-      if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-        KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
-      }
-    }
-    
-    # Legg til manglende kolonner for homogen behandling under
-    missKol <- setdiff(unlist(lapply(c("TELLER", "NEVNER", "RATE", "PREDTELLER"), function(x) {
-      paste(x, c("", ".f", ".a", ".n"), sep = "")
-    })), names(KUBE))
-    if (length(missKol) > 0) {
-      KUBE[, (missKol) := NA]
-    }
-    
-    # Behold sum, disse sendes til Friskvik
-    KUBE[, sumTELLER := orgintMult * TELLER]
-    KUBE[, sumNEVNER := orgintMult * NEVNER]
-    KUBE[, sumPREDTELLER := orgintMult * PREDTELLER]
-    
-    # Ta snitt for alt annet enn RATE (der forholdstallet gjør snitt uønsket)
-    # VAL:=VAL/VAL.n
-    valkols <- setdiff(FinnValKols(names(KUBE)), c("RATE", "SMR"))
-    if (length(valkols) > 0) {
-      lp <- paste("KUBE[,c(\"", paste(valkols, collapse = "\",\""), "\"):=list(",
-                  paste(valkols, "=", valkols, "/", valkols, ".n",
-                        sep = "", collapse = ","
-                  ),
-                  ")]",
-                  sep = ""
-      )
-      KUBE[, eval(parse(text = lp))]
-    }
-    
-    if (!(is.na(TNPdscr$NYEKOL_RAD_postMA) | TNPdscr$NYEKOL_RAD_postMA == "")) {
-      KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPdscr$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
-    }
-    
-    if (grepl("\\S", KUBEdscr$MTKOL)) {
-      maltall <- KUBEdscr$MTKOL
-      KUBE[, eval(parse(text = paste("MALTALL:=", KUBEdscr$MTKOL, sep = "")))]
-    } else if (TNPdscr$NEVNERKOL == "-") {
-      maltall <- "TELLER"
-      KUBE[, MALTALL := TELLER]
-    } else {
-      maltall <- "RATE"
-      KUBE[, MALTALL := RATE]
-    }
-    # maltallt<-intersect(paste(maltall,""))
-    
-    if (D_develop_predtype == "DIR") {
-      print("D-develop")
-      cat("Meisskala3:\n")
-      print(unique(KUBE$MEISskala))
-      print(KUBE)
-      
-      # SETT SMR og MEIS
-      
-      if (KUBEdscr$REFVERDI_VP == "P") {
-        KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
-        KUBE[, MEIS := (sumTELLER / sumPREDTELLER) * MEISskala]
-      } else if (KUBEdscr$REFVERDI_VP == "V") {
-        KUBE[, SMR := NA_real_]
-        KUBE[, MEIS := MALTALL]
-      } else {
-        KUBE[, SMR := NA_real_]
-        KUBE[, MEIS := MALTALL]
-      }
-    } else {
-      # SETT SMRtmp. For å lage NORMSMR under må denne settes før NORM. Derfor kan jeg ikke sette SMR=MALTALL/NORM nå.
-      # Men NORMSMR er selvsagt alltid 100 for REFVERDI_P="V"
-      if (KUBEdscr$REFVERDI_VP == "P") {
-        KUBE[, SMRtmp := sumTELLER / sumPREDTELLER * 100]
-      } else if (KUBEdscr$REFVERDI_VP == "V") {
-        KUBE[, SMRtmp := 100]
-      } else {
-        KUBE[, SMRtmp := NA]
-      }
-    }
-    
-    # FINN "LANDSNORMAL". Merk at dette gjelder både ved REFVERDI_VP=P og =V
-    
-    if (D_develop_predtype == "DIR") {
-      # Midlertidig dirty løsning
-      # KUBER:REFVERDI bør omdøpes til KUBER:PREDFILTER og det er denne som brukes i SettPredFilter
-      # Det bør så lages en ny kolonne KUBER:REFGEOn som har GEOniv for referanseverdi. Denne brukes primært for å sette SMR i modus=V
-      RefGEOn <- "L"
-      RefGEOnFilt <- paste("GEOniv=='", RefGEOn, "'", sep = "")
-      VF <- eval(parse(text = paste("subset(KUBE,", RefGEOnFilt, ")", sep = "")))
-    } else {
-      VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
-    }
-    
-    # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
-    if (nrow(VF) == 0) {
-      cat("************************************\nNOE RART MED LANDSNORM, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
-      VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer["T"]]], globs = globs)
-    }
-    
-    if (D_develop_predtype == "IND") {
-      VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
-      if (maltall %in% c("TELLER", "RATE")) {
-        data.table::setnames(VF, c(paste(maltall, c("", ".f", ".a", ".n"), sep = ""), "SMRtmp"), c(paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"))
-        VF <- VF[, c(VFtabkols, paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"), with = FALSE]
-      } else {
-        data.table::setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
-        VF <- VF[, c(VFtabkols, "NORM", "NORMSMR"), with = FALSE]
-      }
-    } else {
-      VF[, lopendeMEISref := MEIS]
-      VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), c("GEOniv", "GEO", "FYLKE"))
-      VF <- VF[, c(VFtabkols, "lopendeMEISref"), with = FALSE]
-    }
-    data.table::setkeyv(KUBE, VFtabkols)
-    data.table::setkeyv(VF, VFtabkols)
-    
-    KUBE <- VF[KUBE]
-    
-    if (D_develop_predtype == "IND") {
-      # Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
-      # SMR>100 kan oppstå dersom det f.eks. er noen med ukjent alder/kjønn.
-      # Ratene for ukjent alder/kjønn vil ikke matche nevner fra BEF, derfor vil det predikeres for får døde relativt til observert
-      if (KUBEdscr$REFVERDI_VP == "P") {
-        KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
-      } else if (KUBEdscr$REFVERDI_VP == "V") {
-        KUBE[, SMR := MALTALL / NORM * 100]
-      } else {
-        KUBE[, SMR := NA]
-      }
-      
-      KUBE[, SMR := 100 * (SMR / NORMSMR)]
-      
-      KUBE[, MEIS := SMR * NORM / 100]
-    } else {
-      KUBE[, lopendeFORHOLDSVERDI := MEIS / lopendeMEISref * 100]
-      
-      # D-develop
-      # Dirty tricks i denne midlertidige løsninga, bruker gamle utnavn
-      KUBE[, SMR := lopendeFORHOLDSVERDI]
-      KUBE[, NORM := lopendeMEISref]
-    }
-    
-    # Bytt til eksterne TAB-navn for ekstradimensjoner
-    FGP <- FGPs[[filer[["T"]]]]
-    etabs <- character(0)
-    for (etab in names(KUBE)[grepl("^TAB\\d+$", names(KUBE))]) {
-      if (grepl("\\S", FGP[[etab]])) {
-        data.table::setnames(KUBE, etab, FGP[[etab]])
-        etabs <- c(etabs, FGP[[etab]])
-      }
-    }
-    
-    # SETT UTKOLONNER FOR ALLVISKUBE
-    if (!(is.na(KUBEdscr$NESSTARTUPPEL) | KUBEdscr$NESSTARTUPPEL == "")) {
-      NstarTup <- unlist(stringr::str_split(KUBEdscr$NESSTARTUPPEL, ","))
-    } else if (KUBEdscr$REFVERDI_VP == "P") {
-      NstarTup <- c("T", "RATE", "SMR", "MEIS")
-    } else {
-      NstarTup <- character(0)
-    }
-    OutVar <- globs$NesstarOutputDef[NstarTup]
-    
-    if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
-      hjelpeVar <- unlist(stringr::str_split(KUBEdscr$EKSTRAVARIABLE, ","))
-      OutVar <- c(OutVar, hjelpeVar)
-    }
-    
-    KHtabs <- c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK")
-    tabs <- c(KHtabs, etabs)
-    if (!(is.na(KUBEdscr$DIMDROPP) | KUBEdscr$DIMDROPP == "")) {
-      dimdropp <- unlist(stringr::str_split(KUBEdscr$DIMDROPP, ","))
-      tabs <- setdiff(tabs, dimdropp)
-    }
-    
-    KUBE[, AAR := paste(AARl, "_", AARh, sep = "")]
-    if (all(c("ALDERl", "ALDERh") %in% names(KUBE))) {
-      KUBE[, ALDER := paste(ALDERl, "_", ALDERh, sep = "")]
-    } else {
-      tabs <- setdiff(tabs, "ALDER")
-    }
-    if (!"KJONN" %in% names(KUBE)) {
-      tabs <- setdiff(tabs, "KJONN")
-    }
-    
-    # EVT SPESIALBEHANDLING
-    
-    if ("STATAPRIKKpre" %in% names(dumps)) {
-      for (format in dumps[["STATAPRIKKpre"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpre", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
-    dims <- find_dims(dt = KUBE, spec = FGPs)
-    stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
-    
-    KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs)
-    
-    if ("STATAPRIKKpost" %in% names(dumps)) {
-      for (format in dumps[["STATAPRIKKpost"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpost", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # Start RSYNT_postprosess
-    if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
-      synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
-      if (grepl("<STATA>", synt)) {
-        synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-        RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-        if (RES$feil != "") {
-          stop("Something went wrong in STATA, RSYNT_POSTPROSESS", RES$feil, sep = "\n")
-        } else {
-          KUBE <- RES$TABLE
-        }
-      } else {
-        rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if ("try-error" %in% class(rsynterr)) {
-          print(rsynterr)
-          stop("Something went wrong in R, RSYNT_POSTPROSESS")
-        }
-      }
-    }
-    
-    if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
-      for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
-        DumpTabell(KUBE, paste(KUBEid, "RSYNT_POSTPROSESSpost", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
-    # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
-    KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
-    
-    if ("ALDER" %in% names(KUBE)) {
-      KUBE <- KUBE[!ALDER %in% c("999_999", "888_888"), ]
-    }
-    if ("KJONN" %in% names(KUBE)) {
-      KUBE <- KUBE[!KJONN %in% c(8, 9), ]
-    }
-    
-    # LAYOUT
-    utkols <- c(tabs, OutVar)
-    ALLVIS <- data.table::copy(KUBE)
-    
-    # SKJUL HELE TUPPELET
-    # FLAGG PER VARIABEL KAN/BØR VURDERES!
-    # Litt tricky å finne riktig ".f"-kolloner. Må ikke ta med mBEFc f.eks fra BEF fila dersom denne er irrelevant
-    fvars <- intersect(names(ALLVIS), paste(union(globs$NesstarOutputDef, OutVar), ".f", sep = ""))
-    # fvars<-intersect(names(NESSTAR),c(OrgKubeKolNames[grepl(".f$",OrgKubeKolNames)],"NORM.f","SMR.f"))
-    ALLVIS[, SPVFLAGG := 0]
-    if (length(fvars) > 0) {
-      # Dette er unødvendig krongelete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, ønskes SPVFLAGG=1
-      ALLVIS[, tSPV1 := eval(parse(text = paste("pmax(", paste(lapply(fvars, function(x) {
-        paste(x, "*(", x, "!=2)", sep = "")
-      }), collapse = ","), ",na.rm = TRUE)", sep = "")))]
-      ALLVIS[, tSPV2 := eval(parse(text = paste("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)", sep = "")))]
-      ALLVIS[, SPVFLAGG := ifelse(tSPV1 == 0, tSPV2, tSPV1)]
-      ALLVIS[, c("tSPV1", "tSPV2") := NULL]
-      ALLVIS[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
-    }
-    ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
-    ALLVIS[, SPVFLAGG := plyr::mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
-    
-    # Filtrer bort GEO som ikke skal rapporteres
-    KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
-    ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
-    
-    # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
-    if(isTRUE(write)){
-      LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
-    }
-    
-    # Filter ALLVIS KUBE
-    ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
-    
-    # Create QC KUBE based on the censored ALLVIS kube
-    # Contain all the full ALLVIS kuve + uncensored TELLER/NEVNER/sumTELLER/sumNEVNER/RATE.n
-    QC <- LagQCKube(allvis = ALLVIS,
-                    allvistabs = tabs, 
-                    kube = KUBE,
-                    globs = globs)
-    
-    if (tmpbryt == 2) {
-      print("TMPBRYT=2")
-      return(list(raaKUBE0 = raaKUBE0, raaKUBE = raaKUBE, raaKUBE2 = raaKUBE2, raaKUBE3 = raaKUBE3, KUBE = KUBE, TNF = TNF, ALLVIS = ALLVIS))
-    }
-    
-    cat("---------------------KUBE FERDIG\n\n")
-    
-    # Save RESULTAT to global env
-    RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
+    lp <- paste("KUBE[,c(\"", paste(valkols, ".n", collapse = "\",\"", sep = ""), "\"):=list(", n, ")]", sep = "")
+    KUBE[, eval(parse(text = lp))]
   }
   
+  # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
+  fix_geo_special(d = KUBE, specs = FGPs[[filer["T"]]], id = KUBEid)
+  
+  if ("maKUBE0" %in% names(dumps)) {
+    for (format in dumps[["maKUBE0"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "maKUBE0", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # Anonymiser og skjul
+  
+  # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt
+  # Se KHaggreger!
+  raaKUBE <- data.table::copy(KUBE)
+  
+  # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
+  if (ma_satt == 1) {
+    valkols <- FinnValKols(names(KUBE))
+    anon_tot_tol <- 0.2
+    
+    lp <- paste("KUBE[,':='(",
+                paste(valkols, "=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
+                      valkols, ".f=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
+                      sep = "", collapse = ","
+                ),
+                ")]",
+                sep = ""
+    )
+    eval(parse(text = lp))
+  }
+  
+  if ("anoKUBE1" %in% names(dumps)) {
+    for (format in dumps[["anoKUBE1"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "anoKUBE1", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # Anonymiser, trinn 2 Ekte anonymisering basert på liten teller, liten nevner og liten N-T
+  if (!(is.na(KUBEdscr$PRIKK_T) | KUBEdscr$PRIKK_T == "")) {
+    # T<=PRIKK_T
+    cat("T-PRIKKER", nrow(subset(KUBE, TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
+    KUBE[TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+    # N-T<=PRIKK_T
+    cat("N-T-PRIKKER", nrow(subset(KUBE, NEVNER - TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
+    KUBE[NEVNER - TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0 & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+  }
+  
+  if (!(is.na(KUBEdscr$PRIKK_N) | KUBEdscr$PRIKK_N == "")) {
+    # N<PRIKK_N
+    cat("N-PRIKKER", nrow(subset(KUBE, NEVNER <= KUBEdscr$PRIKK_N)), "rader\n")
+    KUBE[NEVNER <= KUBEdscr$PRIKK_N & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+  }
+  
+  if ("anoKUBE2" %in% names(dumps)) {
+    for (format in dumps[["anoKUBE2"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "anoKUBE2", sep = "_"), globs = globs, format = format)
+    }
+  }
+  # Anonymiser trinn 3. Anonymiser naboer
+  if (!(is.na(KUBEdscr$OVERKAT_ANO) | KUBEdscr$OVERKAT_ANO == "")) {
+    # DEVELOP: BRuk .f=4 her slik at ikke slår ut i HULL under
+    KUBE <- AnonymiserNaboer(KUBE, KUBEdscr$OVERKAT_ANO, FGP = FGPs[[filer[["T"]]]], D_develop_predtype, globs = globs)
+  }
+  if ("anoKUBE3" %in% names(dumps)) {
+    for (format in dumps[["anoKUBE3"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "anoKUBE3", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  raaKUBE2 <- data.table::copy(KUBE)
+  # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
+  SvakAndelAvSerieGrense <- 0.5
+  HullAndelAvSerieGrense <- 0.2
+  
+  if (!(is.na(KUBEdscr$STATTOL_T) | KUBEdscr$STATTOL_T == "")) {
+    tabkols <- setdiff(intersect(names(KUBE), globs$DefDesign$DesignKolsFA), c(globs$DefDesign$DelKols[["Y"]]))
+    KUBE[TELLER.f < 9, AntAar := .N, by = tabkols]
+    KUBE[TELLER.f < 9, SVAK := sum(is.na(TELLER) | TELLER <= KUBEdscr$STATTOL_T), by = tabkols]
+    KUBE[TELLER.f < 9, HULL := sum(TELLER.f == 3), by = tabkols]
+    KUBE[TELLER.f < 9, SKJUL := ifelse(SVAK / AntAar > SvakAndelAvSerieGrense | HULL / AntAar > HullAndelAvSerieGrense, 1, 0)]
+    
+    
+    cat("Skjuler", nrow(subset(KUBE, SKJUL == 1)), "rader\n")
+    KUBE[SKJUL == 1, c("TELLER", "TELLER.f") := list(NA, 3)]
+    KUBE[SKJUL == 1, c("RATE", "RATE.f") := list(NA, 3)]
+    KUBE[, c("SVAK", "HULL", "SKJUL", "AntAar") := NULL]
+  }
+  raaKUBE3 <- data.table::copy(KUBE)
+  if ("anoKUBE4" %in% names(dumps)) {
+    for (format in dumps[["anoKUBE4"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "anoKUBE4", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # LAYOUT
+  
+  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
+    for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpre", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # EVT SPESIALBEHANDLING
+  
+  if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
+    synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
+    error <- ""
+    ok <- 1
+    if (grepl("<STATA>", synt)) {
+      synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
+      RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
+      if (RES$feil != "") {
+        stop("Something went wrong in STATA, SLUTTREDIGER", RES$feil, sep = "\n")
+      } else {
+        KUBE <- RES$TABLE
+      }
+    } else {
+      rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
+      if ("try-error" %in% class(rsynterr)) {
+        print(rsynterr)
+        stop("Something went wrong in R, SLUTTREDIGER")
+      }
+    }
+  }
+  
+  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) {
+    for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpost", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # mapvalues(KUBE$SPVFLAGG,c(0,1,2,3),c(0,2,1,3),warn_missing = FALSE)     #BRUKER 1='.",2='.." i NESSTAR
+  
+  OrgKubeKolNames <- names(KUBE)
+  
+  # Alle kolonner settes for alle KUBER uavhengig av om TELLER, NEVNER, RATE, MALTALL, PRED=V/P etc
+  if (!"NEVNER" %in% names(KUBE)) {
+    KUBE[, NEVNER := NA]
+  }
+  if (!"RATE" %in% names(KUBE)) {
+    KUBE[, RATE := NA]
+  }
+  
+  if (D_develop_predtype != "DIR") {
+    # Sett skala for teller
+    if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
+      KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+    }
+  }
+  
+  # Legg til manglende kolonner for homogen behandling under
+  missKol <- setdiff(unlist(lapply(c("TELLER", "NEVNER", "RATE", "PREDTELLER"), function(x) {
+    paste(x, c("", ".f", ".a", ".n"), sep = "")
+  })), names(KUBE))
+  if (length(missKol) > 0) {
+    KUBE[, (missKol) := NA]
+  }
+  
+  # Behold sum, disse sendes til Friskvik
+  KUBE[, sumTELLER := orgintMult * TELLER]
+  KUBE[, sumNEVNER := orgintMult * NEVNER]
+  KUBE[, sumPREDTELLER := orgintMult * PREDTELLER]
+  
+  # Ta snitt for alt annet enn RATE (der forholdstallet gjør snitt uønsket)
+  # VAL:=VAL/VAL.n
+  valkols <- setdiff(FinnValKols(names(KUBE)), c("RATE", "SMR"))
+  if (length(valkols) > 0) {
+    lp <- paste("KUBE[,c(\"", paste(valkols, collapse = "\",\""), "\"):=list(",
+                paste(valkols, "=", valkols, "/", valkols, ".n",
+                      sep = "", collapse = ","
+                ),
+                ")]",
+                sep = ""
+    )
+    KUBE[, eval(parse(text = lp))]
+  }
+  
+  if (!(is.na(TNPdscr$NYEKOL_RAD_postMA) | TNPdscr$NYEKOL_RAD_postMA == "")) {
+    KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPdscr$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
+  }
+  
+  if (grepl("\\S", KUBEdscr$MTKOL)) {
+    maltall <- KUBEdscr$MTKOL
+    KUBE[, eval(parse(text = paste("MALTALL:=", KUBEdscr$MTKOL, sep = "")))]
+  } else if (TNPdscr$NEVNERKOL == "-") {
+    maltall <- "TELLER"
+    KUBE[, MALTALL := TELLER]
+  } else {
+    maltall <- "RATE"
+    KUBE[, MALTALL := RATE]
+  }
+  # maltallt<-intersect(paste(maltall,""))
+  
+  if (D_develop_predtype == "DIR") {
+    print("D-develop")
+    cat("Meisskala3:\n")
+    print(unique(KUBE$MEISskala))
+    print(KUBE)
+    
+    # SETT SMR og MEIS
+    
+    if (KUBEdscr$REFVERDI_VP == "P") {
+      KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
+      KUBE[, MEIS := (sumTELLER / sumPREDTELLER) * MEISskala]
+    } else if (KUBEdscr$REFVERDI_VP == "V") {
+      KUBE[, SMR := NA_real_]
+      KUBE[, MEIS := MALTALL]
+    } else {
+      KUBE[, SMR := NA_real_]
+      KUBE[, MEIS := MALTALL]
+    }
+  } else {
+    # SETT SMRtmp. For å lage NORMSMR under må denne settes før NORM. Derfor kan jeg ikke sette SMR=MALTALL/NORM nå.
+    # Men NORMSMR er selvsagt alltid 100 for REFVERDI_P="V"
+    if (KUBEdscr$REFVERDI_VP == "P") {
+      KUBE[, SMRtmp := sumTELLER / sumPREDTELLER * 100]
+    } else if (KUBEdscr$REFVERDI_VP == "V") {
+      KUBE[, SMRtmp := 100]
+    } else {
+      KUBE[, SMRtmp := NA]
+    }
+  }
+  
+  # FINN "LANDSNORMAL". Merk at dette gjelder både ved REFVERDI_VP=P og =V
+  
+  if (D_develop_predtype == "DIR") {
+    # Midlertidig dirty løsning
+    # KUBER:REFVERDI bør omdøpes til KUBER:PREDFILTER og det er denne som brukes i SettPredFilter
+    # Det bør så lages en ny kolonne KUBER:REFGEOn som har GEOniv for referanseverdi. Denne brukes primært for å sette SMR i modus=V
+    RefGEOn <- "L"
+    RefGEOnFilt <- paste("GEOniv=='", RefGEOn, "'", sep = "")
+    VF <- eval(parse(text = paste("subset(KUBE,", RefGEOnFilt, ")", sep = "")))
+  } else {
+    VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
+  }
+  
+  # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og må lages
+  if (nrow(VF) == 0) {
+    cat("************************************\nNOE RART MED LANDSNORM, IKKE I KUBEDESIGN, MÅ UT PÅ NY OMKODING.\nER DETTE RETT?\n")
+    VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer["T"]]], globs = globs)
+  }
+  
+  if (D_develop_predtype == "IND") {
+    VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
+    if (maltall %in% c("TELLER", "RATE")) {
+      data.table::setnames(VF, c(paste(maltall, c("", ".f", ".a", ".n"), sep = ""), "SMRtmp"), c(paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"))
+      VF <- VF[, c(VFtabkols, paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"), with = FALSE]
+    } else {
+      data.table::setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
+      VF <- VF[, c(VFtabkols, "NORM", "NORMSMR"), with = FALSE]
+    }
+  } else {
+    VF[, lopendeMEISref := MEIS]
+    VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), c("GEOniv", "GEO", "FYLKE"))
+    VF <- VF[, c(VFtabkols, "lopendeMEISref"), with = FALSE]
+  }
+  data.table::setkeyv(KUBE, VFtabkols)
+  data.table::setkeyv(VF, VFtabkols)
+  
+  KUBE <- VF[KUBE]
+  
+  if (D_develop_predtype == "IND") {
+    # Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
+    # SMR>100 kan oppstå dersom det f.eks. er noen med ukjent alder/kjønn.
+    # Ratene for ukjent alder/kjønn vil ikke matche nevner fra BEF, derfor vil det predikeres for får døde relativt til observert
+    if (KUBEdscr$REFVERDI_VP == "P") {
+      KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
+    } else if (KUBEdscr$REFVERDI_VP == "V") {
+      KUBE[, SMR := MALTALL / NORM * 100]
+    } else {
+      KUBE[, SMR := NA]
+    }
+    
+    KUBE[, SMR := 100 * (SMR / NORMSMR)]
+    
+    KUBE[, MEIS := SMR * NORM / 100]
+  } else {
+    KUBE[, lopendeFORHOLDSVERDI := MEIS / lopendeMEISref * 100]
+    
+    # D-develop
+    # Dirty tricks i denne midlertidige løsninga, bruker gamle utnavn
+    KUBE[, SMR := lopendeFORHOLDSVERDI]
+    KUBE[, NORM := lopendeMEISref]
+  }
+  
+  # Bytt til eksterne TAB-navn for ekstradimensjoner
+  FGP <- FGPs[[filer[["T"]]]]
+  etabs <- character(0)
+  for (etab in names(KUBE)[grepl("^TAB\\d+$", names(KUBE))]) {
+    if (grepl("\\S", FGP[[etab]])) {
+      data.table::setnames(KUBE, etab, FGP[[etab]])
+      etabs <- c(etabs, FGP[[etab]])
+    }
+  }
+  
+  # SETT UTKOLONNER FOR ALLVISKUBE
+  if (!(is.na(KUBEdscr$NESSTARTUPPEL) | KUBEdscr$NESSTARTUPPEL == "")) {
+    NstarTup <- unlist(stringr::str_split(KUBEdscr$NESSTARTUPPEL, ","))
+  } else if (KUBEdscr$REFVERDI_VP == "P") {
+    NstarTup <- c("T", "RATE", "SMR", "MEIS")
+  } else {
+    NstarTup <- character(0)
+  }
+  OutVar <- globs$NesstarOutputDef[NstarTup]
+  
+  if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
+    hjelpeVar <- unlist(stringr::str_split(KUBEdscr$EKSTRAVARIABLE, ","))
+    OutVar <- c(OutVar, hjelpeVar)
+  }
+  
+  KHtabs <- c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK")
+  tabs <- c(KHtabs, etabs)
+  if (!(is.na(KUBEdscr$DIMDROPP) | KUBEdscr$DIMDROPP == "")) {
+    dimdropp <- unlist(stringr::str_split(KUBEdscr$DIMDROPP, ","))
+    tabs <- setdiff(tabs, dimdropp)
+  }
+  
+  KUBE[, AAR := paste(AARl, "_", AARh, sep = "")]
+  if (all(c("ALDERl", "ALDERh") %in% names(KUBE))) {
+    KUBE[, ALDER := paste(ALDERl, "_", ALDERh, sep = "")]
+  } else {
+    tabs <- setdiff(tabs, "ALDER")
+  }
+  if (!"KJONN" %in% names(KUBE)) {
+    tabs <- setdiff(tabs, "KJONN")
+  }
+  
+  # EVT SPESIALBEHANDLING
+  
+  if ("STATAPRIKKpre" %in% names(dumps)) {
+    for (format in dumps[["STATAPRIKKpre"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpre", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
+  dims <- find_dims(dt = KUBE, spec = FGPs)
+  stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
+  
+  KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs)
+  
+  if ("STATAPRIKKpost" %in% names(dumps)) {
+    for (format in dumps[["STATAPRIKKpost"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpost", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # Start RSYNT_postprosess
+  if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
+    synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
+    if (grepl("<STATA>", synt)) {
+      synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
+      RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
+      if (RES$feil != "") {
+        stop("Something went wrong in STATA, RSYNT_POSTPROSESS", RES$feil, sep = "\n")
+      } else {
+        KUBE <- RES$TABLE
+      }
+    } else {
+      rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
+      if ("try-error" %in% class(rsynterr)) {
+        print(rsynterr)
+        stop("Something went wrong in R, RSYNT_POSTPROSESS")
+      }
+    }
+  }
+  
+  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
+    for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
+      DumpTabell(KUBE, paste(KUBEid, "RSYNT_POSTPROSESSpost", sep = "_"), globs = globs, format = format)
+    }
+  }
+  
+  # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
+  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
+  
+  if ("ALDER" %in% names(KUBE)) {
+    KUBE <- KUBE[!ALDER %in% c("999_999", "888_888"), ]
+  }
+  if ("KJONN" %in% names(KUBE)) {
+    KUBE <- KUBE[!KJONN %in% c(8, 9), ]
+  }
+  
+  # LAYOUT
+  utkols <- c(tabs, OutVar)
+  ALLVIS <- data.table::copy(KUBE)
+  
+  # SKJUL HELE TUPPELET
+  # FLAGG PER VARIABEL KAN/BØR VURDERES!
+  # Litt tricky å finne riktig ".f"-kolloner. Må ikke ta med mBEFc f.eks fra BEF fila dersom denne er irrelevant
+  fvars <- intersect(names(ALLVIS), paste(union(globs$NesstarOutputDef, OutVar), ".f", sep = ""))
+  # fvars<-intersect(names(NESSTAR),c(OrgKubeKolNames[grepl(".f$",OrgKubeKolNames)],"NORM.f","SMR.f"))
+  ALLVIS[, SPVFLAGG := 0]
+  if (length(fvars) > 0) {
+    # Dette er unødvendig krongelete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, ønskes SPVFLAGG=1
+    ALLVIS[, tSPV1 := eval(parse(text = paste("pmax(", paste(lapply(fvars, function(x) {
+      paste(x, "*(", x, "!=2)", sep = "")
+    }), collapse = ","), ",na.rm = TRUE)", sep = "")))]
+    ALLVIS[, tSPV2 := eval(parse(text = paste("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)", sep = "")))]
+    ALLVIS[, SPVFLAGG := ifelse(tSPV1 == 0, tSPV2, tSPV1)]
+    ALLVIS[, c("tSPV1", "tSPV2") := NULL]
+    ALLVIS[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
+  }
+  ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
+  ALLVIS[, SPVFLAGG := plyr::mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
+  
+  # Filtrer bort GEO som ikke skal rapporteres
+  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
+  ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
+  
+  # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
+  if(isTRUE(write)){
+    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
+  }
+  
+  # Filter ALLVIS KUBE
+  ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]
+  
+  # Create QC KUBE based on the censored ALLVIS kube
+  # Contain all the full ALLVIS kuve + uncensored TELLER/NEVNER/sumTELLER/sumNEVNER/RATE.n
+  QC <- LagQCKube(allvis = ALLVIS,
+                  allvistabs = tabs, 
+                  kube = KUBE,
+                  globs = globs)
+  
+  cat("---------------------KUBE FERDIG\n\n")
+  
+  # Save RESULTAT to global env
+  RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
+
   # If write = TRUE, save output files
   if(isTRUE(write)){
     cat("SAVING OUTPUT FILES:\n")

@@ -246,7 +246,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       }
       Filter <- SettFilterDesign(FilterDscr, bruk0 = FALSE, FGP = FGP, globs = globs)
       if (length(Filter) > 0) {
-        FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = Filter)), globs = globs, echo = 1)
+        FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = Filter)), globs = globs)
       }
       
       if (FilterDscr$GEOHARM == 1) {
@@ -331,9 +331,8 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 #' @param NN 
 #' @param Design 
 #' @param KUBEdscr 
-#' @param rapport 
 #' @param globs 
-LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, rapport = list(), globs = FinnGlobs()) {
+LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, globs = FinnGlobs()) {
   is_kh_debug()
   
   # Finn initiellt design før evt lesing av KUBEdscr, dette for å kunne godta tomme angivelser der (gir default fra InitDes)
@@ -370,7 +369,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     KHerr("UDEKKA i RDT")
   }
   cat("***Lager TF fra", filer[TT], "\n")
-  TF <- OmkodFil(FinnFilT(filer[TT]), RDT, globs = globs, echo = 1)
+  TF <- OmkodFil(FinnFilT(filer[TT]), RDT, globs = globs)
   
   # TF<-GeoHarm(TF,vals=FGPs[[filer[TT]]]$vals,globs=globs) #Trengs ikke om KUBEd, da tas rektisering i
   if (!is.na(filer[NN])) {
@@ -379,7 +378,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
       KHerr("UDEKKA i RDN")
     }
     cat("Lager NF fra", filer[NN], "\n")
-    NF <- OmkodFil(FinnFilT(filer[NN]), RDN, globs = globs, echo = 1)
+    NF <- OmkodFil(FinnFilT(filer[NN]), RDN, globs = globs)
     
     # NF<-GeoHarm(NF,vals=FGPs[[filer[NN]]]$vals,globs=globs)
   }
@@ -633,8 +632,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param DF1 
 #' @param DF2 
 #' @param globs 
-#' @param echo 
-FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs(), echo = 0) {
+FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs()) {
   # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
   is_kh_debug()
   
@@ -745,8 +743,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 #' @param KB 
 #' @param IntervallHull 
 #' @param AggPri 
-#' @param echo 
-FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), ReturnerFullFull = FALSE, globs = FinnGlobs(), prios = globs$DefDesign, KB = globs$KB, IntervallHull = globs$DefDesign$IntervallHull, AggPri = globs$DefDesign$AggPri, echo = 0) {
+FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), ReturnerFullFull = FALSE, globs = FinnGlobs(), prios = globs$DefDesign, KB = globs$KB, IntervallHull = globs$DefDesign$IntervallHull, AggPri = globs$DefDesign$AggPri) {
   is_kh_debug()
   
   # Merk assymtri mellom DesFRA og DesTIL.
@@ -937,11 +934,6 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     }
   }
   
-  if (echo >= 1) {
-    cat("Parts:\n")
-    print(Parts)
-  }
-  
   gc()
   SKombs <- list()
   KBs <- list()
@@ -974,11 +966,6 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     } else {
       betcols <- character()
       betD <- data.table::data.table(Parts[[del]])
-    }
-    if (echo >= 1) {
-      cat("betD 1:\n", kombn, "\n")
-      print(betD)
-      print(komblist)
     }
 
     # Finn beste alternativ
@@ -1053,8 +1040,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
 #' @param TIL 
 #' @param storst 
 #' @param delnavn 
-#' @param echo 
-FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", echo = 0) {
+FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT") {
   is_kh_debug()
   
   # I tilfelle input er data.table
@@ -1081,15 +1067,9 @@ FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", ech
     # KAND<-list(KAND)
     KAND <- split(KAND, rep(1:ncol(KAND), each = nrow(KAND)))
   }
-  if (echo == 1) {
-    print(KAND)
-  }
   
   # Finn intern overlapp i FRA
   OVLP <- intervals::interval_overlap(FRAi, FRAi)
-  if (echo == 1) {
-    print(OVLP)
-  }
   
   # Initier tom kodebok
   KODEBOK0 <- as.data.frame(setNames(replicate(length(utcolnavn), integer(0), simplify = F), utcolnavn))
@@ -1265,8 +1245,7 @@ FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), F
 #' @param FIL 
 #' @param RD 
 #' @param globs 
-#' @param echo 
-OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
+OmkodFil <- function(FIL, RD, globs = FinnGlobs()) {
   is_kh_debug()
   
   orgkols <- names(FIL)
@@ -1283,18 +1262,14 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
     for (del in names(RD$Filters)) {
       data.table::setkeyv(FIL, names(RD$Filters[[del]]))
       data.table::setkeyv(RD$Filters[[del]], names(RD$Filters[[del]]))
-      if (echo == 1) {
-        cat("Filtrerer", del, "før dim(FIL)=", dim(FIL))
-      }
+      cat("Filtrerer", del, "før dim(FIL)=", dim(FIL))
       if (any(duplicated(RD$Filters[[del]]))) {
         print("CARTESIAN????")
         print(RD$Filters[[del]])
         print(RD$Filters[[del]][duplicated(RD$Filters[[del]]), ])
       }
       FIL <- FIL[RD$Filters[[del]], nomatch = 0]
-      if (echo == 1) {
-        cat(" og etter", dim(FIL), "\n")
-      }
+      cat(" og etter", dim(FIL), "\n")
     }
     
     # NB! Rekkefølge er essensiell, dvs at ubeting kommer til slutt
@@ -1314,15 +1289,11 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
       data.table::setkeyv(RD$KBs[[del]], orgtabs)
       replikfaktor <- RD$KBs[[del]][, list(N = .N), by = orgtabs][, mean(N)]
       data.table::setkeyv(FIL, orgtabs)
-      if (echo == 1) {
-        cat("Omkoder", del, "dim(FIL) er ", dim(FIL), "originalt")
-      }
+      cat("Omkoder", del, "dim(FIL) er ", dim(FIL), "originalt")
       if (nrow(FIL) < 1000000 | replikfaktor < 4 | del == "Gn") {
         FIL <- FIL[RD$KBs[[del]], nomatch = 0, allow.cartesian = TRUE]
         # FIL<-FIL[RD$KBs[[del]],nomatch=0]
-        if (echo == 1) {
-          cat(" og", dim(FIL), "etter merge")
-        }
+        cat(" og", dim(FIL), "etter merge")
         if (del == "Gn") {
           # Omkod geo
           FIL[GEOniv_omk == "K", GEO := substr(GEO, 0, 4)]
@@ -1359,9 +1330,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
         }
         FIL <- FILt
       }
-      if (echo == 1) {
-        cat(" og til slutt", dim(FIL), "\n")
-      }
+      cat(" og til slutt", dim(FIL), "\n")
       data.table::setnames(FIL, names(FIL), gsub("_omk$", "", names(FIL)))
     }
   }
@@ -1611,7 +1580,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
     # omk[,]<-as.numeric(omk[,])
     # omkD<-FinnDesign(omk,amin=amin,amax=amax,globs=globs)
     print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
-    FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = OmkParts)), globs = globs, echo = 1)
+    FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = OmkParts)), globs = globs)
   }
   if (subsetstr != "") {
     FIL <- eval(parse(text = paste("subset(FIL,", subsetstr, ")", sep = "")))
@@ -1662,17 +1631,14 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
 #' @param Fil 
 #' @param Part 
 #' @param FGP 
-#' @param rapport 
 #' @param globs 
-#' @param echo 
-OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), rapport = list(), globs = FinnGlobs(), echo = 0) {
+OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
   is_kh_debug()
   
-  rapport["KALL"] <- "OmkodFilFraPart"
   Dorg <- FinnDesign(Fil, FGP = FGP, globs = globs)
   Dmod <- ModifiserDesign(Part, Dorg, globs = globs)
-  RD <- FinnRedesign(Dorg, Dmod, globs = globs, echo = echo)
-  return(OmkodFil(Fil, RD, rapport = rapport, globs = globs))
+  RD <- FinnRedesign(Dorg, Dmod, globs = globs)
+  return(OmkodFil(Fil, RD, globs = globs))
 }
 
 #' ModifiserDesign (kb)

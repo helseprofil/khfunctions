@@ -1,4 +1,4 @@
-LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = FinnGlobs(), versjonert = FALSE, echo = FALSE, dumps = list()) {
+LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = FinnGlobs(), versjonert = FALSE, dumps = list()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -8,11 +8,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   LestFil <- LesFil(filbesk, batchdate = batchdate, globs = globs, dumps = dumps)
   ok <- LestFil$ok
   DF <- LestFil$DF
-  
-  if (echo == TRUE) {
-    cat("\nETTER INNLES\n#############################\n")
-    print(head(DF))
-  }
   
   #   #EVT SPESIALBEHANDLING
   #   if (!is.na(filbesk$RSYNT1)){
@@ -158,12 +153,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
   }
   
-  if (echo == TRUE) {
-    cat("\nETTER TRINN2\n#############################\n")
-    print(head(DF))
-  }
-  
-  
   if (ok == 1) {
     # Merge GEO delt i to
     if (filbesk$GEOd2 != "-" & !is.na(filbesk$GEOd2)) {
@@ -178,13 +167,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     
     DF <- DF[, names(DF)[names(DF) %in% kolorgs]]
   }
-  
-  if (echo == TRUE) {
-    cat("\nETTER TRINN3\n#############################\n")
-    print(head(DF))
-  }
+
   TilFilLogg(filbesk$KOBLID, "INNLES_OK", ok, batchdate = batchdate, globs = globs)
-  
   
   if (!is.na(filbesk$GRUNNKRETS) && filbesk$GRUNNKRETS == 1) {
     data.table::setDT(DF)
@@ -461,10 +445,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     
     default.stringsAsFactors <- TRUE
     Kols <- c(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(DF)], names(DF)[grepl("^VAL\\d+(\\.(f|a)|)$", names(DF))])
-    if (echo == TRUE) {
-      print(Kols)
-      cat("Nest siste trinn\n#########################\n")
-    }
     
     # print(filbesk)
     # kAN KRÆSJE VED UKJENT KOLNAVN!
@@ -1016,11 +996,10 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
 #' @param FG 
 #' @param filgruppe 
 #' @param FullResult 
-#' @param echo 
 #' @param batchdate 
 #' @param versjonert 
 #' @param globs 
-SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
+SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
   is_kh_debug()
   
   HarDuplikater <- 0
@@ -1115,17 +1094,8 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     tmp$FILGRUPPE <- filgruppe
     tmp$BATCHID <- batchdate
     tmp$SV <- "S"
-    if (echo >= 1) {
-      cat("HAR", nrow(DUB), "duplikater (", nrow(subset(DUB, dNOg > 0)), "), det kan gjerne ta", nrow(DUB) / 100, "sek  å skrive ut logg\n")
-    }
-    if (echo >= 2) {
-      print(DUB)
-    }
     if (nrow(DUB) < 1000) {
       RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
-      if (echo >= 1) {
-        cat("Ferdig dublogg\n")
-      }
       if (versjonert == TRUE) {
         tmp$SV <- "V"
         RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)

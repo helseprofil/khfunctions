@@ -939,15 +939,10 @@ uselocal <- function(test = F){
 #' @param KUBEid name of kube to test on
 .SetKubeParameters <- function(KUBEid){
   KUBEid <<- KUBEid
-  lagRapport <<- 0
   batchdate <<- SettKHBatchDate()
   versjonert <<- FALSE
-  bare_TN <<- 0
-  drop_TN <<- 0
-  tmpbryt <<- 0
   csvcopy <<- FALSE
   globs <<- FinnGlobs()
-  echo <<- 0
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
 }
