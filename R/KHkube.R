@@ -12,17 +12,20 @@
 #' @param alarm if TRUE, plays a sound when done
 #' @param ... 
 LagKUBE <- function(KUBEid,
+                    globs = FinnGlobs(),
                     versjonert = FALSE,
                     csvcopy = FALSE,
-                    globs = FinnGlobs(),
                     dumps = list(), 
                     write = FALSE,
-                    alarm = FALSE,
-                    ...) {
+                    alarm = FALSE) {
 
   is_kh_debug()
   batchdate <- SettKHBatchDate()
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+  
+  # Save Console Output
+  sink(file = file.path(globs$path, globs$DUMPdir, "KUBELOGG", paste0(KUBEid, "_", batchdate, "_LOGG.txt")), 
+       split = TRUE)
   
   globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
   globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
@@ -63,7 +66,7 @@ LagKUBE <- function(KUBEid,
     cat("\n", utfils)
   }
   
-  # TRINN 1 LAG TNF
+  # LAG TNF ----
   
   cat("******LAGER TNF\n")
   TNtab <- LagTNtabell(filer, FilDesL, FGPs, TNPdscr, KUBEdscr = KUBEdscr, globs = globs)
@@ -190,15 +193,15 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  raaKUBE0 <- data.table::copy(KUBE)
+  # STANDARDISERING ----
   
   if (D_develop_predtype == "DIR") {
-    # Sett skala for teller (må gjøres før rate brukes i MEISskala)
+  # Sett skala for teller (må gjøres før rate brukes i MEISskala)
     if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
       KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
     }
     
-    # FINN MEISskala Merk at dette gjelder både ved REFVERDI_VP=P og =V
+    # FINN MEISskala. Merk at dette gjelder både ved REFVERDI_VP=P og =V
     
     if (KUBEdscr$REFVERDI_VP == "P") {
       VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
@@ -219,11 +222,12 @@ LagKUBE <- function(KUBEid,
       KUBE[, MEISskala := NA_real_]
     }
     
-    print("D-develop")
-    cat("Meisskala1:\n")
-    print(unique(KUBE$MEISskala))
+    # print("D-develop")
+    # cat("Meisskala1:\n")
+    # print(unique(KUBE$MEISskala))
   }
   
+  # AGGREGER PERIODE ----
   # Finn "snitt" for ma-år.
   # DVs, egentlig lages forløpig bare summer, snitt settes etter prikking under
   # Snitt tolerer missing av type .f=1 ("random"), men bare noen få anonyme .f>1, se KHaggreger
@@ -305,11 +309,10 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  # Anonymiser og skjul
+  # Anonymiser og skjul ----
   
   # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt
   # Se KHaggreger!
-  raaKUBE <- data.table::copy(KUBE)
   
   # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
   if (ma_satt == 1) {
@@ -365,7 +368,6 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  raaKUBE2 <- data.table::copy(KUBE)
   # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
   SvakAndelAvSerieGrense <- 0.5
   HullAndelAvSerieGrense <- 0.2
@@ -383,14 +385,14 @@ LagKUBE <- function(KUBEid,
     KUBE[SKJUL == 1, c("RATE", "RATE.f") := list(NA, 3)]
     KUBE[, c("SVAK", "HULL", "SKJUL", "AntAar") := NULL]
   }
-  raaKUBE3 <- data.table::copy(KUBE)
-  if ("anoKUBE4" %in% names(dumps)) {
+
+    if ("anoKUBE4" %in% names(dumps)) {
     for (format in dumps[["anoKUBE4"]]) {
       DumpTabell(KUBE, paste(KUBEid, "anoKUBE4", sep = "_"), globs = globs, format = format)
     }
   }
   
-  # LAYOUT
+  # LAYOUT ----
   
   if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
     for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
@@ -398,7 +400,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  # EVT SPESIALBEHANDLING
+  ## RSYNT_SLUTTREDIGER ---- 
   
   if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
     synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
@@ -428,6 +430,7 @@ LagKUBE <- function(KUBEid,
   }
   
   # mapvalues(KUBE$SPVFLAGG,c(0,1,2,3),c(0,2,1,3),warn_missing = FALSE)     #BRUKER 1='.",2='.." i NESSTAR
+  ## KOLONNER ----
   
   OrgKubeKolNames <- names(KUBE)
   
@@ -454,11 +457,13 @@ LagKUBE <- function(KUBEid,
     KUBE[, (missKol) := NA]
   }
   
+  ## sumTELLER-NEVNER-PREDTELLER ----
   # Behold sum, disse sendes til Friskvik
   KUBE[, sumTELLER := orgintMult * TELLER]
   KUBE[, sumNEVNER := orgintMult * NEVNER]
   KUBE[, sumPREDTELLER := orgintMult * PREDTELLER]
   
+  ## Gjennomsnitt ---- 
   # Ta snitt for alt annet enn RATE (der forholdstallet gjør snitt uønsket)
   # VAL:=VAL/VAL.n
   valkols <- setdiff(FinnValKols(names(KUBE)), c("RATE", "SMR"))
@@ -473,10 +478,12 @@ LagKUBE <- function(KUBEid,
     KUBE[, eval(parse(text = lp))]
   }
   
+  ## Nye verdikolonner ----
   if (!(is.na(TNPdscr$NYEKOL_RAD_postMA) | TNPdscr$NYEKOL_RAD_postMA == "")) {
     KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPdscr$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
   }
   
+  ## MALTALL ----
   if (grepl("\\S", KUBEdscr$MTKOL)) {
     maltall <- KUBEdscr$MTKOL
     KUBE[, eval(parse(text = paste("MALTALL:=", KUBEdscr$MTKOL, sep = "")))]
@@ -487,15 +494,16 @@ LagKUBE <- function(KUBEid,
     maltall <- "RATE"
     KUBE[, MALTALL := RATE]
   }
+  
   # maltallt<-intersect(paste(maltall,""))
   
+  ## SETT SMR og MEIS ----
   if (D_develop_predtype == "DIR") {
-    print("D-develop")
-    cat("Meisskala3:\n")
-    print(unique(KUBE$MEISskala))
-    print(KUBE)
+    # print("D-develop")
+    # cat("Meisskala3:\n")
+    # print(unique(KUBE$MEISskala))
+    # print(KUBE)
     
-    # SETT SMR og MEIS
     
     if (KUBEdscr$REFVERDI_VP == "P") {
       KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
@@ -519,6 +527,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
+  ## LANDSNORMAL ----
   # FINN "LANDSNORMAL". Merk at dette gjelder både ved REFVERDI_VP=P og =V
   
   if (D_develop_predtype == "DIR") {
@@ -631,6 +640,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
+  # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
   dims <- find_dims(dt = KUBE, spec = FGPs)
   stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
@@ -643,7 +653,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  # Start RSYNT_postprosess
+  # RSYNT_POSTPROSESS ---- 
   if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
     synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
     if (grepl("<STATA>", synt)) {
@@ -706,6 +716,7 @@ LagKUBE <- function(KUBEid,
   KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
   ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
   
+  # FRISKVIK, ALLVIS og QC----
   # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
   if(isTRUE(write)){
     LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
@@ -726,6 +737,7 @@ LagKUBE <- function(KUBEid,
   # Save RESULTAT to global env
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
 
+  # SKRIV RESULTAT ---- 
   # If write = TRUE, save output files
   if(isTRUE(write)){
     cat("SAVING OUTPUT FILES:\n")
@@ -756,31 +768,39 @@ LagKUBE <- function(KUBEid,
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
-  return(RESULTAT)
-}
-
-#' LagFlereKuber
-#' 
-#' Wrapper aroung LagKUBE, allowing for more than one KUBE to be made simultaneously
-#'
-LagFlereKuber <- function(KUBEidA, versjonert = FALSE, csvcopy = FALSE, globs = FinnGlobs(), dumps = list(), write = FALSE, ...) {
-  is_kh_debug()
-  
-  batchdate <- SettKHBatchDate()
-  loggfile <- paste(globs$path, "/", globs$KubeDir, "/LOGG/", batchdate, ".txt", sep = "")
-  sink(loggfile, split = TRUE)
-  cat("BATCH:", batchdate, "\n")
-  for (KUBEid in KUBEidA) {
-    KK <- LagKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, csvcopy = csvcopy, globs = globs, dumps = dumps, write = write, ...)
-  }
   sink()
+  return(RESULTAT)
 }
 
 #' LagKubeDatertCsv
 #' 
 #' Wrapper around LagKUBE, with default options to save output files
 #'
-LagKubeDatertCsv <- function(KUBEID, dumps = list(), ...) {
-  is_kh_debug()
-  invisible(LagFlereKuber(KUBEID, versjonert = TRUE, csvcopy = TRUE, dumps = dumps, write = TRUE, ...))
+LagKubeDatertCsv <- function(KUBEID, 
+                             globs = FinnGlobs(),
+                             dumps = list(), 
+                             versjonert = TRUE,
+                             csvcopy = TRUE,
+                             write = TRUE,
+                             alarm = FALSE) {
+  invisible(LagKUBE(KUBEID, globs = globs, versjonert = versjonert, csvcopy = csvcopy, dumps = dumps, write = write, alarm = alarm))
 }
+
+#' LagFlereKuber
+#' 
+#' Wrapper aroung LagKUBE, allowing for more than one KUBE to be made simultaneously
+#' 
+#' @param KUBEid_ALLE
+#' @param ... Optional, can set versjonert, csvcopy, write arguments if TRUE not wanted
+#'
+LagFlereKuber <- function(KUBEid_ALLE, 
+                          globs = FinnGlobs(),
+                          dumps = list(), 
+                          alarm = FALSE,
+                          ...) {
+  for (KUBEid in KUBEid_ALLE) {
+    LagKubeDatertCsv(KUBEid, globs = globs, dumps = dumps, alarm = alarm, ...)
+  }
+  sink()
+}
+
