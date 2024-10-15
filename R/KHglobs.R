@@ -288,16 +288,16 @@ SettGlobs <- function(path = "", modus = NA) {
   KnrHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   TKNR <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
-  # Gjelder også for soner
+  # Gjelder ogsaa for soner
   KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
     paste(x, "00", sep = "")
   })
   KnrHarmS <- cbind(as.data.frame(KnrHarmS, stringsAsFactors = FALSE), HARMstd = KnrHarm$HARMstd)
   KnrHarm <- rbind(KnrHarm, KnrHarmS)
-  # Må legge til de som ikke omkodes for å lette bruk i merge
+  # Maa legge til de som ikke omkodes for aa lette bruk i merge
   # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
   
-  # GK til bydel. Bør konsolideres med KnrHarm
+  # GK til bydel. Boer konsolideres med KnrHarm
   GkBHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
   
   globs$DefDesign <- SettDefDesignKH(globs = globs)

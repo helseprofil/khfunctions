@@ -45,7 +45,7 @@ SammenlignKubePar <- function(PAR, modus = NA, globs = FinnGlobs()) {
         # VERSJON 2 FULL OUTER JOIN, RESUUSRKREVENDE!
         # KOMP<-merge(KUBE1,KUBE2,all=TRUE)
         
-        # MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
+        # Maa BAREBERE NED KOLONNNER OG EVT OMDoePE
         
         utfil <- paste("F:/Prosjekter/Kommunehelsa/PRODUKSJON/VALIDERING/NESSTAR_KUBER/KH2016v2015/", paret$KUBE_NAVN1, "_", paret$VERSJON1, "v", paret$VERSJON2, ".csv", sep = "")
         cat(paste("Skriver ut", utfil, "\n"))
@@ -133,7 +133,7 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
     # VERSJON 2 FULL OUTER JOIN, RESUUSRKREVENDE!
     # KOMP<-merge(KUBE1,KUBE2,all=TRUE)
     
-    # MÅ BAREBERE NED KOLONNNER OG EVT OMDØPE
+    # Maa BAREBERE NED KOLONNNER OG EVT OMDoePE
     
     fileName <- paste0(KUBENAVN, ".csv")
     utfil <- file.path(validDir, fileName)
@@ -427,7 +427,7 @@ SammenlignKuber <- function(V1, V2, FULL = TRUE, streng = TRUE, comparecols = ch
   checkm <- FALSE
   mismatch <- integer(0)
   if (streng == TRUE & length(tabdiff) > 0) {
-    cat("Kan ikke sammenligne KUBER når følgende kolonner ikker er i begge:", tabdiff, "\n")
+    cat("Kan ikke sammenligne KUBER naar foelgende kolonner ikke er i begge:", tabdiff, "\n")
     V12 <- data.table::data.table(0)
   } else {
     if (length(tabdiff) > 0) {

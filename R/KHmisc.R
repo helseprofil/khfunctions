@@ -61,8 +61,8 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
     .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
     print(DUMPtabs)
   } else if (format == "STATA") {
-    TABELL[TABELL == ""] <- " " # STATA støtter ikke "empty-string"
-    names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 tåler ikke numeriske kolonnenavn
+    TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+    names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
     names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
     foreign::write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
   }
@@ -84,8 +84,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmpdo <- paste("STATAtmp_", ".do", sep = "")
   tmpdta <- paste("STATAtmp_", ".dta", sep = "")
   tmplog <- paste("STATAtmp_", ".log", sep = "")
-  TABLE[TABLE == ""] <- " " # STATA støtter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
+  TABLE[TABLE == ""] <- " " # STATA stoetter ikke "empty-string"
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 taaler ikke numeriske kolonnenavn
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   haven::write_dta(TABLE, tmpdta)
   
@@ -111,7 +111,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   } else {
     TABLE <- haven::read_dta(tmpdta, encoding = "UTF-8")
   }
-  # Reverserer omforminger for å kunne skrive til STATA
+  # Reverserer omforminger for aa kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
@@ -230,7 +230,7 @@ FinnTabKolsKUBE <- function(allnames, globs = FinnGlobs()) {
 LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALSE) {
   is_kh_debug()
   
-  TNF <- data.table::copy(TNF) # Får uønsket warning om self.reference under om ikke gjør slik
+  TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
   data.table::setDT(TNF)
   valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
   # FinnValKols(names(TNF))
@@ -329,7 +329,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   }
   
   # Fyll evt hull i aldersintervaller
-  # Bør generaliserer til INT !!!
+  # Boer generaliserer til INT !!!
   if (globs$DefDesign$AMissAllow == TRUE) {
     if ("A" %in% names(Design$Part)) {
       mangler <- intervals::interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
@@ -353,14 +353,14 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
   FullDesign[ObsDesign, HAR := 1]
   Design[["Design"]] <- FullDesign
   
-  # Utgått
+  # Utgaatt
   # Filtrer til bare den delen av designet som er aktuell for omkoding (dsv uten TAB1 etc)
   # setkeym(FullDesign,OmkKols)
   # Design[["OmkDesign"]]<-FullDesign[,list(HAR=max(HAR)),by=OmkKols]
 
   # Sett omkodingskombinasjone
-  # Noen dimensjoner får variere fritt (UBeting). Andre må være fast for alle versjoner av UBeting
-  # Def er at Gn og Y er frie, mens K og A må være fast for hver Gn,Y kombinasjon
+  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
+  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
   Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
   komb <- Design[["UBeting"]]
   for (del in Beting) {
@@ -411,7 +411,7 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   valkols <- names(FIL)[!names(FIL) %in% tabnames]
   valkols <- valkols[!grepl("\\.(f|a)", valkols)]
   valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
-  setkeym(FIL, tabnames) # Sjekk om key ok for å effektivisere?
+  setkeym(FIL, tabnames) # Sjekk om key ok for aa effektivisere?
   
   if (snitt == FALSE) {
     lp <- paste("list(",
@@ -425,7 +425,7 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
     )
     FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
   } else {
-    # Sett også hjelpestørrelser for vurdering av snitt
+    # Sett ogsaa hjelpestoerrelser for vurdering av snitt
     lp <- paste("list(",
                 paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
                       valkols, ".f=max(", valkols, ".f),",
@@ -559,7 +559,7 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
   }
   if (is.character(verdi)) {
     verdi <- paste("'", verdi, "'", sep = "")
-    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig sær \n i Access!
+    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
   }
   upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
   tmp <- sqlQuery(globs$log, upd)
@@ -570,8 +570,8 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
 #'
 #' @param mhstr 
 LesMultiHead <- function(mhstr) {
-  # Leser parameterstreng for multihead og gjør om til relevante variable
-  # Velger å kalle på denne funksjonen ved behov for samme inputstreng heller enn å porssessere strengen en gang og sende bitene rundt
+  # Leser parameterstreng for multihead og gjoer om til relevante variable
+  # Velger aa kalle paa denne funksjonen ved behov for samme inputstreng heller enn aa porssessere strengen en gang og sende bitene rundt
   # Finn evt angitt separator (trengs bare settes dersom det er snakk om en originalt pastet rad med annen seaprator enn "|"
   is_kh_debug()
   
@@ -648,17 +648,8 @@ FinnFilT <- function(...) {
   return(FinnFil(...)$FT)
 }
 
-## expand.grid.df <- function(...) {
-##   is_kh_debug()
-
-##   # Hjelpefunksjon, se http://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames
-##   # Finnes også en i reshape, men ikke i reshape2, så bruker ikke denne
-##   # Skjønner ikke helt syntaksen, men funker utmerket
-##   Reduce(function(...) merge(..., by = NULL), list(...))
-## }
-
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
-#' expand.grid.df (kb/ybk)
+#' expand.grid.df (ybk)
 #'
 #' @param ... 
 expand.grid.df <- function(...) {
@@ -703,7 +694,7 @@ expand.grid.df <- function(...) {
 setkeym <- function(DTo, keys) {
   is_kh_debug()
   
-  # Forøsk på å speede opp når setkeyv brukes for å sikre key(DTo)=keys
+  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
   if (!("data.table" %in% class(DTo) && identical(key(DTo), keys))) {
     data.table::setDT(DTo)
     data.table::setkeyv(DTo, keys)
@@ -768,8 +759,8 @@ godkjent <- function(profil = c("FHP", "OVP"),
   bruker <- Sys.info()[["user"]]
   message(
     "\n********\n  Kopiering av filer for ",
-    profil[1], " og geonivå ", modus, " for ",
-    aar, " begynner nå. Gjennomført av ", bruker, "\n********\n"
+    profil[1], " og geonivaa ", modus, " for ",
+    aar, " begynner naa. Gjennomfoert av ", bruker, "\n********\n"
   )
   
   ## Get connection to DB

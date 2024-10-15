@@ -67,7 +67,7 @@ LagFilgruppe <- function(gruppe,
   
   
   # Essensielt bare loop over alle delfiler/orignalfiler
-  # For hver orignalfil kjøres LagTabellFraFil
+  # For hver orignalfil kjoeres LagTabellFraFil
   # Stables til tabellen FG
   # Finn filgruppeparametre
   FGP <- FinnFilgruppeParametre(gruppe, batchdate = batchdate, globs = globs)
@@ -90,7 +90,7 @@ LagFilgruppe <- function(gruppe,
         filbesk$filn <- file.path(getSti, filbesk$FILNAVN)
         ## filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
         filbesk$filn <- gsub("\\\\", "/", filbesk$filn)
-        # Sett evt default for år basert på aktuelt årstall
+        # Sett evt default for aar basert paa aktuelt aarstall
         filbesk$AAR <- gsub("<\\$y>", paste("<", filbesk$DEFAAR, ">", sep = ""), filbesk$AAR)
         # LagTabell
         DF <- LagTabellFraFil(filbesk, FGP, batchdate = batchdate, diagnose = diagnose, globs = globs, versjonert = versjonert, dumps = dumps)
@@ -103,12 +103,12 @@ LagFilgruppe <- function(gruppe,
         stid <- format(Sys.time(), "%Y-%m-%d %X")
       }
     } else {
-      # Må gi fornuftig tilbakemelding
+      # Maa gi fornuftig tilbakemelding
     }
     
     # DEV: SPESIALBEHANDLING AV FILGRUPPE HER!! F.EKS. IMPUTER NPR
     
-    # Diagnostisering og rapportering på hele filgruppa under ett
+    # Diagnostisering og rapportering paa hele filgruppa under ett
     
     if (nrow(Filgruppe) > 0 & diagnose == 1) {
       # Finn og rapporter duplikater
@@ -160,7 +160,7 @@ LagFilgruppe <- function(gruppe,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(Filgruppe, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
+          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
           ok <- 0
         } else {
           Filgruppe <- RES$TABLE
@@ -228,7 +228,7 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   is_kh_debug()
   
   # SKall rundt LagFilGruppe, lager og lagrer evt til fil
-  # Default er å ta alle grupper, ellers angis ønsket batch i filgrupper-argumentet
+  # Default er aa ta alle grupper, ellers angis oensket batch i filgrupper-argumentet
   if (length(filgrupper) == 0) {
     # filgrupper<-as.matrix(RODBC::sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
     filgrupper <- as.matrix(RODBC::sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
