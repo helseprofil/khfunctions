@@ -22,7 +22,6 @@
 #' tmpBUFFER
 SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
   is_kh_debug()
-  
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   KUBEdscr <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
   if ((is.na(KUBEdscr$TNP) | KUBEdscr$TNP == "")) {
@@ -106,7 +105,7 @@ SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = 
   tmpBUFFER <- character(0)
   for (fil in unique(filer)) {
     TabFSub <- ifelse(fil == filer["T"], TabFSubTT, "")
-    FILinfo <- KlargjorFil(fil, TabFSub = TabFSub, KUBEid = KUBEid, versjonert = versjonert, FILbatch = NA, batchdate = batchdate, globs = globs)
+    FILinfo <- KlargjorFil(FilVers = fil, TabFSub = TabFSub, KUBEid = KUBEid, versjonert = versjonert, FILbatch = NA, batchdate = batchdate, globs = globs)
     FGPs[[fil]] <- FILinfo$FGP
     FilDesL[[fil]] <- FILinfo$FILd
     
@@ -194,12 +193,12 @@ SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = Fi
 
 KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
   is_kh_debug()
+  
   TilBuffer <- 0
   if (!exists("BUFFER")) {
     .GlobalEnv$BUFFER <- list()
   }
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  
   FilterDscr <- as.list(sqlQuery(globs$dbh, paste("SELECT * FROM FILFILTRE WHERE FILVERSJON='", FilVers, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, sep = ""), as.is = TRUE))
   
   # Har oppsatt filter
@@ -220,7 +219,6 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       FIL <- FILn$FT
       sqlQuery(globs$log, paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '", KUBEid, "_", batchdate, "','", FilterDscr$ORGFIL, "_", FILn$batch, "'", sep = ""))
       if (TabFSub != "") {
-        # print("ASKJDLKJASLDKJL  TabFSub")
         cat("Filtrer med tab-filter, foer er dim(FIL)", dim(FIL))
         FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
         cat(" og etter", dim(FIL), "\n")
@@ -228,20 +226,21 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       
       orgkols <- data.table::copy(names(FIL))
       if (grepl("\\S", FilterDscr$KOLLAPSdeler)) {
-        cat("Foer aggregering er dim(FIL)", dim(FIL))
+        cat("\nFILFILTRE:KOLLAPSdel\nFoer aggregering er dim(FIL)", dim(FIL))
         tabkols <- FinnTabKols(names(FIL))
         data.table::setkeyv(FIL, tabkols)
         kolldel <- unlist(stringr::str_split(FilterDscr$KOLLAPSdeler, ","))
         kolldelN <- unlist(globs$DefDesign$DelKolsF[kolldel])
         # FIL[,(kolldelN):=NULL]
         FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
-        FIL <- FIL[, lapply(.SD, sum), by = tabkols]
+        FIL <- FIL[, lapply(.SD, sum), by = tabkols] # SJEKK OM DENNE KAN BLI RASKERE MED COLLAPSE (fsum) eller GRP
         FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
         FIL <- FIL[, orgkols, with = FALSE]
         cat(" og etter", dim(FIL), "\n")
       }
       
       if (!(is.na(FilterDscr$NYEKOL_KOL_preRAD) | FilterDscr$NYEKOL_KOL_preRAD == "")) {
+        cat("\nFILFILTER:NYEKOL_preRAD: ")
         FIL <- LeggTilNyeVerdiKolonner(FIL, FilterDscr$NYEKOL_KOL_preRAD, slettInf = TRUE)
       }
       Filter <- SettFilterDesign(FilterDscr, bruk0 = FALSE, FGP = FGP, globs = globs)
@@ -250,21 +249,26 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       }
       
       if (FilterDscr$GEOHARM == 1) {
+        cat("\nFILFILTRE:GEOHARM: ")
         rektiser <- ifelse(FilterDscr$REKTISER == 1, 1, 0)
         FIL <- GeoHarm(FIL, vals = FGP$vals, rektiser = rektiser, batchdate = batchdate, globs = globs)
       }
       if (!(is.na(FilterDscr$NYETAB) | FilterDscr$NYETAB == "")) {
+        cat("\nFILFILTRE:NYETAB: ")
         FIL <- AggregerRader(FIL, FilterDscr$NYETAB, FGP = FGP)
       }
       
       if (grepl("\\S", FilterDscr$NYEKOL_RAD)) {
+        cat("\nFILFILTER:NYEKOL_RAD: ")
         FIL <- LeggTilSumFraRader(FIL, FilterDscr$NYEKOL_RAD, FGP = FGP, globs = globs)
       }
       if (!(is.na(FilterDscr$NYEKOL_KOL) | FilterDscr$NYEKOL_KOL == "")) {
+        cat("\nFILFILTER:NYEKOL_KOL: ")
         FIL <- LeggTilNyeVerdiKolonner(FIL, FilterDscr$NYEKOL_KOL, slettInf = TRUE)
       }
       
       if (!(is.na(FilterDscr$NYKOLSmerge) | FilterDscr$NYKOLSmerge == "")) {
+        cat("\nFILFILTER:NYKOLSmerge: ")
         NY <- eval(parse(text = FilterDscr$NYKOLSmerge))
         tabK <- intersect(FinnTabKols(names(NY)), FinnTabKols(names(FIL)))
         data.table::setkeyv(NY, tabK)
@@ -314,7 +318,6 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
     # .GlobalEnv$BUFFERbatch[[FilVers]]<-FILn$batch
     TilBuffer <- 1
   }
-  
   
   FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
   gc()
@@ -1374,23 +1377,27 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs()) {
 #' @param batchdate 
 #' @param globs 
 #' @param GEOstdAAR 
-GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, FDesign = list(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = globs$KHaargang) {
+GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = globs$KHaargang) {
   is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
-    FIL <- data.table::data.table(FIL)
+    FIL <- data.table::setDT(FIL)
   }
   keyorg <- data.table::key(FIL)
   geoomk <- globs$KnrHarm
-  FIL$GEO <- plyr::mapvalues(FIL$GEO, geoomk$GEO, geoomk$GEO_omk, warn_missing = FALSE)
-  FIL[, FYLKE := NULL]
+  #FIL$GEO <- plyr::mapvalues(FIL$GEO, geoomk$GEO, geoomk$GEO_omk, warn_missing = FALSE)
+  if(any(FIL$GEO %in% geoomk$GEO)){
+    FIL <- collapse::join(FIL, geoomk, on = "GEO", how = "left", verbose = 0)
+    FIL[!is.na(GEO_omk), let(GEO = GEO_omk)][, let(GEO_omk = NULL, HARMstd = NULL)]
+  }
+  FIL[, let(FYLKE = NULL)]
+  
   FIL <- KHaggreger(FIL, vals = vals, globs = globs)
   # Rektangulariser
   if (rektiser == TRUE) {
     REKT <- data.table::data.table()
-    if (length(FDesign) == 0) {
-      FDesign <- FinnDesign(FIL)
-    }
+    FDesign <- FinnDesign(FIL)
+
     FDes <- FDesign$Design
     # Switch for TYP=="O" ??
     for (Gn in FDesign$Part[["Gn"]][["GEOniv"]]) {

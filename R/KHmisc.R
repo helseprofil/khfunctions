@@ -402,59 +402,69 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   orgclass <- class(FIL)
   orgcols <- names(FIL)
   if (identical(orgclass, "data.frame")) {
-    FIL <- data.table::data.table(FIL)
+    FIL <- data.table::setDT(FIL)
   }
   orgkeys <- data.table::key(FIL)
-  # Avoid renaming of colnames from data.table > 1.15.0 by coercing to unnamed vector
-  tabnames <- as.character(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(FIL)])
-  # tabnames<-names(FIL)[!grepl("^VAL\\d+(f|)$",names(FIL))]
+  tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
   valkols <- names(FIL)[!names(FIL) %in% tabnames]
   valkols <- valkols[!grepl("\\.(f|a)", valkols)]
   valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
-  setkeym(FIL, tabnames) # Sjekk om key ok for aa effektivisere?
+  if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
   
-  if (snitt == FALSE) {
-    lp <- paste("list(",
-                paste(valkols, "=sum(", valkols, "),",
-                      valkols, ".f=max(", valkols, ".f),",
-                      valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
-                      sep = "", collapse = ","
-                ),
-                ")",
-                sep = ""
-    )
-    FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
-  } else {
-    # Sett ogsaa hjelpestoerrelser for vurdering av snitt
-    lp <- paste("list(",
-                paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
-                      valkols, ".f=max(", valkols, ".f),",
-                      valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
-                      valkols, ".fn1=sum(", valkols, ".f==1),",
-                      valkols, ".fn3=sum(", valkols, ".f>1),",
-                      valkols, ".n=.N",
-                      sep = "", collapse = ","
-                ),
-                ")",
-                sep = ""
-    )
-    FILa <- FIL[, eval(parse(text = lp)), by = tabnames]
-    
-    # Anonymiser, trinn 1
-    # Filtrer snitt som ikke skal brukes pga for mye anonymt
-    anon_tot_tol <- 0.2
-    lp <- paste("FILa[,':='(",
-                paste(valkols, "=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
-                      valkols, ".f=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
-                      sep = "", collapse = ","
-                ),
-                ")]",
-                sep = ""
-    )
-    eval(parse(text = lp))
-    
-    FILa <- FILa[, c(orgcols, paste(valkols, ".n", sep = "")), with = FALSE]
-  }
+  # if (snitt == FALSE) {
+  # lp <- paste("list(",
+  #             paste(valkols, "=sum(", valkols, "),",
+  #                   valkols, ".f=max(", valkols, ".f),",
+  #                   valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
+  #                   sep = "", collapse = ","
+  #             ),
+  #             ")",
+  #             sep = ""
+  # )
+  # FIL <- FIL[, eval(parse(text = lp)), by = tabnames]
+
+    FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+    FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+    colorder <- tabnames
+    for(val in valkols){
+      FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+      colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+    }
+    FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+    data.table::setcolorder(FIL, colorder)
+
+    # USIKKER PÅ OM DET UNDER KAN SLETTES (TROR IKKE DET BRUKES), DET OVER KAN ERSTATTES
+  # } else {
+  #   # Sett ogsaa hjelpestoerrelser for vurdering av snitt
+  #   lp <- paste("list(",
+  #               paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
+  #                     valkols, ".f=max(", valkols, ".f),",
+  #                     valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
+  #                     valkols, ".fn1=sum(", valkols, ".f==1),",
+  #                     valkols, ".fn3=sum(", valkols, ".f>1),",
+  #                     valkols, ".n=.N",
+  #                     sep = "", collapse = ","
+  #               ),
+  #               ")",
+  #               sep = ""
+  #   )
+  #   FIL <- FIL[, eval(parse(text = lp)), by = tabnames]
+  # 
+  #   # Anonymiser, trinn 1
+  #   # Filtrer snitt som ikke skal brukes pga for mye anonymt
+  #   anon_tot_tol <- 0.2
+  #   lp <- paste("FIL[,':='(",
+  #               paste(valkols, "=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
+  #                     valkols, ".f=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
+  #                     sep = "", collapse = ","
+  #               ),
+  #               ")]",
+  #               sep = ""
+  #   )
+  #   eval(parse(text = lp))
+  # 
+  #   FIL <- FIL[, c(orgcols, paste(valkols, ".n", sep = "")), with = FALSE]
+  # }
   vals <- vals[valkols]
   usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
     x$sumbar == 0
@@ -462,16 +472,14 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   for (val in valkols) {
     if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
       eval(parse(text = paste(
-        "FILa[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
         sep = ""
       )))
     }
   }
-  setkeym(FIL, orgkeys)
-  if (identical(orgclass, "data.frame")) {
-    FIL <- data.frame(FIL)
-  }
-  return(FILa)
+  if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
+
+  return(FIL)
 }
 
 ht2 <- function(x, n = 3) {
