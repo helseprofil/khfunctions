@@ -75,11 +75,11 @@ SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = 
   } else {
     STNPdscr <- list()
   }
-  # Denne er ikke sÃ¥ veldig robust for feilspesifkasjon, men den brukes ikke annet til de enkleste tilfellene
+  # Denne er ikke så veldig robust for feilspesifkasjon, men den brukes ikke annet til de enkleste tilfellene
   PredFilter <- SettPredFilter(KUBEdscr$REFVERDI, globs = globs)
   
   # Sett Tab-filter
-  # For Ã¥ redusere ressursbruk er det viktig at lange lister med unÃ¸dvendige ETAB blir barert bort tidlig
+  # For å redusere ressursbruk er det viktig at lange lister med unødvendige ETAB blir barert bort tidlig
   TabConds <- character(0)
   TabFSubTT <- ""
   for (tab in names(KUBEdscr)[grepl("^TAB\\d+$", names(KUBEdscr))]) {
@@ -130,7 +130,7 @@ SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = 
 #' @examples
 SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
   
-  # BÃ¸r nok konsolidere SettPredFilter og SettNaboAnoSpec, bÃ¸r vÃ¦re greit Ã¥ gjÃ¸re dette
+  # Bør nok konsolidere SettPredFilter og SettNaboAnoSpec, bør være greit å gjøre dette
   
   is_kh_debug()
   PredFilter <- list()
@@ -142,7 +142,7 @@ SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = Fi
     D_develop_predtype <- "DIR"
   }
   
-  # MÃ¥ utvikles til Ã¥ lese KUBEdscr$REFVERDI
+  # Må utvikles til å lese KUBEdscr$REFVERDI
   if (is.null(refvstr) || is.na(refvstr)) {
     PredFilter <- list(Gn = data.frame(GEOniv = "L"))
   } else {
@@ -169,7 +169,7 @@ SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = Fi
         } else if (grepl(paste("(^|\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&)", sep = ""), refvstr)) {
           intval1 <- as.integer(gsub(paste("(^|.*\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&.*)", sep = ""), "\\2", refvstr))
           intval <- c(intval1, intval1)
-          # Gammelt: kunne ha f.eks. AAR='2012_2014'. Dette blir for dillete mot annen bruk, mÃ¥ da ha "AARl='2012' & AARh='2014'"
+          # Gammelt: kunne ha f.eks. AAR='2012_2014'. Dette blir for dillete mot annen bruk, må da ha "AARl='2012' & AARh='2014'"
           # intval<-as.integer(unlist(stringr::str_split(gsub(paste("(^|.*\\&) *",delN," *== *'*(.*?)'* *($|\\&.*)",sep=""),"\\2",refvstr),"_")))
           # if (length(intval)==1){intval<-c(intval,intval)}
           
@@ -221,14 +221,14 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       sqlQuery(globs$log, paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '", KUBEid, "_", batchdate, "','", FilterDscr$ORGFIL, "_", FILn$batch, "'", sep = ""))
       if (TabFSub != "") {
         # print("ASKJDLKJASLDKJL  TabFSub")
-        cat("Filtrer med tab-filter, fÃ¸r er dim(FIL)", dim(FIL))
+        cat("Filtrer med tab-filter, før er dim(FIL)", dim(FIL))
         FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
         cat(" og etter", dim(FIL), "\n")
       }
       
       orgkols <- data.table::copy(names(FIL))
       if (grepl("\\S", FilterDscr$KOLLAPSdeler)) {
-        cat("FÃ¸r aggregering er dim(FIL)", dim(FIL))
+        cat("Før aggregering er dim(FIL)", dim(FIL))
         tabkols <- FinnTabKols(names(FIL))
         data.table::setkeyv(FIL, tabkols)
         kolldel <- unlist(stringr::str_split(FilterDscr$KOLLAPSdeler, ","))
@@ -295,14 +295,14 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       }
     }
   }
-  # Har ikke oppsatt filter, bruk rÃ¥
+  # Har ikke oppsatt filter, bruk rå
   else {
     FILn <- FinnFil(FilVers, versjonert = versjonert, batch = FILbatch)
     FIL <- FILn$FT
     # sqlQuery(globs$log,paste("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '",KUBEid,"_",batchdate,"','",FilVers,"_",FILn$batch,"'",sep=""))
     
     if (TabFSub != "") {
-      cat("Filtrer med tab-filter, fÃ¸r er dim(FIL)", dim(FIL))
+      cat("Filtrer med tab-filter, før er dim(FIL)", dim(FIL))
       FIL <- eval(parse(text = paste("subset(FIL,", TabFSub, ")", sep = "")))
       cat(" og etter", dim(FIL), "\n")
     }
@@ -336,14 +336,14 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, rapport = list(), globs = FinnGlobs()) {
   is_kh_debug()
   
-  # Finn initiellt design fÃ¸r evt lesing av KUBEdscr, dette for Ã¥ kunne godta tomme angivelser der (gir default fra InitDes)
+  # Finn initiellt design før evt lesing av KUBEdscr, dette for å kunne godta tomme angivelser der (gir default fra InitDes)
   if (is.null(Design)) {
     if (is.na(filer[NN])) {
       InitDes <- FilDesL[[filer[TT]]]
     } else {
       FTab <- FinnFellesTab(FilDesL[[filer[TT]]], FilDesL[[filer[NN]]], globs = globs)
       InitDes <- FTab$FDes
-      # MÃ¥ legge til deler som evt bare er i den ene slik at disse blir del av KUBEd
+      # Må legge til deler som evt bare er i den ene slik at disse blir del av KUBEd
       for (del in setdiff(names(FilDesL[[filer[TT]]]$Part), names(FilDesL[[filer[NN]]]$Part))) {
         InitDes$Part[[del]] <- FilDesL[[filer[TT]]]$Part[[del]]
       }
@@ -363,7 +363,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     TNdes <- InitDes
   }
   rektangularisert <- 0
-  geoharmonisert <- 1 # Bygg ut til at de ikke trenger vÃ¦re geoharm fra KlargjÃ¸rFil
+  geoharmonisert <- 1 # Bygg ut til at de ikke trenger være geoharm fra KlargjørFil
   
   RDT <- FinnRedesign(FilDesL[[filer[TT]]], TNdes, globs = globs)
   if (nrow(RDT$Udekk) > 0) {
@@ -437,7 +437,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     data.table::setkeyv(NF, kols)
     # print(kols)
     
-    # NÃ¥r KubeD=NULL er det ikke nÃ¸dvendig Ã¥ fange implisitt 0 i teller selv om nevner finnes,
+    # Når KubeD=NULL er det ikke nødvendig å fange implisitt 0 i teller selv om nevner finnes,
     # derfor bare join TF->NF
     cat("TNF merges TNF<-NF[TF]\n")
     
@@ -446,7 +446,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
     cat("--TNF ferdig merget TNF<-NF[TF] gir dim(TF)", dim(TF), ", dim(NF)", dim(NF), ", og dim(TNF)", dim(TNF), "\n")
   } else {
     TNF <- TF
-    cat("--TNF ferdig, har ikke nevner, sÃ¥ TNF<-TF\n")
+    cat("--TNF ferdig, har ikke nevner, så TNF<-TF\n")
   }
   
   # Evt prossesering av nye kolonner etter merge/design
@@ -535,7 +535,7 @@ FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
   for (del in names(KubeD)) {
     tKOLS <- globs$DefDesign$DelKols[[del]]
     if (all(tKOLS %in% names(FT))) {
-      KubeD[[del]] <- KubeD[[del]][, tKOLS, with = FALSE] # Burde vÃ¦re unÃ¸dvendig, men noen ganger har HAR-kolonner blitt med
+      KubeD[[del]] <- KubeD[[del]][, tKOLS, with = FALSE] # Burde være unødvendig, men noen ganger har HAR-kolonner blitt med
       data.table::setkeyv(FT, tKOLS)
       data.table::setkeyv(KubeD[[del]], tKOLS)
       FT <- FT[KubeD[[del]], nomatch = 0]
@@ -706,7 +706,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
           data.table::setkeyv(OrgParts[[del]], names(listDT))
           Deler[[del]] <- OrgParts[[del]][!listDT, ]
         } else {
-          print("**********************KAN IKKE BRUKE -[liste] i SettFilterDesign nÃ¥r ikke OrgParts")
+          print("**********************KAN IKKE BRUKE -[liste] i SettFilterDesign når ikke OrgParts")
         }
       } else {
         Deler[[del]] <- listDT
@@ -751,10 +751,10 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   
   # Merk assymtri mellom DesFRA og DesTIL.
   # For DesTIL brukes bare DesTil$Part og DesTIL$OmkDesign.
-  # DesFRA mÃ¥ derfor komme fra FinnDesign med alle egenskaper satt der, mens DesTIL kan vÃ¦re enklere og satt andre steder
+  # DesFRA må derfor komme fra FinnDesign med alle egenskaper satt der, mens DesTIL kan være enklere og satt andre steder
 
-  #   #Deler i DesFra som ikke er i DesTil mÃ¥ legegs til i DesTil (full kryss mot Part[del])
-  #   #Merk at deler i DesTil som ikke er i DesFra gÃ¥r greit (all omkoding er indirekte "betinget" pÃ¥ disse)
+  #   #Deler i DesFra som ikke er i DesTil må legegs til i DesTil (full kryss mot Part[del])
+  #   #Merk at deler i DesTil som ikke er i DesFra går greit (all omkoding er indirekte "betinget" på disse)
   #   kryssdeler<-names(DesFRA$Part)[!(names(DesFRA$Part) %in% names(DesTIL$Part))]
   #   if (length(kryssdeler)>0){
   #     DesTIL<-ModifiserDesign(DesFRA$Part[kryssdeler],DesTIL,globs=globs)
@@ -763,11 +763,11 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   
   # Sett partiell omkoding
   # For intervaller kalles FinnKodebokINtervaller, elllers hentes fast kodebok som utgnagspunkt
-  # Disse kodebÃ¸kene (KJONN etc) filtreres til de omkodingene som er aktuelle (bÃ¸r gjÃ¸res her for Ã¥ begrense kombinatorikk, selv om dette kunne vÃ¦rt utsatt)
-  # Dvs omkodinger til en TIL som ikke har alle nÃ¸dvendige deler i FRA filtreres bort
+  # Disse kodebøkene (KJONN etc) filtreres til de omkodingene som er aktuelle (bør gjøres her for å begrense kombinatorikk, selv om dette kunne vært utsatt)
+  # Dvs omkodinger til en TIL som ikke har alle nødvendige deler i FRA filtreres bort
   # Merk at noen deler i FRA ikke er obligatoriske (slik som KJONN=9 for omkoding til KJONN=0)
   
-  # Rydd DesTIL$Design (Kan variere litt mht HAR avhengig av hvor kallet pÃ¥ denne funksjonen er gjort fra. Skal ha 1 har felt)
+  # Rydd DesTIL$Design (Kan variere litt mht HAR avhengig av hvor kallet på denne funksjonen er gjort fra. Skal ha 1 har felt)
   if (is.null(DesTIL$Design)) {
     komblist <- paste("as.data.frame(DesTIL$Part[[\"", names(DesTIL$Part), "\"]])", sep = "", collapse = ",")
     ## FULL <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", komblist, ")", sep = ""))))
@@ -809,7 +809,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     # if (del %in% names(DesTIL$Part)){
     
     if (del %in% names(DesTIL$Part) & del %in% names(DesFRA$Part)) {
-      DesTIL$Part[[del]] <- data.table::copy(data.table::as.data.table(DesTIL$Part[[del]])) # FÃ¥r noen rare warnings uten copy, bÃ¸r debugge dette
+      DesTIL$Part[[del]] <- data.table::copy(data.table::as.data.table(DesTIL$Part[[del]])) # Får noen rare warnings uten copy, bør debugge dette
       delH <- paste(del, "_HAR", sep = "")
       if (!delH %in% names(DesTIL)) {
         DesTIL$Part[[del]][, (delH) := 1]
@@ -857,7 +857,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
         
         # Behandling av intervaller (to kolonner etc)
       } else if (globs$DefDesign$DelType[del] == "INT") {
-        # Global KB kan inneholde (fil)spesifikke koden "ALLE", mÃ¥ erstatte denne med "amin_amax" og lage intervall
+        # Global KB kan inneholde (fil)spesifikke koden "ALLE", må erstatte denne med "amin_amax" og lage intervall
         # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
         Imin <- eval(parse(text = paste("min(DesFRA$Part[[del]][,", globs$DefDesign$DelKolN[[del]], "l])", sep = "")))
         Imax <- eval(parse(text = paste("max(DesFRA$Part[[del]][,", globs$DefDesign$DelKolN[[del]], "h])", sep = "")))
@@ -874,19 +874,19 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
           # KBD<-KBD[KBD[,kolomk] %in% paste(DesTIL$Part[[del]][,kols,with=FALSE],sep="_"),]
           KBD <- KBD[KBD[, kolomk] %in% apply(DesTIL$Part[[del]][, kols, with = FALSE], 1, paste, collapse = "_"), ]
         }
-        # MÃ¥ fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
+        # Må fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
         
         delkols <- KHglobs$DefDesign$DelKols[[del]]
         IntFra <- DesFRA$Part[[del]][, delkols, with = FALSE]
         # IntTil<-DesTIL$Part[[del]][DesTIL$Part[[del]][[paste(del,"_HAR",sep="")]]==1,delkols,with=FALSE]
         # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
-        # Videre er disse bare med nÃ¥r TilDes er satt fra FinnDesign(FG), ikke nÃ¥r TilDes er fra Parts
-        # Usikker pÃ¥ om det alltid er best Ã¥ slippe disse gjennom.
+        # Videre er disse bare med når TilDes er satt fra FinnDesign(FG), ikke når TilDes er fra Parts
+        # Usikker på om det alltid er best å slippe disse gjennom.
         IntTil <- DesTIL$Part[[del]][, delkols, with = FALSE]
-        # Fjerner spesialkoder (dvs uoppgitt etc i KB) fÃ¸r intervallomregning
+        # Fjerner spesialkoder (dvs uoppgitt etc i KB) før intervallomregning
         IntFra <- IntFra[!apply(IntFra[, kols, with = FALSE], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
         IntTil <- IntTil[!apply(IntTil[, kols, with = FALSE], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
-        # print("aksdlÃ¸kaslÃ¸dkÃ¸alsdkÃ¸kÃ¸")
+        # print("aksdløkaslødkøalsdkøkø")
         # print(IntFra)
         # print(IntTil)
         KBInt <- FinnKodebokIntervaller(as.data.frame(IntFra), as.data.frame(IntTil), deln = del)
@@ -905,7 +905,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
           KBD <- KBInt
         }
         
-        # Koble pÃ¥ "del_HAR"
+        # Koble på "del_HAR"
         omkcols <- c(kolomk, paste(del, "_pri", sep = ""))
         KBD <- data.table::data.table(KBD, key = kols)
         KBD <- data.table::data.table(DesFRA$Part[[del]], key = kols)[KBD]
@@ -919,8 +919,8 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
         # data.table::setnames(KBD,"DEKKok",paste(del,"_Dekk",sep=""))
         
         # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-        # USIKKER pÃ¥ om dette er optimalt. Det mÃ¥ ikke kastes for mye for riktig bruk fra FinnFellesTab
-        # Egentlig er det jo unÃ¸dvenig Ã¥ kaste noe som helst. Dette er mest for rapport/lesing av KBD
+        # USIKKER på om dette er optimalt. Det må ikke kastes for mye for riktig bruk fra FinnFellesTab
+        # Egentlig er det jo unødvenig å kaste noe som helst. Dette er mest for rapport/lesing av KBD
         kolsomkpri <- c(kolsomk, paste(del, "_pri", sep = ""))
         eval(parse(text = paste(
           "KBD[,Kast:=!any(", del, "_HAR==1 | ", del, "_obl==0),by=kolsomkpri]",
@@ -948,7 +948,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   Filters <- list()
   DelStatus <- list()
   
-  # MÃ¥ passe pÃ¥ rekkefÃ¸lge (Ubeting til slutt), ellers kan det gÃ¥ galt i FULL
+  # Må passe på rekkefølge (Ubeting til slutt), ellers kan det gå galt i FULL
   beting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$BetingOmk, globs$DefDesign$BetingF))
   ubeting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$UBeting))
   
@@ -965,8 +965,8 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
       data.table::setkeyv(DesFRA$SKombs[[kombn]], delkols)
       betD <- DesFRA$SKombs[[kombn]][Parts[[del]], allow.cartesian = TRUE]
       betD[is.na(HAR), HAR := 0]
-      # MÃ¥ kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
-      # fÃ¥ del_Dekk==1 under dersom del er i beting, da vil en annen del i beting fÃ¥ NA og by=betcols gÃ¥r galt!)
+      # Må kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
+      # få del_Dekk==1 under dersom del er i beting, da vil en annen del i beting få NA og by=betcols går galt!)
       betD <- subset(betD, eval(parse(text = paste(del, "_Dekk==1", sep = ""))))
       # Sett (betinget) dekning
       betcols <- unlist(globs$DefDesign$DelKols[setdiff(DesFRA[["UBeting"]], del)])
@@ -994,12 +994,12 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     KB <- betD[eval(parse(text = paste("Bruk==", prid, " & ", del, "_HAR==1", sep = "")))]
     SKombs[[del]] <- betD
     
-    # Sjekk om del kan omkodes helt partielt (fra Part) eller om mÃ¥ betinge (dvs KB)
+    # Sjekk om del kan omkodes helt partielt (fra Part) eller om må betinge (dvs KB)
     
     # Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
-    # Om en slik finnes beholdes KB, ellers fjernes overlÃ¸dig betinging
+    # Om en slik finnes beholdes KB, ellers fjernes overlødig betinging
     maxBet <- KB[, eval(parse(text = paste("list(NOPri=length(unique(", prid, ")))", sep = ""))), by = OmkCols][, max(NOPri)]
-    # UtgÃ¥tt se KB<- over
+    # Utgått se KB<- over
     # KB<-KB[[del]][eval(parse(text=paste(del,"_HAR==1",sep=""))),]
     if (maxBet == 1) {
       # brukcols<-setdiff(names(KB),betcols)
@@ -1014,7 +1014,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     }
     
     if (del == "Y" & DelStatus[[del]] == "B") {
-      KHerr("Har DelStatus[[Y]]==B, dette takles per nÃ¥ ikke i FilOmkod og vil gi feil der!!!")
+      KHerr("Har DelStatus[[Y]]==B, dette takles per nå ikke i FilOmkod og vil gi feil der!!!")
     }
     
     # Sett dekning i FULL
@@ -1028,7 +1028,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
     #   delkols<-KHglobs$DefDesign$DelKols[[del]]
     # }
     
-    # Ignorer KB der det ikke foregÃ¥r reell omkoding
+    # Ignorer KB der det ikke foregår reell omkoding
     if (all(KBs[[del]][, delkols, with = FALSE] == KBs[[del]][, paste(delkols, "_omk", sep = ""), with = FALSE])) {
       Filters[[del]] <- KBs[[del]][, names(KBs[[del]])[!grepl("_omk$", names(KBs[[del]]))], with = FALSE]
       KBs[del] <- NULL
@@ -1065,10 +1065,10 @@ FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", ech
   TILi <- intervals::Intervals(TIL, type = "Z")
   FRAi <- intervals::Intervals(FRA, type = "Z")
   if (storst == TRUE) {
-    # Gir hÃ¸yest prioritet til Ã¥ bruke/beholde store intervaller
+    # Gir høyest prioritet til å bruke/beholde store intervaller
     sorter <- order(intervals::size(FRAi), decreasing = TRUE)
   } else {
-    # Gir hÃ¸yest prioritet til Ã¥ bruke smÃ¥ intervaller og aggregger opp. Brukes ved aldersstandardisering
+    # Gir høyest prioritet til å bruke små intervaller og aggregger opp. Brukes ved aldersstandardisering
     sorter <- order(intervals::size(FRAi))
   }
   
@@ -1077,7 +1077,7 @@ FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", ech
   FRA <- FRA[sorter, ]
   # Finn kandidater, dvs inkluderte "underintrevaller"
   KAND <- intervals::interval_included(TILi, FRAi)
-  if ("matrix" %in% class(KAND)) { # Irriterende bug(?) i interval nÃ¥r TILi har dim 1 eller KAND er n*m
+  if ("matrix" %in% class(KAND)) { # Irriterende bug(?) i interval når TILi har dim 1 eller KAND er n*m
     # KAND<-list(KAND)
     KAND <- split(KAND, rep(1:ncol(KAND), each = nrow(KAND)))
   }
@@ -1094,7 +1094,7 @@ FinnKodebokIntervaller <- function(FRA, TIL, storst = TRUE, delnavn = "INT", ech
   # Initier tom kodebok
   KODEBOK0 <- as.data.frame(setNames(replicate(length(utcolnavn), integer(0), simplify = F), utcolnavn))
   KODEBOK <- KODEBOK0
-  # MÃ¥ loope over alle TIL. Kan dette vektoriseres? Kanskje ikke sÃ¥ mye Ã¥ vinne?
+  # Må loope over alle TIL. Kan dette vektoriseres? Kanskje ikke så mye å vinne?
   for (i in 1:nrow(TIL)) {
     result <- list("pri" = 0, "KODEBOK" = KODEBOK0)
     result <- FinnKodebokForEtIntervall(KAND[[i]], FRA, TIL[i, ], OVLP, 0, result, utcolnavn)
@@ -1123,7 +1123,7 @@ FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utc
   if (DekkerInt(FRA[Find, ], TILint)) {
     jobb <- Find[Find > letn]
     if (length(jobb) > 0) {
-      # MÃ¥ unngÃ¥ jobbing pÃ¥ alle esoteriske kombinasjoner ved mye overlap
+      # Må unngå jobbing på alle esoteriske kombinasjoner ved mye overlap
       if (result$pri < 6) {
         letn <- jobb[1]
         # cat("Let videres med letn",letn,"\n")
@@ -1284,7 +1284,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
       data.table::setkeyv(FIL, names(RD$Filters[[del]]))
       data.table::setkeyv(RD$Filters[[del]], names(RD$Filters[[del]]))
       if (echo == 1) {
-        cat("Filtrerer", del, "fÃ¸r dim(FIL)=", dim(FIL))
+        cat("Filtrerer", del, "før dim(FIL)=", dim(FIL))
       }
       if (any(duplicated(RD$Filters[[del]]))) {
         print("CARTESIAN????")
@@ -1297,7 +1297,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
       }
     }
     
-    # NB! RekkefÃ¸lge er essensiell, dvs at ubeting kommer til slutt
+    # NB! Rekkefølge er essensiell, dvs at ubeting kommer til slutt
     beting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$BetingOmk, globs$DefDesign$BetingF))
     ubeting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$UBeting))
     
@@ -1308,8 +1308,8 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
       
       # Sjekk type omkoding som trengs.
       # Dersom hver orgkode skal til mange omkkoder
-      # er det uheldig Ã¥ merge FIL[KB] om FIL er stor siden det lages mange kopier av orglinjer i FIL
-      # i slike tilfeller kobles i stedet inn en loop over omkoding til hver omktab  (jfr laging av tiÃ¥rssnitt i KREFT)
+      # er det uheldig å merge FIL[KB] om FIL er stor siden det lages mange kopier av orglinjer i FIL
+      # i slike tilfeller kobles i stedet inn en loop over omkoding til hver omktab  (jfr laging av tiårssnitt i KREFT)
       
       data.table::setkeyv(RD$KBs[[del]], orgtabs)
       replikfaktor <- RD$KBs[[del]][, list(N = .N), by = orgtabs][, mean(N)]
@@ -1331,7 +1331,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
           # FIL[GEOniv_omk=="B" & GEOniv=="S" & grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list(substr(GEO,0,6),substr(GEO,0,2))]
           # FIL[GEOniv_omk=="B" & GEOniv=="S" & !grepl("^(0301|1103|1201|1601)",GEO),c("GEO","FYLKE"):=list("999999","99")]
           FIL[GEOniv_omk == "B" & GEOniv == "S" & !grepl("^(0301|1103|1201|1601|4601|5001)", GEO), c("GEO", "FYLKE") := list("999999", "99")]
-          # Dette er dÃ¥rlig, bÃ¸r endre til
+          # Dette er dårlig, bør endre til
           # FIL[GEOniv_omk=="B" & GEOniv=="S" & !GEO %in% globs$GeoKoder[GEOniv=="B"]$GEO,c("GEO","FYLKE"):=list("999999","99")]
           FIL[GEOniv_omk == "H" & GEOniv != "H", GEO := plyr::mapvalues(FYLKE, globs$HELSEREG$FYLKE, globs$HELSEREG$HELSEREG, warn_missing = FALSE)]
           # FIL[GEOniv_omk=="H" & GEOniv!="H",FYLKE:="00"]
@@ -1340,7 +1340,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs(), echo = 0) {
         data.table::setkeyv(FIL, bycols)
         lpl <- paste("list(", lp, ")", sep = "")
         FIL <- FIL[, eval(parse(text = lpl)), by = bycols]
-        # Dette skulle vel vÃ¦rt bedre, men blir alt for tregt? nÃ¥r ikke bycols er key
+        # Dette skulle vel vært bedre, men blir alt for tregt? når ikke bycols er key
         # FIL<-FIL[RD$KBs[[del]],nomatch=0,allow.cartesian=TRUE][, eval(parse(text=lp)), by=bycols]
       } else {
         KB <- data.table::copy(RD$KBs[[del]])
@@ -1515,20 +1515,20 @@ LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), gl
         # Sy sammen
         commontabs <- globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(NF)]
         
-        # Er usikker pÃ¥ om hva som egentlig er best her.
+        # Er usikker på om hva som egentlig er best her.
         # Siden OmkodFraPart brukt i EkstraherRadSummer gir full rektulangusering kan man ha satt
-        # deler i NF som er udekket i TNF. 1) Disse Ã¸nskes vel egentlig ikke med
-        # men motsatt, 2) dersom TNF ha manglende GEO-koder som finnes i NF er det kanskje Ã¸nskelig Ã¥ ha disse med
-        # Jeg velger Ã¥ sette venstre join TNF->NF slik at problem 1 faller bort
-        # SÃ¥ lenge hervÃ¦rende prosedyre bare kjÃ¸res etter at TNF er rektangularisert mht GEO faller ogsÃ¥ 2) bort
-        # Dette gjelder i standard produskjonslÃ¸ype (LagTnTabell, LagKUBE etc)
+        # deler i NF som er udekket i TNF. 1) Disse ønskes vel egentlig ikke med
+        # men motsatt, 2) dersom TNF ha manglende GEO-koder som finnes i NF er det kanskje ønskelig å ha disse med
+        # Jeg velger å sette venstre join TNF->NF slik at problem 1 faller bort
+        # Så lenge herværende prosedyre bare kjøres etter at TNF er rektangularisert mht GEO faller også 2) bort
+        # Dette gjelder i standard produskjonsløype (LagTnTabell, LagKUBE etc)
         
         setkeym(TNF, commontabs)
         setkeym(NF, commontabs)
         dimorg <- dim(TNF)
         TNF <- NF[, c(commontabs, nycols), with = FALSE][TNF]
-        cat("LeggTilSumFraRader. FÃ¸r er dim(TNF)", dimorg, "og dim(NF)", dim(NF), "etter er dim(TNF)", dim(TNF), "\n")
-        # altsÃ¥ ikke
+        cat("LeggTilSumFraRader. Før er dim(TNF)", dimorg, "og dim(NF)", dim(NF), "etter er dim(TNF)", dim(TNF), "\n")
+        # altså ikke
         # TNF<-merge(TNF,NF[,c(commontabs,nycols),with=FALSE],all=TRUE,by=commontabs)
         
         # TNF<-merge(TNF,NF[,c(commontabs,nycols),with=FALSE],all=TRUE,by=commontabs)
@@ -1570,7 +1570,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
   pstrorg <- gsub("(^ *|& *)(KJONN|UTD|LAND|INNVKAT)( *&| *$)", "\\1\\2==0\\3", pstrorg)
   
   # Intervaller
-  # Er det mulig Ã¥ abstrahere her, dvs Ã¥ ta alle "INT"-deler med samme syntaks???
+  # Er det mulig å abstrahere her, dvs å ta alle "INT"-deler med samme syntaks???
   pstrorg <- gsub("ALDER *(={1,2}) *\"*ALLE\"*", paste("ALDERl==", amin, " & ALDERh==", amax, sep = ""), pstrorg)
   pstrorg <- gsub("ALDER *(={1,2}) *(\\d+)$", "ALDERl==\\2 & ALDERh==\\2", pstrorg)
   pstrorg <- gsub("AAR *(={1,2}) *(\\d+)$", "AARl==\\2 & AARh==\\2", pstrorg)
@@ -1595,7 +1595,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
   
   # Omkod disse
   if (length(subvals) > 0) {
-    # For omkodbare kolonner mÃ¥ disse omkodes til sÃ¸kte verdier (for generalitet mÃ¥ det omkodes selv om disse finnes)
+    # For omkodbare kolonner må disse omkodes til søkte verdier (for generalitet må det omkodes selv om disse finnes)
     OmkParts <- list()
     for (del in names(globs$DefDesign$DelKols)) {
       if (all(globs$DefDesign$DelKols[[del]] %in% names(subvals))) {
@@ -1721,9 +1721,9 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = FinnGlobs()) {
     setkeym(OmkDesNy, OmkKols)
     Org[["OmkDesign"]] <- OmkDesNy
   }
-  # Merk, det gir bare mening Ã¥ bruke denne for Ã¥ lage et TIL-design, da trengs ikke de fÃ¸lgende delene
-  # Om det modifiserte designet skal brukes som et FRA-design mÃ¥ ogsÃ¥ disse endres. Det er en klÃ¸nete operasjon (og som vel knapt er veldefinert)
-  # Kan altsÃ¥ IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  # Merk, det gir bare mening å bruke denne for å lage et TIL-design, da trengs ikke de følgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design må også disse endres. Det er en klønete operasjon (og som vel knapt er veldefinert)
+  # Kan altså IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
   
   Org[["Design"]] <- NULL
   Org[["SKombs"]] <- NULL
@@ -1746,7 +1746,7 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, na.rm 
   UT <- KUBE[0, ]
   tabs <- setdiff(FinnTabKols(names(KUBE)), c("AARl", "AARh"))
   valkols <- FinnValKols(names(KUBE))
-  # Utrykk for KH-aggregering (med hjelpestÃ¸rrelses for snitt)
+  # Utrykk for KH-aggregering (med hjelpestørrelses for snitt)
   if (na.rm == FALSE) {
     lpv <- paste(valkols, "=sum(", valkols, ",na.rm=", na.rm, "),",
                  valkols, ".f=max(", valkols, ".f),",
@@ -1777,7 +1777,7 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, na.rm 
   } else {
     aara <- intersect((min(aara) + per - 1):max(aara), aara)
   }
-  cat("Finner", per, "-Ã¥rs sum for ")
+  cat("Finner", per, "-års sum for ")
   for (aar in aara) {
     cat(aar, " ")
     lp <- paste("list(AARl=", aar - per + 1, ",AARh=", aar, ",", lpv, ")", sep = "")
@@ -1819,8 +1819,8 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_d
   AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
   
   vals <- FinnValKols(names(FG))
-  # FinnValKolsF funker ikke riktig!!!! BÃ¥de pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
-  # MÃ¥ utbedres gjennomgripende, men kan ikke gjÃ¸re dette nÃ¥ derfor bare denne ad hoc lÃ¸sninga
+  # FinnValKolsF funker ikke riktig!!!! Både pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
+  # Må utbedres gjennomgripende, men kan ikke gjøre dette nå derfor bare denne ad hoc løsninga
   if (D_develop_predtype == "IND") {
     alletabs <- setdiff(names(FG), FinnValKolsF(names(FG)))
   } else {
@@ -1940,7 +1940,7 @@ DekkerInt <- function(FRA, TIL) {
   is_kh_debug()
   
   # Sjekker at hele intervallet TIL[,1]-TIL[,2] dekkes av intervallene i FRA
-  # Bryr seg ikke om overlapp her, det gjÃ¸res andre steder
+  # Bryr seg ikke om overlapp her, det gjøres andre steder
   # Kompakt, men effektiv syntaks
   return(all(TIL[, 1]:TIL[, 2] %in% unlist(mapply(seq, FRA[, 1], FRA[, 2]))))
 }
@@ -1991,7 +1991,7 @@ do_stata_prikk <- function(dt, spc, batchdate, globs){
   }
   
   if (RES$feil != "") {
-    stop("Noe gikk galt i kjÃ¸ring av STATA \n", RES$feil)
+    stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
   }
   
   return(dt)
@@ -2162,7 +2162,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         FRISKVIK[, (kastkols) := NA]
       }
       
-      # ALLTID prikk MEIS dersom SPVFLAGG > 0. Denne skal ut i profiler, og kan ikke vÃ¦re uprikket. 
+      # ALLTID prikk MEIS dersom SPVFLAGG > 0. Denne skal ut i profiler, og kan ikke være uprikket. 
       FRISKVIK[SPVFLAGG > 0, MEIS := NA]
       
       FRISKVIK <- FRISKVIK[, mget(c(globs$FriskvikTabs, globs$FriskvikVals))]
@@ -2180,7 +2180,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
       }
     } else {
-      cat("ADVARSEL!!!!!!!! modus ", modus, "i FRISKVIK stÃ¸ttes ikke\n")
+      cat("ADVARSEL!!!!!!!! modus ", modus, "i FRISKVIK støttes ikke\n")
     }
   }
 }
