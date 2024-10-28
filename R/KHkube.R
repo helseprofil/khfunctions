@@ -689,6 +689,9 @@ LagKUBE <- function(KUBEid,
     KUBE <- KUBE[!KJONN %in% c(8, 9), ]
   }
   
+  ## ---- REKTANGULARISERE MANGLENDE RADER FOR BYDEL ----
+  ## Der bydel starter senere enn andre må disse radene genereres, da ALLVIS ikke takler manglende rader.
+  
   # LAYOUT
   utkols <- c(tabs, OutVar)
   ALLVIS <- data.table::copy(KUBE)

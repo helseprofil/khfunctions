@@ -2283,8 +2283,8 @@ fix_geo_special <- function(d,
       .years <- 2019:2022
     } 
     .geos <- c("1508", "1580")
-    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    KUBE[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
+    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
   }
   return(d)
 }

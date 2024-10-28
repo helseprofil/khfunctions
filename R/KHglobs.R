@@ -255,7 +255,7 @@ SettGlobs <- function(path = "", modus = NA) {
   
   # If path is not given, and defpath is not found, print warning
   if (path == "") {
-      cat(globs$stjstr, "******KRITISK FEIL: path ikke funnet\n******Har du tilgang til F:/?", globs$stjstr, sep = "")
+      cat(globs$stjstr, "******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?", globs$stjstr, sep = "")
   }
   
   # if path does not contain db file, print error and set path = ""

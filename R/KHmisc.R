@@ -411,29 +411,17 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
   valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
   if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
   
-  # if (snitt == FALSE) {
-  # lp <- paste("list(",
-  #             paste(valkols, "=sum(", valkols, "),",
-  #                   valkols, ".f=max(", valkols, ".f),",
-  #                   valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
-  #                   sep = "", collapse = ","
-  #             ),
-  #             ")",
-  #             sep = ""
-  # )
-  # FIL <- FIL[, eval(parse(text = lp)), by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+  colorder <- tabnames
+  for(val in valkols){
+    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+  data.table::setcolorder(FIL, colorder)
 
-    FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
-    FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
-    colorder <- tabnames
-    for(val in valkols){
-      FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
-      colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
-    }
-    FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
-    data.table::setcolorder(FIL, colorder)
-
-    # USIKKER PÅ OM DET UNDER KAN SLETTES (TROR IKKE DET BRUKES), DET OVER KAN ERSTATTES
+    # USIKKER PÅ OM DET UNDER KAN SLETTES (TROR IKKE DET BRUKES)
   # } else {
   #   # Sett ogsaa hjelpestoerrelser for vurdering av snitt
   #   lp <- paste("list(",

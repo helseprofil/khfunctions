@@ -1,7 +1,7 @@
 library(profvis)
 
 path <- file.path(fs::path_home(), "helseprofil", "KHprofiler")
-KUBENAVN <- "ENPERSON"
+KUBENAVN <- "HKR"
 
 
 for(b in c("master", "dev")){
@@ -21,4 +21,23 @@ for(b in c("master", "dev")){
   rm("BUFFER")
   rm(p)
   gc()
+}
+
+
+# To compare the total time spent, use e.g. system.time(LagKUBE(..)) 
+
+
+time <- list()
+for(b in c("master", "dev")){
+  
+  gc()
+  branch <- b
+  usebranch(branch)
+  
+  time[[branch]] <- system.time(LagKUBE(KUBENAVN, write = F))
+  
+  rm("RESULTAT")
+  rm("BUFFER")
+  gc()
+  
 }
