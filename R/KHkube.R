@@ -272,7 +272,7 @@ LagKUBE <- function(KUBEid,
       if (AntYMiss > 0) {
         cat("Setter SumOverAar med AntYMiss=", AntYMiss, "\n")
       }
-      maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, na.rm = TRUE, report_lpsvars = TRUE, globs = globs)
+      maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, globs = globs)
       
       # sett rate paa nytt
       if (TNPdscr$NEVNERKOL != "-") {
