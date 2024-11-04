@@ -55,7 +55,7 @@ LagKUBE <- function(KUBEid,
   }
   
   # Lage og eksportere USER/helseprofil/kubespec.csv
-  kube_spec(spec = KUBEdscr, dims = NA)
+  stataspec <- kube_spec(spec = KUBEdscr, dims = NA)
   
   # If write = TRUE, save ACCESS specs
   if(isTRUE(write)){

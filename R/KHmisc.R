@@ -919,8 +919,10 @@ usebranch <- function(branch){
 
 #' uselocal (VL)
 #' for development
-uselocal <- function(test = F){
+uselocal <- function(test = F, debug = F){
   rm(list = lsf.str(all.names = T))
+  show_functions <<- debug
+  show_arguments <<- debug
   source("./R/KHmisc.R", encoding = "latin1")
   source("./R/KHpaths.R", encoding = "latin1")
   if(test) .useTest()

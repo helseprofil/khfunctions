@@ -793,12 +793,13 @@ FinnRedesign <- function(DesFRA,
   # DEV: Denne delen kan hentes ut til en egen funksjon
   for (del in names(KB)) {
     if (del %in% names(DesTIL$Part) & del %in% names(DesFRA$Part)) {
-      # DesTIL$Part[[del]] <- data.table::copy(data.table::as.data.table(DesTIL$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
+      d <- data.table::copy(data.table::setDT(DesTIL$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
       delH <- paste0(del, "_HAR")
+      delP <- paste0(del, "_pri")
       delO <- paste0(del, "_obl")
       delD <- paste0(del, "_Dekk")
-      if (!delH %in% names(DesTIL$Part[[del]])) {
-        DesTIL$Part[[del]][, (delH) := 1]
+      if (!delH %in% names(d)) {
+        d[, (delH) := 1]
       }
       KBD <- as.data.table(KB[[del]])
       kol <- as.character(globs$DefDesign$DelKolN[del])
@@ -810,16 +811,15 @@ FinnRedesign <- function(DesFRA,
       
       # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
       if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
-        tabN <- as.character(globs$DefDesign$DelKolN[del])
-        tilTabs <- DesTIL$Part[[del]][, ..tabN]
-        KBD <- setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(tabN, paste0(tabN, "_omk"), paste0(del, c("_pri", "_obl"))))
+        tilTabs <- d[, ..kol]
+        KBD <- setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
         Parts[[del]] <- KBD
       }
       
       if (globs$DefDesign$DelType[del] == "COL") {
         if (nrow(KBD) > 0) {
           # Filtrer bort TIL-koder i global-KB som ikke er i desTIL
-          KBD <- KBD[get(kolomk) %in% DesTIL$Part[[del]][[kol]]]
+          KBD <- KBD[get(kolomk) %in% d[[kol]]]
           setkeyv(KBD, kolomkpri)
           KBD[, (delH) := as.integer(0L)]
           KBD[get(kol) %in% DesFRA$Part[[del]][[kol]], (delH) := 1L]
@@ -839,7 +839,7 @@ FinnRedesign <- function(DesFRA,
           KBD[, (kols) := tstrsplit(get(kol), "_", fixed = TRUE)]
           KBD[, (kolsomk) := tstrsplit(get(kolomk), "_", fixed = TRUE)]
           # Filtrer KBD mot TIL!!
-          KBD <- KBD[kolomk %in% apply(DesTIL$Part[[del]][, ..kols], 1, paste, collapse = "_")]
+          KBD <- KBD[kolomk %in% apply(d[, ..kols], 1, paste, collapse = "_")]
         }
         # Maa fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
         # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
@@ -847,7 +847,7 @@ FinnRedesign <- function(DesFRA,
         # Usikker paa om det alltid er best aa slippe disse gjennom.
         
         IntFra <- DesFRA$Part[[del]][, ..kols]
-        IntTil <- DesTIL$Part[[del]][, ..kols]
+        IntTil <- d[, ..kols]
         # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
         IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
         IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
@@ -911,7 +911,6 @@ FinnRedesign <- function(DesFRA,
       # Koble med DeSFRA
       data.table::setkeyv(Parts[[del]], kols)
       data.table::setkeyv(DesFRA$SKombs[[kombn]], kols)
-      # betD <- DesFRA$SKombs[[kombn]][Parts[[del]], allow.cartesian = TRUE]
       betD <- collapse::join(DesFRA$SKombs[[kombn]], Parts[[del]], how = "right", multiple = T, verbose = F)
       betD[is.na(HAR), HAR := 0]
       # Maa kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
@@ -923,21 +922,18 @@ FinnRedesign <- function(DesFRA,
       betD <- SettPartDekk(betD, del = del, har = "HAR", IntervallHull = IntervallHull, betcols = betcols, globs = globs)
     } else {
       betcols <- character()
-      if(!is(Parts[[del]], "data.table")) betD <- data.table::setDT(Parts[[del]])
+      betD <- data.table::copy(Parts[[del]])
     }
 
     # Finn beste alternativ
     bycols <- c(kolsomk, betcols)
     if (del %in% SkalAggregeresOpp) {
       betD[get(delD) == 1, Bruk := max(get(delP)), by = bycols]
-      eval(parse(text = paste("betD[", del, "_Dekk==1,Bruk:=max(", del, "_pri),by=bycols]", sep = "")))
     } else {
       betD[get(delD) == 1, Bruk := min(get(delP)), by = bycols]
-      # eval(parse(text = paste("betD[", del, "_Dekk==1,Bruk:=min(", del, "_pri),by=bycols]", sep = "")))
     }
     
     KB <- betD[Bruk == get(delP) & get(delH) == 1]
-    # KB <- betD[eval(parse(text = paste("Bruk==", delP, " & ", del, "_HAR==1", sep = "")))]
     SKombs[[del]] <- betD
     
     # Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
@@ -945,9 +941,6 @@ FinnRedesign <- function(DesFRA,
     # Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
     # Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
     maxBet <- KB[, .(NOPri = length(unique(get(delP)))), by = kolsomk][, max(NOPri)]
-    # maxBet <- KB[, eval(parse(text = paste("list(NOPri=length(unique(", delP, ")))", sep = ""))), by = kolsomk][, max(NOPri)]
-    # Utgaatt se KB<- over
-    # KB<-KB[[del]][eval(parse(text=paste(del,"_HAR==1",sep=""))),]
     if (maxBet == 1) {
       brukcols <- c(gsub("_omk$", "", kolsomk), kolsomk)
       data.table::setkeyv(KB, brukcols)
@@ -955,7 +948,6 @@ FinnRedesign <- function(DesFRA,
       DelStatus[[del]] <- "P"
     } else {
       brukcols <- names(KB)[!grepl("(_obl|_{0,1}HAR|_Dekk|_pri|Bruk)$", names(KB))]
-      # KB[, (deletecols) := NULL]
       KBs[[del]] <- KB[, ..brukcols]
       DelStatus[[del]] <- "B"
     }
@@ -968,7 +960,7 @@ FinnRedesign <- function(DesFRA,
     common <- intersect(names(FULL), names(KB))
     data.table::setkeyv(KB, common)
     data.table::setkeyv(FULL, common)
-    FULL <- FULL[KB[, ..common], nomatch = 0, allow.cartesian = TRUE]
+    FULL <- FULL[KB[, ..common], nomatch = NULL, allow.cartesian = TRUE]
     
     # Ignorer KB der det ikke foregaar reell omkoding
     if (all(KBs[[del]][, ..kols] == KBs[[del]][, ..kolsomk])) {
@@ -1912,7 +1904,7 @@ kube_spec <- function(spec, dims){
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
-  # return(specDF)
+  return(specDF)
 }
 
 #' find_dims (vl)
