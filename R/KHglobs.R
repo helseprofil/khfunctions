@@ -1,56 +1,61 @@
+# Lese options fra en configfil, tilsvarende det som gjøres i orgdata/qualcontrol. 
+# Disse kan igjen brukes til å sette globglobs, som i: khaargang = getOption(khfunctions.year) osv. 
+# Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
+# Alle filstier og hardkodede verdier kan legges i options, det gjelder også KHpaths. 
+
 # Global parameters, starting point for SettGlobs()/FinnGlobs()
 globglobs <- list(
-  HOVEDmodus = "NH",
-  KHaargang = 2024,
-  KHgeoniv = "K",
-  KHdbname = dbNameFile,
-  KHlogg = dbLogFile,
-  StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE",
-  StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT",
-  KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA",
-  KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R",
-  KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT",
-  KubeDirQC_NH = "PRODUKTER/KUBER/NORGESHELSA/QC",
-  KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA",
-  KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R",
-  KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT",
-  KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC",
-  KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
-  FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE",
-  FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM",
-  FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL",
-  ovpDir_F = "PRODUKTER/KUBER/OVP_FYLKE",
-  ovpDir_K = "PRODUKTER/KUBER/OVP_KOMM",
-  ovpDir_B = "PRODUKTER/KUBER/OVP_BYDEL",
-  TNPDirNy = "PRODUKTER/MELLOMPROD/R/TNP/NYESTE",
-  TNPDirDat = "PRODUKTER/MELLOMPROD/R/TNP/DATERT",
-  BUFFERdir = "BIN/BUFFER",
-  DUMPdir = "RUNTIMEDUMP",
-  kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"),
-  taborgs = c("GEO", "AAR", "KJONN", "ALDER", "TAB1", "TAB2", "TAB3"),
-  NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"),
-  FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"),
-  FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"),
-  QCVals = c("TELLER", "NEVNER", "sumTELLER", "sumNEVNER", "RATE.n"),
-  KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"),
-  binDir = "bin",
+  HOVEDmodus = "NH", # bli kvitt denne
+  KHaargang = 2024, # legges i options
+  KHgeoniv = "K", # brukes bare i godkjent(), kan fjernes
+  KHdbname = dbNameFile, # legges i options
+  KHlogg = dbLogFile, # legges i options
+  StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE", # legges i options
+  StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT", # legges i options
+  KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA", # bli kvitt denne
+  KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R", # bli kvitt denne
+  KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT", # bli kvitt denne
+  KubeDirQC_NH = "PRODUKTER/KUBER/NORGESHELSA/QC", # bli kvitt denne
+  KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA", # legges i options
+  KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R", # legges i options
+  KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT", # legges i options
+  KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC", # legges i options
+  KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do", # legges i options
+  FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE", # legges i options
+  FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM", # legges i options
+  FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL", # legges i options
+  ovpDir_F = "PRODUKTER/KUBER/OVP_FYLKE", # legges i options
+  ovpDir_K = "PRODUKTER/KUBER/OVP_KOMM", # legges i options
+  ovpDir_B = "PRODUKTER/KUBER/OVP_BYDEL", # legges i options
+  TNPDirNy = "PRODUKTER/MELLOMPROD/R/TNP/NYESTE", # legges i options
+  TNPDirDat = "PRODUKTER/MELLOMPROD/R/TNP/DATERT", # legges i options
+  BUFFERdir = "BIN/BUFFER", # legges i options, erstattes med lokal mappe i helseprofil?
+  DUMPdir = "RUNTIMEDUMP", # legges i options
+  kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"), # legges i options
+  taborgs = c("GEO", "AAR", "KJONN", "ALDER", "TAB1", "TAB2", "TAB3"), # legges i options
+  NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"), # legges i options
+  FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"), # legges i options
+  FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"), # legges i options
+  QCVals = c("TELLER", "NEVNER", "sumTELLER", "sumNEVNER", "RATE.n"), # legges i options
+  KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"), # legges i options
+  binDir = "bin", # legges i options
   tmpfilerpath = "bin\tmpfiler",
-  geo_illeg = "GGG",
-  alder_illeg = "888_888",
-  alder_ukjent = "999_999",
-  kjonn_illeg = "8",
-  kjonn_ukjent = "9",
-  aar_illeg = "8888_8888",
-  utdann_illeg = "8",
-  utdann_ukjent = "9",
-  landbak_illeg = "8",
-  landbak_ukjent = "9",
-  innvkat_illeg = "8",
-  innvkat_ukjent = "9",
-  SisteBatch = "9999-01-01-01-01",
-  DefDumpFormat = "CSV",
-  stjstr = "************************************************************\n",
-  XLScols = as.vector(sapply(c("", as.vector(paste(sapply(c("", LETTERS[]), paste, LETTERS[], sep = "")))), paste, LETTERS[], sep = ""))
+  geo_illeg = "GGG", # legges i options
+  alder_illeg = "888_888", # legges i options
+  alder_ukjent = "999_999", # legges i options
+  kjonn_illeg = "8", # legges i options
+  kjonn_ukjent = "9", # legges i options
+  aar_illeg = "8888_8888", # legges i options
+  utdann_illeg = "8", # legges i options
+  utdann_ukjent = "9", # legges i options
+  landbak_illeg = "8", # legges i options
+  landbak_ukjent = "9",# legges i options
+  innvkat_illeg = "8",# legges i options
+  innvkat_ukjent = "9",# legges i options
+  SisteBatch = "9999-01-01-01-01",# legges i options
+  DefDumpFormat = "CSV",# legges i options
+  stjstr = "************************************************************\n", # bli kvitt denne
+  XLScols = as.vector(sapply(c("", as.vector(paste(sapply(c("", LETTERS[]), paste, LETTERS[], sep = "")))), paste, LETTERS[], sep = "")) # bli kvitt denne
 )
 
 #' SettDefDesignKH (kb)

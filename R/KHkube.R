@@ -42,6 +42,7 @@ LagKUBE <- function(KUBEid,
   FGPs <- Finfo$FGPs
   FilDesL <- Finfo$FilDesL
   
+  # Denne kan fjernes når modus NH utgår
   if (KUBEdscr$MODUS == "KH") {
     globs$KubeDir <- globs$KubeDir_KH
     globs$KubeDirNy <- globs$KubeDirNy_KH
@@ -204,7 +205,7 @@ LagKUBE <- function(KUBEid,
     # FINN MEISskala. Merk at dette gjelder baade ved REFVERDI_VP=P og =V
     
     if (KUBEdscr$REFVERDI_VP == "P") {
-      VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
+      VF <- KUBE[eval(rlang::parse_expr(PredFilter$PfiltStr))]
       # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og maa lages
       if (nrow(VF) == 0) {
         cat("************************************\nNOE RART MED PredFilter, IKKE I KUBEDESIGN, MAA UT PAA NY OMKODING.\nER DETTE RETT?\n")
@@ -247,16 +248,16 @@ LagKUBE <- function(KUBEid,
   
   tuppel <- intersect(c("TELLER", "NEVNER", "RATE"), names(KUBE))
   tuppel.f <- paste(tuppel, ".f", sep = "")
-  fmax <- paste("pmax(", paste(tuppel.f, collapse = ","), ")", sep = "")
+  fmax <- rlang::parse_expr(paste("pmax(", paste(tuppel.f, collapse = ","), ")", sep = ""))
   if (length(tuppel) > 0) {
-    KUBE[eval(parse(text = fmax)) > 0, (tuppel) := list(NA)]
-    KUBE[eval(parse(text = fmax)) > 0, (tuppel.f) := eval(parse(text = fmax))]
+    KUBE[eval(fmax) > 0, (tuppel) := list(NA)]
+    KUBE[eval(fmax) > 0, (tuppel.f) := eval(fmax)]
     # Om enkeltobservasjoner ikke skal brukes, men samtidig tas ut av alle summeringer
     # kan man ha satt VAL=0,VAL.f=-1
     # Dette vil ikke oedelegge summer der tallet inngaar. Tallet selv, eller sumemr av kun slike tall, settes naa til NA
     # Dette brukes f.eks naar SVANGERROYK ekskluderer Oslo, Akershus. Dette er skjuling, saa VAL.f=3
-    KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(NA)]
-    KUBE[eval(parse(text = fmax)) == -1, (tuppel) := list(3)]
+    KUBE[eval(fmax) == -1, (tuppel) := list(NA)]
+    KUBE[eval(fmax) == -1, (tuppel) := list(3)]
   }
   
   ma_satt <- 0
@@ -296,8 +297,9 @@ LagKUBE <- function(KUBEid,
       n <- 1
       orgintMult <- orgint_n
     }
-    lp <- paste("KUBE[,c(\"", paste(valkols, ".n", collapse = "\",\"", sep = ""), "\"):=list(", n, ")]", sep = "")
-    KUBE[, eval(parse(text = lp))]
+    # lp <- paste("KUBE[,c(\"", paste(valkols, ".n", collapse = "\",\"", sep = ""), "\"):=list(", n, ")]", sep = "")
+    # KUBE[, eval(parse(text = lp))]
+    KUBE[, paste0(names(.SD), ".n") := list(n), .SDcols = valkols]
   }
   
   # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
@@ -319,15 +321,25 @@ LagKUBE <- function(KUBEid,
     valkols <- FinnValKols(names(KUBE))
     anon_tot_tol <- 0.2
     
-    lp <- paste("KUBE[,':='(",
-                paste(valkols, "=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
-                      valkols, ".f=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
-                      sep = "", collapse = ","
-                ),
-                ")]",
-                sep = ""
-    )
-    eval(parse(text = lp))
+    # lp <- paste("KUBE[,':='(",
+    #             paste(valkols, "=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
+    #                   valkols, ".f=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
+    #                   sep = "", collapse = ","
+    #             ),
+    #             ")]",
+    #             sep = ""
+    # )
+    # eval(parse(text = lp))
+    
+    for(kol in valkols){
+    kol.f <- paste0(kol, ".f")
+    kol.n <- paste0(kol, ".n")
+    kol.fn3 <- paste0(kol, ".fn3")
+    data.table::set(kubekopi,
+                    i = kubekopi[get(kol.n) > 0 & get(kol.fn3)/get(kol.n) >= anon_tot_tol, which = TRUE],
+                    j = c(kol, kol.f),
+                    value = list(NA, 3))
+    }
   }
   
   if ("anoKUBE1" %in% names(dumps)) {
@@ -538,7 +550,8 @@ LagKUBE <- function(KUBEid,
     RefGEOnFilt <- paste("GEOniv=='", RefGEOn, "'", sep = "")
     VF <- eval(parse(text = paste("subset(KUBE,", RefGEOnFilt, ")", sep = "")))
   } else {
-    VF <- eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
+    VF <- KUBE[eval(rlang::parse_expr(PredFilter$PfiltStr))]
+    # eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
   }
   
   # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og maa lages
