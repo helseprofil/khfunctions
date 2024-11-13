@@ -52,11 +52,12 @@ KHerr <- function(error) {
 #' @param TABELLnavn 
 #' @param globs 
 #' @param format
-DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$DefDumpFormat) {
+DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = NULL) {
   is_kh_debug()
+  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
   
   if (format == "CSV") {
-    write.table(TABELL, file = paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".csv", sep = ""), sep = ";", na = "", row.names = FALSE)
+    write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
   } else if (format == "R") {
     .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
     print(DUMPtabs)
@@ -64,7 +65,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = globs$D
     TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
     names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
     names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-    foreign::write.dta(TABELL, paste(globs$path, "/", globs$DUMPdir, "/", TABELLnavn, ".dta", sep = ""))
+    foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
   }
 }
 
@@ -217,7 +218,7 @@ FinnTabKols <- function(knames) {
 FinnTabKolsKUBE <- function(allnames, globs = FinnGlobs()) {
   is_kh_debug()
   
-  annet <- union(union(unlist(globs$NesstarOutputDef), FinnValKolsF(allnames)), c("NORMSMR", "SMRtmp"))
+  annet <- union(union(unlist(getOption("khfunctions.valcols")), FinnValKolsF(allnames)), c("NORMSMR", "SMRtmp"))
   return(setdiff(allnames, annet))
 }
 
@@ -605,10 +606,10 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
     cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
   } else {
     if (!is.na(batch)) {
-      filn <- paste(globs$path, "/", globs$StablaDirDat, "/", FILID, "_", batch, ".rds", sep = "")
+      filn <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.dat"), "/", FILID, "_", batch, ".rds", sep = "")
     } else if (versjonert == TRUE) {
       orgwd <- getwd()
-      path <- paste(globs$path, "/", globs$StablaDirDat, sep = "")
+      path <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.dat"), sep = "")
       setwd(path)
       Filer <- unlist(list.files(include.dirs = FALSE))
       Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
@@ -620,7 +621,7 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
       }
       setwd(orgwd)
     } else {
-      filn <- paste(globs$path, "/", globs$StablaDirNy, "/", FILID, ".rds", sep = "")
+      filn <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.ny"), "/", FILID, ".rds", sep = "")
       print(filn)
     }
     if (file.access(filn, mode = 0) == -1) {
@@ -784,7 +785,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   )
   
   ## Get connection to DB
-  mdb_file <- file.path(defpath, globglobs$KHdbname)
+  mdb_file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.db"))
   conn <- RODBC::odbcDriverConnect(paste0(
     "Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",
     mdb_file
@@ -821,19 +822,19 @@ godkjent <- function(profil = c("FHP", "OVP"),
   fileNames <- tblAlle[, filename := paste0(INDIKATOR, "_", VERSJON_PROFILAAR_GEO, ".csv")][["filename"]]
   
   ## Root folder where the file is
-  pathRoot <- defpath
+  pathRoot <- getOption("khfunctions.root")
   
   ## Path for Profile
   pathProfil <- switch(utTYP,
                        "FHP" = c(
-                         globglobs$FriskVDir_F,
-                         globglobs$FriskVDir_K,
-                         globglobs$FriskVDir_B
+                         getOption("khfunctions.fhpF"),
+                         getOption("khfunctions.fhpK"),
+                         getOption("khfunctions.fhpB")
                        ),
                        "OVP" = c(
-                         globglobs$ovpDir_F,
-                         globglobs$ovpDir_K,
-                         globglobs$ovpDir_B
+                         getOption("khfunctions.ovpF"),
+                         getOption("khfunctions.ovpK"),
+                         getOption("khfunctions.ovpB")
                        )
   )
   
@@ -924,9 +925,9 @@ uselocal <- function(test = F, debug = F){
   show_functions <<- debug
   show_arguments <<- debug
   source("./R/KHmisc.R", encoding = "latin1")
-  source("./R/KHpaths.R", encoding = "latin1")
+  KH_options()
   if(test) .useTest()
-  if(!test) source("./R/KHglobs.R", encoding = "latin1")
+  source("./R/KHglobs.R", encoding = "latin1")
   source("./R/KHfilgruppefunctions.R", encoding = "latin1")
   source("./R/KHfilgruppe.R", encoding = "latin1")
   source("./R/KHkubefunctions.R", encoding = "latin1")
@@ -940,9 +941,9 @@ uselocal <- function(test = F, debug = F){
 .useTest <- function(){
   RODBC::odbcCloseAll()
   TESTMODUS <<- TRUE
-  dbNameFile <<- "STYRING/test/KHELSAtest.mdb"
-  dbLogFile <<- "STYRING/test/KHloggtest.mdb"
-  source("./R/KHglobs.R")
+  options(khfunctions.db = "STYRING/test/KHELSAtest.mdb")
+  options(khfunctions.logg = "STYRING/test/KHloggtest.mdb")
+  # source("./R/KHglobs.R")
 }
 
 
@@ -958,4 +959,24 @@ uselocal <- function(test = F, debug = F){
   csvcopy <<- FALSE
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
+}
+
+#' @title KH_options
+#' @description
+#' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
+#' option is different from the config-file, and give the option to update. 
+
+KH_options <- function(){
+  # Set global options
+  op <- options()
+  optOrg <- orgdata:::is_globs("khfunctions")
+  orgDT <- !(names(optOrg) %in% names(op))
+  if(any(orgDT)) options(optOrg[orgDT])
+  corrglobs <- orgdata:::is_correct_globs(optOrg)
+  if(!isTRUE(corrglobs)){
+    x <- utils::askYesNo("Options are not the same as in the config file, update options now?")
+    if(isTRUE(x)){
+      orgdata:::update_globs("khfunctions")
+    }
+  }
 }

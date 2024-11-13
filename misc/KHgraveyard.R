@@ -857,3 +857,24 @@ if(length(.localvers) == 0){
     }
   }
 }
+
+#' SettKubedirs (kb)
+#'
+#' @param globs 
+#' @param modus 
+SettKubedirs <- function(globs, modus = NA) {
+  is_kh_debug()
+  
+  if (modus == "KH") {
+    globs$KubeDir <- globs$KubeDir_KH
+    globs$KubeDirNy <- globs$KubeDirNy_KH
+    globs$KubeDirDat <- globs$KubeDirDat_KH
+    globs$FriskVDir <- globs$FriskVDir_KH
+  } else {
+    globs$KubeDir <- globs$KubeDir_NH
+    globs$KubeDirNy <- globs$KubeDirNy_NH
+    globs$KubeDirDat <- globs$KubeDirDat_NH
+    globs$FriskVDir <- globs$FriskVDir_NH
+  }
+  return(globs)
+}

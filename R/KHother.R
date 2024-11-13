@@ -6,7 +6,7 @@
 #' @param aar1 
 #' @param aar2 
 #' @param modus 
-SammelignAarganger <- function(globs = FinnGlobs(), aar1 = globs$KHaargang, aar2 = globs$KHaargang - 1, modus = "KH") {
+SammelignAarganger <- function(globs = FinnGlobs(), aar1 = getOption("khfunctions.year"), aar2 = getOption("khfunctions.year") - 1, modus = "KH") {
   is_kh_debug()
   
   KUBE1 <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT KUBE_NAVN, VERSJON FROM ", modus, aar1, "_KUBESTATUS", sep = ""), stringsAsFactors = F))
@@ -27,7 +27,6 @@ SammelignAarganger <- function(globs = FinnGlobs(), aar1 = globs$KHaargang, aar2
 SammenlignKubePar <- function(PAR, modus = NA, globs = FinnGlobs()) {
   is_kh_debug()
   
-  globs <- SettKubedirs(globs, modus = modus)
   for (i in 1:nrow(PAR)) {
     paret <- PAR[i, ]
     if (grepl("^\\d{4}", paret$VERSJON1) & grepl("^\\d{4}", paret$VERSJON2)) {
@@ -57,27 +56,6 @@ SammenlignKubePar <- function(PAR, modus = NA, globs = FinnGlobs()) {
   }
 }
 
-#' SettKubedirs (kb)
-#'
-#' @param globs 
-#' @param modus 
-SettKubedirs <- function(globs, modus = NA) {
-  is_kh_debug()
-  
-  if (modus == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
-    globs$KubeDirNy <- globs$KubeDirNy_KH
-    globs$KubeDirDat <- globs$KubeDirDat_KH
-    globs$FriskVDir <- globs$FriskVDir_KH
-  } else {
-    globs$KubeDir <- globs$KubeDir_NH
-    globs$KubeDirNy <- globs$KubeDirNy_NH
-    globs$KubeDirDat <- globs$KubeDirDat_NH
-    globs$FriskVDir <- globs$FriskVDir_NH
-  }
-  return(globs)
-}
-
 #' TmpRutineSammenlignKHkuber (kb)
 #'
 #' @param kubefilnavn1 
@@ -102,7 +80,7 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
   
   print(names(KUBE1))
   print(names(KUBE2))
-  tabs <- unique(c(globs$FriskvikTabs, tabs))
+  tabs <- unique(c(getOption("khfunctions.profiltabs"), tabs))
   
   
   tabs1 <- intersect(names(KUBE1), tabs)
@@ -113,11 +91,11 @@ TmpRutineSammenlignKHkuber <- function(kubefilnavn1, kubefilnavn2, KUBENAVN, tab
   KHglobs$DefDesign$DesignKols
   
   ## Folder to keep the output if not allready there
-  currYr <- KHglobs$KHaargang - 1
-  nextYr <- KHglobs$KHaargang
+  currYr <- KHgetOption("khfunctions.year") - 1
+  nextYr <- KHgetOption("khfunctions.year")
   foldName <- paste0("Batch", currYr, "vs", nextYr)
   
-  validDir <- file.path(defpath, "VALIDERING/NESSTAR_KUBER", foldName)
+  validDir <- file.path(getOption("khfunctions.root"), "VALIDERING/NESSTAR_KUBER", foldName)
   
   if (isFALSE(fs::dir_exists(validDir))) {
     fs::dir_create(validDir)
@@ -154,9 +132,9 @@ FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
   is_kh_debug()
   
   if (is.na(batch)) {
-    filn <- paste(globs$path, "/", globs$KubeDirNy, fila, ".rds", sep = "")
+    filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kube.ny"), paste0(fila, ".rds"))
   } else {
-    filn <- paste(globs$path, "/", globs$KubeDirDat, "/R/", fila, "_", batch, ".rds", sep = "")
+    filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kube.dat"), "R", paste0(fila, "_", batch, ".rds"))
   }
   KUBE <- data.table::data.table()
   if (file.access(filn, mode = 0) == -1) {
@@ -178,19 +156,19 @@ FinnKubeT <- function(fila, batch = NA, globs = FinnGlobs()) {
 KonverterRMappe <- function(Rmappe, Utmappe, Format = "csv", globs = FinnFlobs) {
   is_kh_debug()
   
-  print(paste(globs$path, Rmappe, sep = "/"))
-  setwd(paste(globs$path, Rmappe, sep = "/"))
+  print(paste(getOption("khfunctions.root"), Rmappe, sep = "/"))
+  setwd(paste(getOption("khfunctions.root"), Rmappe, sep = "/"))
   filer <- list.files()
   for (fil in filer[grepl("\\.rds$", filer)]) {
     filn <- gsub("(.*)\\.rds$", "\\1", fil)
     TABELL <- readRDS(fil)
     cat("Eksporterer ", filn, "\n")
     if (tolower(Format) == "csv") {
-      filen <- paste(globs$path, "/", Utmappe, filn, ".csv", sep = "")
+      filen <- paste(getOption("khfunctions.root"), "/", Utmappe, filn, ".csv", sep = "")
       write.table(TABELL, file = filen, sep = ";", row.names = FALSE)
       cat("CSV til", filen, "\n")
     } else if (tolower(Format) == "stata") {
-      foreign::write.dta(TABELL, file = paste(globs$path, "/", Utmappe, filn, ".dta", sep = ""))
+      foreign::write.dta(TABELL, file = paste(getOption("khfunctions.root"), "/", Utmappe, filn, ".dta", sep = ""))
     }
   }
 }
@@ -203,10 +181,10 @@ KonverterRMappe <- function(Rmappe, Utmappe, Format = "csv", globs = FinnFlobs) 
 KonverterKUBER <- function(Format = "CSV", versjonert = FALSE, globs = FinnGlobs()) {
   is_kh_debug()
   
-  # Rmappe<-paste(globs$path,"/",globs$KubeDirNy,sep="")
-  Rmappe <- globs$KubeDirNy
+  # Rmappe<-paste(getOption("khfunctions.root"),"/",getOption("khfunctions.kubedir")Ny,sep="")
+  Rmappe <- getOption("khfunctions.kube.ny")
   if (versjonert == TRUE) {
-    Rmappe <- paste0(globs$KubeDirDat, "/R/")
+    Rmappe <- paste0(getOption("khfunctions.kube.dat"), "/R/")
   }
   Utmappe <- gsub("/R/", paste("/", Format, "/", sep = ""), Rmappe)
   KonverterRMappe(Rmappe = Rmappe, Utmappe = Utmappe, Format = Format, globs = globs)
@@ -219,10 +197,10 @@ KonverterKUBER <- function(Format = "CSV", versjonert = FALSE, globs = FinnGlobs
 KonverterStablaFilgrupper <- function(Format = "CSV", globs = FinnGlobs()) {
   is_kh_debug()
   
-  # Rmappe<-paste(globs$path,"/",globs$KubeDirNy,sep="")
-  Rmappe <- globs$StablaDirNy
+  # Rmappe<-paste(getOption("khfunctions.root"),"/",getOption("khfunctions.kubedir")Ny,sep="")
+  Rmappe <- getOption("khfunctions.filegroups.ny")
   if (versjonert == TRUE) {
-    Rmappe <- globs$StablaDirDat
+    Rmappe <- getOption("khfunctions.filegroups.dat")
   }
   Utmappe <- gsub("(.*/)R(/.*)", paste("\\1", Format, "\\2", sep = ""), Rmappe)
   KonverterRMappe(Rmappe = Rmappe, Utmappe = Utmappe, Format = Format, globs = globs)
@@ -378,7 +356,7 @@ FinnDatertKube <- function(KUBEid, batch = NA, silent = FALSE, hist = 0) {
   is_kh_debug()
   
   globs <- FinnGlobs()
-  path <- paste(globs$path, "/", globs$KubeDirDat, "/R/", sep = "")
+  path <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.kubedir"), "/R/", sep = "")
   # Finner nyeste daterte versjon om ikke batcdate er gitt
   if (is.na(batch)) {
     orgwd <- getwd()
@@ -519,7 +497,7 @@ CompNyOgKlarAlle <- function(globs = FinnGlobs()) {
   
   batchdate <- SettKHBatchDate()
   KUBER <- sqlQuery(globs$dbh, "SELECT KUBE_NAVN FROM KUBER", as.is = TRUE)
-  utfil <- paste(globs$path, "/", globs$KubeDir, "/LOGG/CompNyOgKlar_", batchdate, ".txt", sep = "")
+  utfil <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.kubedir"), "/LOGG/CompNyOgKlar_", batchdate, ".txt", sep = "")
   sink(utfil, split = TRUE)
   for (i in 1:nrow(KUBER)) {
     comp <- try(CompNyOgKlar(KUBER[i, 1], streng = FALSE, globs = globs))

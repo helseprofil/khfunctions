@@ -29,8 +29,8 @@ LagFilgruppe <- function(gruppe,
                          localDir = setLocal) {
   is_kh_debug()
   
-  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
-  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))
+  globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.logg")))
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
@@ -44,9 +44,8 @@ LagFilgruppe <- function(gruppe,
   }
   
   ## To see which DB is currently used
-  ## that value in globs$KHdbname and globs$path
-  whichPath <- ifelse(localDir, setLocalPath, defpath)
-  whichDB <- ifelse(localDir, setDBFile, dbNameFile)
+  whichPath <- ifelse(localDir, setLocalPath, getOption("khfunctions.root"))
+  whichDB <- ifelse(localDir, setDBFile, getOption("khfunctions.db"))
   message(
     lineMsg,
     "  DB name: ", whichDB, "\n",
@@ -83,12 +82,10 @@ LagFilgruppe <- function(gruppe,
       for (i in 1:nrow(delfiler)) {
         
         ## Need root path for raw files
-        getSti <- rawPath
-        
         filbesk <- delfiler[i, ]
         tm <- proc.time()
-        filbesk$filn <- file.path(getSti, filbesk$FILNAVN)
-        ## filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
+        filbesk$filn <- file.path(getOption("khfunctions.root"), filbesk$FILNAVN)
+        ## filbesk$filn<-paste(getOption("khfunctions.root"),filbesk$FILNAVN,sep="/")
         filbesk$filn <- gsub("\\\\", "/", filbesk$filn)
         # Sett evt default for aar basert paa aktuelt aarstall
         filbesk$AAR <- gsub("<\\$y>", paste("<", filbesk$DEFAAR, ">", sep = ""), filbesk$AAR)
@@ -187,9 +184,9 @@ LagFilgruppe <- function(gruppe,
     RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
     
     # SKRIV RESULTAT
-    path <- globs$path
+    path <- getOption("khfunctions.root")
     
-    if (!exists("testmappe")) testmappe <- file.path(globs$path, "TEST")
+    if (!exists("testmappe")) testmappe <- file.path(getOption("khfunctions.root"), "TEST")
     
     if (test) {
       printR <- FALSE
@@ -200,12 +197,12 @@ LagFilgruppe <- function(gruppe,
     }
     
     if (printR) {
-      utfiln <- paste(path, "/", globs$StablaDirNy, "/", gruppe, ".rds", sep = "")
+      utfiln <- paste(path, "/", getOption("khfunctions.filegroups.ny"), "/", gruppe, ".rds", sep = "")
       # save(Filgruppe,file=utfiln)
       print(utfiln)
       saveRDS(Filgruppe, file = utfiln)
       if (versjonert == TRUE) {
-        utfild <- paste(path, "/", globs$StablaDirDat, "/", gruppe, "_", batchdate, ".rds", sep = "")
+        utfild <- paste(path, "/", getOption("khfunctions.filegroups.dat"), "/", gruppe, "_", batchdate, ".rds", sep = "")
         file.copy(utfiln, utfild)
       }
     }

@@ -17,6 +17,7 @@ library(zoo)
 library(plyr) 
 library(sqldf)
 library(stringr)
+library(rlang)
 library(intervals)
 library(data.table)
 library(readxl)
@@ -36,6 +37,7 @@ show_arguments <- FALSE
 
 # Load setup scripts (paths, global parameters, functions) to enable all functionality
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHmisc.R", encoding = "latin1")
+KH_options()
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHpaths.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHglobs.R", encoding = "latin1")
 source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfilgruppefunctions.R", encoding = "latin1")

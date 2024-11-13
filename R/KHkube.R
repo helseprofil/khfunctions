@@ -24,11 +24,15 @@ LagKUBE <- function(KUBEid,
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   
   # Save Console Output
-  sink(file = file.path(globs$path, globs$DUMPdir, "KUBELOGG", paste0(KUBEid, "_", batchdate, "_LOGG.txt")), 
+  sink(file = file.path(getOption("khfunctions.root"), 
+                        getOption("khfunctions.dumpdir"), 
+                        paste0("KUBELOGG_", KUBEid, "_", batchdate, "_LOGG.txt")), 
        split = TRUE)
   
-  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
-  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                                      getOption("khfunctions.db")))
+  globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                                      getOption("khfunctions.logg")))
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   # Les inn noedvendig informasjon om filene involvert (skilt ut i egen funksjon for lesbarhet)
@@ -42,26 +46,16 @@ LagKUBE <- function(KUBEid,
   FGPs <- Finfo$FGPs
   FilDesL <- Finfo$FilDesL
   
-  # Denne kan fjernes når modus NH utgår
-  if (KUBEdscr$MODUS == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
-    globs$KubeDirNy <- globs$KubeDirNy_KH
-    globs$KubeDirDat <- globs$KubeDirDat_KH
-    globs$KubeDirQc <- globs$KubeDirQC_KH
-  } else {
-    globs$KubeDir <- globs$KubeDir_NH
-    globs$KubeDirNy <- globs$KubeDirNy_NH
-    globs$KubeDirDat <- globs$KubeDirDat_NH
-    globs$KubeDirQc <- globs$KubeDirQC_NH
-  }
-  
   # Lage og eksportere USER/helseprofil/kubespec.csv
   stataspec <- kube_spec(spec = KUBEdscr, dims = NA)
   
   # If write = TRUE, save ACCESS specs
   if(isTRUE(write)){
     cat("Saving ACCESS specs to file:\n")
-    utfils <- paste(globs$path, "/", globs$KubeDir, "/SPECS/spec_", KUBEid, "_", batchdate, ".csv", sep = "")
+    utfils <- file.path(getOption("khfunctions.root"), 
+                        getOption("khfunctions.kubedir"), 
+                        getOption("khfunctions.kube.specs"), 
+                        paste0("spec_", KUBEid, "_", batchdate, ".csv"))
     specs <- GetAccessSpecs(KUBEid = KUBEid, kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, datef = datef, globs = globs)
     data.table::fwrite(specs, file = utfils, sep = ";")
     cat("\n", utfils)
@@ -621,7 +615,7 @@ LagKUBE <- function(KUBEid,
   } else {
     NstarTup <- character(0)
   }
-  OutVar <- globs$NesstarOutputDef[NstarTup]
+  OutVar <- as.character(getOption("khfunctions.valcols")[NstarTup])
   
   if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
     hjelpeVar <- unlist(stringr::str_split(KUBEdscr$EKSTRAVARIABLE, ","))
@@ -712,7 +706,7 @@ LagKUBE <- function(KUBEid,
   # SKJUL HELE TUPPELET
   # FLAGG PER VARIABEL KAN/BoeR VURDERES!
   # Litt tricky aa finne riktig ".f"-kolloner. Maa ikke ta med mBEFc f.eks fra BEF fila dersom denne er irrelevant
-  fvars <- intersect(names(ALLVIS), paste(union(globs$NesstarOutputDef, OutVar), ".f", sep = ""))
+  fvars <- intersect(names(ALLVIS), paste(union(getOption("khfunctions.valcols"), OutVar), ".f", sep = ""))
   # fvars<-intersect(names(NESSTAR),c(OrgKubeKolNames[grepl(".f$",OrgKubeKolNames)],"NORM.f","SMR.f"))
   ALLVIS[, SPVFLAGG := 0]
   if (length(fvars) > 0) {
@@ -735,7 +729,7 @@ LagKUBE <- function(KUBEid,
   # FRISKVIK, ALLVIS og QC----
   # If write = TRUE, Create FRISKVIK indicators, based on the censored ALLVIS kube
   if(isTRUE(write)){
-    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = globs$KHaargang, modus = KUBEdscr$MODUS, FGP = FGPs[[filer["T"]]], versjonert = versjonert, batchdate = batchdate, globs = globs)
+    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = FGPs[[filer["T"]]], modus = KUBEdscr$MODUS, batchdate = batchdate, globs = globs)
   }
   
   # Filter ALLVIS KUBE
@@ -745,8 +739,7 @@ LagKUBE <- function(KUBEid,
   # Contain all the full ALLVIS kuve + uncensored TELLER/NEVNER/sumTELLER/sumNEVNER/RATE.n
   QC <- LagQCKube(allvis = ALLVIS,
                   allvistabs = tabs, 
-                  kube = KUBE,
-                  globs = globs)
+                  kube = KUBE)
   
   cat("---------------------KUBE FERDIG\n\n")
   
@@ -756,26 +749,27 @@ LagKUBE <- function(KUBEid,
   # SKRIV RESULTAT ---- 
   # If write = TRUE, save output files
   if(isTRUE(write)){
+    basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
     cat("SAVING OUTPUT FILES:\n")
     ## Write .rds file to NYESTE/R
-    utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
+    utfiln <- file.path(basepath, getOption("khfunctions.kube.ny"), paste0(KUBEid, ".rds"))
     saveRDS(KUBE, file = utfiln)
     cat("\n", utfiln)
     
     ## If versjonert, Write .rds file to DATERT/R (copy from NYESTE)
     if (versjonert == TRUE) {
-      utfilv <- paste(globs$path, "/", globs$KubeDirDat, "/R/", KUBEid, "_", batchdate, ".rds", sep = "")
+      utfilv <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(KUBEid, "_", batchdate, ".rds"))
       file.copy(utfiln, utfilv)
       cat("\n", utfilv)
     }
     
     ## If csvcopy, Write .csv file to DATERT/csv, and QC kube to QC
     if (csvcopy == TRUE) {
-      utfild <- paste(globs$path, "/", globs$KubeDirDat, "/csv/", KUBEid, "_", batchdate, ".csv", sep = "")
+      utfild <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(KUBEid, "_", batchdate, ".csv"))
       data.table::fwrite(ALLVIS, file = utfild, sep = ";")
       cat("\n", utfild)
       
-      utfilq <- paste(globs$path, "/", globs$KubeDirQc, "/QC_", KUBEid, "_", batchdate, ".csv", sep = "")
+      utfilq <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", KUBEid, "_", batchdate, ".csv"))
       data.table::fwrite(QC, file = utfilq, sep = ";")
       cat("\n", utfilq)
     }

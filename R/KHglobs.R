@@ -1,62 +1,17 @@
-# Lese options fra en configfil, tilsvarende det som gjøres i orgdata/qualcontrol. 
-# Disse kan igjen brukes til å sette globglobs, som i: khaargang = getOption(khfunctions.year) osv. 
 # Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
-# Alle filstier og hardkodede verdier kan legges i options, det gjelder også KHpaths. 
+
+# Parametre som hentes direkte fra options trenger ikke stå i globslisten, de kan brukes direkte fra options. 
 
 # Global parameters, starting point for SettGlobs()/FinnGlobs()
-globglobs <- list(
-  HOVEDmodus = "NH", # bli kvitt denne
-  KHaargang = 2024, # legges i options
-  KHgeoniv = "K", # brukes bare i godkjent(), kan fjernes
-  KHdbname = dbNameFile, # legges i options
-  KHlogg = dbLogFile, # legges i options
-  StablaDirNy = "PRODUKTER/MELLOMPROD/R/STABLAORG/NYESTE", # legges i options
-  StablaDirDat = "PRODUKTER/MELLOMPROD/R/STABLAORG/DATERT", # legges i options
-  KubeDir_NH = "PRODUKTER/KUBER/NORGESHELSA", # bli kvitt denne
-  KubeDirNy_NH = "PRODUKTER/KUBER/NORGESHELSA/NYESTE/R", # bli kvitt denne
-  KubeDirDat_NH = "PRODUKTER/KUBER/NORGESHELSA/DATERT", # bli kvitt denne
-  KubeDirQC_NH = "PRODUKTER/KUBER/NORGESHELSA/QC", # bli kvitt denne
-  KubeDir_KH = "PRODUKTER/KUBER/KOMMUNEHELSA", # legges i options
-  KubeDirNy_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/NYESTE/R", # legges i options
-  KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT", # legges i options
-  KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC", # legges i options
-  KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do", # legges i options
-  FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE", # legges i options
-  FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM", # legges i options
-  FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL", # legges i options
-  ovpDir_F = "PRODUKTER/KUBER/OVP_FYLKE", # legges i options
-  ovpDir_K = "PRODUKTER/KUBER/OVP_KOMM", # legges i options
-  ovpDir_B = "PRODUKTER/KUBER/OVP_BYDEL", # legges i options
-  TNPDirNy = "PRODUKTER/MELLOMPROD/R/TNP/NYESTE", # legges i options
-  TNPDirDat = "PRODUKTER/MELLOMPROD/R/TNP/DATERT", # legges i options
-  BUFFERdir = "BIN/BUFFER", # legges i options, erstattes med lokal mappe i helseprofil?
-  DUMPdir = "RUNTIMEDUMP", # legges i options
-  kolorgs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "TAB1", "TAB2", "TAB3", "VAL1", "VAL2", "VAL3"), # legges i options
-  taborgs = c("GEO", "AAR", "KJONN", "ALDER", "TAB1", "TAB2", "TAB3"), # legges i options
-  NesstarOutputDef = c(MT = "MALTALL", T = "TELLER", N = "NEVNER", RATE = "RATE", SMR = "SMR", MEIS = "MEIS", ST = "sumTELLER", SN = "sumNEVNER", SPT = "sumPREDTELLER", RN = "RATE.n"), # legges i options
-  FriskvikTabs = c("GEO", "AAR", "KJONN", "ALDER", "UTDANN", "INNVKAT", "LANDBAK", "ETAB"), # legges i options
-  FriskvikVals = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n"), # legges i options
-  QCVals = c("TELLER", "NEVNER", "sumTELLER", "sumNEVNER", "RATE.n"), # legges i options
-  KubeKols = c("sumTELLER", "sumNEVNER", "RATE", "MALTALL", "sumPREDTELLER", "PREDTELLER", "SMR", "NORM", "MEIS", "RATE.n", "ALDER", "AAR", "SMRtmp"), # legges i options
-  binDir = "bin", # legges i options
-  tmpfilerpath = "bin\tmpfiler",
-  geo_illeg = "GGG", # legges i options
-  alder_illeg = "888_888", # legges i options
-  alder_ukjent = "999_999", # legges i options
-  kjonn_illeg = "8", # legges i options
-  kjonn_ukjent = "9", # legges i options
-  aar_illeg = "8888_8888", # legges i options
-  utdann_illeg = "8", # legges i options
-  utdann_ukjent = "9", # legges i options
-  landbak_illeg = "8", # legges i options
-  landbak_ukjent = "9",# legges i options
-  innvkat_illeg = "8",# legges i options
-  innvkat_ukjent = "9",# legges i options
-  SisteBatch = "9999-01-01-01-01",# legges i options
-  DefDumpFormat = "CSV",# legges i options
-  stjstr = "************************************************************\n", # bli kvitt denne
-  XLScols = as.vector(sapply(c("", as.vector(paste(sapply(c("", LETTERS[]), paste, LETTERS[], sep = "")))), paste, LETTERS[], sep = "")) # bli kvitt denne
-)
+# globglobs <- list()
+# filstier
+# globglobs[["path"]] <- getOption("khfunctions.root")
+# globglobs[["KubeDir"]] <- getOption("khfunctions.kubedir")
+# globglobs[["KubeDirNy"]] <- getOption("khfunctions.kube.ny") # Endre navn til KubeDir, KubeDirNy osv, uten _KH
+# globglobs[["KubeDirDat"]] <- getOption("khfunctions.kube.dat")
+# globglobs[["KubeDirQC"]] <- getOption("khfunctions.kubedir.qc")
+# globglobs[["KubeDirSpecs"]] <- getOption("khfunctions.kube.specs")
+# globglobs[["DUMPdir"]] <- getOption("khfunctions.dumpdir")
 
 #' SettDefDesignKH (kb)
 #' 
@@ -193,20 +148,20 @@ SettLegitimeKoder <- function(globs = FinnGlobs()) {
   return(KodeL)
 }
 
-SettTotalKoder <- function(globs = FinnGlobs()) {
-  is_kh_debug()
-  
-  Koder <- RODBC::sqlQuery(globs$dbh, "SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1", as.is = TRUE, stringsAsFactors = FALSE)
-  TotKoder <- list()
-  for (del in Koder$DEL) {
-    if (Koder$FORMAT[Koder$DEL == del] == "integer") {
-      TotKoder[[del]] <- as.integer(Koder$KODE[Koder$DEL == del])
-    } else {
-      TotKoder[[del]] <- Koder$KODE[Koder$DEL == del]
-    }
-  }
-  return(TotKoder)
-}
+# SettTotalKoder <- function(globs = FinnGlobs()) {
+#   is_kh_debug()
+#   
+#   Koder <- RODBC::sqlQuery(globs$dbh, "SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1", as.is = TRUE, stringsAsFactors = FALSE)
+#   TotKoder <- list()
+#   for (del in Koder$DEL) {
+#     if (Koder$FORMAT[Koder$DEL == del] == "integer") {
+#       TotKoder[[del]] <- as.integer(Koder$KODE[Koder$DEL == del])
+#     } else {
+#       TotKoder[[del]] <- Koder$KODE[Koder$DEL == del]
+#     }
+#   }
+#   return(TotKoder)
+# }
 
 #' FinnStataExe (ybk)
 #'
@@ -227,45 +182,30 @@ FinnStataExe <- function() {
 #'
 #' @param path 
 #' @param modus 
-SettGlobs <- function(path = "", modus = NA) {
+SettGlobs <- function(path = "") {
   is_kh_debug()
   
   # Close all active connections to avoid many connection open simultaneously
   RODBC::odbcCloseAll()
   
-  # Les globglobs (se topp av fil)
-  globs <- globglobs
-  if (is.na(modus)) {
-    modus <- globs$HOVEDmodus
-  }
-  
-  if (modus == "KH") {
-    globs$KubeDir <- globs$KubeDir_KH
-    globs$KubeDirNy <- globs$KubeDirNy_KH
-    globs$KubeDirDat <- globs$KubeDirDat_KH
-  } else {
-    globs$KubeDir <- globs$KubeDir_NH
-    globs$KubeDirNy <- globs$KubeDirNy_NH
-    globs$KubeDirDat <- globs$KubeDirDat_NH
-  }
-  
-  dbFile <- globs$KHdbname
-  logFile <- globs$KHlogg
+  globs <- list()
+  dbFile <- getOption("khfunctions.db")
+  logFile <- getOption("khfunctions.logg")
   
   # If path is not provided, set it to defpath
-  if (path == "" & file.exists(paste(defpath, dbFile, sep = "/"))) {
-    path <- defpath
+  if (path == "" & file.exists(paste(getOption("khfunctions.root"), dbFile, sep = "/"))) {
+    path <- getOption("khfunctions.root")
     cat("Setter path = ", path, "\n")
   }
   
   # If path is not given, and defpath is not found, print warning
   if (path == "") {
-      cat(globs$stjstr, "******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?", globs$stjstr, sep = "")
+      cat("******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?")
   }
   
   # if path does not contain db file, print error and set path = ""
-  if (isFALSE(file.exists(paste(path, dbFile, sep = "/")))) {
-    cat(globs$stjstr, "******KRITISK FEIL: path har ikke hovedfila", KHdbname, globs$stjstr, sep = "")
+  if (!file.exists(file.path(path, dbFile))) {
+    cat("******KRITISK FEIL: ", dbFile, " ikke funnet i ", path, sep = "")
     path <- ""
   }
   
@@ -282,7 +222,7 @@ SettGlobs <- function(path = "", modus = NA) {
     KHOc <- RODBC::odbcConnectAccess2007(paste(path, dbFile, sep = "/"))
     KHLc <- RODBC::odbcConnectAccess2007(paste(path, logFile, sep = "/"))
     
-    path <- rawPath
+    path <- getOption("khfunctions.root")
   }
   
   globs <- c(globs, list(dbh = KHOc, log = KHLc, path = path))
@@ -308,7 +248,7 @@ SettGlobs <- function(path = "", modus = NA) {
   globs$DefDesign <- SettDefDesignKH(globs = globs)
   globs$KB <- SettKodeBokGlob(globs = globs)
   globs$LegKoder <- SettLegitimeKoder(globs = globs)
-  globs$TotalKoder <- SettTotalKoder(globs = globs)
+  globs$TotalKoder <- getOption("khfunctions.totals")
   Stata <- FinnStataExe()
   globs$StataExe <- Stata$Exe
   globs$StataVers <- Stata$Vers

@@ -232,7 +232,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
         kolldel <- unlist(stringr::str_split(FilterDscr$KOLLAPSdeler, ","))
         kolldelN <- unlist(globs$DefDesign$DelKolsF[kolldel])
         # FIL[,(kolldelN):=NULL]
-        FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
+        FIL[, (kolldelN) := globs$TotalKoder[kolldel]]
         FIL <- FIL[, lapply(.SD, sum), by = tabkols] # SJEKK OM DENNE KAN BLI RASKERE MED COLLAPSE (fsum) eller GRP
         FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
         FIL <- FIL[, orgkols, with = FALSE]
@@ -494,7 +494,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
 #' @param batchdate 
 #' @param globs 
 #' @param GEOstdAAR
-RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = globs$KHaargang) {
+RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
   is_kh_debug()
   delDFstr <- character(0)
   delkolsA <- character(0)
@@ -1317,7 +1317,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs()) {
 #' @param batchdate 
 #' @param globs 
 #' @param GEOstdAAR 
-GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = globs$KHaargang) {
+GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
   is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
@@ -1870,7 +1870,7 @@ do_stata_prikk <- function(dt, spc, batchdate, globs){
   
   if (s_prikk > 0){
     ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/")
+    sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
     synt <- paste0('include "', sfile, '"')
     
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
@@ -1938,20 +1938,29 @@ find_dims <- function(dt, spec){
 #' LagAlleFriskvikIndikatorerForKube (kb)
 #'
 #' @param KUBEid 
-#' @param globs 
+#' @param KUBE 
+#' @param FGP
 #' @param modus 
-#' @param aargang 
+#' @param batchdate 
+#' @param globs 
 #' @param ...
-LagAlleFriskvikIndikatorerForKube <- function(KUBEid, globs = FinnGlobs(), modus = globs$HOVEDMODUS, aargang = format(Sys.time(), "%Y"), ...) {
+LagAlleFriskvikIndikatorerForKube <- function(KUBEid, 
+                                              KUBE, 
+                                              FGP, 
+                                              modus = NULL, 
+                                              batchdate, 
+                                              globs = FinnGlobs(),  
+                                              ...) {
   
   is_kh_debug()
+  aargang <- getOption("khfunctions.year")
   # indikatorer<-unlist(sqlQuery(globs$dbh,paste("SELECT INDIKATOR FROM ",friskvikTAB,aargang," WHERE KUBE_NAVN='",KUBEid,"'",sep=""),as.is=TRUE))
   indikatorer <- sqlQuery(globs$dbh, paste("SELECT INDIKATOR, ID FROM FRISKVIK WHERE AARGANG=", aargang, "AND KUBE_NAVN='", KUBEid, "'", sep = ""), as.is = TRUE)
   
   if (dim(indikatorer)[1] > 0) {
     for (i in 1:dim(indikatorer)[1]) {
       cat("Lager Friskvikfil for ", indikatorer[i, 1], "\n")
-      LagFriskvikIndikator(id = indikatorer[i, 2], aargang = aargang, modus = modus, globs = globs, ...)
+      LagFriskvikIndikator(id = indikatorer[i, 2], KUBE = KUBE, FGP = FGP, modus = modus, aargang = aargang, batchdate = batchdate, globs = globs, ...)
     }
   }
 }
@@ -1961,15 +1970,20 @@ LagAlleFriskvikIndikatorerForKube <- function(KUBEid, globs = FinnGlobs(), modus
 #' @param id 
 #' @param KUBE 
 #' @param FGP 
-#' @param versjonert 
+#' @param modus
 #' @param aargang 
 #' @param batchdate 
 #' @param globs 
-#' @param modus
-LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, amax = 120), versjonert = FALSE, aargang = format(Sys.time(), "%Y"), batchdate = SettKHBatchDate(), globs = FinnGlobs(), modus = globs$HOVEDMODUS) {
+LagFriskvikIndikator <- function(id, 
+                                 KUBE = data.table(), 
+                                 FGP = list(amin = 0, amax = 120), 
+                                 modus = NULL, 
+                                 aargang = NULL,
+                                 batchdate = SettKHBatchDate(), 
+                                 globs = FinnGlobs()) {
   
   is_kh_debug()
-  # FVdscr<-sqlQuery(globs$dbh,paste("SELECT * FROM ",aargang," WHERE INDIKATOR='",indikator,"' AND VERSJONFRA<=",datef," AND VERSJONTIL>",datef,sep=""),as.is=TRUE)
+  if(is.null(aargang)) aargang <- getOption("khfunctions.year")
   FVdscr <- sqlQuery(globs$dbh, paste("SELECT * FROM FRISKVIK WHERE ID=", id, sep = ""), as.is = TRUE)
   
   moduser <- unlist(stringr::str_split(FVdscr$MODUS, ""))
@@ -1980,14 +1994,14 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
   
   switch(profile,
          "FHP" = {
-           setDir_K <- globs$FriskVDir_K
-           setDir_B <- globs$FriskVDir_B
-           setDir_F <- globs$FriskVDir_F
+           setDir_K <- getOption("khfunctions.fhpK")
+           setDir_B <- getOption("khfunctions.fhpB")
+           setDir_F <- getOption("khfunctions.fhpF")
          },
          "OVP" = {
-           setDir_K <- globs$ovpDir_K
-           setDir_B <- globs$ovpDir_B
-           setDir_F <- globs$ovpDir_F
+           setDir_K <- getOption("khfunctions.ovpK")
+           setDir_B <- getOption("khfunctions.ovpB")
+           setDir_F <- getOption("khfunctions.ovpF")
          }
   )
   
@@ -2028,7 +2042,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       filter <- paste(filterA, collapse = " & ")
       FRISKVIK <- subset(KUBE, eval(parse(text = filter)))
       
-      defrows <- nrow(subset(KHglobs$GeoKoder, FRA <= aargang & TIL > aargang & TYP == "O" & GEOniv %in% GEOfilter))
+      defrows <- nrow(subset(globs$GeoKoder, FRA <= aargang & TIL > aargang & TYP == "O" & GEOniv %in% GEOfilter))
       if (nrow(FRISKVIK) != defrows) {
         KHerr(paste("FEIL I FRISKVIKFILTER", filter, "GIR bare", nrow(FRISKVIK), "/", defrows, "rader!"))
       }
@@ -2039,7 +2053,7 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
         FRISKVIK[, (MissKol) := NA]
       }
       
-      MissKol2 <- setdiff(c(globs$FriskvikTabs, globs$FriskvikVals), names(FRISKVIK))
+      MissKol2 <- setdiff(c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals")), names(FRISKVIK))
       if (length(MissKol2) > 0) {
         KHerr(paste("FEIL: Kolonnene", MissKol2, "mangler i Friskvik!"))
         FRISKVIK[, (MissKol2) := NA]
@@ -2047,27 +2061,24 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
       
       if (grepl("\\S", FVdscr$ALTERNATIV_MALTALL)) {
         FRISKVIK$MALTALL <- FRISKVIK[[FVdscr$ALTERNATIV_MALTALL]]
-        kastkols <- setdiff(globs$FriskvikVals, "MALTALL")
+        kastkols <- setdiff(getOption("khfunctions.profilvals"), "MALTALL")
         FRISKVIK[, (kastkols) := NA]
       }
       
       # ALLTID prikk MEIS dersom SPVFLAGG > 0. Denne skal ut i profiler, og kan ikke vaere uprikket. 
       FRISKVIK[SPVFLAGG > 0, MEIS := NA]
       
-      FRISKVIK <- FRISKVIK[, mget(c(globs$FriskvikTabs, globs$FriskvikVals))]
+      FRISKVIK <- FRISKVIK[, mget(c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals")))]
       
-      versjonert <- TRUE
-      # SKRIV UT
-      if (versjonert == TRUE) {
-        setPath <- paste(globs$path, "/", FriskVDir, "/", aargang, "/csv/", sep = "")
-        
-        ## Check path if doesn't exist so create
-        if (!fs::dir_exists(setPath)) fs::dir_create(setPath)
-        
-        utfiln <- paste0(setPath, FVdscr$INDIKATOR, "_", batchdate, ".csv")
-        cat("-->> FRISKVIK EKSPORT:", utfiln, "\n")
-        data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
-      }
+      setPath <- file.path(getOption("khfunctions.root"), 
+                           getOption("khfunctions.kubedir"), FriskVDir, aargang, "csv")
+      
+      ## Check path if doesn't exist so create
+      if (!fs::dir_exists(setPath)) fs::dir_create(setPath)
+      
+      utfiln <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", batchdate, ".csv"))
+      cat("-->> FRISKVIK EKSPORT:", utfiln, "\n")
+      data.table::fwrite(FRISKVIK, utfiln, sep = ";", row.names = FALSE)
     } else {
       cat("ADVARSEL!!!!!!!! modus ", modus, "i FRISKVIK stoettes ikke\n")
     }
@@ -2085,13 +2096,12 @@ LagFriskvikIndikator <- function(id, KUBE = data.table(), FGP = list(amin = 0, a
 #' @param globs defaults to FinnGlobs() 
 LagQCKube <- function(allvis,
                       allvistabs,
-                      kube,
-                      globs = FinnGlobs()){
+                      kube){
   is_kh_debug()
-  
+  qcvals <- getOption("khfunctions.qcvals")
   QC <- data.table::copy(allvis)
-  uprikk <- data.table::copy(kube)[, mget(c(allvistabs, globs$QCVals))]
-  data.table::setnames(uprikk, globs$QCVals, paste0(globs$QCVals, "_uprikk"))
+  uprikk <- data.table::copy(kube)[, mget(c(allvistabs, qcvals))]
+  data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
   QC <- QC[uprikk, on = allvistabs]
   
@@ -2161,7 +2171,7 @@ GetAccessSpecs <- function(KUBEid,
   }
   
   # Add FRISKVIK
-  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT * FROM FRISKVIK WHERE AARGANG=", globs$KHaargang, "AND KUBE_NAVN='", KUBEid, "'", sep = ""), as.is = TRUE))
+  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste("SELECT * FROM FRISKVIK WHERE AARGANG=", getOption("khfunctions.year"), "AND KUBE_NAVN='", KUBEid, "'", sep = ""), as.is = TRUE))
   
   for(i in Friskvik$ID){
     friskvikindikator <- Friskvik[ID == i]

@@ -15,6 +15,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   #     eval(parse(text=filbesk$RSYNT1))
   #   }
   # cat("\nETTER INNLES\n#############################\n")
+  kolorgs <- getOption("khfunctions.kolorgs")
   
   if (ok == 1) {
     
@@ -22,7 +23,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     # NB: for oversiktelighet i parameterfila gjoeres dette baade foer og etter reshape
     # Dvs: kolonnenavn generert i reshape tillates aa avvike fra standardnavn, disse endres etterpaa
     # Valdiering skjer ved siste endring
-    kolorgs <- globs$kolorgs
     # Finn kolonner spesifisert i filbesk
     HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
     HarCols <- HarCols[HarCols %in% names(DF)]
@@ -277,7 +277,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       DF <- subset(DF, !ALDER %in% subset(alder, OMK == "-")$ORG)
       
       SkrivKBLogg(KB = alder, type = "ALDER", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(globs$alder_illeg %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(getOption("khfunctions.alder_illegal") %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
       DF$ALDERl <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$LO, warn_missing = FALSE))
       DF$ALDERh <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$HI, warn_missing = FALSE))
       # DF$ALDERl<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$LO,warn_missing = FALSE))
@@ -291,7 +291,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       kjonn <- KJONNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = kjonn, type = "KJONN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(globs$kjonn_illeg %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(getOption("khfunctions.illegal") %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$KJONN <- as.integer(plyr::mapvalues(DF$KJONN, kjonn$ORG, kjonn$OMK, warn_missing = FALSE))
     }
@@ -303,7 +303,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       aar <- AARvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = aar, type = "AAR", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "AAR_ok", ifelse(globs$aar_illeg %in% aar$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "AAR_ok", ifelse(getOption("khfunctions.aar_illegal") %in% aar$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       # Kast der AAR koder til "-" (maa ta det her og ikek generelle under pga intervall)
       DF <- subset(DF, !AAR %in% subset(aar, OMK == "-")$ORG)
@@ -319,7 +319,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       utdann <- UTDANNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = utdann, type = "UTDANN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(globs$utdann_illeg %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(getOption("khfunctions.illegal") %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$UTDANN <- as.integer(plyr::mapvalues(DF$UTDANN, utdann$ORG, utdann$OMK, warn_missing = FALSE))
     }
@@ -331,7 +331,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       innvkat <- INNVKATvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = innvkat, type = "INNVKAT", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(globs$innvkat_illeg %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(getOption("khfunctions.illegal") %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$INNVKAT <- as.integer(plyr::mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
     }
@@ -343,7 +343,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       landbak <- LANDBAKvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = landbak, type = "LANDBAK", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(globs$landbak_illeg %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(getOption("khfunctions.illegal") %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$LANDBAK <- as.integer(plyr::mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
     }
@@ -355,7 +355,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
     
     # DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER maatte tas over pga intervall)
-    DF <- subset(DF, rowSums(DF[, names(DF) %in% globs$taborgs] == "-") == 0)
+    DF <- subset(DF, rowSums(DF[, names(DF) %in% getOption("khfunctions.taborgs")] == "-") == 0)
     
     # VASK VERDIER. Litt annen prosess, bruker KB, men tabulerer bare ikke-numeriske.
     # Setter numerisk, med flagg for type NA
@@ -686,7 +686,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
     }
   }
   
-  # sink(file=paste(globs$path,"/hoder.txt",sep=""),append=TRUE)
+  # sink(file=paste(getOption("khfunctions.root"),"/hoder.txt",sep=""),append=TRUE)
   # cat("\n#################\nFIL: ")
   # cat(filn)
   # cat("\n")
@@ -789,7 +789,8 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
   DF <- as.data.frame(DF, stringsAsFactors = FALSE)
   
   # Sett header. Default er vanlige Excel-kolonnenavn
-  names(DF) <- globs$XLScols[1:length(names(DF))]
+  
+  names(DF) <- excelcols()[1:length(names(DF))]
   
   # Bruk av flernivaa header.
   # Ikke saerlig elegant syntaks, men prinsippet er rett fram
@@ -878,7 +879,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
       err <- INNLES
       ok <- 0
     } else {
-      DF <- setNames(INNLES, globs$XLScols[1:ncol(INNLES)])
+      DF <- setNames(INNLES, excelcols()[1:ncol(INNLES)])
       ## ## Finner ut hvis hele kolonne er missing
       ## colMISS = sapply(DF, function(x) all(is.na(x)))
       ## missUT = attributes(colMISS[colMISS==1])$names
@@ -1348,7 +1349,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
     geo$OMK[geo$OK == 0] <- "8888"
     geo$GEOniv[geo$OK == 0] <- "K"
   } else {
-    geo$OMK[geo$OK == 0] <- globs$geo_illeg
+    geo$OMK[geo$OK == 0] <- getOption("khfunctions.geo_illegal")
   }
   # Sett fylke
   geo$FYLKE <- NA
@@ -1396,7 +1397,7 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
   alder$OMK <- sub("^ *(\\d+)( ?r|) *(og|eller) (yngre|under)", "_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(\\d+) *( +år| *$)", "\\1_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(Alle( *aldre.*|)|Totalt{0,1}|I alt) *$", paste(amin, "_", amax, sep = ""), alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", globs$alder_ukjent, alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", getOption("khfunctions.alder_ukjent"), alder$OMK, ignore.case = TRUE)
   
   # alder$OMK[is.na(alder$OMK)]<-"999_999"
   alder$OMK <- sub("^(\\d+)_$", paste("\\1_", amax, sep = ""), alder$OMK)
@@ -1407,14 +1408,14 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
   
   okformat <- grepl("^\\d+_\\d+$|^-$", alder$OMK)
   # Ugyldig verdi/ukjent kode
-  alder$OMK[!okformat] <- globs$alder_illeg
+  alder$OMK[!okformat] <- getOption("khfunctions.alder_illegal")
   alder$OK[!okformat] <- 0
   
   # Sett intervall
   alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
-  alder$OMK[alder$HI < alder$LO] <- globs$alder_illeg
-  alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(globs$alder_illeg, globs$alder_ukjent))] <- globs$alder_illeg
+  alder$OMK[alder$HI < alder$LO] <- getOption("khfunctions.alder_illegal")
+  alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_ukjent")))] <- getOption("khfunctions.alder_illegal")
   alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   return(alder)
 }
@@ -1443,7 +1444,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
   # kjonn$OMK[is.na(kjonn$ORG)]<-9
   
   # Ugyldig verdi/ukjent kode
-  kjonn$OMK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- globs$kjonn_illeg
+  kjonn$OMK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- getOption("khfunctions.illegal")
   kjonn$OK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- 0
   
   return(kjonn)
@@ -1477,7 +1478,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
   utdann$OMK <- sub("^ *(alle) *$", "0", utdann$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  utdann$OMK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- globs$utdann_illeg
+  utdann$OMK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- getOption("khfunctions.illegal")
   utdann$OK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- 0
   return(utdann)
 }
@@ -1511,7 +1512,7 @@ INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatch
   innvkat$OMK <- sub("^ *(alle) *$", "0", innvkat$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- globs$innvkat_illeg
+  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- getOption("khfunctions.illegal")
   innvkat$OK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- 0
   
   return(innvkat)
@@ -1549,7 +1550,7 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
   landbak$OMK <- sub("^ *(Alle) *$", "0", landbak$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- globs$landbak_illeg
+  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- getOption("khfunctions.illegal")
   landbak$OK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- 0
   
   return(landbak)
@@ -1579,13 +1580,22 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   
   # Ugyldig verdi/ukjent kode
   okformat <- grepl("^\\d+_\\d+$|^-$", aar$OMK)
-  aar$OMK[!okformat] <- globs$aar_illeg
+  aar$OMK[!okformat] <- getOption("khfunctions.aar_illegal")
   aar$OK[!okformat] <- 0
   
   # Sett intervall
   aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
-  aar$OMK[aar$HI < aar$LO] <- globs$aar_illeg
+  aar$OMK[aar$HI < aar$LO] <- getOption("khfunctions.aar_illegal")
   aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   return(aar)
+}
+
+#' @title excelcols
+#' @return default excel headers
+excelcols <- function(){
+  single <- LETTERS
+  double <- sapply(single, paste0, single)
+  triple <- sapply(double, paste0, single)
+  c(single, double, triple)
 }
