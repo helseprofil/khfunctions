@@ -606,22 +606,22 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
     cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
   } else {
     if (!is.na(batch)) {
-      filn <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.dat"), "/", FILID, "_", batch, ".rds", sep = "")
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"), paste0(FILID, "_", batch, ".rds"))
     } else if (versjonert == TRUE) {
       orgwd <- getwd()
-      path <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.dat"), sep = "")
-      setwd(path)
-      Filer <- unlist(list.files(include.dirs = FALSE))
+      path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"))
+      # setwd(path)
+      Filer <- unlist(list.files(path, include.dirs = FALSE))
       Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
       if (length(Filer) > 0) {
-        filn <- paste(path, "/", Filer[order(Filer)][length(Filer)], sep = "")
+        filn <- file.path(path, Filer[order(Filer)][length(Filer)])
         batch <- gsub(".*_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", "\\1", Filer[order(Filer)][length(Filer)])
       } else {
-        filn <- paste(path, "/", FILID, ".rds", sep = "")
+        filn <- file.path(path, paste0(FILID, ".rds"))
       }
       setwd(orgwd)
     } else {
-      filn <- paste(getOption("khfunctions.root"), "/", getOption("khfunctions.filegroups.ny"), "/", FILID, ".rds", sep = "")
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(FILID, ".rds"))
       print(filn)
     }
     if (file.access(filn, mode = 0) == -1) {
@@ -848,7 +848,7 @@ godkjent <- function(profil = c("FHP", "OVP"),
   ## Current date style to create folder
   batchdate <- SettKHBatchDate()
   
-  fileRoot <- paste0(pathRoot, "/", pathDir, "/", aar)
+  fileRoot <- file.path(pathRoot, pathDir, aar)
   fileFrom <- file.path(fileRoot, "CSV")
   fileTo <- file.path(fileRoot, "GODKJENT", batchdate)
   
@@ -932,7 +932,6 @@ uselocal <- function(test = F, debug = F){
   source("./R/KHfilgruppe.R", encoding = "latin1")
   source("./R/KHkubefunctions.R", encoding = "latin1")
   source("./R/KHkube.R", encoding = "latin1")
-  source("./R/KHother.R", encoding = "latin1")
   cat("\nLoaded local functions")
 }
 
