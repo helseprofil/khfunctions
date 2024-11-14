@@ -39,7 +39,7 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
   KolsDel <- list()
   for (del in names(DelKols)) {
     if (DelType[del] == "INT") {
-      DelKols[[del]] <- paste(DelKols[[del]], c("l", "h"), sep = "")
+      DelKols[[del]] <- paste0(DelKols[[del]], c("l", "h"))
       DelKolsF[[del]] <- DelKols[[del]]
     }
     if (!(is.na(DelKolE[[del]]) | DelKolE[[del]] == "")) {
@@ -112,10 +112,10 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
     }
     kbdnames <- names(KBD)
     kbdnames <- gsub("ORGKODE", globs$DefDesign$DelKolN[del], kbdnames)
-    kbdnames <- gsub("NYKODE(h|l|)", paste(globs$DefDesign$DelKolN[del], "\\1_omk", sep = ""), kbdnames)
-    kbdnames <- gsub("NYKODE(h|l|)", paste(globs$DefDesign$DelKolN[del], "\\1_omk", sep = ""), kbdnames)
-    kbdnames <- gsub("PRI_OMKOD", paste(del, "_pri", sep = ""), kbdnames)
-    kbdnames <- gsub("OBLIG", paste(del, "_obl", sep = ""), kbdnames)
+    kbdnames <- gsub("NYKODE(h|l|)", paste0(globs$DefDesign$DelKolN[del], "\\1_omk"), kbdnames)
+    kbdnames <- gsub("NYKODE(h|l|)", paste0(globs$DefDesign$DelKolN[del], "\\1_omk"), kbdnames)
+    kbdnames <- gsub("PRI_OMKOD", paste0(del, "_pri"), kbdnames)
+    kbdnames <- gsub("OBLIG", paste0(del, "_obl"), kbdnames)
     data.table::setnames(KBD, names(KBD), kbdnames)
     KB[[del]] <- KBD[, names(KBD)[!names(KBD) %in% c("ID", "DEL")]]
   }
@@ -193,7 +193,7 @@ SettGlobs <- function(path = "") {
   logFile <- getOption("khfunctions.logg")
   
   # If path is not provided, set it to defpath
-  if (path == "" & file.exists(paste(getOption("khfunctions.root"), dbFile, sep = "/"))) {
+  if (path == "" & file.exists(file.path(getOption("khfunctions.root"), dbFile))) {
     path <- getOption("khfunctions.root")
     cat("Setter path = ", path, "\n")
   }
@@ -219,8 +219,8 @@ SettGlobs <- function(path = "") {
   # If path is valid, connect to database and reset path to rawPath for global parameters to work
   if(path != ""){
     # Sys.getenv("R_ARCH")   gir "/x64"eller "/i386"
-    KHOc <- RODBC::odbcConnectAccess2007(paste(path, dbFile, sep = "/"))
-    KHLc <- RODBC::odbcConnectAccess2007(paste(path, logFile, sep = "/"))
+    KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
+    KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
     
     path <- getOption("khfunctions.root")
   }
@@ -235,7 +235,7 @@ SettGlobs <- function(path = "") {
   HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
   # Gjelder ogsaa for soner
   KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
-    paste(x, "00", sep = "")
+    paste0(x, "00")
   })
   KnrHarmS <- cbind(as.data.frame(KnrHarmS, stringsAsFactors = FALSE), HARMstd = KnrHarm$HARMstd)
   KnrHarm <- rbind(KnrHarm, KnrHarmS)

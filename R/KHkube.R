@@ -115,7 +115,7 @@ LagKUBE <- function(KUBEid,
     if (ukurante > 0) {
       cat("!!! NAs i ST og/eller SN (", ukurante, "), dette vil gi problemer i PREDTELLER\n")
     }
-    soppelkols <- setdiff(names(STN), c(FinnTabKols(names(STN)), paste("PREDRATE", c("", ".f", ".a"), sep = "")))
+    soppelkols <- setdiff(names(STN), c(FinnTabKols(names(STN)), paste0("PREDRATE", c("", ".f", ".a"))))
     if (length(soppelkols) > 0) {
       STN[, (soppelkols) := NULL]
     }
@@ -130,9 +130,9 @@ LagKUBE <- function(KUBEid,
     } else {
       PredNevnerKol <- TNPdscr$NEVNERKOL
     }
-    PNnames <- gsub(paste("^", PredNevnerKol, "(\\.f|\\.a|)$", sep = ""), "PREDNEVNER\\1", names(PN))
+    PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(PN))
     data.table::setnames(PN, names(PN), PNnames)
-    soppelkols <- setdiff(names(PN), c(FinnTabKols(names(PN)), paste("PREDNEVNER", c("", ".f", ".a"), sep = "")))
+    soppelkols <- setdiff(names(PN), c(FinnTabKols(names(PN)), paste0("PREDNEVNER", c("", ".f", ".a"))))
     if (length(soppelkols) > 0) {
       PN[, (soppelkols) := NULL]
     }
@@ -184,7 +184,7 @@ LagKUBE <- function(KUBEid,
   
   if ("raaKUBE0" %in% names(dumps)) {
     for (format in dumps[["raaKUBE0"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "raaKUBE0", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = format)
     }
   }
   
@@ -232,7 +232,7 @@ LagKUBE <- function(KUBEid,
   aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
   int_lengde <- as.integer(unique(KUBE[, AARh - AARl + 1]))
   if (length(int_lengde) > 1) {
-    KHerr(paste("!!!!!!HAR ULIKE LENGDER PAA INTERVALLER!!"))
+    KHerr("!!!!!!HAR ULIKE LENGDER PAA INTERVALLER!!")
   }
   
   # Maa "balansere" NA i teller og nevner slik sumrate og sumnevner balanserer  (Bedre/enklere aa gjoere det her enn i KHaggreger)
@@ -241,8 +241,8 @@ LagKUBE <- function(KUBEid,
   # Slik at dataflyten stoetter en slik endring
   
   tuppel <- intersect(c("TELLER", "NEVNER", "RATE"), names(KUBE))
-  tuppel.f <- paste(tuppel, ".f", sep = "")
-  fmax <- rlang::parse_expr(paste("pmax(", paste(tuppel.f, collapse = ","), ")", sep = ""))
+  tuppel.f <- paste0(tuppel, ".f")
+  fmax <- rlang::parse_expr(paste0("pmax(", paste(tuppel.f, collapse = ","), ")"))
   if (length(tuppel) > 0) {
     KUBE[eval(fmax) > 0, (tuppel) := list(NA)]
     KUBE[eval(fmax) > 0, (tuppel.f) := eval(fmax)]
@@ -258,7 +258,7 @@ LagKUBE <- function(KUBEid,
   orgintMult <- 1
   if (KUBEdscr$MOVAV > 1) {
     if (any(aar$AARl != aar$AARh)) {
-      KHerr(paste("Kan ikke sette snitt (ma=", ma, ") naar det er intervaller i originaldata", sep = ""))
+      KHerr(paste0("Kan ikke sette snitt (ma=", ma, ") naar det er intervaller i originaldata"))
     } else {
       ma <- KUBEdscr$MOVAV
       
@@ -279,7 +279,6 @@ LagKUBE <- function(KUBEid,
         }
       }
       ma_satt <- 1
-      # maKUBE<-maKUBE[,names(maKUBE)[!grepl(".n$",names(maKUBE))],with=FALSE]  #Kast .n kolonner, ferdig med disse
       KUBE <- maKUBE
     }
   } else {
@@ -291,8 +290,6 @@ LagKUBE <- function(KUBEid,
       n <- 1
       orgintMult <- orgint_n
     }
-    # lp <- paste("KUBE[,c(\"", paste(valkols, ".n", collapse = "\",\"", sep = ""), "\"):=list(", n, ")]", sep = "")
-    # KUBE[, eval(parse(text = lp))]
     KUBE[, paste0(names(.SD), ".n") := list(n), .SDcols = valkols]
   }
   
@@ -301,7 +298,7 @@ LagKUBE <- function(KUBEid,
   
   if ("maKUBE0" %in% names(dumps)) {
     for (format in dumps[["maKUBE0"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "maKUBE0", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), globs = globs, format = format)
     }
   }
   
@@ -314,16 +311,6 @@ LagKUBE <- function(KUBEid,
   if (ma_satt == 1) {
     valkols <- FinnValKols(names(KUBE))
     anon_tot_tol <- 0.2
-    
-    # lp <- paste("KUBE[,':='(",
-    #             paste(valkols, "=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
-    #                   valkols, ".f=ifelse(", valkols, ".n>0 & ", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
-    #                   sep = "", collapse = ","
-    #             ),
-    #             ")]",
-    #             sep = ""
-    # )
-    # eval(parse(text = lp))
     
     for(kol in valkols){
     kol.f <- paste0(kol, ".f")
@@ -338,7 +325,7 @@ LagKUBE <- function(KUBEid,
   
   if ("anoKUBE1" %in% names(dumps)) {
     for (format in dumps[["anoKUBE1"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "anoKUBE1", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE1"), globs = globs, format = format)
     }
   }
   
@@ -360,7 +347,7 @@ LagKUBE <- function(KUBEid,
   
   if ("anoKUBE2" %in% names(dumps)) {
     for (format in dumps[["anoKUBE2"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "anoKUBE2", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE2"), globs = globs, format = format)
     }
   }
   # Anonymiser trinn 3. Anonymiser naboer
@@ -370,7 +357,7 @@ LagKUBE <- function(KUBEid,
   }
   if ("anoKUBE3" %in% names(dumps)) {
     for (format in dumps[["anoKUBE3"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "anoKUBE3", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE3"), globs = globs, format = format)
     }
   }
   
@@ -394,7 +381,7 @@ LagKUBE <- function(KUBEid,
 
     if ("anoKUBE4" %in% names(dumps)) {
     for (format in dumps[["anoKUBE4"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "anoKUBE4", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE4"), globs = globs, format = format)
     }
   }
   
@@ -402,7 +389,7 @@ LagKUBE <- function(KUBEid,
   
   if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
     for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpre", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = format)
     }
   }
   
@@ -431,7 +418,7 @@ LagKUBE <- function(KUBEid,
   
   if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) {
     for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "KUBE_SLUTTREDIGERpost", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), globs = globs, format = format)
     }
   }
   
@@ -457,7 +444,7 @@ LagKUBE <- function(KUBEid,
   
   # Legg til manglende kolonner for homogen behandling under
   missKol <- setdiff(unlist(lapply(c("TELLER", "NEVNER", "RATE", "PREDTELLER"), function(x) {
-    paste(x, c("", ".f", ".a", ".n"), sep = "")
+    paste0(x, c("", ".f", ".a", ".n"))
   })), names(KUBE))
   if (length(missKol) > 0) {
     KUBE[, (missKol) := NA]
@@ -474,13 +461,10 @@ LagKUBE <- function(KUBEid,
   # VAL:=VAL/VAL.n
   valkols <- setdiff(FinnValKols(names(KUBE)), c("RATE", "SMR"))
   if (length(valkols) > 0) {
-    lp <- paste("KUBE[,c(\"", paste(valkols, collapse = "\",\""), "\"):=list(",
-                paste(valkols, "=", valkols, "/", valkols, ".n",
-                      sep = "", collapse = ","
-                ),
-                ")]",
-                sep = ""
-    )
+    lp <- paste0("KUBE[,c(\"", paste(valkols, collapse = "\",\""), "\"):=list(",
+                 paste0(valkols, "=", valkols, "/", valkols, ".n", collapse = ","
+                       ),
+                 ")]")
     KUBE[, eval(parse(text = lp))]
   }
   
@@ -492,7 +476,7 @@ LagKUBE <- function(KUBEid,
   ## MALTALL ----
   if (grepl("\\S", KUBEdscr$MTKOL)) {
     maltall <- KUBEdscr$MTKOL
-    KUBE[, eval(parse(text = paste("MALTALL:=", KUBEdscr$MTKOL, sep = "")))]
+    KUBE[, eval(parse(text = paste0("MALTALL:=", KUBEdscr$MTKOL)))]
   } else if (TNPdscr$NEVNERKOL == "-") {
     maltall <- "TELLER"
     KUBE[, MALTALL := TELLER]
@@ -500,8 +484,6 @@ LagKUBE <- function(KUBEid,
     maltall <- "RATE"
     KUBE[, MALTALL := RATE]
   }
-  
-  # maltallt<-intersect(paste(maltall,""))
   
   ## SETT SMR og MEIS ----
   if (D_develop_predtype == "DIR") {
@@ -541,11 +523,10 @@ LagKUBE <- function(KUBEid,
     # KUBER:REFVERDI boer omdoepes til KUBER:PREDFILTER og det er denne som brukes i SettPredFilter
     # Det boer saa lages en ny kolonne KUBER:REFGEOn som har GEOniv for referanseverdi. Denne brukes primaert for aa sette SMR i modus=V
     RefGEOn <- "L"
-    RefGEOnFilt <- paste("GEOniv=='", RefGEOn, "'", sep = "")
-    VF <- eval(parse(text = paste("subset(KUBE,", RefGEOnFilt, ")", sep = "")))
+    RefGEOnFilt <- paste0("GEOniv=='", RefGEOn, "'")
+    VF <- eval(parse(text = paste0("subset(KUBE,", RefGEOnFilt, ")")))
   } else {
     VF <- KUBE[eval(rlang::parse_expr(PredFilter$PfiltStr))]
-    # eval(parse(text = paste("subset(KUBE,", PredFilter$PfiltStr, ")", sep = "")))
   }
   
   # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og maa lages
@@ -557,8 +538,8 @@ LagKUBE <- function(KUBEid,
   if (D_develop_predtype == "IND") {
     VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), PredFilter$Pkols)
     if (maltall %in% c("TELLER", "RATE")) {
-      data.table::setnames(VF, c(paste(maltall, c("", ".f", ".a", ".n"), sep = ""), "SMRtmp"), c(paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"))
-      VF <- VF[, c(VFtabkols, paste("NORM", c("", ".f", ".a", ".n"), sep = ""), "NORMSMR"), with = FALSE]
+      data.table::setnames(VF, c(paste0(maltall, c("", ".f", ".a", ".n")), "SMRtmp"), c(paste0("NORM", c("", ".f", ".a", ".n")), "NORMSMR"))
+      VF <- VF[, c(VFtabkols, paste0("NORM", c("", ".f", ".a", ".n")), "NORMSMR"), with = FALSE]
     } else {
       data.table::setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
       VF <- VF[, c(VFtabkols, "NORM", "NORMSMR"), with = FALSE]
@@ -629,9 +610,9 @@ LagKUBE <- function(KUBEid,
     tabs <- setdiff(tabs, dimdropp)
   }
   
-  KUBE[, AAR := paste(AARl, "_", AARh, sep = "")]
+  KUBE[, AAR := paste0(AARl, "_", AARh)]
   if (all(c("ALDERl", "ALDERh") %in% names(KUBE))) {
-    KUBE[, ALDER := paste(ALDERl, "_", ALDERh, sep = "")]
+    KUBE[, ALDER := paste0(ALDERl, "_", ALDERh)]
   } else {
     tabs <- setdiff(tabs, "ALDER")
   }
@@ -643,7 +624,7 @@ LagKUBE <- function(KUBEid,
   
   if ("STATAPRIKKpre" %in% names(dumps)) {
     for (format in dumps[["STATAPRIKKpre"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpre", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), globs = globs, format = format)
     }
   }
   
@@ -656,7 +637,7 @@ LagKUBE <- function(KUBEid,
   
   if ("STATAPRIKKpost" %in% names(dumps)) {
     for (format in dumps[["STATAPRIKKpost"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "STATAPRIKKpost", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = format)
     }
   }
   
@@ -682,7 +663,7 @@ LagKUBE <- function(KUBEid,
   
   if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
     for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
-      DumpTabell(KUBE, paste(KUBEid, "RSYNT_POSTPROSESSpost", sep = "_"), globs = globs, format = format)
+      DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), globs = globs, format = format)
     }
   }
   
@@ -706,18 +687,18 @@ LagKUBE <- function(KUBEid,
   # SKJUL HELE TUPPELET
   # FLAGG PER VARIABEL KAN/BoeR VURDERES!
   # Litt tricky aa finne riktig ".f"-kolloner. Maa ikke ta med mBEFc f.eks fra BEF fila dersom denne er irrelevant
-  fvars <- intersect(names(ALLVIS), paste(union(getOption("khfunctions.valcols"), OutVar), ".f", sep = ""))
+  fvars <- intersect(names(ALLVIS), paste0(union(getOption("khfunctions.valcols"), OutVar), ".f"))
   # fvars<-intersect(names(NESSTAR),c(OrgKubeKolNames[grepl(".f$",OrgKubeKolNames)],"NORM.f","SMR.f"))
   ALLVIS[, SPVFLAGG := 0]
   if (length(fvars) > 0) {
     # Dette er unoedvendig krongelete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1
-    ALLVIS[, tSPV1 := eval(parse(text = paste("pmax(", paste(lapply(fvars, function(x) {
-      paste(x, "*(", x, "!=2)", sep = "")
-    }), collapse = ","), ",na.rm = TRUE)", sep = "")))]
-    ALLVIS[, tSPV2 := eval(parse(text = paste("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)", sep = "")))]
+    ALLVIS[, tSPV1 := eval(parse(text = paste0("pmax(", paste(lapply(fvars, function(x) {
+      paste0(x, "*(", x, "!=2)")
+    }), collapse = ","), ",na.rm = TRUE)")))]
+    ALLVIS[, tSPV2 := eval(parse(text = paste0("pmax(", paste(fvars, collapse = ","), ",na.rm = TRUE)")))]
     ALLVIS[, SPVFLAGG := ifelse(tSPV1 == 0, tSPV2, tSPV1)]
     ALLVIS[, c("tSPV1", "tSPV2") := NULL]
-    ALLVIS[SPVFLAGG > 0, eval(parse(text = paste("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)", sep = "")))]
+    ALLVIS[SPVFLAGG > 0, eval(parse(text = paste0("c(\"", paste(OutVar, collapse = "\",\""), "\"):=list(NA)")))]
   }
   ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
   ALLVIS[, SPVFLAGG := plyr::mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]

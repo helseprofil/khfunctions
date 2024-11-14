@@ -85,7 +85,6 @@ LagFilgruppe <- function(gruppe,
         filbesk <- delfiler[i, ]
         tm <- proc.time()
         filbesk$filn <- file.path(getOption("khfunctions.root"), filbesk$FILNAVN)
-        ## filbesk$filn<-paste(getOption("khfunctions.root"),filbesk$FILNAVN,sep="/")
         filbesk$filn <- gsub("\\\\", "/", filbesk$filn)
         # Sett evt default for aar basert paa aktuelt aarstall
         filbesk$AAR <- gsub("<\\$y>", paste("<", filbesk$DEFAAR, ">", sep = ""), filbesk$AAR)
@@ -197,12 +196,12 @@ LagFilgruppe <- function(gruppe,
     }
     
     if (printR) {
-      utfiln <- paste(path, "/", getOption("khfunctions.filegroups.ny"), "/", gruppe, ".rds", sep = "")
+      utfiln <- file.path(path, getOption("khfunctions.filegroups.ny"), paste0(gruppe, ".rds"))
       # save(Filgruppe,file=utfiln)
       print(utfiln)
       saveRDS(Filgruppe, file = utfiln)
       if (versjonert == TRUE) {
-        utfild <- paste(path, "/", getOption("khfunctions.filegroups.dat"), "/", gruppe, "_", batchdate, ".rds", sep = "")
+        utfild <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(gruppe, "_", batchdate, ".rds"))
         file.copy(utfiln, utfild)
       }
     }
