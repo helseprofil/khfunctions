@@ -757,7 +757,6 @@ LagKUBE <- function(KUBEid,
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
   sink()
-  return(RESULTAT)
 }
 
 #' LagKubeDatertCsv

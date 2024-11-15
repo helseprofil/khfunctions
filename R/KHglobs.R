@@ -5,80 +5,56 @@
 #'
 #' @param path 
 #' @param modus 
-SettGlobs <- function(path = "") {
+SettGlobs <- function() {
   is_kh_debug()
-  
-  # Close all active connections to avoid many connection open simultaneously
   RODBC::odbcCloseAll()
-  
-  globs <- list()
+  path <- getOption("khfunctions.root")
   dbFile <- getOption("khfunctions.db")
   logFile <- getOption("khfunctions.logg")
   
-  # If path is not provided, set it to defpath
-  if (path == "" & file.exists(file.path(getOption("khfunctions.root"), dbFile))) {
-    path <- getOption("khfunctions.root")
-    cat("Setter path = ", path, "\n")
+  if (!dir.exists(path)) {
+    stop(paste0(path, " ikke funnet, Har du tilgang til O:/?"))
   }
-  
-  # If path is not given, and defpath is not found, print warning
-  if (path == "") {
-      cat("******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?")
-  }
-  
-  # if path does not contain db file, print error and set path = ""
-  if (!file.exists(file.path(path, dbFile))) {
-    cat("******KRITISK FEIL: ", dbFile, " ikke funnet i ", path, sep = "")
-    path <- ""
-  }
-  
-  # If local path is set:
-  if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
-    ## Use other location of KHELSA.mdb and KHlogg.mdb
-    ## This is needed due to constant crash with unstable network
-    path <- setLocalPath
-  }
-  
-  # If path is valid, connect to database and reset path to rawPath for global parameters to work
-  if(path != ""){
-    # Sys.getenv("R_ARCH")   gir "/x64"eller "/i386"
-    KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
-    KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
-    
-    path <- getOption("khfunctions.root")
-  }
-  
-  globs <- c(globs, list(dbh = KHOc, log = KHLc, path = path))
-  
-  GeoNavn <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
-  GeoKoder <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
-  UtGeoKoder <- GeoKoder[TYP == "O" & TIL == 9999]$GEO
-  KnrHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
-  TKNR <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
-  # Gjelder ogsaa for soner
-  KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
-    paste0(x, "00")
-  })
-  KnrHarmS <- cbind(as.data.frame(KnrHarmS, stringsAsFactors = FALSE), HARMstd = KnrHarm$HARMstd)
-  KnrHarm <- rbind(KnrHarm, KnrHarmS)
-  # Maa legge til de som ikke omkodes for aa lette bruk i merge
-  # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
-  
-  # GK til bydel. Boer konsolideres med KnrHarm
-  GkBHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
-  
-  globs$DefDesign <- SettDefDesignKH(globs = globs)
-  globs$KB <- SettKodeBokGlob(globs = globs)
-  globs$LegKoder <- SettLegitimeKoder(globs = globs)
-  globs$TotalKoder <- getOption("khfunctions.totals")
-  Stata <- FinnStataExe()
-  globs$StataExe <- Stata$Exe
-  globs$StataVers <- Stata$Vers
-  # RODBC::odbcCloseAll()
-  return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
-}
 
+  if (!file.exists(file.path(path, dbFile))) {
+    stop(dbFile, " ikke funnet i ", path)
+  }
+  
+  # # If local path is set:
+  # if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
+  #   path <- setLocalPath
+  # }
+  # 
+  # If path is valid, connect to database and reset path to rawPath for global parameters to work
+  # if(path != ""){
+  #   KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
+  #   KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
+  # 
+  #   path <- getOption("khfunctions.root")
+  # }
+  
+  KHOc <- connect_khelsa()
+  KHLc <- connect_khlogg()
+  globs <- list(dbh = KHOc, log = KHLc)
+  
+  # globs[["GeoNavn"]] <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
+  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
+  globs[["UtGeoKoder"]] <- globs$GeoKoder[TYP == "O" & TIL == 9999]$GEO
+  globs[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
+  globs[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  KnrHarm <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
+  globs[["KnrHarm"]] <- data.table::rbindlist(list(KnrHarm, KnrHarmS))
+  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+  globs[["DefDesign"]] <- SettDefDesignKH(globs = globs)
+  globs[["KB"]] <- SettKodeBokGlob(globs = globs)
+  globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs) ## 
+  globs[["TotalKoder"]] <- getOption("khfunctions.totals")
+  Stata <- FinnStataExe()
+  globs[["StataExe"]] <- Stata$Exe
+  globs[["StataVers"]] <- Stata$Vers
+  return(globs)
+}
 
 #' SettDefDesignKH (kb)
 #' 
@@ -161,21 +137,21 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
   # are not possible to convert to integer (e.g. LANDBAK = "1c").
   # Probably benign as these values are already recoded 
   
-  OmkodD <- RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_OMKOD
-                            UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE)
+  OmkodD <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_OMKOD
+                                              UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE))
   KB <- list()
   
   for (del in names(globs$DefDesign$DelKolN)) {
-    KBD <- subset(OmkodD, DEL == del)
+    KBD <- OmkodD[DEL == del]
     if (globs$DefDesign$DelType[del] == "INT") {
       if (nrow(KBD) > 0) {
-        KBD[, c("ORGKODEl", "ORGKODEh", "NYKODEl", "NYKODEh")] <- as.integer(NA)
+        KBD[, c("ORGKODEl", "ORGKODEh", "NYKODEl", "NYKODEh") := NA_integer_]
       } else {
-        KBD <- cbind(KBD, data.frame(ORGKODEl = integer(0), ORGKODEh = integer(0), NYKODEl = integer(0), NYKODEh = integer(0)))
+        KBD[, c("ORGKODEl", "ORGKODEh", "NYKODEl", "NYKODEh") := integer()]
       }
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
-      KBD$ORGKODE <- as.integer(KBD$ORGKODE)
-      KBD$NYKODE <- as.integer(KBD$NYKODE)
+      if(del == "L") KBD <- KBD[!grepl("[^0-9]", ORGKODE)]
+      KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = c("ORGKODE", "NYKODE")]
     }
     kbdnames <- names(KBD)
     kbdnames <- gsub("ORGKODE", globs$DefDesign$DelKolN[del], kbdnames)
@@ -184,7 +160,8 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
     kbdnames <- gsub("PRI_OMKOD", paste0(del, "_pri"), kbdnames)
     kbdnames <- gsub("OBLIG", paste0(del, "_obl"), kbdnames)
     data.table::setnames(KBD, names(KBD), kbdnames)
-    KB[[del]] <- KBD[, names(KBD)[!names(KBD) %in% c("ID", "DEL")]]
+    KBD[, c("ID", "DEL") := NULL]
+    KB[[del]] <- KBD
   }
   return(KB)
 }
@@ -199,16 +176,17 @@ SettLegitimeKoder <- function(globs = SettGlobs()) {
   # Happens when DefDesign$Delformat[del] == "integer", for dimensions where some values 
   # are not possible to convert to integer (e.g. "1c").
   
-  Koder <- RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE)
+  Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_KODER", as.is = TRUE))
   KodeL <- list()
   for (del in unique(Koder$DEL)) {
-    KodeD <- subset(Koder, DEL == del)
+    KodeD <- Koder[DEL == del]
     if (globs$DefDesign$DelType[del] == "INT") {
-      KodeD <- cbind(KodeD, setNames(matrix(as.integer(stringr::str_split_fixed(KodeD$KODE, "_", 2)), ncol = 2), globs$DefDesign$DelKols[[del]]))
+      KodeD[, (globs$DefDesign$DelKols[[del]]) := tstrsplit(KODE, "_", fixed = TRUE)]
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
-      KodeD <- setNames(cbind(KodeD, as.integer(KodeD$KODE)), c(names(KodeD), globs$DefDesign$DelKols[[del]]))
+      KodeD[, (globs$DefDesign$DelKols[[del]]) := NA_integer_]
+      KodeD[!grepl("[^0-9]", KODE), (globs$DefDesign$DelKols[[del]]) := as.integer(KODE)]
     } else if (globs$DefDesign$DelFormat[del] == "character") {
-      KodeD <- setNames(cbind(KodeD, KodeD$KODE), c(names(KodeD), globs$DefDesign$DelKols[[del]]))
+      KodeD[, (globs$DefDesign$DelKols[[del]]) := KODE]
     }
     KodeL[[del]] <- KodeD
   }

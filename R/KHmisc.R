@@ -927,14 +927,17 @@ uselocal <- function(test = F, debug = F){
 
 # Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
 #' .useTest (VL)
-.useTest <- function(){
+#'
+#' @param db path to test db file
+#' @param logg path to test log file
+.useTest <- function(db = NULL, logg = NULL){
   RODBC::odbcCloseAll()
+  if(is.null(db)) db <- "STYRING/test/KHELSAtest.mdb"
+  if(is.null(logg)) logg <- "STYRING/test/KHloggtest.mdb"
   TESTMODUS <<- TRUE
-  options(khfunctions.db = "STYRING/test/KHELSAtest.mdb")
-  options(khfunctions.logg = "STYRING/test/KHloggtest.mdb")
-  # source("./R/KHglobs.R")
+  options(khfunctions.db = db)
+  options(khfunctions.logg = logg)
 }
-
 
 #' .SetKubeParameters (VL)
 #'
