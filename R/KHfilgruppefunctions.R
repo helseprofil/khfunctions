@@ -1,4 +1,4 @@
-LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = FinnGlobs(), versjonert = FALSE, dumps = list()) {
+LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = SettGlobs(), versjonert = FALSE, dumps = list()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -500,7 +500,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
 #' @param batchdate 
 #' @param globs 
 #' @param dumps 
-LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), dumps = character()) {
+LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), dumps = character()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -745,7 +745,7 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
 #' @param FjernTommeKol 
 #' @param globs 
 #' @param ... 
-cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = FinnGlobs(), ...) {
+cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = SettGlobs(), ...) {
   # Ved bruk av undertabeller med titler som ikke staar i egen kolonne
   # Lager egen kolonne av undertitler som blir ekta TAB
   # Ikke saa veldig elegant, men funker for de faar tilfellene der dette trengs og som ellers ville trengt haandsoem
@@ -843,7 +843,7 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
 #' @param na.strings 
 #' @param ryddOpp 
 #' @param ... 
-Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
+Xls2R.KH <- function(xlsfil, ark = "", globs = SettGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
   is_kh_debug()
   
   err <- ""
@@ -894,7 +894,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
 #' @param gruppe 
 #' @param batchdate 
 #' @param globs 
-FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   dbh <- globs$dbh
@@ -961,7 +961,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
 #' @param globs 
 #' @param test 
 #' @param testID 
-FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), test = runtest, testID = testfiles) {
+FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = SettGlobs()) {
   is_kh_debug()
   
   # Default er aa finne filbesk gyldige naa (Sys.time)
@@ -984,11 +984,6 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
   fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
   
   ## Picking up files path that is refered to in ORIGINALFILER
-  
-  if (test) {
-    fb <- subset(fb, KOBLID %in% testID)
-  }
-  
   invisible(fb)
 }
 
@@ -1000,7 +995,7 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
 #' @param batchdate 
 #' @param versjonert 
 #' @param globs 
-SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
+SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
   HarDuplikater <- 0
@@ -1122,7 +1117,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettK
 #' @export
 #'
 #' @examples
-ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   # Reshape av DELF basert paa parametre i filbesk
   is_kh_debug()
   
@@ -1175,9 +1170,6 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Fin
   return(list(DF = DELF, ok = ok))
 }
 
-# Necessary to create this object?
-subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
-
 #' KBomkod (kb)
 #'
 #' @param org 
@@ -1186,7 +1178,7 @@ subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(
 #' @param valsubs 
 #' @param batchdate 
 #' @param globs 
-KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = FinnGlobs()) {
+KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = SettGlobs()) {
   is_kh_debug()
   
   datef <- format(Sys.time(), "#%Y-%m-%d#")
@@ -1249,7 +1241,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), harlevekaar = F) {
+GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), harlevekaar = F) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1367,7 +1359,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
 #' @param FGP 
 #' @param batchdate 
 #' @param globs 
-ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   amax <- FGP$amax
@@ -1426,7 +1418,7 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1457,7 +1449,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1490,7 +1482,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1525,7 +1517,7 @@ INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1562,7 +1554,7 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {

@@ -20,7 +20,7 @@
 #' FilDesL: 
 #' - Design of files in filer
 #' tmpBUFFER
-SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
+SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   KUBEdscr <- as.list(sqlQuery(globs$dbh, paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef), as.is = TRUE))
@@ -127,7 +127,7 @@ SettFilInfoKUBE <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = 
 #' @export
 #'
 #' @examples
-SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   
   # Boer nok konsolidere SettPredFilter og SettNaboAnoSpec, boer vaere greit aa gjoere dette
   
@@ -191,7 +191,7 @@ SettPredFilter <- function(refvstr, FGP = list(amin = 0, amax = 120), globs = Fi
   return(list(Design = PredFilter, PfiltStr = refvstr, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
 }
 
-KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = FinnGlobs()) {
+KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjonert = FALSE, FILbatch = NA, batchdate = SettKHBatchDate(), GeoHarmDefault = 1, globs = SettGlobs()) {
   is_kh_debug()
   
   TilBuffer <- 0
@@ -215,7 +215,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
         }
       }
       
-      FILn <- FinnFil(FilterDscr$ORGFIL, batch = FILbatch, versjonert = versjonert)
+      FILn <- FinnFil(FilterDscr$ORGFIL, batch = FILbatch, versjonert = versjonert, globs = globs)
       FIL <- FILn$FT
       sqlQuery(globs$log, paste0("INSERT INTO KUBEBATCH (KUBEBATCH,FILBATCH) SELECT '", KUBEid, "_", batchdate, "','", FilterDscr$ORGFIL, "_", FILn$batch, "'"))
       if (TabFSub != "") {
@@ -234,7 +234,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
         # FIL[,(kolldelN):=NULL]
         FIL[, (kolldelN) := globs$TotalKoder[kolldel]]
         FIL <- FIL[, lapply(.SD, sum), by = tabkols] # SJEKK OM DENNE KAN BLI RASKERE MED COLLAPSE (fsum) eller GRP
-        FIL[, (kolldelN) := KHglobs$TotalKoder[kolldel]]
+        FIL[, (kolldelN) := globs$TotalKoder[kolldel]]
         FIL <- FIL[, orgkols, with = FALSE]
         cat(" og etter", dim(FIL), "\n")
       }
@@ -245,7 +245,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
       }
       Filter <- SettFilterDesign(FilterDscr, bruk0 = FALSE, FGP = FGP, globs = globs)
       if (length(Filter) > 0) {
-        FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = Filter)), globs = globs)
+        FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL, globs = globs), list(Parts = Filter), globs = globs), globs = globs)
       }
       
       if (FilterDscr$GEOHARM == 1) {
@@ -297,7 +297,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
   }
   # Har ikke oppsatt filter, bruk raa
   else {
-    FILn <- FinnFil(FilVers, versjonert = versjonert, batch = FILbatch)
+    FILn <- FinnFil(FilVers, versjonert = versjonert, batch = FILbatch, globs = globs)
     FIL <- FILn$FT
     
     if (TabFSub != "") {
@@ -330,7 +330,7 @@ KlargjorFil <- function(FilVers, TabFSub = "", rolle = "", KUBEid = "", versjone
 #' @param Design 
 #' @param KUBEdscr 
 #' @param globs 
-LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, globs = FinnGlobs()) {
+LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Design = NULL, KUBEdscr = NULL, globs = SettGlobs()) {
   is_kh_debug()
   # profvis::profvis({
   # Finn initiellt design foer evt lesing av KUBEdscr, dette for aa kunne godta tomme angivelser der (gir default fra InitDes)
@@ -489,7 +489,7 @@ LagTNtabell <- function(filer, FilDesL, FGPs, TNPdscr, TT = "T", NN = "N", Desig
 #' @param batchdate 
 #' @param globs 
 #' @param GEOstdAAR
-RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
+RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = SettKHBatchDate(), globs = SettGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
   is_kh_debug()
   delDFstr <- character(0)
   delkolsA <- character(0)
@@ -524,7 +524,7 @@ RektangulariserKUBE <- function(orgnames, KubeD, vals = list(), batchdate = Sett
 #' @param FT 
 #' @param KubeD 
 #' @param globs 
-FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
+FiltrerTab <- function(FT, KubeD, globs = SettGlobs()) {
   is_kh_debug()
   
   orgkols <- names(FT)
@@ -546,7 +546,7 @@ FiltrerTab <- function(FT, KubeD, globs = FinnGlobs()) {
 #' @param ORGd 
 #' @param FGP 
 #' @param globs 
-FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   KubeD <- list(
@@ -562,7 +562,7 @@ FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), gl
 #' @param bruk0 
 #' @param FGP 
 #' @param globs 
-FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   Deler <- list()
@@ -629,7 +629,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param DF1 
 #' @param DF2 
 #' @param globs 
-FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs()) {
+FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
   is_kh_debug()
   # profvis::profvis({
@@ -639,8 +639,8 @@ FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs()) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
   
-  RD1 <- FinnRedesign(DF1, list(Part = FTabs))
-  RD2 <- FinnRedesign(DF2, list(Part = FTabs))
+  RD1 <- FinnRedesign(DF1, list(Part = FTabs), globs = globs)
+  RD2 <- FinnRedesign(DF2, list(Part = FTabs), globs = globs)
   ### kommet hit ---- 
   omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
   data.table::setkeyv(RD1$FULL, omktabs)
@@ -649,7 +649,7 @@ FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs()) {
   Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
   Dekk12 <- Dekk1[Dekk2, nomatch = 0]
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  FDes <- FinnDesign(Dekk12)
+  FDes <- FinnDesign(Dekk12, globs = globs)
   cat(" Ferdig i FinnFellesTab\n")
   # })
   gc()
@@ -663,7 +663,7 @@ FinnFellesTab <- function(DF1, DF2, globs = FinnGlobs()) {
 #' @param bruk0 
 #' @param FGP 
 #' @param globs 
-SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   Deler <- list()
@@ -741,7 +741,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 FinnRedesign <- function(DesFRA, 
                          DesTIL, 
                          SkalAggregeresOpp = character(), 
-                         globs = FinnGlobs()) {
+                         globs = SettGlobs()) {
   is_kh_debug()
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
@@ -1107,7 +1107,7 @@ SettPartDekk <- function(KB,
                          har = paste0(del, "_HAR"), 
                          betcols = character(0), 
                          IntervallHull = globs$DefDesign$IntervallHull,
-                         globs = FinnGlobs()) {
+                         globs = SettGlobs()) {
   is_kh_debug()
   
   kol <- as.character(globs$DefDesign$DelKolN[del])
@@ -1149,7 +1149,7 @@ SettPartDekk <- function(KB,
 #' @export
 #'
 #' @examples
-FinnRedesignForFilter <- function(ORGd, Filter, globs = FinnGlobs()) {
+FinnRedesignForFilter <- function(ORGd, Filter, globs = SettGlobs()) {
   is_kh_debug()
   
   MODd <- Filter
@@ -1166,7 +1166,7 @@ FinnRedesignForFilter <- function(ORGd, Filter, globs = FinnGlobs()) {
 #' @param FilterKols 
 #' @param FGP 
 #' @param globs 
-FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
@@ -1179,7 +1179,7 @@ FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), F
 #' @param FIL 
 #' @param RD 
 #' @param globs 
-OmkodFil <- function(FIL, RD, globs = FinnGlobs()) {
+OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
   is_kh_debug()
   
   orgkols <- names(FIL)
@@ -1307,7 +1307,7 @@ OmkodFil <- function(FIL, RD, globs = FinnGlobs()) {
 #' @param batchdate 
 #' @param globs 
 #' @param GEOstdAAR 
-GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = FinnGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
+GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = SettGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
   is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
@@ -1326,7 +1326,7 @@ GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatch
   # Rektangulariser
   if (rektiser == TRUE) {
     REKT <- data.table::data.table()
-    FDesign <- FinnDesign(FIL)
+    FDesign <- FinnDesign(FIL, globs = globs)
 
     FDes <- FDesign$Design
     # Switch for TYP=="O" ??
@@ -1400,7 +1400,7 @@ SettMergeNAs <- function(FT, valsdef = list()) {
 #' @param NYdscr 
 #' @param FGP 
 #' @param globs 
-LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   if (!(is.na(NYdscr) | NYdscr == "")) {
@@ -1454,7 +1454,7 @@ LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), gl
 #' @param pstrorg 
 #' @param FGP 
 #' @param globs 
-EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   data.table::setDT(FIL)
@@ -1504,7 +1504,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
     for (del in names(globs$DefDesign$DelKols)) {
       if (all(globs$DefDesign$DelKols[[del]] %in% names(subvals))) {
         dvals <- subvals[globs$DefDesign$DelKols[[del]]]
-        if (KHglobs$DefDesign$DelFormat[[del]] == "integer") {
+        if (globs$DefDesign$DelFormat[[del]] == "integer") {
           dvals <- setNames(as.integer(dvals), names(dvals))
         }
         OmkParts[[del]] <- setNames(data.frame(matrix(dvals, ncol = length(dvals))), names(dvals))
@@ -1515,7 +1515,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
     # omk[,]<-as.numeric(omk[,])
     # omkD<-FinnDesign(omk,amin=amin,amax=amax,globs=globs)
     print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
-    FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL), list(Parts = OmkParts)), globs = globs)
+    FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL, globs = globs), list(Parts = OmkParts), globs = globs), globs = globs)
   }
   if (subsetstr != "") {
     FIL <- eval(parse(text = paste0("subset(FIL,", subsetstr, ")")))
@@ -1553,7 +1553,7 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
         tab <- tabE
       }
       FG2 <- eval(parse(text = paste0("subset(FG,", subexp, ")")))
-      FG2 <- KHaggreger(FG2[, setdiff(names(FG), tab), with = FALSE])
+      FG2 <- KHaggreger(FG2[, setdiff(names(FG), tab), with = FALSE], globs = globs)
       FG2[, eval(parse(text = paste0(tab, ":='", nylab, "'")))]
       FG <- rbind(FG, FG2[, names(FG), with = FALSE])
     }
@@ -1567,7 +1567,7 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
 #' @param Part 
 #' @param FGP 
 #' @param globs 
-OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   Dorg <- FinnDesign(Fil, FGP = FGP, globs = globs)
@@ -1581,7 +1581,7 @@ OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs =
 #' @param Nytt 
 #' @param Org 
 #' @param globs 
-ModifiserDesign <- function(Nytt, Org = list(), globs = FinnGlobs()) {
+ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
   is_kh_debug()
   
   Nkombs <- 1
@@ -1640,7 +1640,7 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = FinnGlobs()) {
 #' @param FyllMiss 
 #' @param AntYMiss 
 #' @param globs 
-FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = FinnGlobs()) {
+FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
   is_kh_debug()
   UT <- KUBE[0, ]
   tabs <- setdiff(FinnTabKols(names(KUBE)), c("AARl", "AARh"))
@@ -1701,7 +1701,7 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs 
 #' @param FGP 
 #' @param D_develop_predtype 
 #' @param globs
-AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_develop_predtype = "IND", globs = FinnGlobs()) {
+AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_develop_predtype = "IND", globs = SettGlobs()) {
   is_kh_debug()
   FG <- data.table::copy(FG)
   AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
@@ -1764,7 +1764,7 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_d
 #' @param ovkatspec 
 #' @param FGP 
 #' @param globs 
-SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   Foverkat <- list()
   if (!(is.null(ovkatspec) || is.na(ovkatspec))) {
@@ -1931,7 +1931,7 @@ LagAlleFriskvikIndikatorerForKube <- function(KUBEid,
                                               FGP, 
                                               modus = NULL, 
                                               batchdate, 
-                                              globs = FinnGlobs(),  
+                                              globs = SettGlobs(),  
                                               ...) {
   
   is_kh_debug()
@@ -1962,7 +1962,7 @@ LagFriskvikIndikator <- function(id,
                                  modus = NULL, 
                                  aargang = NULL,
                                  batchdate = SettKHBatchDate(), 
-                                 globs = FinnGlobs()) {
+                                 globs = SettGlobs()) {
   
   is_kh_debug()
   if(is.null(aargang)) aargang <- getOption("khfunctions.year")
@@ -2075,7 +2075,6 @@ LagFriskvikIndikator <- function(id,
 #' @param uprikk Uncensored KUBE
 #' @param allvistabs Dimensions included in ALLVIS kube
 #' @param allvisvals All columns 
-#' @param globs defaults to FinnGlobs() 
 LagQCKube <- function(allvis,
                       allvistabs,
                       kube){
@@ -2104,7 +2103,7 @@ GetAccessSpecs <- function(KUBEid,
                            filgrupper,
                            stnp,
                            datef,
-                           globs = FinnGlobs()){
+                           globs = SettGlobs()){
   
   meltdscr <- function(dscr, name = NULL){
     if(is.null(name)){

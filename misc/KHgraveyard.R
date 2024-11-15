@@ -1387,3 +1387,28 @@ FinnDatertKube <- function(KUBEid, batch = NA, silent = FALSE, hist = 0) {
   
   return(KUBE)
 }
+
+#' FinnGlobs (kb)
+#'
+#' Hjelperutine, bruker KHglobs eller SettGlobs()
+FinnGlobs <- function() {
+  is_kh_debug()
+  
+  globs <- NA
+  if (exists("KHglobs")) {
+    globs <- KHglobs
+  } else {
+    globs <- SettGlobs()
+  }
+  return(globs)
+}
+
+#' FinnTabKolsKUBE (kb)
+#'
+#' Finds column names not in NESSTARTUPPEL
+FinnTabKolsKUBE <- function(allnames, globs = SettGlobs()) {
+  is_kh_debug()
+  
+  annet <- union(union(unlist(getOption("khfunctions.valcols")), FinnValKolsF(allnames)), c("NORMSMR", "SMRtmp"))
+  return(setdiff(allnames, annet))
+}

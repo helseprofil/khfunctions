@@ -52,7 +52,7 @@ KHerr <- function(error) {
 #' @param TABELLnavn 
 #' @param globs 
 #' @param format
-DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = NULL) {
+DumpTabell <- function(TABELL, TABELLnavn, globs = SettGlobs(), format = NULL) {
   is_kh_debug()
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
   
@@ -76,7 +76,7 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = FinnGlobs(), format = NULL) {
 #' @param tableTYP 
 #' @param batchdate 
 #' @param globs
-KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   tmpdir <- file.path(fs::path_home(), "helseprofil")
@@ -211,17 +211,6 @@ FinnTabKols <- function(knames) {
   return(setdiff(knames, c(FinnValKolsF(knames), "KOBLID", "ROW")))
 }
 
-
-#' FinnTabKolsKUBE (kb)
-#'
-#' Finds column names not in NESSTARTUPPEL
-FinnTabKolsKUBE <- function(allnames, globs = FinnGlobs()) {
-  is_kh_debug()
-  
-  annet <- union(union(unlist(getOption("khfunctions.valcols")), FinnValKolsF(allnames)), c("NORMSMR", "SMRtmp"))
-  return(setdiff(allnames, annet))
-}
-
 #' LeggTilNyeVerdiKolonner (kb)
 #'
 #' @param TNF 
@@ -278,7 +267,7 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
 #' @export
 #'
 #' @examples
-FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs()) {
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
@@ -397,7 +386,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = FinnGlobs(
 #' @param vals 
 #' @param snitt 
 #' @param globs 
-KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = FinnGlobs()) {
+KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
   orgclass <- class(FIL)
@@ -481,7 +470,7 @@ ht2 <- function(x, n = 3) {
 #'
 #' @param koblid 
 #' @param globs 
-FinnFilGruppeFraKoblid <- function(koblid, globs = FinnGlobs()) {
+FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
   is_kh_debug()
   
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
@@ -495,7 +484,7 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = FinnGlobs()) {
 #' @param gruppe 
 #' @param batchdate 
 #' @param globs 
-SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
   sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
@@ -545,13 +534,13 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' @param verdi 
 #' @param batchdate 
 #' @param globs 
-TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
   if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
     print("**************Hvorfor er jeg egentlig her?*********************'")
     sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
-    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid), sep = "")
+    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
     sqlQuery(globs$log, upd)
   }
   if (is.character(verdi)) {
@@ -597,7 +586,7 @@ LesMultiHead <- function(mhstr) {
 #' @param TYP 
 #' @param IDKOLS 
 #' @param globs 
-FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = FinnGlobs()) {
+FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
   FT <- data.frame()
@@ -639,10 +628,10 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
 #' FinnFilT (kb)
 #'
 #' @param ... 
-FinnFilT <- function(...) {
+FinnFilT <- function(filid) {
   is_kh_debug()
   
-  return(FinnFil(...)$FT)
+  return(FinnFil(filid, globs = globs)$FT)
 }
 
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
@@ -722,15 +711,14 @@ setkeym <- function(DTo, keys) {
   }
 }
 
-# used in access
-#' YAlagVal (kb)
-#'
+#' @Title YAlagVal (kb)
+#' used in access
 #' @param FG 
 #' @param YL 
 #' @param AL 
 #' @param vals 
 #' @param globs 
-YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGlobs()) {
+YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG))) {
   is_kh_debug()
   
   data.table::setDT(FG)
@@ -766,16 +754,17 @@ YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG)), globs = FinnGlob
 #' @param aar 
 #' @param ... 
 godkjent <- function(profil = c("FHP", "OVP"),
-                     modus = globglobs$KHgeoniv,
-                     aar = globglobs$KHaar, ...) {
+                     modus = c("K", "F", "B"),
+                     aar = getOption("khfunctions.year"), ...) {
   is_kh_debug()
   
   profil <- match.arg(profil)
+  modus <- match.arg(modus)
   
-  modusFolder <- switch(modus,
-                        F = "NH",
-                        "KH"
-  )
+  # modusFolder <- switch(modus,
+  #                       F = "NH",
+  #                       "KH"
+  # )
   
   bruker <- Sys.info()[["user"]]
   message(
@@ -799,8 +788,8 @@ godkjent <- function(profil = c("FHP", "OVP"),
   
   tbl_fsk <- RODBC::sqlQuery(conn, sqlFrisk)
   
-  tblCols <- c("KUBE_NAVN", "VERSJON_PROFILAAR_GEO", "OK_PROFILAAR_GEO")
-  tblName <- paste0(modusFolder, aar, "_KUBESTATUS")
+  tblCols <- c("KUBE_NAVN", "DATOTAG_KUBE", "QC_OK")
+  tblName <- paste0("KUBESTATUS_", aar)
   sqlKube <- glue::glue_sql("SELECT {`tblCols`*} from {`tblName`}", .con = DBI::ANSI())
   
   tbl_kube <- RODBC::sqlQuery(conn, sqlKube)
@@ -815,11 +804,11 @@ godkjent <- function(profil = c("FHP", "OVP"),
   
   tblAlle <- rawAlle[PROFILTYPE == utTYP, ] %>%
     .[MODUS == modus, ] %>%
-    .[OK_PROFILAAR_GEO == 1, ]
+    .[QC_OK == 1, ]
   
   
   ## Create filenames
-  fileNames <- tblAlle[, filename := paste0(INDIKATOR, "_", VERSJON_PROFILAAR_GEO, ".csv")][["filename"]]
+  fileNames <- tblAlle[, filename := paste0(INDIKATOR, "_", DATOTAG_KUBE, ".csv")][["filename"]]
   
   ## Root folder where the file is
   pathRoot <- getOption("khfunctions.root")
@@ -908,13 +897,14 @@ godkjent <- function(profil = c("FHP", "OVP"),
 usebranch <- function(branch){
   rm(list = lsf.str(all.names = T))
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHpaths.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppefunctions.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppe.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkubefunctions.R"), encoding = "latin1")
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
+  # source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
   cat("\nLoaded functions from branch: ", branch)
 }
 
@@ -952,7 +942,7 @@ uselocal <- function(test = F, debug = F){
 #' @param KUBEid name of kube to test on
 .SetKubeParameters <- function(KUBEid){
   KUBEid <<- KUBEid
-  globs <<- FinnGlobs()
+  globs <<- SettGlobs()
   batchdate <<- SettKHBatchDate()
   versjonert <<- FALSE
   csvcopy <<- FALSE
@@ -978,4 +968,14 @@ KH_options <- function(){
       orgdata:::update_globs("khfunctions")
     }
   }
+}
+
+connect_khelsa <- function(){
+  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                         getOption("khfunctions.db")))
+}
+
+connect_khlogg <- function(){
+  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                         getOption("khfunctions.logg")))
 }

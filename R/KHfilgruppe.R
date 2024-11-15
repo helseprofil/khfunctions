@@ -17,20 +17,20 @@
 #' @param localDir 
 LagFilgruppe <- function(gruppe,
                          batchdate = SettKHBatchDate(),
-                         globs = FinnGlobs(),
+                         globs = SettGlobs(),
                          diagnose = 0,
                          printR = TRUE,
                          printCSV = FALSE,
                          printSTATA = FALSE,
                          versjonert = FALSE,
                          dumps = list(),
-                         test = runtest,
-                         idtest = testfiles,
-                         localDir = setLocal) {
+                         test = FALSE,
+                         idtest = NULL,
+                         localDir = FALSE) {
   is_kh_debug()
   
-  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))
-  globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.logg")))
+  # globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))
+  # globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.logg")))
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
@@ -108,11 +108,11 @@ LagFilgruppe <- function(gruppe,
     
     if (nrow(Filgruppe) > 0 & diagnose == 1) {
       # Finn og rapporter duplikater
-      HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = KHglobs)
+      HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = globs)
       RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
       
       # Sjekk design
-      FGd <- FinnDesign(Filgruppe, FGP = FGP)
+      FGd <- FinnDesign(Filgruppe, FGP = FGP, globs = globs)
       
       # Er ubalansert?
       subset(FGd$Design, HAR != 1)
@@ -126,10 +126,10 @@ LagFilgruppe <- function(gruppe,
       tmp$FILGRUPPE <- gruppe
       tmp$BATCH <- batchdate
       tmp$SV <- "S"
-      RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+      RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       if (versjonert == TRUE) {
         tmp$SV <- "V"
-        RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+        RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       }
     }
     # Sett (eksterne) kolonnenavn
@@ -220,7 +220,7 @@ LagFilgruppe <- function(gruppe,
 #' @param printCSV 
 #' @param printSTATA 
 #' @param versjonert 
-LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = FinnGlobs(), printR = TRUE, printCSV = FALSE, printSTATA = FALSE, versjonert = FALSE) {
+LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = SettGlobs(), printR = TRUE, printCSV = FALSE, printSTATA = FALSE, versjonert = FALSE) {
   is_kh_debug()
   
   # SKall rundt LagFilGruppe, lager og lagrer evt til fil

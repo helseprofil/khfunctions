@@ -6,13 +6,13 @@
 #' @param batchdate 
 #' @param versjonert 
 #' @param csvcopy Save a CSV-copy?
-#' @param globs global parameters, defaults to FinnGlobs()
+#' @param globs global parameters, defaults to SettGlobs()
 #' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
 #' @param ... 
 LagKUBE <- function(KUBEid,
-                    globs = FinnGlobs(),
+                    globs = SettGlobs(),
                     versjonert = FALSE,
                     csvcopy = FALSE,
                     dumps = list(), 
@@ -29,10 +29,8 @@ LagKUBE <- function(KUBEid,
                         paste0("KUBELOGG_", KUBEid, "_", batchdate, "_LOGG.txt")), 
        split = TRUE)
   
-  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                                      getOption("khfunctions.db")))
-  globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                                      getOption("khfunctions.logg")))
+  # globs$dbh <- connect_khelsa()
+  # globs$log <- connect_khlogg()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   # Les inn noedvendig informasjon om filene involvert (skilt ut i egen funksjon for lesbarhet)
@@ -768,7 +766,7 @@ LagKUBE <- function(KUBEid,
 #' Wrapper around LagKUBE, with default options to save output files
 #'
 LagKubeDatertCsv <- function(KUBEID, 
-                             globs = FinnGlobs(),
+                             globs = SettGlobs(),
                              dumps = list(), 
                              versjonert = TRUE,
                              csvcopy = TRUE,
@@ -785,7 +783,7 @@ LagKubeDatertCsv <- function(KUBEID,
 #' @param ... Optional, can set versjonert, csvcopy, write arguments if TRUE not wanted
 #'
 LagFlereKuber <- function(KUBEid_ALLE, 
-                          globs = FinnGlobs(),
+                          globs = SettGlobs(),
                           dumps = list(), 
                           alarm = FALSE,
                           ...) {

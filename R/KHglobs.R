@@ -19,7 +19,7 @@
 #' Se tabell KH_DELER
 #'
 #' @param globs 
-SettDefDesignKH <- function(globs = FinnGlobs()) {
+SettDefDesignKH <- function(globs = SettGlobs()) {
   is_kh_debug()
   
   Deler <- RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_DELER", as.is = TRUE, stringsAsFactors = FALSE)
@@ -86,7 +86,7 @@ SettDefDesignKH <- function(globs = FinnGlobs()) {
 #' SettKodeBokGlob (kb)
 #'
 #' @param globs 
-SettKodeBokGlob <- function(globs = FinnGlobs()) {
+SettKodeBokGlob <- function(globs = SettGlobs()) {
   is_kh_debug()
   
   # Produces warning: NAs introduced by coercion
@@ -125,7 +125,7 @@ SettKodeBokGlob <- function(globs = FinnGlobs()) {
 #' SettLegitimeKoder (kb)
 #'
 #' @param globs 
-SettLegitimeKoder <- function(globs = FinnGlobs()) {
+SettLegitimeKoder <- function(globs = SettGlobs()) {
   is_kh_debug()
   
   # Produces warning: In data.frame(..., check.names = FALSE) : NAs introduced by coercion
@@ -148,7 +148,7 @@ SettLegitimeKoder <- function(globs = FinnGlobs()) {
   return(KodeL)
 }
 
-# SettTotalKoder <- function(globs = FinnGlobs()) {
+# SettTotalKoder <- function(globs = SettGlobs()) {
 #   is_kh_debug()
 #   
 #   Koder <- RODBC::sqlQuery(globs$dbh, "SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1", as.is = TRUE, stringsAsFactors = FALSE)
@@ -252,25 +252,8 @@ SettGlobs <- function(path = "") {
   Stata <- FinnStataExe()
   globs$StataExe <- Stata$Exe
   globs$StataVers <- Stata$Vers
-  RODBC::odbcCloseAll()
+  # RODBC::odbcCloseAll()
   return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
 }
 
-#' FinnGlobs (kb)
-#'
-#' Hjelperutine, bruker KHglobs eller SettGlobs()
-FinnGlobs <- function() {
-  is_kh_debug()
-  
-  globs <- NA
-  if (exists("KHglobs")) {
-    globs <- KHglobs
-  } else {
-    globs <- SettGlobs()
-  }
-  return(globs)
-}
-
-# Definer KHglobs
-KHglobs <- SettGlobs()
 RODBC::odbcCloseAll()
