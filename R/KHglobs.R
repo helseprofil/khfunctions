@@ -1,17 +1,84 @@
 # Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
-
 # Parametre som hentes direkte fra options trenger ikke stå i globslisten, de kan brukes direkte fra options. 
 
-# Global parameters, starting point for SettGlobs()/FinnGlobs()
-# globglobs <- list()
-# filstier
-# globglobs[["path"]] <- getOption("khfunctions.root")
-# globglobs[["KubeDir"]] <- getOption("khfunctions.kubedir")
-# globglobs[["KubeDirNy"]] <- getOption("khfunctions.kube.ny") # Endre navn til KubeDir, KubeDirNy osv, uten _KH
-# globglobs[["KubeDirDat"]] <- getOption("khfunctions.kube.dat")
-# globglobs[["KubeDirQC"]] <- getOption("khfunctions.kubedir.qc")
-# globglobs[["KubeDirSpecs"]] <- getOption("khfunctions.kube.specs")
-# globglobs[["DUMPdir"]] <- getOption("khfunctions.dumpdir")
+#' SettGlobs (kb)
+#'
+#' @param path 
+#' @param modus 
+SettGlobs <- function(path = "") {
+  is_kh_debug()
+  
+  # Close all active connections to avoid many connection open simultaneously
+  RODBC::odbcCloseAll()
+  
+  globs <- list()
+  dbFile <- getOption("khfunctions.db")
+  logFile <- getOption("khfunctions.logg")
+  
+  # If path is not provided, set it to defpath
+  if (path == "" & file.exists(file.path(getOption("khfunctions.root"), dbFile))) {
+    path <- getOption("khfunctions.root")
+    cat("Setter path = ", path, "\n")
+  }
+  
+  # If path is not given, and defpath is not found, print warning
+  if (path == "") {
+      cat("******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?")
+  }
+  
+  # if path does not contain db file, print error and set path = ""
+  if (!file.exists(file.path(path, dbFile))) {
+    cat("******KRITISK FEIL: ", dbFile, " ikke funnet i ", path, sep = "")
+    path <- ""
+  }
+  
+  # If local path is set:
+  if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
+    ## Use other location of KHELSA.mdb and KHlogg.mdb
+    ## This is needed due to constant crash with unstable network
+    path <- setLocalPath
+  }
+  
+  # If path is valid, connect to database and reset path to rawPath for global parameters to work
+  if(path != ""){
+    # Sys.getenv("R_ARCH")   gir "/x64"eller "/i386"
+    KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
+    KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
+    
+    path <- getOption("khfunctions.root")
+  }
+  
+  globs <- c(globs, list(dbh = KHOc, log = KHLc, path = path))
+  
+  GeoNavn <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
+  GeoKoder <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
+  UtGeoKoder <- GeoKoder[TYP == "O" & TIL == 9999]$GEO
+  KnrHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  TKNR <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
+  HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  # Gjelder ogsaa for soner
+  KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
+    paste0(x, "00")
+  })
+  KnrHarmS <- cbind(as.data.frame(KnrHarmS, stringsAsFactors = FALSE), HARMstd = KnrHarm$HARMstd)
+  KnrHarm <- rbind(KnrHarm, KnrHarmS)
+  # Maa legge til de som ikke omkodes for aa lette bruk i merge
+  # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
+  
+  # GK til bydel. Boer konsolideres med KnrHarm
+  GkBHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
+  
+  globs$DefDesign <- SettDefDesignKH(globs = globs)
+  globs$KB <- SettKodeBokGlob(globs = globs)
+  globs$LegKoder <- SettLegitimeKoder(globs = globs)
+  globs$TotalKoder <- getOption("khfunctions.totals")
+  Stata <- FinnStataExe()
+  globs$StataExe <- Stata$Exe
+  globs$StataVers <- Stata$Vers
+  # RODBC::odbcCloseAll()
+  return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
+}
+
 
 #' SettDefDesignKH (kb)
 #' 
@@ -148,21 +215,6 @@ SettLegitimeKoder <- function(globs = SettGlobs()) {
   return(KodeL)
 }
 
-# SettTotalKoder <- function(globs = SettGlobs()) {
-#   is_kh_debug()
-#   
-#   Koder <- RODBC::sqlQuery(globs$dbh, "SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1", as.is = TRUE, stringsAsFactors = FALSE)
-#   TotKoder <- list()
-#   for (del in Koder$DEL) {
-#     if (Koder$FORMAT[Koder$DEL == del] == "integer") {
-#       TotKoder[[del]] <- as.integer(Koder$KODE[Koder$DEL == del])
-#     } else {
-#       TotKoder[[del]] <- Koder$KODE[Koder$DEL == del]
-#     }
-#   }
-#   return(TotKoder)
-# }
-
 #' FinnStataExe (ybk)
 #'
 #' Find the most recent version of locally installed Stata
@@ -177,83 +229,3 @@ FinnStataExe <- function() {
   
   return(list(Exe = Exe, Vers = Vers))
 }
-
-#' SettGlobs (kb)
-#'
-#' @param path 
-#' @param modus 
-SettGlobs <- function(path = "") {
-  is_kh_debug()
-  
-  # Close all active connections to avoid many connection open simultaneously
-  RODBC::odbcCloseAll()
-  
-  globs <- list()
-  dbFile <- getOption("khfunctions.db")
-  logFile <- getOption("khfunctions.logg")
-  
-  # If path is not provided, set it to defpath
-  if (path == "" & file.exists(file.path(getOption("khfunctions.root"), dbFile))) {
-    path <- getOption("khfunctions.root")
-    cat("Setter path = ", path, "\n")
-  }
-  
-  # If path is not given, and defpath is not found, print warning
-  if (path == "") {
-      cat("******KRITISK FEIL: path ikke funnet\n******Har du tilgang til O:/?")
-  }
-  
-  # if path does not contain db file, print error and set path = ""
-  if (!file.exists(file.path(path, dbFile))) {
-    cat("******KRITISK FEIL: ", dbFile, " ikke funnet i ", path, sep = "")
-    path <- ""
-  }
-  
-  # If local path is set:
-  if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
-    ## Use other location of KHELSA.mdb and KHlogg.mdb
-    ## This is needed due to constant crash with unstable network
-    path <- setLocalPath
-  }
-  
-  # If path is valid, connect to database and reset path to rawPath for global parameters to work
-  if(path != ""){
-    # Sys.getenv("R_ARCH")   gir "/x64"eller "/i386"
-    KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
-    KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
-    
-    path <- getOption("khfunctions.root")
-  }
-  
-  globs <- c(globs, list(dbh = KHOc, log = KHLc, path = path))
-  
-  GeoNavn <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
-  GeoKoder <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
-  UtGeoKoder <- GeoKoder[TYP == "O" & TIL == 9999]$GEO
-  KnrHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
-  TKNR <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  HELSEREG <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
-  # Gjelder ogsaa for soner
-  KnrHarmS <- lapply(KnrHarm[, c("GEO", "GEO_omk"), with = FALSE], function(x) {
-    paste0(x, "00")
-  })
-  KnrHarmS <- cbind(as.data.frame(KnrHarmS, stringsAsFactors = FALSE), HARMstd = KnrHarm$HARMstd)
-  KnrHarm <- rbind(KnrHarm, KnrHarmS)
-  # Maa legge til de som ikke omkodes for aa lette bruk i merge
-  # KnrHarm<-rbind(KnrHarm,data.frame(KNRorg=GeoKoder$GEO[TIL<2008],KNRharm=GeoKoder$GEO[TIL<2008],HARMstd=2008))
-  
-  # GK til bydel. Boer konsolideres med KnrHarm
-  GkBHarm <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK,Bydel2004"))
-  
-  globs$DefDesign <- SettDefDesignKH(globs = globs)
-  globs$KB <- SettKodeBokGlob(globs = globs)
-  globs$LegKoder <- SettLegitimeKoder(globs = globs)
-  globs$TotalKoder <- getOption("khfunctions.totals")
-  Stata <- FinnStataExe()
-  globs$StataExe <- Stata$Exe
-  globs$StataVers <- Stata$Vers
-  # RODBC::odbcCloseAll()
-  return(c(globs, list(GeoNavn = GeoNavn, GeoKoder = GeoKoder, UtGeoKoder = UtGeoKoder, KnrHarm = KnrHarm, GkBHarm = GkBHarm, TKNR = TKNR, HELSEREG = HELSEREG)))
-}
-
-RODBC::odbcCloseAll()

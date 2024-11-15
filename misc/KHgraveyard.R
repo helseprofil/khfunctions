@@ -1412,3 +1412,20 @@ FinnTabKolsKUBE <- function(allnames, globs = SettGlobs()) {
   annet <- union(union(unlist(getOption("khfunctions.valcols")), FinnValKolsF(allnames)), c("NORMSMR", "SMRtmp"))
   return(setdiff(allnames, annet))
 }
+
+#' SettTotalKoder (kb)
+#' replaed by config
+SettTotalKoder <- function(globs = SettGlobs()) {
+  is_kh_debug()
+
+  Koder <- RODBC::sqlQuery(globs$dbh, "SELECT KH_KODER.DEL,KODE, FORMAT FROM KH_KODER INNER JOIN KH_DELER ON KH_KODER.DEL=KH_DELER.DEL WHERE TOTAL=1", as.is = TRUE, stringsAsFactors = FALSE)
+  TotKoder <- list()
+  for (del in Koder$DEL) {
+    if (Koder$FORMAT[Koder$DEL == del] == "integer") {
+      TotKoder[[del]] <- as.integer(Koder$KODE[Koder$DEL == del])
+    } else {
+      TotKoder[[del]] <- Koder$KODE[Koder$DEL == del]
+    }
+  }
+  return(TotKoder)
+}

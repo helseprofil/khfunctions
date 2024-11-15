@@ -12,7 +12,6 @@
 #' @param alarm if TRUE, plays a sound when done
 #' @param ... 
 LagKUBE <- function(KUBEid,
-                    globs = SettGlobs(),
                     versjonert = FALSE,
                     csvcopy = FALSE,
                     dumps = list(), 
@@ -20,6 +19,9 @@ LagKUBE <- function(KUBEid,
                     alarm = FALSE) {
 
   is_kh_debug()
+  globs <- SettGlobs()
+  on.exit(RODBC::odbcCloseAll(), add = TRUE)
+  
   batchdate <- SettKHBatchDate()
   datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
   
@@ -29,9 +31,6 @@ LagKUBE <- function(KUBEid,
                         paste0("KUBELOGG_", KUBEid, "_", batchdate, "_LOGG.txt")), 
        split = TRUE)
   
-  # globs$dbh <- connect_khelsa()
-  # globs$log <- connect_khlogg()
-  on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   # Les inn noedvendig informasjon om filene involvert (skilt ut i egen funksjon for lesbarhet)
   Finfo <- SettFilInfoKUBE(KUBEid, batchdate = batchdate, versjonert = versjonert, globs = globs)

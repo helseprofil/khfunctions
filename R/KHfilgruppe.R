@@ -17,7 +17,6 @@
 #' @param localDir 
 LagFilgruppe <- function(gruppe,
                          batchdate = SettKHBatchDate(),
-                         globs = SettGlobs(),
                          diagnose = 0,
                          printR = TRUE,
                          printCSV = FALSE,
@@ -28,9 +27,7 @@ LagFilgruppe <- function(gruppe,
                          idtest = NULL,
                          localDir = FALSE) {
   is_kh_debug()
-  
-  # globs$dbh <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))
-  # globs$log <- RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), getOption("khfunctions.logg")))
+  globs <-  SettGlobs()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
