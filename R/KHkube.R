@@ -307,14 +307,14 @@ LagKUBE <- function(KUBEid,
   # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
   if (ma_satt == 1) {
     valkols <- FinnValKols(names(KUBE))
-    anon_tot_tol <- 0.2
+    anon_tot_tol <- getOption("khfunctions.anon_tot_tol") #0.2
     
     for(kol in valkols){
     kol.f <- paste0(kol, ".f")
     kol.n <- paste0(kol, ".n")
     kol.fn3 <- paste0(kol, ".fn3")
-    data.table::set(kubekopi,
-                    i = kubekopi[get(kol.n) > 0 & get(kol.fn3)/get(kol.n) >= anon_tot_tol, which = TRUE],
+    data.table::set(KUBE,
+                    i = KUBE[get(kol.n) > 0 & get(kol.fn3)/get(kol.n) >= anon_tot_tol, which = TRUE],
                     j = c(kol, kol.f),
                     value = list(NA, 3))
     }
@@ -359,8 +359,8 @@ LagKUBE <- function(KUBEid,
   }
   
   # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
-  SvakAndelAvSerieGrense <- 0.5
-  HullAndelAvSerieGrense <- 0.2
+  SvakAndelAvSerieGrense <- getOption("khfunctions.anon_svakandel") #0.5
+  HullAndelAvSerieGrense <- getOption("khfunctions.anon_hullandel") #0.2
   
   if (!(is.na(KUBEdscr$STATTOL_T) | KUBEdscr$STATTOL_T == "")) {
     tabkols <- setdiff(intersect(names(KUBE), globs$DefDesign$DesignKolsFA), c(globs$DefDesign$DelKols[["Y"]]))

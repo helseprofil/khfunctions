@@ -1,5 +1,4 @@
 # Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
-# Parametre som hentes direkte fra options trenger ikke stå i globslisten, de kan brukes direkte fra options. 
 
 #' SettGlobs (kb)
 #'
