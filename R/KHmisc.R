@@ -910,8 +910,9 @@ usebranch <- function(branch){
 
 #' uselocal (VL)
 #' for development
-uselocal <- function(test = F, debug = F){
-  rm(list = lsf.str(all.names = T))
+uselocal <- function(test = FALSE, 
+                     debug = FALSE){
+  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
   show_functions <<- debug
   show_arguments <<- debug
   source("./R/KHmisc.R", encoding = "latin1")
