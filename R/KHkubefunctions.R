@@ -147,7 +147,7 @@ SettPredFilter <- function(refvstr, globs = SettGlobs()) {
     for (del in names(refverdicolumns)) {
       delN <- refverdicolumns[del]
       if (deltype[del] == "COL") {
-        if (grepl(paste0("(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$)"), refvstr)) {
+        if (grepl(paste0(delN, " *=="), refvstr)) {
           Pcols <- c(Pcols, delkolsF[[del]])
           val <- gsub(paste0(".*(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$).*"), "\\2", refvstr)
           if (delformat[del] == "integer") {
@@ -157,13 +157,14 @@ SettPredFilter <- function(refvstr, globs = SettGlobs()) {
           }
         }
       } else if (deltype[del] == "INT") {
-        if (grepl(paste0("(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&)"), refvstr) &&
-            grepl(paste0("(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&)"), refvstr)) {
+        if (grepl(paste0(delN, "l *=="), refvstr) &&
+            grepl(paste0(delN, "h *=="), refvstr)) {
+          # hvis både delNl og delNh i REFVERDI
           Pcols <- c(Pcols, delkolsF[[del]])
           vall <- gsub(paste0(".*(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&).*"), "\\2", refvstr)
           valh <- gsub(paste0(".*(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&).*"), "\\2", refvstr)
           PredFilter[[del]] <- eval(parse(text = paste0("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)")))
-        } else if (grepl(paste0("(^|\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&)"), refvstr)) {
+        } else if (grepl(paste0(delN, "l{0,1} *=="), refvstr)) {
           # Hvis bare AARl/ALDERl, setter AARh/ALDERh = AARl/ALDERl
           intval1 <- as.integer(gsub(paste0("(^|.*\\&) *", delN, "l{0,1} *== *'*(.*?)'* *($|\\&.*)"), "\\2", refvstr))
           intval <- c(intval1, intval1)
