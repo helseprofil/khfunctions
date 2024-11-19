@@ -1,9 +1,6 @@
 # Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
 
 #' SettGlobs (kb)
-#'
-#' @param path 
-#' @param modus 
 SettGlobs <- function() {
   is_kh_debug()
   RODBC::odbcCloseAll()
@@ -26,28 +23,28 @@ SettGlobs <- function() {
   # 
   # If path is valid, connect to database and reset path to rawPath for global parameters to work
   # if(path != ""){
-  #   KHOc <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
-  #   KHLc <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
+  #   KHELSA <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
+  #   KHLOGG <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
   # 
   #   path <- getOption("khfunctions.root")
   # }
   
-  KHOc <- connect_khelsa()
-  KHLc <- connect_khlogg()
-  globs <- list(dbh = KHOc, log = KHLc)
+  KHELSA <- connect_khelsa()
+  KHLOGG <- connect_khlogg()
+  globs <- list(dbh = KHELSA, log = KHLOGG)
   
-  # globs[["GeoNavn"]] <- data.table::data.table(RODBC::sqlQuery(KHOc, "SELECT * from GeoNavn", as.is = TRUE))
-  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
+  # globs[["GeoNavn"]] <- data.table::data.table(RODBC::sqlQuery(KHELSA, "SELECT * from GeoNavn", as.is = TRUE))
+  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
   globs[["UtGeoKoder"]] <- globs$GeoKoder[TYP == "O" & TIL == 9999]$GEO
-  globs[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  globs[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
-  KnrHarm <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  globs[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
+  globs[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  KnrHarm <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   globs[["KnrHarm"]] <- data.table::rbindlist(list(KnrHarm, KnrHarmS))
-  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(KHOc, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
-  globs[["DefDesign"]] <- SettDefDesignKH(globs = globs)
+  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+  globs[["DefDesign"]] <- SettDefDesignKH(dbcon = KHELSA)
   globs[["KB"]] <- SettKodeBokGlob(globs = globs)
-  globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs) ## 
+  globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs) 
   globs[["TotalKoder"]] <- getOption("khfunctions.totals")
   Stata <- FinnStataExe()
   globs[["StataExe"]] <- Stata$Exe
@@ -59,14 +56,10 @@ SettGlobs <- function() {
 #' 
 #' Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
 #' Se tabell KH_DELER
-#'
-#' @param globs 
-SettDefDesignKH <- function(globs = SettGlobs()) {
+SettDefDesignKH <- function(dbcon) {
   is_kh_debug()
   
-  Deler <- RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_DELER", as.is = TRUE, stringsAsFactors = FALSE)
-  # DelKols<-lapply(as.list(setNames(Deler$DelKols, Deler$DEL)),function(x){unlist(stringr::str_split(x,pattern=","))})
-  # Tilrettelegging for enkle oppslag:
+  Deler <- data.table::setDT(RODBC::sqlQuery(dbcon, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE))
   DelKolN <- setNames(Deler$DelKol, Deler$DEL)
   DelKolE <- setNames(Deler$DelKolE, Deler$DEL)
   DelType <- setNames(Deler$TYPE, Deler$DEL)
@@ -96,7 +89,6 @@ SettDefDesignKH <- function(globs = SettGlobs()) {
   BetingOmk <- Deler$DEL[Deler$OMKODbet == "B"]
   BetingF <- Deler$DEL[Deler$OMKODbet == "F"]
   OmkDel <- c(UBeting, BetingOmk)
-  # IntervallHull<-list(A="DekkInt/TotInt>0.999 | (NTOT>=10 & NHAR/NTOT>0.8) | (TotInt<=20 & DekkInt>=10) | TotInt<=10")
   
   DesignKols <- c(unlist(DelKols[c(UBeting, BetingOmk)]))
   DesignKolsF <- c(DesignKols, unlist(DelKols[BetingF]))
@@ -119,8 +111,7 @@ SettDefDesignKH <- function(globs = SettGlobs()) {
       DesignKolsFA = DesignKolsFA,
       AggPri = AggPri,
       AggVedStand = AggVedStand,
-      IntervallHull = IntervallHull,
-      AMissAllow = TRUE
+      IntervallHull = IntervallHull
     )
   )
 }
@@ -131,13 +122,9 @@ SettDefDesignKH <- function(globs = SettGlobs()) {
 SettKodeBokGlob <- function(globs = SettGlobs()) {
   is_kh_debug()
   
-  # Produces warning: NAs introduced by coercion
-  # Happens when DefDesign$Delformat[del] == "integer", for dimensions where some values 
-  # are not possible to convert to integer (e.g. LANDBAK = "1c").
-  # Probably benign as these values are already recoded 
-  
   OmkodD <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_OMKOD
                                               UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE))
+  OmkodD <- OmkodD[DEL != "S"]
   KB <- list()
   
   for (del in names(globs$DefDesign$DelKolN)) {
@@ -170,12 +157,8 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
 #' @param globs 
 SettLegitimeKoder <- function(globs = SettGlobs()) {
   is_kh_debug()
-  
-  # Produces warning: In data.frame(..., check.names = FALSE) : NAs introduced by coercion
-  # Happens when DefDesign$Delformat[del] == "integer", for dimensions where some values 
-  # are not possible to convert to integer (e.g. "1c").
-  
-  Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_KODER", as.is = TRUE))
+
+  Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_KODER WHERE DEL <> 'S'", as.is = TRUE))
   KodeL <- list()
   for (del in unique(Koder$DEL)) {
     KodeD <- Koder[DEL == del]

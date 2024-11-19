@@ -138,50 +138,6 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
-#' get_col (ybk)
-#' 
-#' helper function in STATA censoring
-#' Easier to check with sum by converting valid col value to 1
-get_col <- function(var, num = TRUE){
-  is_kh_debug()
-  
-  if (is.na(var) || var == ""){
-    var <- NA
-  }
-  
-  if (num){
-    var <- var_num(var)
-  }
-  
-  if (!is.na(var) && num){
-    var <- 1
-  }
-  
-  return(var)
-}
-
-#' var_num (ybk)
-#' 
-#' Helper function for STATA censoring
-#' Avoid warning message "NAs introduced by coercion" when using as.numeric
-#'
-#' @param x 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-var_num <- function(x){
-  is_kh_debug()
-  
-  v <- is.numeric(x)
-  if (!v){
-    x <- NA
-  }
-  
-  return(x)
-}
-
 #' FinnValKols (kb)
 #'
 #' @param knames 
@@ -198,7 +154,7 @@ FinnValKolsF <- function(knames) {
   
   vkolsN <- gsub("^(.*?)\\.f$", "\\1", knames[grepl("^(.*?)\\.f$", knames)])
   vkolsNF <- unlist(lapply(vkolsN, function(x) {
-    paste(x, c("", ".f", ".a", ".n"), sep = "")
+    paste0(x, c("", ".f", ".a", ".n"))
   }))
   return(intersect(knames, vkolsNF))
 }
@@ -262,11 +218,6 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
 #' @param FIL 
 #' @param FGP 
 #' @param globs 
-#'
-#' @return
-#' @export
-#'
-#' @examples
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -274,7 +225,6 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
     FIL <- data.table::data.table(FIL)
   }
   keyorg <- data.table::key(FIL)
-  # Sett defdesign
   DelKols <- globs$DefDesign$DelKols
   UBeting <- globs$DefDesign$UBeting
   BetingOmk <- globs$DefDesign$BetingOmk
@@ -285,14 +235,11 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   DesignKols <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% names(FIL)]
   OmkKols <- globs$DefDesign$DesignKols[globs$DefDesign$DesignKols %in% names(FIL)]
   
-  # Initier tomt resultat
   Design <- list()
   Design[["KolNavn"]] <- names(FIL)
   # Finn faktisk design
   setkeym(FIL, c(DesignKols))
-  ObsDesign <- unique(FIL[, DesignKols, with = FALSE])
-  # print(unique(FIL[,c("ALDERl","ALDERh"),with=FALSE]))
-  # print(subset(FIL,GEOniv==1 & AARl==2009 & TAB1=="Total"))
+  ObsDesign <- unique(FIL[, ..DesignKols])
   
   # Finn deler inneholdt i tabell
   Deler <- character()
@@ -301,7 +248,6 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
       Deler <- c(Deler, del)
     }
   }
-  # Sjekk for evt ugyldig med bare ALDERl etc?
   
   # Sett omkodingskombinasjoner
   Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
@@ -319,17 +265,11 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   }
   
   # Fyll evt hull i aldersintervaller
-  # Boer generaliserer til INT !!!
-  if (globs$DefDesign$AMissAllow == TRUE) {
-    if ("A" %in% names(Design$Part)) {
-      mangler <- intervals::interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
-      if (nrow(mangler) > 0) {
-        mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
-        #         if (max(mangler$ALDERl)>=95){
-        #           mangler[ALDERl==max(mangler$ALDERl),A_HAR]<-1
-        #         }
-        Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
-      }
+  if ("A" %in% names(Design$Part)) {
+    mangler <- intervals::interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    if (nrow(mangler) > 0) {
+      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
+      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
     }
   }
   
@@ -343,11 +283,6 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   FullDesign[ObsDesign, HAR := 1]
   Design[["Design"]] <- FullDesign
   
-  # Utgaatt
-  # Filtrer til bare den delen av designet som er aktuell for omkoding (dsv uten TAB1 etc)
-  # setkeym(FullDesign,OmkKols)
-  # Design[["OmkDesign"]]<-FullDesign[,list(HAR=max(HAR)),by=OmkKols]
-
   # Sett omkodingskombinasjone
   # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
   # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
@@ -373,7 +308,6 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
     }
   }
   
-  # Tilbakestill key
   setkeym(ObsDesign, names(ObsDesign))
   setkeym(FIL, keyorg)
   gc()
@@ -926,15 +860,15 @@ uselocal <- function(test = FALSE,
   cat("\nLoaded local functions")
 }
 
-# Uset khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
+# Use khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
 #' .useTest (VL)
 #'
 #' @param db path to test db file
 #' @param logg path to test log file
 .useTest <- function(db = NULL, logg = NULL){
   RODBC::odbcCloseAll()
-  if(is.null(db)) db <- "STYRING/test/KHELSAtest.mdb"
-  if(is.null(logg)) logg <- "STYRING/test/KHloggtest.mdb"
+  if(is.null(db)) db <- getOption("khfunctions.test.db")
+  if(is.null(logg)) logg <- getOption("khfunctions.test.logg")
   TESTMODUS <<- TRUE
   options(khfunctions.db = db)
   options(khfunctions.logg = logg)
@@ -958,7 +892,6 @@ uselocal <- function(test = FALSE,
 #' @description
 #' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
 #' option is different from the config-file, and give the option to update. 
-
 KH_options <- function(){
   # Set global options
   op <- options()
