@@ -455,7 +455,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     # Merk at ekte NA settes inn igjen naar det rektangulariseres paa aktive kommuner ved kubeproduksjon
     GeoFra <- setNames(globs$GeoKoder$FRA, globs$GeoKoder$GEO)
     GeoTil <- setNames(globs$GeoKoder$TIL, globs$GeoKoder$GEO)
-    valkols <- FinnValKols(names(DF))
+    valkols <- get_value_columns(names(DF))
     # Skjoenner ikke hvorfor dette ikke funker
     
     DF2 <- DF[!((unlist(GeoTil[DF$GEO]) <= DF$AARl | unlist(GeoFra[DF$GEO]) >= DF$AARh) & rowSums(is.na(data.frame(DF[, valkols]))) == length(valkols)), ]
@@ -898,7 +898,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
   is_kh_debug()
   
   dbh <- globs$dbh
-  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+  datef <- FormatSqlBatchdate(batchdate)
   FGPaktiv <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                                    "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                         ",
@@ -959,17 +959,8 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
 #' @param filgruppe 
 #' @param batchdate 
 #' @param globs 
-#' @param test 
-#' @param testID 
-FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = SettGlobs()) {
-  is_kh_debug()
-  
-  # Default er aa finne filbesk gyldige naa (Sys.time)
-  datef <- format(Sys.time(), "#%Y-%m-%d#")
-  # ALternativt kan man finne for en historisk batchdate
-  if (!is.null(batchdate)) {
-    datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  }
+FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  datef <- FormatSqlBatchdate(batchdate)
   sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
               FROM INNLESING INNER JOIN
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER
@@ -982,8 +973,6 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = SettGlobs()) 
               AND INNLESING.VERSJONFRA<=", datef, "
               AND INNLESING.VERSJONTIL>", datef, sep = "")
   fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
-  
-  ## Picking up files path that is refered to in ORIGINALFILER
   invisible(fb)
 }
 
@@ -1005,7 +994,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettK
   orgkeys <- data.table::key(FG)
   tabkols <- globs$DefDesign$DesignKolsFA
   tabkols <- tabkols[tabkols %in% names(FG)]
-  valkols <- FinnValKols(names(FG))
+  valkols <- get_value_columns(names(FG))
   setkeym(FG, tabkols)
   
   dubi <- duplicated(FG)
@@ -1183,7 +1172,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
   
   datef <- format(Sys.time(), "#%Y-%m-%d#")
   if (!is.null(batchdate)) {
-    datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+    datef <- FormatSqlBatchdate(batchdate)
   }
   omk <- org
   kbf <- paste(type, "kb", sep = "")

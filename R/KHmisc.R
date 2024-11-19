@@ -139,33 +139,18 @@ warn_prikk <- function(r, s){
   invisible()
 }
 
-#' FinnValKols (kb)
-#'
-#' @param knames 
-FinnValKols <- function(knames) {
-  is_kh_debug()
-  
-  gsub("^(.*?)\\.f$", "\\1", knames[grepl("^(.*?)\\.f$", knames)])
+#' get_value_columns
+get_value_columns <- function(columnnames, full = FALSE) {
+  valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
+  valcols <- gsub("\\.f$", "", valcols)
+  if(full) valcols <- paste0(rep(valcols, each = 4), c("", ".f", ".a", ".n"))
+  return(intersect(columnnames, valcols))
 }
 
-#' FinnValKolsF (kb)
-#'
-FinnValKolsF <- function(knames) {
-  is_kh_debug()
-  
-  vkolsN <- gsub("^(.*?)\\.f$", "\\1", knames[grepl("^(.*?)\\.f$", knames)])
-  vkolsNF <- unlist(lapply(vkolsN, function(x) {
-    paste0(x, c("", ".f", ".a", ".n"))
-  }))
-  return(intersect(knames, vkolsNF))
-}
-
-#' FinnTabKols (kb)
-#'
-FinnTabKols <- function(knames) {
-  is_kh_debug()
-  
-  return(setdiff(knames, c(FinnValKolsF(knames), "KOBLID", "ROW")))
+#' get_dimension_columns
+get_dimension_columns <- function(columnnames) {
+  notab <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
+  return(setdiff(columnnames, notab))
 }
 
 #' LeggTilNyeVerdiKolonner (kb)
@@ -180,7 +165,7 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
   TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
   data.table::setDT(TNF)
   valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
-  # FinnValKols(names(TNF))
+  # get_value_columns(names(TNF))
   if (!(is.na(NYEdscr) | NYEdscr == "")) {
     for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
       nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
@@ -315,13 +300,41 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   return(Design)
 }
 
+do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
+  if(!is(file, "data.table")) data.table::setDT(file)
+  tabcols <- get_dimension_columns(names(file))
+  valcols <- get_value_columns(names(file))
+  colorder <- tabcols 
+  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
+  
+  g <- collapse::GRP(file, tabcols)
+  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = valcols]
+  file[, names(.SD) := collapse::fmax(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".f")]
+  for(val in valcols){
+    file[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".a")]
+  # collapse::settransformv(file, paste0(valcols, ".a"), fsum, g = g, TRA = 2)
+  # Remove if marked as not "sumbar"
+  for(val in valcols){
+    if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
+      valA <- paste0(val, ".a")
+      valF <- paste0(val, ".f")
+      file[get(valA) > 1, c(val, valF) := list(NA, 2)]
+    }
+  }
+  data.table::setcolorder(file, colorder)
+  return(file)
+}
+
 #' KHaggreger (kb)
 #'
 #' @param FIL 
 #' @param vals 
 #' @param snitt 
 #' @param globs 
-KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = SettGlobs()) {
+KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
   is_kh_debug()
   
   orgclass <- class(FIL)
@@ -331,9 +344,7 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = SettGlobs()) {
   }
   orgkeys <- data.table::key(FIL)
   tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
-  valkols <- names(FIL)[!names(FIL) %in% tabnames]
-  valkols <- valkols[!grepl("\\.(f|a)", valkols)]
-  valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
+  valkols <- get_value_columns(names(FIL))
   if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
   
   FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
@@ -346,38 +357,6 @@ KHaggreger <- function(FIL, vals = list(), snitt = FALSE, globs = SettGlobs()) {
   FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
   data.table::setcolorder(FIL, colorder)
 
-    # USIKKER PÅ OM DET UNDER KAN SLETTES (TROR IKKE DET BRUKES)
-  # } else {
-  #   # Sett ogsaa hjelpestoerrelser for vurdering av snitt
-  #   lp <- paste("list(",
-  #               paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
-  #                     valkols, ".f=max(", valkols, ".f),",
-  #                     valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
-  #                     valkols, ".fn1=sum(", valkols, ".f==1),",
-  #                     valkols, ".fn3=sum(", valkols, ".f>1),",
-  #                     valkols, ".n=.N",
-  #                     sep = "", collapse = ","
-  #               ),
-  #               ")",
-  #               sep = ""
-  #   )
-  #   FIL <- FIL[, eval(parse(text = lp)), by = tabnames]
-  # 
-  #   # Anonymiser, trinn 1
-  #   # Filtrer snitt som ikke skal brukes pga for mye anonymt
-  #   anon_tot_tol <- 0.2
-  #   lp <- paste("FIL[,':='(",
-  #               paste(valkols, "=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",NA,", valkols, "),",
-  #                     valkols, ".f=ifelse(", valkols, ".fn3/", valkols, ".n>=", anon_tot_tol, ",3,", valkols, ".f)",
-  #                     sep = "", collapse = ","
-  #               ),
-  #               ")]",
-  #               sep = ""
-  #   )
-  #   eval(parse(text = lp))
-  # 
-  #   FIL <- FIL[, c(orgcols, paste(valkols, ".n", sep = "")), with = FALSE]
-  # }
   vals <- vals[valkols]
   usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
     x$sumbar == 0
@@ -653,7 +632,7 @@ setkeym <- function(DTo, keys) {
 #' @param AL 
 #' @param vals 
 #' @param globs 
-YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG))) {
+YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
   is_kh_debug()
   
   data.table::setDT(FG)
@@ -671,7 +650,7 @@ YAlagVal <- function(FG, YL, AL, vals = FinnValKols(names(FG))) {
   FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
   FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
   data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
-  tabkols <- setdiff(names(FGl), FinnValKolsF(names(FG)))
+  tabkols <- setdiff(names(FGl), get_value_columns(names(FG), full = TRUE))
   lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
   data.table::setnames(FGl, unlist(lapply(vals, function(x) {
     paste(x, c("", ".f", ".a"), sep = "")
@@ -819,16 +798,9 @@ godkjent <- function(profil = c("FHP", "OVP"),
   )
 }
 
-#' usebranch (VL)
-#' 
+#' @title usebranch
+#' @description
 #' use to test other branches, loads all functions from a specified branch
-#'
-#' @param branch 
-#'
-#' @return
-#' @export
-#'
-#' @examples
 usebranch <- function(branch){
   rm(list = lsf.str(all.names = T))
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
@@ -841,52 +813,6 @@ usebranch <- function(branch){
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
   # source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
   cat("\nLoaded functions from branch: ", branch)
-}
-
-#' uselocal (VL)
-#' for development
-uselocal <- function(test = FALSE, 
-                     debug = FALSE){
-  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
-  show_functions <<- debug
-  show_arguments <<- debug
-  source("./R/KHmisc.R", encoding = "latin1")
-  KH_options()
-  if(test) .useTest()
-  source("./R/KHglobs.R", encoding = "latin1")
-  source("./R/KHfilgruppefunctions.R", encoding = "latin1")
-  source("./R/KHfilgruppe.R", encoding = "latin1")
-  source("./R/KHkubefunctions.R", encoding = "latin1")
-  source("./R/KHkube.R", encoding = "latin1")
-  cat("\nLoaded local functions")
-}
-
-# Use khelsa and khlogg in the STYRING/test/-folder, for testing access functionality
-#' .useTest (VL)
-#'
-#' @param db path to test db file
-#' @param logg path to test log file
-.useTest <- function(db = NULL, logg = NULL){
-  RODBC::odbcCloseAll()
-  if(is.null(db)) db <- getOption("khfunctions.test.db")
-  if(is.null(logg)) logg <- getOption("khfunctions.test.logg")
-  TESTMODUS <<- TRUE
-  options(khfunctions.db = db)
-  options(khfunctions.logg = logg)
-}
-
-#' .SetKubeParameters (VL)
-#'
-#' for testing LagKUBE, store all the parameters to global env
-#' @param KUBEid name of kube to test on
-.SetKubeParameters <- function(KUBEid){
-  KUBEid <<- KUBEid
-  globs <<- SettGlobs()
-  batchdate <<- SettKHBatchDate()
-  versjonert <<- FALSE
-  csvcopy <<- FALSE
-  dumps <<- list()
-  assign("write", FALSE, envir = .GlobalEnv)
 }
 
 #' @title KH_options
@@ -908,12 +834,6 @@ KH_options <- function(){
   }
 }
 
-connect_khelsa <- function(){
-  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                         getOption("khfunctions.db")))
-}
-
-connect_khlogg <- function(){
-  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                         getOption("khfunctions.logg")))
+FormatSqlBatchdate <- function(batchdate){
+  format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
 }

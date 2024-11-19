@@ -1,5 +1,3 @@
-# Hardkodede verdier som SvakAndelAvSerieGrense, HullAndelAvSerieGrense, anon_tot_tol osv bør legges i configfilen.
-
 #' SettGlobs (kb)
 SettGlobs <- function() {
   is_kh_debug()
@@ -188,4 +186,14 @@ FinnStataExe <- function() {
   Exe <- file.path(stata_path, stata_bin)
   
   return(list(Exe = Exe, Vers = Vers))
+}
+
+connect_khelsa <- function(){
+  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                         getOption("khfunctions.db")))
+}
+
+connect_khlogg <- function(){
+  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                         getOption("khfunctions.logg")))
 }
