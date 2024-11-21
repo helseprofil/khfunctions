@@ -16,6 +16,7 @@ globglobs <- list(
   KubeDirDat_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/DATERT",
   KubeDirQC_KH = "PRODUKTER/KUBER/KOMMUNEHELSA/QC",
   KubeStataPrikkFil ="BIN/Z_Statasnutter/StataPrikking.do",
+  KubeStataPrikkFil_geo = "BIN/Z_Statasnutter/StataPrikking_geo.do",
   FriskVDir_F = "PRODUKTER/KUBER/FRISKVIK_FYLKE",
   FriskVDir_K = "PRODUKTER/KUBER/FRISKVIK_KOMM",
   FriskVDir_B = "PRODUKTER/KUBER/FRISKVIK_BYDEL",

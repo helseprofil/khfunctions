@@ -1966,7 +1966,7 @@ DFHeadToString <- function(innDF, topn = 10) {
 #' do_stata_prikk (ybk)
 #' 
 #' Function to censor the data using the STATA method (JRM)
-do_stata_prikk <- function(dt, spc, batchdate, globs){
+do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
   is_kh_debug()
   
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
@@ -1981,7 +1981,9 @@ do_stata_prikk <- function(dt, spc, batchdate, globs){
   
   if (s_prikk > 0){
     ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/")
+    sfile <- ifelse(geonaboprikk,
+                    paste(globs[["path"]], globs[["KubeStataPrikkFil_geo"]], sep = "/"),
+                    paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/"))
     synt <- paste0('include "', sfile, '"')
     
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
