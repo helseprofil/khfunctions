@@ -29,9 +29,10 @@ LagKUBE <- function(KUBEid,
                     dumps = list(), 
                     write = FALSE,
                     alarm = FALSE,
-                    geonaboprikk = FALSE,
+                    geonaboprikk = TRUE,
                     ...) {
   is_kh_debug()
+  if(!geonabprikk) message("OBS! naboprikking på GEO er deaktivert!")
   
   globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
   globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
@@ -764,7 +765,7 @@ LagKUBE <- function(KUBEid,
   if(isTRUE(write)){
     cat("SAVING OUTPUT FILES:\n")
     ## Write .rds file to NYESTE/R
-    if(geonaboprikk) KUBEid <- paste0("geonaboprikk_", KUBEid)
+    if(!geonaboprikk) KUBEid <- paste0("ikkegeoprikket_", KUBEid)
     utfiln <- paste(globs$path, "/", globs$KubeDirNy, "/", KUBEid, ".rds", sep = "")
     saveRDS(KUBE, file = utfiln)
     cat("\n", utfiln)
