@@ -32,7 +32,7 @@ LagKUBE <- function(KUBEid,
                     geonaboprikk = TRUE,
                     ...) {
   is_kh_debug()
-  if(!geonabprikk) message("OBS! naboprikking på GEO er deaktivert!")
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   
   globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
   globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
