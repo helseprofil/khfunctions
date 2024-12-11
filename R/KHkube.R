@@ -66,7 +66,7 @@ LagKUBE <- function(KUBEid,
   }
   
   # Lage og eksportere USER/helseprofil/kubespec.csv
-  kube_spec(spec = KUBEdscr, dims = NA)
+  kube_spec(spec = KUBEdscr)
   
   # If write = TRUE, save ACCESS specs
   if(isTRUE(write)){
@@ -662,7 +662,7 @@ LagKUBE <- function(KUBEid,
     
     # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
     dims <- find_dims(dt = KUBE, spec = FGPs)
-    stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
+    stataspec <- kube_spec(spec = KUBEdscr, dims = dims, geonaboprikk = geonaboprikk)
     
     KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
     

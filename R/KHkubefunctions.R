@@ -1981,9 +1981,7 @@ do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
   
   if (s_prikk > 0){
     ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- ifelse(geonaboprikk,
-                    paste(globs[["path"]], globs[["KubeStataPrikkFil_geo"]], sep = "/"),
-                    paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/"))
+    sfile <- paste(globs[["path"]], globs[["KubeStataPrikkFil"]], sep = "/")
     synt <- paste0('include "', sfile, '"')
     
     RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
@@ -2002,7 +2000,7 @@ do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-kube_spec <- function(spec, dims){
+kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -2013,7 +2011,8 @@ kube_spec <- function(spec, dims){
   varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, .SD, .SDcols = varSpec]
-  varDF[, DIMS := list(dims)]
+  if(!is.null(dims)) varDF[, DIMS := list(dims)]
+  if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
