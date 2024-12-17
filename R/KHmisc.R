@@ -950,5 +950,6 @@ uselocal <- function(test = F){
   globs <<- FinnGlobs()
   echo <<- 0
   dumps <<- list()
+  geonaboprikk <<- TRUE
   assign("write", FALSE, envir = .GlobalEnv)
 }
