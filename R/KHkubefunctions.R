@@ -770,9 +770,7 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   # Rydd DesTIL$Design (Kan variere litt mht HAR avhengig av hvor kallet på denne funksjonen er gjort fra. Skal ha 1 har felt)
   if (is.null(DesTIL$Design)) {
     komblist <- paste("as.data.frame(DesTIL$Part[[\"", names(DesTIL$Part), "\"]])", sep = "", collapse = ",")
-    ## FULL <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", komblist, ")", sep = ""))))
-    FULL <- do.call(expand.grid.df, DesTIL$Part)
-    data.table::setDT(FULL)
+    FULL <- do.call(expand.grid.dt, DesTIL$Part)
     
     harkols <- names(FULL)[grepl("_HAR$", names(FULL))]
     if (length(harkols) > 0) {
@@ -790,12 +788,10 @@ FinnRedesign <- function(DesFRA, DesTIL, SkalAggregeresOpp = character(), Return
   
   # Need to get the colnames before manipulation
   namesFULL <- names(FULL)
-  gc()
   
   betKols <- setdiff(names(DesFRA$SKombs$bet), "HAR")
   if (length(betKols) > 0) {
-    FULL <- expand.grid.df(FULL, DesFRA$SKombs$bet[, ..betKols])
-    data.table::setDT(FULL)
+    FULL <- expand.grid.dt(FULL, DesFRA$SKombs$bet[, ..betKols])
   }
   for (del in DesFRA$UBeting) {
     if (is.null(DesTIL$Part[[del]])) {
