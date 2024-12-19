@@ -719,6 +719,7 @@ expand.grid.dt <- function(...){
   rm(DFs, rows)
   gc()
   return(res)
+}
 
 #' setkeym (kb)
 #'
@@ -955,7 +956,6 @@ uselocal <- function(test = F){
   dbLogFile <<- "STYRING/test/KHloggtest.mdb"
   source("./R/KHglobs.R")
 }
-
 
 #' .SetKubeParameters (VL)
 #'
