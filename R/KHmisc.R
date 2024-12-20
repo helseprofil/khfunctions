@@ -31,8 +31,6 @@ is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE
 #' 
 #' Used to set date tag in file names
 SettKHBatchDate <- function() {
-  is_kh_debug()
-  
   format(Sys.time(), "%Y-%m-%d-%H-%M")
 }
 
@@ -151,50 +149,6 @@ get_value_columns <- function(columnnames, full = FALSE) {
 get_dimension_columns <- function(columnnames) {
   notab <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
   return(setdiff(columnnames, notab))
-}
-
-#' LeggTilNyeVerdiKolonner (kb)
-#'
-#' @param TNF 
-#' @param NYEdscr 
-#' @param slettInf 
-#' @param postMA 
-LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALSE) {
-  is_kh_debug()
-  
-  TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
-  data.table::setDT(TNF)
-  valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
-  # get_value_columns(names(TNF))
-  if (!(is.na(NYEdscr) | NYEdscr == "")) {
-    for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
-      nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
-      expr <- gsub("^(.*?)=(.*)$", "\\2", nycolexpr)
-      invKols <- valKols[sapply(valKols, FUN = function(x) {
-        grepl(x, expr)
-      })]
-      eval(parse(text = paste(
-        "TNF[,c(\"", paste(nycol, c("", ".f", ".a"), collapse = "\",\"", sep = ""), "\")
-      :=list(", expr, ",pmax(", paste(invKols, ".f", collapse = ",", sep = ""), "),
-                      pmax(", paste(invKols, ".a", collapse = ",", sep = ""), "))]",
-        sep = ""
-      )))
-      if (postMA == TRUE) {
-        eval(parse(text = paste(
-          "TNF[,c(\"", paste(nycol, c(".n", ".fn1", ".fn3", ".fn9"), collapse = "\",\"", sep = ""), "\")
-        :=list(1,0,0,0)]",
-          sep = ""
-        )))
-      }
-      if (slettInf == TRUE) {
-        eval(parse(text = paste("suppressWarnings(",
-                                "TNF[", nycol, "%in% c(Inf,NaN,NA),c(\"", paste(nycol, c("", ".f"), collapse = "\",\"", sep = ""), "\"):=list(NA,2)])",
-                                sep = ""
-        )))
-      }
-    }
-  }
-  return(TNF)
 }
 
 #' FinnDesign (kb)
@@ -623,42 +577,6 @@ setkeym <- function(DTo, keys) {
     data.table::setDT(DTo)
     data.table::setkeyv(DTo, keys)
   }
-}
-
-#' @Title YAlagVal (kb)
-#' used in access
-#' @param FG 
-#' @param YL 
-#' @param AL 
-#' @param vals 
-#' @param globs 
-YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
-  is_kh_debug()
-  
-  data.table::setDT(FG)
-  orgkols <- names(FG)
-  ltag <- function(lag) {
-    ltag <- ""
-    if (lag > 0) {
-      ltag <- paste("m", abs(lag), sep = "")
-    } else if (lag < 0) {
-      ltag <- paste("p", abs(lag), sep = "")
-    }
-    return(ltag)
-  }
-  FGl <- data.table::copy(FG)
-  FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
-  FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
-  data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
-  tabkols <- setdiff(names(FGl), get_value_columns(names(FG), full = TRUE))
-  lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
-  data.table::setnames(FGl, unlist(lapply(vals, function(x) {
-    paste(x, c("", ".f", ".a"), sep = "")
-  })), lvals)
-  FGl <- FGl[, c(tabkols, lvals), with = FALSE]
-  data.table::setkeyv(FG, tabkols)
-  data.table::setkeyv(FGl, tabkols)
-  return(FGl)
 }
 
 #' godkjent (ybk)

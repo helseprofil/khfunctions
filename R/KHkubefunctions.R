@@ -71,13 +71,16 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
   is_kh_debug()
-  # profvis::profvis({
   cat("Starter i FinnFellesTab.")
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
-  
+  # FTabs inneholder alle unike verdier av alle dimensjoner som finnes i TELLER og NEVNER-filen
+  # ER DETTE NØDVENDIG???? Dette kan gi helt enormt store filer i neste steg da alle kombinasjoner
+  # av alle dimensjoner rektangulariseres og for noen filer sprenger minnet
+  # Det intuitive er at det bare er nødvendig å beholde nivåer som finnes i tellerfilen, og dermed barbere bort 
+  # det som bare finnes i nevnerfilen for redesign av filene. 
   RD1 <- FinnRedesign(DF1, list(Part = FTabs), globs = globs)
   RD2 <- FinnRedesign(DF2, list(Part = FTabs), globs = globs)
   ### kommet hit ---- 
@@ -90,7 +93,6 @@ FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
   FDes <- FinnDesign(Dekk12, globs = globs)
   cat(" Ferdig i FinnFellesTab\n")
-  # })
   gc()
   return(list(Dekk = Dekk12, FDes = FDes))
 }
@@ -612,124 +614,6 @@ FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), F
   FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
   FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
   return(FinnDesign(FiltD, FGP = FGP, globs = globs))
-}
-
-#' OmkodFil (kb)
-#'
-#' @param FIL 
-#' @param RD 
-#' @param globs 
-OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
-  is_kh_debug()
-  
-  orgkols <- names(FIL)
-  data.table::setDT(FIL)
-  tabnames <- get_dimension_columns(names(FIL))
-  valkols <- get_value_columns(names(FIL))
-  lp <- paste0(valkols, "=sum(", valkols, "),",
-               valkols, ".f=max(", valkols, ".f),",
-               valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
-               collapse = ",")
-  
-  if (nrow(RD$FULL) > 0) {
-    for (del in names(RD$Filters)) {
-      data.table::setkeyv(FIL, names(RD$Filters[[del]]))
-      data.table::setkeyv(RD$Filters[[del]], names(RD$Filters[[del]]))
-      cat("Filtrerer", del, "foer dim(FIL)=", dim(FIL))
-      if (any(duplicated(RD$Filters[[del]]))) {
-        print("CARTESIAN????")
-        print(RD$Filters[[del]])
-        print(RD$Filters[[del]][duplicated(RD$Filters[[del]]), ])
-      }
-      FIL <- FIL[RD$Filters[[del]], nomatch = 0]
-      cat(" og etter", dim(FIL), "\n")
-    }
-    
-    # NB! Rekkefoelge er essensiell, dvs at ubeting kommer til slutt
-    beting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$BetingOmk, globs$DefDesign$BetingF))
-    ubeting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$UBeting))
-    
-    for (del in intersect(c(beting, ubeting), names(RD$KBs))) {
-      orgtabs <- names(RD$KBs[[del]])[!grepl("_omk$", names(RD$KBs[[del]]))]
-      omktabs <- names(RD$KBs[[del]])[grepl("_omk$", names(RD$KBs[[del]]))]
-      bycols <- c(setdiff(tabnames, gsub("_omk", "", omktabs)), omktabs)
-      
-      # Sjekk type omkoding som trengs.
-      # Dersom hver orgkode skal til mange omkkoder
-      # er det uheldig aa merge FIL[KB] om FIL er stor siden det lages mange kopier av orglinjer i FIL
-      # i slike tilfeller kobles i stedet inn en loop over omkoding til hver omktab  (jfr laging av tiaarssnitt i KREFT)
-      
-      data.table::setkeyv(RD$KBs[[del]], orgtabs)
-      replikfaktor <- RD$KBs[[del]][, list(N = .N), by = orgtabs][, mean(N)]
-      data.table::setkeyv(FIL, orgtabs)
-      cat("Omkoder", del, "dim(FIL) er ", dim(FIL), "originalt")
-      if (nrow(FIL) < 1000000 | replikfaktor < 4 | del == "Gn") {
-        FIL <- FIL[RD$KBs[[del]], nomatch = 0, allow.cartesian = TRUE]
-        # FIL<-FIL[RD$KBs[[del]],nomatch=0]
-        cat(" og", dim(FIL), "etter merge")
-        if (del == "Gn") {
-          FIL[GEOniv_omk == "K", GEO := substr(GEO, 0, 4)]
-          FIL[GEOniv_omk == "F", GEO := FYLKE]
-          FIL[GEOniv_omk == "L", c("GEO", "FYLKE") := list("0", "00")]
-          FIL[GEOniv_omk == "B" & GEOniv == "S" & !grepl("^(0301|1103|1201|1601|4601|5001)", GEO), c("GEO", "FYLKE") := list("999999", "99")]
-          # Dette er daarlig, boer endre til
-          # FIL[GEOniv_omk=="B" & GEOniv=="S" & !GEO %in% globs$GeoKoder[GEOniv=="B"]$GEO,c("GEO","FYLKE"):=list("999999","99")]
-          FIL[GEOniv_omk == "H" & GEOniv != "H", GEO := plyr::mapvalues(FYLKE, globs$HELSEREG$FYLKE, globs$HELSEREG$HELSEREG, warn_missing = FALSE)]
-          FIL[GEOniv_omk == "H", FYLKE := "00"]
-        }
-        data.table::setkeyv(FIL, bycols)
-        lpl <- paste0("list(", lp, ")")
-        FIL <- FIL[, eval(parse(text = lpl)), by = bycols]
-        # Dette skulle vel vaert bedre, men blir alt for tregt? naar ikke bycols er key
-        # FIL<-FIL[RD$KBs[[del]],nomatch=0,allow.cartesian=TRUE][, eval(parse(text=lp)), by=bycols]
-      } else {
-        KB <- data.table::copy(RD$KBs[[del]])
-        data.table::setkeyv(KB, omktabs)
-        OMKs <- unique(KB[, omktabs, with = FALSE])
-        FILt <- FIL[0, ]
-        for (i in 1:nrow(OMKs)) {
-          OMK <- OMKs[i, ]
-          print(OMK)
-          KBt <- KB[OMK]
-          data.table::setkeyv(KBt, orgtabs)
-          FILd <- FIL[KBt, nomatch = 0, allow.cartesian = TRUE]
-          data.table::setkeyv(FILd, bycols)
-          lpt <- paste0("list(", paste(gsub("_omk$", "", names(OMK)), OMK, sep = "=", collapse = ","), ",", lp, ")")
-          FILt <- rbind(FILt, FILd[, eval(parse(text = lpt)), by = bycols][, names(FILt), with = FALSE])
-        }
-        FIL <- FILt
-      }
-      cat(" og til slutt", dim(FIL), "\n")
-      data.table::setnames(FIL, names(FIL), gsub("_omk$", "", names(FIL)))
-    }
-  }
-  
-  if (nrow(RD$Udekk) > 0) {
-    UDekk <- data.table::copy(RD$Udekk)
-    restkols <- setdiff(tabnames, names(UDekk))
-    data.table::setkeyv(FIL, names(UDekk))
-    data.table::setkeyv(UDekk, names(UDekk))
-    FIL <- FIL[!UDekk, ]
-    valkolsF <- unlist(lapply(valkols, function(x) {
-      paste0(x, c("", ".f", ".a"))
-    }))
-    ## feil med recycling av := lest NEWS 1.12.2 data.table
-    ## UDekk[,(valkolsF):=list(NA,9,0)]
-    UDekk[, (valkols) := NA]
-    valg_f <- grep(".f$", valkolsF, value = TRUE)
-    UDekk[, (valg_f) := 9]
-    valg_a <- grep(".a$", valkolsF, value = TRUE)
-    UDekk[, (valg_a) := 0]
-    if (length(restkols) > 0) {
-      rest <- as.data.frame(unique(FIL[, restkols, with = FALSE]))
-      UDekk <- data.table::data.table(expand.grid.df(rest, as.data.frame(UDekk)))
-    }
-    FIL <- rbind(FIL[, orgkols, with = FALSE], UDekk[, orgkols, with = FALSE])
-    cat("UDEKKA:", nrow(RD$Udekk), "\n")
-    # print(subset(RD$Udekk,GEOniv!="B"))
-    print(RD$Udekk)
-  }
-  return(FIL)
 }
 
 #' LeggTilSumFraRader (kb)

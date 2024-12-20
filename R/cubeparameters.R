@@ -1,44 +1,72 @@
 #' @title get_cubeparameters
-#' 
-#' BØR VÆRE EGEN FIL
-#' 
-#' Read ACCESS, extracts information needed in LagKUBE
-#' Reads files and store them in BUFFER (Global)
-get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
-  validdates <- paste0("VERSJONFRA <=", FormatSqlBatchdate(batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(batchdate))
+#' @description
+#' Helper function for [LagKUBE()]. 
+#' The function reads tables from ACCESS to get information on which files are used and how they need to be handled. 
+#' @param KUBEid name of cube
+#' @param batchdate date of current cube batch. Needed to filter out active parameters from ACCESS
+#' @param globs global parameters set by [SettGlobs()]
+#' @return A list of relevant parameters
+get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   
-  params <- list()
-  params[["KUBEdscr"]] <- get_cubedescription(KUBE = KUBEid, validdates = validdates, globs = globs)
-  params[["TNPdscr"]] <- get_tnpdescription(TNP = params$KUBEdscr$TNP, validdates = validdates, globs = globs)
-  isrefverdiP <- params$KUBEdscr$REFVERDI_VP == "P"
-  isSTNP <- !is.na(params$TNPdscr$STANDARDTNFIL) && params$TNPdscr$STANDARDTNFIL != ""
-  params[["STNPdscr"]] <- get_stnpdescription(TNP = params$TNPdscr, validdates = validdates, refverdiP = isrefverdiP, STNP = isSTNP, globs = globs)
-  params[["filer"]] <- get_filenames(params = params, refverdiP = isrefverdiP, STNP = isSTNP)
-  params[["FILFILTRE"]] <- get_filfiltre(files = params$filer, validdates = validdates, globs = globs)
-  params[["PredFilter"]] <- set_predictionfilter(REFVERDI = params$KUBEdscr$REFVERDI, globs = globs)
-  params[["tabfilter"]] <- set_tabfilter(params$KUBEdscr)
-  return(params)
+  parameters <- list()
+  parameters[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(batchdate))
+  parameters[["CUBEinformation"]] <- get_cube_information(KUBEid = KUBEid, validdates = parameters$validdates, globs = globs)
+  parameters[["TNPinformation"]] <- get_tnp_information(TNPname = parameters$CUBEinformation$TNP, validdates = parameters$validdates, globs = globs)
+  isrefverdiP <- parameters$CUBEinformation$REFVERDI_VP == "P"
+  isSTNP <- !is.na(parameters$TNPinformation$STANDARDTNFIL) && parameters$TNPinformation$STANDARDTNFIL != ""
+  parameters[["STNPinformation"]] <- get_stnp_information(TNP = parameters$TNPinformation, validdates = parameters$validdates, isrefverdiP = isrefverdiP, isSTNP = isSTNP, globs = globs)
+  parameters[["files"]] <- get_filenames(parameters = parameters, isrefverdiP = isrefverdiP, isSTNP = isSTNP)
+  parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
+  parameters[["PredFilter"]] <- set_predictionfilter(REFVERDI = parameters$CUBEinformation$REFVERDI, globs = globs)
+  parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
+  return(parameters)
 }
 
-get_cubedescription <- function(KUBE, validdates, globs){
+#' @title get_cube_information
+#' @description
+#' Helper function for [get_cubeparameters()].
+#' Reads from table KUBER in the ACCESS database
+#' @noRD
+#' @param KUBEid cube name
+#' @param validdates valid dates to specify active rows in the ACCESS table
+#' @param globs 
+get_cube_information <- function(KUBEid, validdates, globs){
   KUBER <- as.list(RODBC::sqlQuery(globs$dbh, 
-                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBE, "' AND ", validdates), 
+                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND ", validdates), 
                                    as.is = TRUE))
   
   if ((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", KUBEid)
   return(KUBER)
 }
 
-get_tnpdescription <- function(TNP, validdates, globs){
+#' @title get_tnp_information
+#' @description
+#' Helper function for [get_cubeparameters()]
+#' Reads from table TNP_PROD in the ACCESS database
+#' @noRD
+#' @param TNPname Information from TNP column in KUBER table
+#' @param validdates valid dates to specify active rows in the ACCESS table
+#' @param globs global parameters
+get_tnp_information <- function(TNPname, validdates, globs){
   TNP_PROD <- as.list(RODBC::sqlQuery(globs$dbh, 
-                                      query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNP, "' AND ", validdates), 
+                                      query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNPname, "' AND ", validdates), 
                                       as.is = TRUE))
   return(TNP_PROD)
 }
 
-get_stnpdescription <- function(TNP, validdates, refverdiP, STNP=F, globs){
-  if(!refverdiP) return(list())
-  if(!STNP) return(TNP)
+#' @title get_stnp_information
+#' @description
+#' Helper function for [get_cubeparameters()].
+#' Reads from table TNP_PROD in the ACCESS database, to get information needed for standardization
+#' @noRD
+#' @param TNP TNP table generated by [get_tnp_information()]
+#' @param validdates valid dates to specify active rows in the ACCESS table
+#' @param isrefverdiP TRUE/FALSE, is REFVERDI_VP column in KUBER table == "P", indicating if STNP is to be generated at all
+#' @param isSTNP TRUE/FALSE, indicating if STNP should be different from TNP. This is indicated in the STANDARDTNFIL in TNP_PROD table.
+#' @param globs global parameters
+get_stnp_information <- function(TNP, validdates, isrefverdiP = F, isSTNP = F, globs){
+  if(!isrefverdiP) return(list())
+  if(!isSTNP) return(TNP)
   
   STNP <- as.list(RODBC::sqlQuery(globs$dbh, 
                                   query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNP$STANDARDTNFIL, "' AND ", validdates), 
@@ -46,48 +74,63 @@ get_stnpdescription <- function(TNP, validdates, refverdiP, STNP=F, globs){
   return(STNP)
 }
 
-get_filenames <- function(params, refverdiP, STNP = F){
+#' @title get_filenames
+#' @description
+#' Helper function for [get_cubeparameters()]
+#' Gets a list of files specifies in the TNP_PROD table (TELLERFIL, NEVNERFIL etc.)
+#' @param parameters parameters list, to access TNP and STNP with information on which files are needed
+#' @param isrefverdiP TRUE/FALSE, is REFVERDI_VP column in KUBER table == "P", indicating if standard files should be included
+#' @param isSTNP TRUE/FALSE, indicating if standard files should be different from the main files. This is indicated in the STANDARDTNFIL in TNP_PROD table.
+get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
   files <- list()
-  isteller <- !is.na(params$TNPdscr$TELLERFIL) && params$TNPdscr$TELLERFIL != ""
+  isteller <- !is.na(parameters$TNPinformation$TELLERFIL) && parameters$TNPinformation$TELLERFIL != ""
   if(!isteller) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt!")
-  files[["TELLER"]] <- params$TNPdscr$TELLERFIL
-  isnevnerfil <- !is.na(params$TNPdscr$NEVNERFIL) && params$TNPdscr$NEVNERFIL != ""
-  if(isnevnerfil) files[["NEVNER"]] <- params$TNPdscr$NEVNERFIL
+  files[["TELLER"]] <- parameters$TNPinformation$TELLERFIL
+  isnevnerfil <- !is.na(parameters$TNPinformation$NEVNERFIL) && parameters$TNPinformation$NEVNERFIL != ""
+  if(isnevnerfil) files[["NEVNER"]] <- parameters$TNPinformation$NEVNERFIL
   
-  if(refverdiP){
-    isprednevnerfil <- !is.na(params$TNPdscr$PREDNEVNERFIL) && params$TNPdscr$PREDNEVNERFIL != ""
+  if(isrefverdiP){
+    isprednevnerfil <- !is.na(parameters$TNPinformation$PREDNEVNERFIL) && parameters$TNPinformation$PREDNEVNERFIL != ""
     if(isprednevnerfil){
-      files[["PREDNEVNER"]] <- gsub("^(.*):.*", "\\1", params$TNPdscr$PREDNEVNERFIL)
+      files[["PREDNEVNER"]] <- gsub("^(.*):.*", "\\1", parameters$TNPinformation$PREDNEVNERFIL)
     } else if(isnevnerfil) {
       files[["PREDNEVNER"]] <- files$NEVNER
     } else {
       files[["PREDNEVNER"]] <- files$TELLER
     }
     
-    if(!STNP){
+    if(!isSTNP){
       files[["STANDARDTELLER"]] <- files$TELLER
       if(isnevnerfil) files[["STANDARDNEVNER"]] <- files$NEVNER
     } else {
-      isSTNPtellerfilfil <- !is.na(params$STNPdscr$TELLERFIL) && params$STNPdscr$TELLERFIL != ""
-      if(!isSTNPtellerfil) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt for STANDARDTNFIL: ", params$TNPdscr$STANDARDTNFIL)
-      files[["STANDARDTELLER"]] <- params$STNPdscr$TELLERFIL
+      isSTNPtellerfilfil <- !is.na(parameters$STNPinformation$TELLERFIL) && parameters$STNPinformation$TELLERFIL != ""
+      if(!isSTNPtellerfil) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt for STANDARDTNFIL: ", parameters$TNPinformation$STANDARDTNFIL)
+      files[["STANDARDTELLER"]] <- parameters$STNPinformation$TELLERFIL
       
-      isSTNPnevnerfil <- !is.na(params$STNPdscr$NEVNERFIL) && params$STNPdscr$NEVNERFIL != ""
-      if(isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- params$STNPdscr$NEVNERFIL
-      if(!isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- params$STNPdscr$TELLERFIL
+      isSTNPnevnerfil <- !is.na(parameters$STNPinformation$NEVNERFIL) && parameters$STNPinformation$NEVNERFIL != ""
+      if(isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- parameters$STNPinformation$NEVNERFIL
+      if(!isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- parameters$STNPinformation$TELLERFIL
     }
   }
   return(files)
 }
 
+#' @title get_filfiltre
+#' @description
+#' Helper function for [get_cubeparameters()]
+#' Reads from table FILFILTRE in the ACCESS database, to get information on special treatment of files
+#' @param files list of files generated by [get_filenames()]
+#' @param validdates valid dates to specify active rows in the ACCESS table
+#' @param globs global parameters
 get_filfiltre <- function(files = NULL, validdates, globs){
   filfiltre <- data.table::setDT(RODBC::sqlQuery(globs$dbh, paste0("SELECT * FROM FILFILTRE WHERE ", validdates), as.is = TRUE))
   filfiltre <- filfiltre[FILVERSJON %in% unique(files)]
   return(filfiltre)
 }
 
-#' set_predictionfilter (kb)
-#'
+#' @title set_predictionfilter (kb)
+#' @description 
+#' Helper function for [get_cubeparameters()]
 #' @param REFVERDI Corresponds to ACCESS::KUBER::REFVERDI
 #' @param globs global parameters
 set_predictionfilter <- function(REFVERDI, globs = SettGlobs()) {
@@ -130,32 +173,66 @@ set_predictionfilter <- function(REFVERDI, globs = SettGlobs()) {
   return(list(Design = PredFilter, PfiltStr = REFVERDI, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
 }
 
-#' @title set_tabfilter
-#'
-#' @param KUBEdscr 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-set_tabfilter <- function(KUBEdscr){
-  TabConds <- character()
-  for (tab in names(KUBEdscr)[grepl("^TAB\\d+$", names(KUBEdscr))]) {
-    istab <- !is.na(KUBEdscr[[tab]]) && KUBEdscr[[tab]] != ""
-    if (istab) {
-      tab0 <- paste0(tab, "_0")
-      istab0 <- !is.null(KUBEdscr[[tab0]]) && !is.na(KUBEdscr[[tab0]]) && KUBEdscr[[tab0]] != ""
-      tablist <- KUBEdscr[[tab]]
-      if (istab0) tablist <- KUBEdscr[[tab0]]
-      isminus <- grepl("^-\\[", tablist)
-      tablist <- gsub("^-\\[(.*)\\]$", "\\1", tablist)
-      tablist <- paste0("\"", gsub(",", "\",\"", tablist), "\"")
-      tabcond <- paste0("(", tab, " %in% c(", tablist, "))")
-      if (isminus) tabcond <- paste0("!", tabcond)
-      TabConds <- c(TabConds, tabcond)
+#' @title get_filegroup_information
+#' @description 
+#' Helper function for [get_cubeparameters()]
+#' reads from FILGRUPPER in access
+#' @noRD
+#' @param files list of files to be used in the cube 
+#' @param validdates valid dates to specify active rows in the ACCESS table
+#' @param globs global parameters
+get_filegroup_information <- function(files, filefilters, validdates, globs = SettGlobs()){
+  fileinfo <- list()
+  
+  for(file in unique(files)){
+    filefilter <- filefilters[FILVERSJON == file]
+    if(nrow(filefilter) > 1) stop("> 1 rad i FILFILTRE funnet for FILVERSJON = ", file)
+    filename <- ifelse(nrow(filefilter) == 1, filefilter$ORGFIL, file)
+    FILGRUPPER <- as.list(RODBC::sqlQuery(globs$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filename, "' AND ", validdates), as.is = TRUE))
+    if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filename, " finnes ikke, er duplisert, eller er satt til inaktiv"))
+    
+    isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)
+    if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filename)
+    if(isalderalle){
+      alle_aldre <- as.integer(tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
+      amin <- alle_aldre[1]
+      amax <- alle_aldre[2]
+    } else {
+      amin <- getOption("khfunctions.amin")
+      amax <- getOption("khfunctions.amax")
     }
-  } 
-  tabfilter <- paste0(TabConds, collapse = " & ")
-  return(tabfilter)
+    
+    vals <- list()
+    for(val in grep("^VAL", getOption("khfunctions.kolorgs"), value = T)) {
+      valname <- paste0(val, "navn")
+      isvalname <- !is.na(FILGRUPPER[[valname]]) && FILGRUPPER[[valname]] != ""
+      valname <- ifelse(isvalname, FILGRUPPER[[valname]], val)
+      valmiss <- paste0(val, "miss")
+      isvalmiss <-  !is.na(FILGRUPPER[[valmiss]]) && FILGRUPPER[[valmiss]] != ""
+      valmiss <- ifelse(isvalmiss, FILGRUPPER[[valmiss]], "0")
+      valsumbar <- paste0(val, "sumbar")
+      isvalsumbar <- !is.na(FILGRUPPER[[valsumbar]]) && FILGRUPPER[[valsumbar]] != ""
+      valsumbar <- ifelse(isvalsumbar, FILGRUPPER[[valsumbar]], "0")
+      vals[[valname]] <- list(miss = valmiss, sumbar = valsumbar)
+    }
+    fileinfo[[file]] <- c(FILGRUPPER, list(vals = vals, amin = amin, amax = amax))
+  }
+  return(fileinfo)
+}
+
+#' @title get_filedesign
+#' @description
+#' @noRD
+#' @param files 
+#' @param parameters 
+#' @param globs 
+get_filedesign <- function(files, parameters, globs){
+  if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
+  filedesign <- list()
+  for(file in unique(files)){
+    if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
+    fileinfo <- parameters$fileinformation[[file]]
+    filedesign[[file]] <- FinnDesign(FIL = .GlobalEnv$BUFFER[[file]], FGP = fileinfo, globs = globs)
+  }
 }
 

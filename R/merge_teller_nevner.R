@@ -170,38 +170,7 @@ report_removed_codes <- function(file, cube){
   }
 }
 
-#' @title set_implicit_null_after_merge (kb)
-#' @description
-#' Fixing implicit 0 occurring after merging, using information from VALXmiss in access. 
-#' Previous name SettMergeNAs
-#' @param file
-#' @param implicitnull_defs 
-set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
-  
-  vals <- get_value_columns(names(file))
-  
-  for (val in vals) {
-    if (val %in% names(implicitnull_defs)) {
-      VALmiss <- implicitnull_defs[[val]]$miss
-      replacemissing <- list()
-      if(VALmiss == "..") replacemissing <- list(0, 1, 1)
-      if(VALmiss == ".") replacemissing <- list(0, 2, 1)
-      if(VALmiss == ":") replacemissing <- list(0, 3, 1)
-      if(!grepl("\\D", VALmiss)) replacemissing <- list(as.numeric(VALmiss), 0, 1)
-      if(length(replacemissing) == 0) stop(val, " listed in VALXnavn, but VALXmiss is not '..', '.', ':', or numeric")
-    } else {
-      replacemissing <- list(0, 0, 1)
-    }
-    
-    valF <- paste0(val, ".f")
-    valA <- paste0(val, ".a")
-    missingrows <- which((is.na(file[[val]]) & file[[valF]] == 0) | is.na(file[[valF]]))
-    n_missing <- length(missingrows)
-    if(n_missing > 0) cat("Implisitte nuller: Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader\n")
-    file[missingrows, names(.SD) := replacemissing, .SDcols = c(val, valF, valA)]
-  }
-  return(file)
-}
+
 
 #' @title do_filter_file
 #'

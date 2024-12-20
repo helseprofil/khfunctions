@@ -25,17 +25,18 @@ LagKUBE <- function(KUBEid,
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   on.exit(sink(), add = TRUE)
   
-  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, versjonert = versjonert, globs = globs)
-  parameters <- load_and_format_filegroups(parameters)
+  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
+  load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
+  parameters[["filedesign"]] <- get_filedesign(files = parameters$files, parameters = parameters, globs = globs)
   
   
-  KUBEdscr <- parameters$KUBEdscr
-  TNPdscr <- parameters$TNPdscr
-  filer <- parameters$filer
+  KUBEdscr <- parameters$CUBEinformation
+  TNPdscr <- parameters$TNPinformation
+  filer <- parameters$files
   PredFilter <- parameters$PredFilter
   D_develop_predtype <- parameters$PredFilter$D_develop_predtype
-  STNPdscr <- parameters$STNPdscr
-  FGPs <- parameters$FGPs
+  STNPdscr <- parameters$STNPinformation
+  FGPs <- parameters$fileinformation
   FilDesL <- parameters$FilDesL
   
   stataspec <- kube_spec(spec = KUBEdscr, dims = NA)

@@ -1429,3 +1429,120 @@ SettTotalKoder <- function(globs = SettGlobs()) {
   }
   return(TotKoder)
 }
+
+#' GeoHarm (kb)
+#' 
+#' superseeded by do_harmonize_geo()
+GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatchDate(), globs = SettGlobs(), GEOstdAAR = getOption("khfunctions.year")) {
+  is_kh_debug()
+  
+  if (identical(class(FIL), "data.frame")) {
+    FIL <- data.table::setDT(FIL)
+  }
+  keyorg <- data.table::key(FIL)
+  geoomk <- globs$KnrHarm
+  
+  if(any(FIL$GEO %in% geoomk$GEO)){
+    FIL <- collapse::join(FIL, geoomk, on = "GEO", how = "left", verbose = 0)
+    FIL[!is.na(GEO_omk), let(GEO = GEO_omk)][, let(GEO_omk = NULL, HARMstd = NULL)]
+  }
+  FIL[, let(FYLKE = NULL)]
+  
+  FIL <- KHaggreger(FIL, vals = vals, globs = globs)
+  # Rektangulariser
+  if (rektiser == TRUE) {
+    REKT <- data.table::data.table()
+    FDesign <- FinnDesign(FIL, globs = globs)
+    
+    FDes <- FDesign$Design
+    
+    # SAMME LOGIKK SOM I set_rectangularized_cube_design, bør ekstraheres ut.
+    for (Gn in FDesign$Part[["Gn"]][["GEOniv"]]) {
+      GEOK <- subset(globs$GeoKoder, FRA <= GEOstdAAR & TIL > GEOstdAAR & GEOniv == Gn)$GEO
+      FDesG <- FDes[HAR == 1 & GEOniv == Gn, intersect(names(FIL), names(FDes)), with = FALSE]
+      REKT <- rbind(data.table::data.table(expand.grid.df(data.frame(FDesG), data.frame(GEO = GEOK))), REKT)
+    }
+    data.table::setkeyv(REKT, names(REKT))
+    data.table::setkeyv(FIL, names(REKT))
+    FIL <- FIL[REKT]
+    FIL <- set_implicit_null_after_merge(FIL, vals = vals)
+  }
+  
+  FIL[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]
+  return(FIL)
+}
+
+#' Klargjorfil
+#' superseeded by load_file_to_buffer
+KlargjorFil <- function(filename, tabfilter  = "", versjonert = FALSE, batchdate = SettKHBatchDate(), filefilter = NULL, globs = SettGlobs()) {
+  istabfilter <- tabfilter != ""
+  
+  if(isfilter) FGP <- FinnFilgruppeParametre(filter$ORGFIL, batchdate = batchdate, globs = globs)
+  if(!isfilter) FGP <- FinnFilgruppeParametre(filename, batchdate = batchdate, globs = globs)
+  
+  if(isbuffer){
+    cat("Henter", filename, "fra BUFFER")
+    FIL <- data.table::copy(.GlobalEnv$BUFFER[[filename]])
+  } else if(!isfilter){
+    FIL <- FinnFil(filename, versjonert = versjonert, globs = globs)$FT
+    if(istabfilter) FIL <- do_tabfilter(file = FIL, tabfilter = tabfilter)
+    FIL <- do_harmonize_geo(file = FIL, vals = FGP$vals, rectangularize = FALSE, globs = globs)
+    .GlobalEnv$BUFFER[[filename]] <- FIL
+  } else if(isfilter){
+    FIL <- FinnFil(filter$ORGFIL, versjonert = versjonert, globs = globs)$FT
+    
+    if(istabfilter) FIL <- do_tabfilter(file = FIL, tabfilter = tabfilter)
+    
+    iskollapsdel <- grepl("\\S", filter$KOLLAPSdeler)
+    if(iskollapsdel) FIL <- do_filfiltre_kollapsdeler(file = FIL, parts = filter$KOLLAPSdeler, globs = globs)
+    
+    isnyekolkolprerad <- grepl("\\S", filter$NYEKOL_KOL_preRAD)
+    # TODO: optimalisere leggtilnyeverdikolonner
+    if(isnyekolkolprerad) FIL <- LeggTilNyeVerdiKolonner(FIL, filter$NYEKOL_KOL_preRAD, slettInf = TRUE)
+    
+    Filter <- SettFilterDesign(filter, bruk0 = FALSE, FGP = FGP, globs = globs)
+    if (length(Filter) > 0) FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL, globs = globs), list(Parts = Filter), globs = globs), globs = globs)
+    
+    isgeoharm <- filter$GEOHARM == 1
+    if(isgeoharm){
+      rectangularize <- ifelse(filefilter$REKTISER == 1, TRUE, FALSE)
+      FIL <- do_harmonize_geo(file = FIL, vals = FGP$vals, rectangularize = rectangularize, globs = globs)
+    }
+    
+    # INAKTIV, FJERNE FRA ACCESS?
+    # isnyetab <- grepl("\\S", filter$NYETAB)
+    # if(isnyetab) FIL <- AggregerRader(FIL, filter$NYETAB, FGP = FGP)
+    
+    isnyekolrad <- grepl("\\S", filter$NYEKOL_RAD)
+    if(isnyekolrad) FIL <- LeggTilSumFraRader(FIL, filter$NYEKOL_RAD, FGP = FGP, globs = globs)
+    
+    # INAKTIV, FJERNE FRA ACCESS?
+    # isnyekolkol <- grepl("\\S", filter$NYEKOL_KOL)
+    # if(isnyekolkol) FIL <- LeggTilNyeVerdiKolonner(FIL, filter$NYEKOL_KOL, slettInf = TRUE)
+    
+    isnykolsmerge <- grepl("\\S", filter$NYKOLSmerge)
+    if(isnykolsmerge){
+      # FIL <- do_filfiltre_nykolsmerge()
+      cat("\nFILFILTRE:NYKOLSmerge\n")
+      NY <- eval(parse(text = filter$NYKOLSmerge))
+      tabK <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
+      data.table::setkeyv(NY, tabK)
+      data.table::setkeyv(FIL, tabK)
+      FIL <- NY[FIL]
+    }
+    
+    isrsynt1 <- grepl("\\S", filter$FF_RSYNT1)
+    if(isrsynt1){
+      filter$FF_RSYNT1 <- gsub("\\\r", "\\\n", filter$FF_RSYNT1)
+      rsynterr <- try(eval(parse(text = filter$FF_RSYNT1)), silent = TRUE)
+      if ("try-error" %in% class(rsynt1err)) {
+        print(rsynterr)
+        stop("Something went wrong in R, RSYNT1")
+      }
+    }
+    .GlobalEnv$BUFFER[[filename]] <- FIL
+  }
+  
+  FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
+  return(list(FIL = FIL, FGP = FGP, FILd = FILd))
+} 
