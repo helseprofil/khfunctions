@@ -84,8 +84,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmpdo <- paste("STATAtmp_", batchdate, ".do", sep = "")
   tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
-  TABLE[TABLE == ""] <- " " # STATA støtter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
+  TABLE[TABLE == ""] <- " " # STATA stÃ¸tter ikke "empty-string"
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tÃ¥ler ikke numeriske kolonnenavn
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   haven::write_dta(TABLE, tmpdta)
   

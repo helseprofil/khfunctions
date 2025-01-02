@@ -1060,7 +1060,7 @@ DFHeadToString <- function(innDF, topn = 10) {
 #' do_stata_prikk (ybk)
 #' 
 #' Function to censor the data using the STATA method (JRM)
-do_stata_prikk <- function(dt, spc, batchdate, globs){
+do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
   is_kh_debug()
   
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
@@ -1138,7 +1138,7 @@ var_num <- function(x){
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-kube_spec <- function(spec, dims){
+kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -1149,7 +1149,8 @@ kube_spec <- function(spec, dims){
   varStata <- grep("^Stata", names(specDF), value = TRUE)
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, .SD, .SDcols = varSpec]
-  varDF[, DIMS := list(dims)]
+  if(!is.null(dims)) varDF[, DIMS := list(dims)]
+  if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)

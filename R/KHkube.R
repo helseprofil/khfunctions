@@ -16,9 +16,11 @@ LagKUBE <- function(KUBEid,
                     csvcopy = FALSE,
                     dumps = list(), 
                     write = FALSE,
-                    alarm = FALSE) {
-
+                    alarm = FALSE,
+                    geonaboprikk = TRUE,
+                    ...) {
   is_kh_debug()
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
@@ -590,13 +592,13 @@ LagKUBE <- function(KUBEid,
       DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), globs = globs, format = format)
     }
   }
-  
+
   # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
   dims <- find_dims(dt = KUBE, spec = FGPs)
-  stataspec <- kube_spec(spec = KUBEdscr, dims = dims)
+  stataspec <- kube_spec(spec = KUBEdscr, dims = dims, geonaboprikk = geonaboprikk)
   
-  KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, globs = globs)
+  KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
   
   if ("STATAPRIKKpost" %in% names(dumps)) {
     for (format in dumps[["STATAPRIKKpost"]]) {
@@ -641,7 +643,7 @@ LagKUBE <- function(KUBEid,
   }
   
   ## ---- TODO: REKTANGULARISERE MANGLENDE RADER FOR BYDEL ----
-  ## Der bydel starter senere enn andre m� disse radene genereres, da ALLVIS ikke takler manglende rader.
+  ## Der bydel starter senere enn andre må disse radene genereres, da ALLVIS ikke takler manglende rader.
   
   # LAYOUT
   utkols <- c(tabs, OutVar)
@@ -683,6 +685,8 @@ LagKUBE <- function(KUBEid,
   if(isTRUE(write)){
     basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
     cat("SAVING OUTPUT FILES:\n")
+
+    if(!geonaboprikk) KUBEid <- paste0("ikkegeoprikket_", KUBEid)
 
     utfiln <- file.path(basepath, getOption("khfunctions.kube.ny"), paste0(KUBEid, ".rds"))
     saveRDS(KUBE, file = utfiln)
