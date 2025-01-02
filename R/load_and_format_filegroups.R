@@ -12,7 +12,7 @@ load_and_format_files <- function(parameters, batchdate, versjonert, globs){
   for (file in unique(parameters$files)) {
     isbuffer <- file %in% names(BUFFER)
     tabfilter <- ifelse(file == parameters$files$TELLER, tabfilter_tellerfil, "")
-    if(!isbuffer) load_filegroup_to_buffer(filegroup = file, tabfilter = tabfilter, parameters = parameters, versjonert = versjonert)
+    if(!isbuffer) load_filegroup_to_buffer(filegroup = file, tabfilter = tabfilter, parameters = parameters, versjonert = versjonert, globs = globs)
     invisible(gc())
   }
 }
@@ -65,7 +65,7 @@ do_tabfilter <- function(file, tabfilter){
 #' @param filegroup 
 #' @param tabfilter 
 #' @param filefilter 
-load_filegroup_to_buffer <- function(filegroup, filename, tabfilter, parameters, versjonert){
+load_filegroup_to_buffer <- function(filegroup, filename, tabfilter, parameters, versjonert, globs){
   
   filefilter <- parameters$FILFILTRE[FILVERSJON == filegroup]
   isfilefilter <- nrow(filefilter) > 0
@@ -77,7 +77,7 @@ load_filegroup_to_buffer <- function(filegroup, filename, tabfilter, parameters,
   if(istabfilter) FIL <- do_tabfilter(file = FIL, tabfilter = tabfilter)
  
   if(!isfilefilter){
-    FIL <- do_harmonize_geo(file = FIL, vals = filegroupinformation$vals, rectangularize = FALSE, globs = globs)
+    FIL <- do_harmonize_geo(file = FIL, vals = fileinfo$vals, rectangularize = FALSE, globs = globs)
     .GlobalEnv$BUFFER[[filegroup]] <- FIL
     return(invisible(NULL))
   } 

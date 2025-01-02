@@ -29,7 +29,6 @@ LagKUBE <- function(KUBEid,
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
   parameters[["filedesign"]] <- get_filedesign(files = parameters$files, parameters = parameters, globs = globs)
   
-  
   KUBEdscr <- parameters$CUBEinformation
   TNPdscr <- parameters$TNPinformation
   filer <- parameters$files
@@ -37,7 +36,7 @@ LagKUBE <- function(KUBEid,
   D_develop_predtype <- parameters$PredFilter$D_develop_predtype
   STNPdscr <- parameters$STNPinformation
   FGPs <- parameters$fileinformation
-  FilDesL <- parameters$FilDesL
+  FilDesL <- parameters$filedesign
   
   stataspec <- kube_spec(spec = KUBEdscr, dims = NA)
   

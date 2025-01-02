@@ -234,5 +234,6 @@ get_filedesign <- function(files, parameters, globs){
     fileinfo <- parameters$fileinformation[[file]]
     filedesign[[file]] <- FinnDesign(FIL = .GlobalEnv$BUFFER[[file]], FGP = fileinfo, globs = globs)
   }
+  return(filedesign)
 }
 
