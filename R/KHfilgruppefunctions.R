@@ -1,4 +1,4 @@
-LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = FinnGlobs(), versjonert = FALSE, echo = FALSE, dumps = list()) {
+LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = SettGlobs(), versjonert = FALSE, dumps = list()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -9,25 +9,20 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   ok <- LestFil$ok
   DF <- LestFil$DF
   
-  if (echo == TRUE) {
-    cat("\nETTER INNLES\n#############################\n")
-    print(head(DF))
-  }
-  
   #   #EVT SPESIALBEHANDLING
   #   if (!is.na(filbesk$RSYNT1)){
   #     filbesk$RSYNT1<-gsub("\\\r","\\\n",filbesk$RSYNT1)
   #     eval(parse(text=filbesk$RSYNT1))
   #   }
   # cat("\nETTER INNLES\n#############################\n")
+  kolorgs <- getOption("khfunctions.kolorgs")
   
   if (ok == 1) {
     
-    # Omdøp kolonnenavn.
-    # NB: for oversiktelighet i parameterfila gjøres dette både før og etter reshape
-    # Dvs: kolonnenavn generert i reshape tillates å avvike fra standardnavn, disse endres etterpå
+    # Omdoep kolonnenavn.
+    # NB: for oversiktelighet i parameterfila gjoeres dette baade foer og etter reshape
+    # Dvs: kolonnenavn generert i reshape tillates aa avvike fra standardnavn, disse endres etterpaa
     # Valdiering skjer ved siste endring
-    kolorgs <- globs$kolorgs
     # Finn kolonner spesifisert i filbesk
     HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
     HarCols <- HarCols[HarCols %in% names(DF)]
@@ -46,7 +41,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       }
     }
     
-    # EVT KASTING AV KOLONNER FØR RESHAPE (GJØR melt LETTERE Å BRUKE)
+    # EVT KASTING AV KOLONNER FoeR RESHAPE (GJoeR melt LETTERE aa BRUKE)
     if (!is.na(filbesk$KASTKOLS)) {
       eval(parse(text = paste("DF<-DF[,-", filbesk$KASTKOLS, "]", sep = "")))
     }
@@ -78,7 +73,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   
   if (ok == 1) {
     
-    # Må splitte evt kolonne fra MULTIHEAD
+    # Maa splitte evt kolonne fra MULTIHEAD
     if (!is.na(filbesk$MULTIHEAD)) {
       mhl <- LesMultiHead(filbesk$MULTIHEAD)
       DF[, mhl$colnames] <- stringr::str_split_fixed(DF[, mhl$varname], mhl$sep, 2)
@@ -99,7 +94,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
+          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
           ok <- 0
         } else {
           DF <- RES$TABLE
@@ -126,7 +121,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   
   if (ok == 1) {
     
-    # Omdøp kolonnenavn, runde 2.
+    # Omdoep kolonnenavn, runde 2.
     
     # Finn kolonner spesifisert i filbesk
     HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
@@ -137,7 +132,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     # Finn kolonner med standardverdi ('<.*>' i filbesk)
     DefVCols <- kolorgs[grepl("^<.*>", filbesk[kolorgs])]
     DefV <- matrix(sub("^<(.*)>$", "\\1", filbesk[DefVCols]), nrow = 1)
-    # Sett standardverdier (får ikke til dette med enklere syntaks når det kan være tuppel, virker klønete)
+    # Sett standardverdier (faar ikke til dette med enklere syntaks naar det kan vaere tuppel, virker kloenete)
     DF <- setNames(data.frame(DF, DefV, stringsAsFactors = FALSE), c(names(DF), DefVCols))
     
     # Sjekk for ikke-eksisterende/feilskrevet
@@ -147,7 +142,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       ok <- 0
     }
     
-    # Sjekk at påkrevde kolonner finnes
+    # Sjekk at paakrevde kolonner finnes
     oblkols <- c("GEO", "AAR", "VAL1")
     if (!all(oblkols %in% names(DF))) {
       colerr <- paste(colerr, "KRITISK: Kolonnene <", oblkols[!(oblkols %in% names(DF))], "> finnes ikke\n")
@@ -157,12 +152,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       TilFilLogg(filbesk$KOBLID, "KOLNAVNERR", colerr, batchdate = batchdate, globs = globs)
     }
   }
-  
-  if (echo == TRUE) {
-    cat("\nETTER TRINN2\n#############################\n")
-    print(head(DF))
-  }
-  
   
   if (ok == 1) {
     # Merge GEO delt i to
@@ -178,13 +167,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     
     DF <- DF[, names(DF)[names(DF) %in% kolorgs]]
   }
-  
-  if (echo == TRUE) {
-    cat("\nETTER TRINN3\n#############################\n")
-    print(head(DF))
-  }
+
   TilFilLogg(filbesk$KOBLID, "INNLES_OK", ok, batchdate = batchdate, globs = globs)
-  
   
   if (!is.na(filbesk$GRUNNKRETS) && filbesk$GRUNNKRETS == 1) {
     data.table::setDT(DF)
@@ -259,7 +243,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       if (tab %in% names(DF)) {
         tabKB <- setNames(as.data.frame(table(DF[, tab], useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
         tabKB$KBOMK <- KBomkod(tabKB$ORG, type = tab, filbesk = filbesk, batchdate = batchdate, globs = globs)
-        tabKB$OMK <- gsub("^-$", "XXXKASTXXX", tabKB$KBOMK) # Dirty tricks. Beskytter '-' mot uttrykket nedenfor, uten å gjøre regexp unødvendig komplisert
+        tabKB$OMK <- gsub("^-$", "XXXKASTXXX", tabKB$KBOMK) # Dirty tricks. Beskytter '-' mot uttrykket nedenfor, uten aa gjoere regexp unoedvendig komplisert
         tabKB$OMK <- gsub("[- ,\\/]", "_", tabKB$KBOMK)
         tabKB$OMK <- gsub("XXXKASTXXX", "-", tabKB$KBOMK)
         tabKB$OK <- 1
@@ -279,7 +263,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       
       DF$GEOniv <- plyr::mapvalues(DF$GEO, geo$ORG, geo$GEOniv, warn_missing = FALSE)
       DF$FYLKE <- plyr::mapvalues(DF$GEO, geo$ORG, geo$FYLKE, warn_missing = FALSE)
-      DF$GEO <- plyr::mapvalues(DF$GEO, geo$ORG, geo$OMK, warn_missing = FALSE) # NB: rekkefølge har betydning
+      DF$GEO <- plyr::mapvalues(DF$GEO, geo$ORG, geo$OMK, warn_missing = FALSE) # NB: rekkefoelge har betydning
     }
     # RENSK ALDER
     # Sett intervall for alder ALLE
@@ -289,11 +273,11 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       org <- setNames(as.data.frame(table(DF$ALDER, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
       alder <- ALDERvask(org, FGP = FGP, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
-      # Kast der ALDEr koder til "-" (må ta det her og ikek generelle under pga intervall)
+      # Kast der ALDEr koder til "-" (maa ta det her og ikek generelle under pga intervall)
       DF <- subset(DF, !ALDER %in% subset(alder, OMK == "-")$ORG)
       
       SkrivKBLogg(KB = alder, type = "ALDER", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(globs$alder_illeg %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(getOption("khfunctions.alder_illegal") %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
       DF$ALDERl <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$LO, warn_missing = FALSE))
       DF$ALDERh <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$HI, warn_missing = FALSE))
       # DF$ALDERl<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$LO,warn_missing = FALSE))
@@ -307,7 +291,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       kjonn <- KJONNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = kjonn, type = "KJONN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(globs$kjonn_illeg %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(getOption("khfunctions.illegal") %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$KJONN <- as.integer(plyr::mapvalues(DF$KJONN, kjonn$ORG, kjonn$OMK, warn_missing = FALSE))
     }
@@ -319,9 +303,9 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       aar <- AARvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = aar, type = "AAR", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "AAR_ok", ifelse(globs$aar_illeg %in% aar$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "AAR_ok", ifelse(getOption("khfunctions.aar_illegal") %in% aar$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
-      # Kast der AAR koder til "-" (må ta det her og ikek generelle under pga intervall)
+      # Kast der AAR koder til "-" (maa ta det her og ikek generelle under pga intervall)
       DF <- subset(DF, !AAR %in% subset(aar, OMK == "-")$ORG)
       
       DF$AARl <- as.integer(plyr::mapvalues(DF$AAR, aar$ORG, aar$LO, warn_missing = FALSE))
@@ -335,7 +319,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       utdann <- UTDANNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = utdann, type = "UTDANN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(globs$utdann_illeg %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(getOption("khfunctions.illegal") %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$UTDANN <- as.integer(plyr::mapvalues(DF$UTDANN, utdann$ORG, utdann$OMK, warn_missing = FALSE))
     }
@@ -347,7 +331,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       innvkat <- INNVKATvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = innvkat, type = "INNVKAT", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(globs$innvkat_illeg %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(getOption("khfunctions.illegal") %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$INNVKAT <- as.integer(plyr::mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
     }
@@ -359,7 +343,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       landbak <- LANDBAKvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
       
       SkrivKBLogg(KB = landbak, type = "LANDBAK", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
-      TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(globs$landbak_illeg %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(getOption("khfunctions.illegal") %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
       
       DF$LANDBAK <- as.integer(plyr::mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
     }
@@ -370,8 +354,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       }
     }
     
-    # DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER måtte tas over pga intervall)
-    DF <- subset(DF, rowSums(DF[, names(DF) %in% globs$taborgs] == "-") == 0)
+    # DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER maatte tas over pga intervall)
+    DF <- subset(DF, rowSums(DF[, names(DF) %in% getOption("khfunctions.taborgs")] == "-") == 0)
     
     # VASK VERDIER. Litt annen prosess, bruker KB, men tabulerer bare ikke-numeriske.
     # Setter numerisk, med flagg for type NA
@@ -390,7 +374,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         valomk <- paste(val, "omk", sep = "")
         
         
-        # Lag omkodet verdi med numerisk. Ikke numerisk blir foreløpig NA
+        # Lag omkodet verdi med numerisk. Ikke numerisk blir foreloepig NA
         suppressWarnings(DF[, valomk] <- as.numeric(valKB$omk))
         DF[, valf] <- 0
         DF[, vala] <- 1
@@ -408,7 +392,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
           valKB$OMK <- valKB$KBOMK
           
           
-          # Gjør nytt forsøk på numerisk konvertering etter omkoding
+          # Gjoer nytt forsoek paa numerisk konvertering etter omkoding
           kbNUM <- suppressWarnings(as.numeric(valKB$OMK))
           
           # Legitime
@@ -461,22 +445,18 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     
     default.stringsAsFactors <- TRUE
     Kols <- c(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(DF)], names(DF)[grepl("^VAL\\d+(\\.(f|a)|)$", names(DF))])
-    if (echo == TRUE) {
-      print(Kols)
-      cat("Nest siste trinn\n#########################\n")
-    }
     
     # print(filbesk)
-    # kAN KRÆSJE VED UKJENT KOLNAVN!
+    # kAN KRaeSJE VED UKJENT KOLNAVN!
     # print(FGP)
     DF <- DF[, Kols]
     
-    # Kast rader for inaktive GEO med alle VAL==NA (må gjøres fordi alle kommunekoder gir utrapportert tall fra STATBANK og 0/NA er ikke nøytralt for ikke-sumerbare kolonner, jfr MEDIANINNT)
-    # Merk at ekte NA settes inn igjen når det rektangulariseres på aktive kommuner ved kubeproduksjon
+    # Kast rader for inaktive GEO med alle VAL==NA (maa gjoeres fordi alle kommunekoder gir utrapportert tall fra STATBANK og 0/NA er ikke noeytralt for ikke-sumerbare kolonner, jfr MEDIANINNT)
+    # Merk at ekte NA settes inn igjen naar det rektangulariseres paa aktive kommuner ved kubeproduksjon
     GeoFra <- setNames(globs$GeoKoder$FRA, globs$GeoKoder$GEO)
     GeoTil <- setNames(globs$GeoKoder$TIL, globs$GeoKoder$GEO)
-    valkols <- FinnValKols(names(DF))
-    # Skjønner ikke hvorfor dette ikke funker
+    valkols <- get_value_columns(names(DF))
+    # Skjoenner ikke hvorfor dette ikke funker
     
     DF2 <- DF[!((unlist(GeoTil[DF$GEO]) <= DF$AARl | unlist(GeoFra[DF$GEO]) >= DF$AARh) & rowSums(is.na(data.frame(DF[, valkols]))) == length(valkols)), ]
     DF <- DF2
@@ -484,7 +464,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     
     # Aggreger ned. Unntaksvis der filene er "ucollapset"
     # etter f.eks omkoding av alder til aldersgrupper
-    # Om ikke dette gjøres blir det masse dubletter
+    # Om ikke dette gjoeres blir det masse dubletter
     if (!is.na(filbesk$AGGERGER_DF) & filbesk$AGGERGER_DF == 1) {
       print("SKAL COLLAPSE")
       print(dim(DF))
@@ -508,7 +488,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   
   if (ok == 0) {
     DF <- data.frame()
-    # DF<-DF[0,] #Fungerer ikke mht class, som kan være feil
+    # DF<-DF[0,] #Fungerer ikke mht class, som kan vaere feil
   }
   
   return(DF)
@@ -520,7 +500,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
 #' @param batchdate 
 #' @param globs 
 #' @param dumps 
-LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), dumps = character()) {
+LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), dumps = character()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -583,7 +563,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
           DF <- INNLES
         }
       }
-      # Må sikre at data.frame, noen filer kan være bare en skalar (jfr ENPERSON)
+      # Maa sikre at data.frame, noen filer kan vaere bare en skalar (jfr ENPERSON)
       DF <- as.data.frame(DF, stringsAsFactors = FALSE)
       if (ok == 0) {
         TilFilLogg(filbesk$KOBLID, "INNLESARGerr", innleserr, batchdate = batchdate, globs = globs)
@@ -596,7 +576,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
   
   # Fortsett hvis lest inn er ok
   if (ok == 1) {
-    # Gjør om innlest CSV-aktig til tabell
+    # Gjoer om innlest CSV-aktig til tabell
     
     if (format %in% c("CSV", "XLS", "XLSX")) {
       eval(parse(text = paste("DF<-cSVmod(DF,filbesk,", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ",globs=globs)", sep = "")))
@@ -627,7 +607,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
       eval(parse(text = paste("mhs<-", mh[2], sep = "")))
       names(DF)[mhi] <- mhs
       
-      # Skjønner ikke helt hvorfor ikke denne enkler funker:
+      # Skjoenner ikke helt hvorfor ikke denne enkler funker:
       # eval(parse(text=paste("names(DF)",filbesk$MANHEADER,sep="")))
     }
     
@@ -673,7 +653,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
       if (grepl("<STATA>", synt)) {
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         
-        ## These variables are to be use in Stata process (request from Jørgen)
+        ## These variables are to be use in Stata process (request from Joergen)
         ## They will be deleted when Stata RSYNT1 is completed below
         DF$filgruppe <- filbesk$FILGRUPPE
         DF$delid <- filbesk$DELID
@@ -681,7 +661,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
         
         RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
+          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
           ok <- 0
         } else {
           DF <- RES$TABLE
@@ -706,7 +686,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs(), 
     }
   }
   
-  # sink(file=paste(globs$path,"/hoder.txt",sep=""),append=TRUE)
+  # sink(file=paste(getOption("khfunctions.root"),"/hoder.txt",sep=""),append=TRUE)
   # cat("\n#################\nFIL: ")
   # cat(filn)
   # cat("\n")
@@ -765,10 +745,10 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
 #' @param FjernTommeKol 
 #' @param globs 
 #' @param ... 
-cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = FinnGlobs(), ...) {
-  # Ved bruk av undertabeller med titler som ikke står i egen kolonne
+cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = SettGlobs(), ...) {
+  # Ved bruk av undertabeller med titler som ikke staar i egen kolonne
   # Lager egen kolonne av undertitler som blir ekta TAB
-  # Ikke så veldig elegant, men funker for de får tilfellene der dette trengs og som ellers ville trengt håndsøm
+  # Ikke saa veldig elegant, men funker for de faar tilfellene der dette trengs og som ellers ville trengt haandsoem
   # Syntaks UNDERTABLOK er TAB:kolonne:kommasep liste undertitler:kommasep liste/skalar offset av disse (dvs antall raders forrykking)
   is_kh_debug()
   
@@ -805,18 +785,19 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
   if (FjernTommeKol == TRUE) {
     DF <- DF[, colSums(is.na(DF) | DF == "") != nrow(DF)]
   }
-  # Må sikre at data.frame, noen filer kan være bare en skalar (jfr ENPERSON)
+  # Maa sikre at data.frame, noen filer kan vaere bare en skalar (jfr ENPERSON)
   DF <- as.data.frame(DF, stringsAsFactors = FALSE)
   
   # Sett header. Default er vanlige Excel-kolonnenavn
-  names(DF) <- globs$XLScols[1:length(names(DF))]
   
-  # Bruk av flernivå header.
-  # Ikke særlig elegant syntaks, men prinsippet er rett fram
+  names(DF) <- excelcols()[1:length(names(DF))]
+  
+  # Bruk av flernivaa header.
+  # Ikke saerlig elegant syntaks, men prinsippet er rett fram
   # Disse pastes (evt) sammen til en header
-  # Etter reshape splittes kolonneraden (som nå har blitt en kolonne)
+  # Etter reshape splittes kolonneraden (som naa har blitt en kolonne)
   # i sine respektive kolonner
-  # Kan også være pastet sammen originalt
+  # Kan ogsaa vaere pastet sammen originalt
   # Syntaks gir radnummer for de ulike leddene i multihead "c(TABNAVN1=rad1,TABNAVN2=rad2,...)
   if (!is.na(filbesk$MULTIHEAD)) {
     # Prossesser parameterstreng for multihead, gir liste med relevante deler
@@ -862,7 +843,7 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
 #' @param na.strings 
 #' @param ryddOpp 
 #' @param ... 
-Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
+Xls2R.KH <- function(xlsfil, ark = "", globs = SettGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
   is_kh_debug()
   
   err <- ""
@@ -898,7 +879,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
       err <- INNLES
       ok <- 0
     } else {
-      DF <- setNames(INNLES, globs$XLScols[1:ncol(INNLES)])
+      DF <- setNames(INNLES, excelcols()[1:ncol(INNLES)])
       ## ## Finner ut hvis hele kolonne er missing
       ## colMISS = sapply(DF, function(x) all(is.na(x)))
       ## missUT = attributes(colMISS[colMISS==1])$names
@@ -913,11 +894,11 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = FinnGlobs(), brukfread = TRUE, na
 #' @param gruppe 
 #' @param batchdate 
 #' @param globs 
-FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   dbh <- globs$dbh
-  datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+  datef <- FormatSqlBatchdate(batchdate)
   FGPaktiv <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
                                                    "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
                                         ",
@@ -978,17 +959,8 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
 #' @param filgruppe 
 #' @param batchdate 
 #' @param globs 
-#' @param test 
-#' @param testID 
-FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), test = runtest, testID = testfiles) {
-  is_kh_debug()
-  
-  # Default er å finne filbesk gyldige nå (Sys.time)
-  datef <- format(Sys.time(), "#%Y-%m-%d#")
-  # ALternativt kan man finne for en historisk batchdate
-  if (!is.null(batchdate)) {
-    datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-  }
+FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  datef <- FormatSqlBatchdate(batchdate)
   sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
               FROM INNLESING INNER JOIN
               (  ORGINNLESkobl INNER JOIN ORIGINALFILER
@@ -1001,13 +973,6 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
               AND INNLESING.VERSJONFRA<=", datef, "
               AND INNLESING.VERSJONTIL>", datef, sep = "")
   fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
-  
-  ## Picking up files path that is refered to in ORIGINALFILER
-  
-  if (test) {
-    fb <- subset(fb, KOBLID %in% testID)
-  }
-  
   invisible(fb)
 }
 
@@ -1016,11 +981,10 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = NULL, globs = FinnGlobs(), 
 #' @param FG 
 #' @param filgruppe 
 #' @param FullResult 
-#' @param echo 
 #' @param batchdate 
 #' @param versjonert 
 #' @param globs 
-SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = FinnGlobs()) {
+SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
   HarDuplikater <- 0
@@ -1030,7 +994,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
   orgkeys <- data.table::key(FG)
   tabkols <- globs$DefDesign$DesignKolsFA
   tabkols <- tabkols[tabkols %in% names(FG)]
-  valkols <- FinnValKols(names(FG))
+  valkols <- get_value_columns(names(FG))
   setkeym(FG, tabkols)
   
   dubi <- duplicated(FG)
@@ -1073,7 +1037,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
       DUB[, antKp := 0]
     }
     
-    # Hold ##99-geokoder utenom. Her blir det lagd dubeltter når to illegitime KNR blir samme ##99 etc
+    # Hold ##99-geokoder utenom. Her blir det lagd dubeltter naar to illegitime KNR blir samme ##99 etc
     DUBg <- subset(DUB, !grepl("99$", GEO))
     if (nrow(DUBg) > 0) {
       eval(parse(text = paste(
@@ -1105,7 +1069,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     # Skriv dubletter til logg
     RODBC::sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
     # Legg til resterende kolonner
-    # Må ha ok kolonnenavn til database
+    # Maa ha ok kolonnenavn til database
     data.table::setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
     
     tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
@@ -1115,17 +1079,8 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
     tmp$FILGRUPPE <- filgruppe
     tmp$BATCHID <- batchdate
     tmp$SV <- "S"
-    if (echo >= 1) {
-      cat("HAR", nrow(DUB), "duplikater (", nrow(subset(DUB, dNOg > 0)), "), det kan gjerne ta", nrow(DUB) / 100, "sek  å skrive ut logg\n")
-    }
-    if (echo >= 2) {
-      print(DUB)
-    }
     if (nrow(DUB) < 1000) {
       RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
-      if (echo >= 1) {
-        cat("Ferdig dublogg\n")
-      }
       if (versjonert == TRUE) {
         tmp$SV <- "V"
         RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
@@ -1151,8 +1106,8 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, echo = 0, batchda
 #' @export
 #'
 #' @examples
-ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
-  # Reshape av DELF basert på parametre i filbesk
+ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  # Reshape av DELF basert paa parametre i filbesk
   is_kh_debug()
   
   ok <- 1
@@ -1169,7 +1124,7 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Fin
   }
   varname <- "variable"
   valname <- "value"
-  # varname må tas fra MULTIHEAD om denne brukes
+  # varname maa tas fra MULTIHEAD om denne brukes
   if (!is.na(filbesk$MULTIHEAD)) {
     varname <- LesMultiHead(filbesk$MULTIHEAD)$varname
   } else if (!(is.na(filbesk$RESHAPEvar) || filbesk$RESHAPEvar == "")) {
@@ -1180,14 +1135,14 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Fin
   }
   
   if (all(idvars %in% names(DELF)) & (is.null(mevars) | all(mevars %in% names(DELF)))) {
-    DELF[, idvars] <- sapply(DELF[, idvars], as.character) # Må være av samme type for at ikke reshape skal kræsje
+    DELF[, idvars] <- sapply(DELF[, idvars], as.character) # Maa vaere av samme type for at ikke reshape skal kraesje
     if (!is.null(mevars)) {
       DELF <- data.table::melt(as.data.table(DELF), id.vars = idvars, measure.vars = mevars, variable.name = varname, value.name = valname, na.rm = FALSE)
     } else {
       DELF <- data.table::melt(as.data.table(DELF), id.vars = idvars, variable.name = varname, value.name = valname, na.rm = FALSE)
     }
     data.table::setDF(DELF)
-    DELF[, varname] <- as.character(DELF[, varname]) # Kan ha blitt factor, og det gir krøll senere
+    DELF[, varname] <- as.character(DELF[, varname]) # Kan ha blitt factor, og det gir kroell senere
   } else {
     rshperr <- ""
     if (!all(idvars %in% names(DELF))) {
@@ -1204,9 +1159,6 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Fin
   return(list(DF = DELF, ok = ok))
 }
 
-# Necessary to create this object?
-subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
-
 #' KBomkod (kb)
 #'
 #' @param org 
@@ -1215,12 +1167,12 @@ subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(
 #' @param valsubs 
 #' @param batchdate 
 #' @param globs 
-KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = FinnGlobs()) {
+KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = SettGlobs()) {
   is_kh_debug()
   
   datef <- format(Sys.time(), "#%Y-%m-%d#")
   if (!is.null(batchdate)) {
-    datef <- format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
+    datef <- FormatSqlBatchdate(batchdate)
   }
   omk <- org
   kbf <- paste(type, "kb", sep = "")
@@ -1236,7 +1188,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
   kbok[is.na(kbok)] <- ""
   subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
   if (nrow(kbok) > 0) {
-    KBsubs <- subset(kbok, TYPE == "SUB") # Regulæruttrykk
+    KBsubs <- subset(kbok, TYPE == "SUB") # Regulaeruttrykk
     KB <- subset(kbok, TYPE == "KB") # Oppslagsliste
     i <- 1
     while (i <= nrow(KBsubs)) {
@@ -1278,7 +1230,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), harlevekaar = F) {
+GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), harlevekaar = F) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1311,7 +1263,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   geo$OMK <- sub("^(\\d{4})xx*", "\\1", geo$OMK, ignore.case = TRUE)
   
   # Kode fra navn
-  # Må bli mer avansert for å bli robust. Koder nå 1 til flere (Nes, etc)
+  # Maa bli mer avansert for aa bli robust. Koder naa 1 til flere (Nes, etc)
   UGeo <- data.frame(NAVN = geo$OMK[!grepl("^\\d+$", geo$OMK)])
   if (nrow(UGeo) > 0) {
     GeoNavn <- RODBC::sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
@@ -1372,13 +1324,13 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   
   # Ekte ulegit
   geo$OK[geo$GEOniv == "-"] <- 1
-  # DEVELOP: bare et GEOniv, sett ukjent på dette nivået
+  # DEVELOP: bare et GEOniv, sett ukjent paa dette nivaaet
   # Fil har bare kommunedata -> bruker 8888
   if (sum(c("G", "B", "F", "L") %in% geo$GEOniv) == 0) {
     geo$OMK[geo$OK == 0] <- "8888"
     geo$GEOniv[geo$OK == 0] <- "K"
   } else {
-    geo$OMK[geo$OK == 0] <- globs$geo_illeg
+    geo$OMK[geo$OK == 0] <- getOption("khfunctions.geo_illegal")
   }
   # Sett fylke
   geo$FYLKE <- NA
@@ -1396,7 +1348,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
 #' @param FGP 
 #' @param batchdate 
 #' @param globs 
-ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   amax <- FGP$amax
@@ -1422,29 +1374,29 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
   alder$OMK <- sub("^ *- *(\\d+)( +år| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(\\d+) år (og|eller) eldre", "\\1_", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *over (\\d+)( å?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
-  # alder$OMK<-sub("^ *under (\\d+)( +år| *$)","_\\1",alder$OMK,ignore.case = TRUE)  # Dette blri galt, må erstatte med "_(\\1-1)", men får ikke det til. Må bruke kdoebok
+  # alder$OMK<-sub("^ *under (\\d+)( +år| *$)","_\\1",alder$OMK,ignore.case = TRUE)  # Dette blri galt, maa erstatte med "_(\\1-1)", men faar ikke det til. Maa bruke kdoebok
   alder$OMK <- sub("^ *(\\d+)( ?r|) *(og|eller) (yngre|under)", "_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(\\d+) *( +år| *$)", "\\1_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(Alle( *aldre.*|)|Totalt{0,1}|I alt) *$", paste(amin, "_", amax, sep = ""), alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", globs$alder_ukjent, alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", getOption("khfunctions.alder_ukjent"), alder$OMK, ignore.case = TRUE)
   
   # alder$OMK[is.na(alder$OMK)]<-"999_999"
   alder$OMK <- sub("^(\\d+)_$", paste("\\1_", amax, sep = ""), alder$OMK)
   alder$OMK <- sub("^_(\\d+)$", paste(amin, "_\\1", sep = ""), alder$OMK)
   
   # Ukjent????????
-  # !Må ha to amax, en for ukjent som er høyere, se også ulest under!!!
+  # !Maa ha to amax, en for ukjent som er hoeyere, se ogsaa ulest under!!!
   
   okformat <- grepl("^\\d+_\\d+$|^-$", alder$OMK)
   # Ugyldig verdi/ukjent kode
-  alder$OMK[!okformat] <- globs$alder_illeg
+  alder$OMK[!okformat] <- getOption("khfunctions.alder_illegal")
   alder$OK[!okformat] <- 0
   
   # Sett intervall
   alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
-  alder$OMK[alder$HI < alder$LO] <- globs$alder_illeg
-  alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(globs$alder_illeg, globs$alder_ukjent))] <- globs$alder_illeg
+  alder$OMK[alder$HI < alder$LO] <- getOption("khfunctions.alder_illegal")
+  alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_ukjent")))] <- getOption("khfunctions.alder_illegal")
   alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
   return(alder)
 }
@@ -1455,7 +1407,7 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1473,7 +1425,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
   # kjonn$OMK[is.na(kjonn$ORG)]<-9
   
   # Ugyldig verdi/ukjent kode
-  kjonn$OMK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- globs$kjonn_illeg
+  kjonn$OMK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- getOption("khfunctions.illegal")
   kjonn$OK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- 0
   
   return(kjonn)
@@ -1486,7 +1438,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1507,7 +1459,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
   utdann$OMK <- sub("^ *(alle) *$", "0", utdann$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  utdann$OMK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- globs$utdann_illeg
+  utdann$OMK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- getOption("khfunctions.illegal")
   utdann$OK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- 0
   return(utdann)
 }
@@ -1519,7 +1471,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1541,7 +1493,7 @@ INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatch
   innvkat$OMK <- sub("^ *(alle) *$", "0", innvkat$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- globs$innvkat_illeg
+  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- getOption("khfunctions.illegal")
   innvkat$OK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- 0
   
   return(innvkat)
@@ -1554,7 +1506,7 @@ INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param batchdate 
 #' @param globs 
 #' @param regexp 
-LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs(), regexp = FALSE) {
+LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1579,7 +1531,7 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
   landbak$OMK <- sub("^ *(Alle) *$", "0", landbak$OMK, ignore.case = TRUE)
   
   # Ugyldig verdi/ukjent kode
-  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- globs$landbak_illeg
+  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- getOption("khfunctions.illegal")
   landbak$OK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- 0
   
   return(landbak)
@@ -1591,7 +1543,7 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param filbesk 
 #' @param batchdate 
 #' @param globs 
-AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = FinnGlobs()) {
+AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
   if (nrow(filbesk) == 0) {
@@ -1609,13 +1561,22 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   
   # Ugyldig verdi/ukjent kode
   okformat <- grepl("^\\d+_\\d+$|^-$", aar$OMK)
-  aar$OMK[!okformat] <- globs$aar_illeg
+  aar$OMK[!okformat] <- getOption("khfunctions.aar_illegal")
   aar$OK[!okformat] <- 0
   
   # Sett intervall
   aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   # Ugyldig intervall
-  aar$OMK[aar$HI < aar$LO] <- globs$aar_illeg
+  aar$OMK[aar$HI < aar$LO] <- getOption("khfunctions.aar_illegal")
   aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
   return(aar)
+}
+
+#' @title excelcols
+#' @return default excel headers
+excelcols <- function(){
+  single <- LETTERS
+  double <- sapply(single, paste0, single)
+  triple <- sapply(double, paste0, single)
+  c(single, double, triple)
 }
