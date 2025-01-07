@@ -63,40 +63,6 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   return(Deler)
 }
 
-#' FinnFellesTab (kb)
-#'
-#' @param DF1 
-#' @param DF2 
-#' @param globs 
-FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
-  # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
-  is_kh_debug()
-  cat("Starter i FinnFellesTab.")
-  FTabs <- list()
-  for (del in intersect(names(DF1$Part), names(DF2$Part))) {
-    FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
-  }
-  # FTabs inneholder alle unike verdier av alle dimensjoner som finnes i TELLER og NEVNER-filen
-  # ER DETTE NØDVENDIG???? Dette kan gi helt enormt store filer i neste steg da alle kombinasjoner
-  # av alle dimensjoner rektangulariseres og for noen filer sprenger minnet
-  # Det intuitive er at det bare er nødvendig å beholde nivåer som finnes i tellerfilen, og dermed barbere bort 
-  # det som bare finnes i nevnerfilen for redesign av filene. 
-  RD1 <- FinnRedesign(DF1, list(Part = FTabs), globs = globs)
-  RD2 <- FinnRedesign(DF2, list(Part = FTabs), globs = globs)
-  ### kommet hit ---- 
-  omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
-  data.table::setkeyv(RD1$FULL, omktabs)
-  data.table::setkeyv(RD2$FULL, omktabs)
-  Dekk1 <- unique(RD1$FULL[, omktabs, with = FALSE])
-  Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
-  Dekk12 <- Dekk1[Dekk2, nomatch = 0]
-  data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  FDes <- FinnDesign(Dekk12, globs = globs)
-  cat(" Ferdig i FinnFellesTab\n")
-  gc()
-  return(list(Dekk = Dekk12, FDes = FDes))
-}
-
 #' SettFilterDesign (kb)
 #'
 #' @param KUBEdscr 
@@ -175,24 +141,21 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 
 #' @title FinnRedesign (kb)
 #'
-#' @param DesFRA 
-#' @param DesTIL 
+#' @param fradesign 
+#' @param tildesign 
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
 #' @param globs 
-FinnRedesign <- function(DesFRA, 
-                         DesTIL, 
-                         SkalAggregeresOpp = character(), 
-                         globs = SettGlobs()) {
+FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
   is_kh_debug()
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
   AggPri = globs$DefDesign$AggPri
-  # Merk assymtri mellom DesFRA og DesTIL.
-  # For DesTIL brukes bare DesTil$Part og DesTIL$OmkDesign.
-  # DesFRA maa derfor komme fra FinnDesign med alle egenskaper satt der, mens DesTIL kan vaere enklere og satt andre steder
-
-  # Deler i DesFra som ikke er i DesTil maa legegs til i DesTil (full kryss mot Part[del])
-  # Merk at deler i DesTil som ikke er i DesFra gaar greit (all omkoding er indirekte "betinget" paa disse)
+  # Merk assymtri mellom fradesign og tildesign.
+  # For tildesign brukes bare tildesign$Part og tildesign$OmkDesign.
+  # fradesign maa derfor komme fra FinnDesign med alle egenskaper satt der, mens tildesign kan vaere enklere og satt andre steder
+  
+  # Deler i fradesign som ikke er i tildesign maa legegs til i tildesign (full kryss mot Part[del])
+  # Merk at deler i tildesign som ikke er i fradesign gaar greit (all omkoding er indirekte "betinget" paa disse)
   
   # Sett partiell omkoding
   # For intervaller kalles FinnKodebokINtervaller, elllers hentes fast kodebok som utgnagspunkt
@@ -200,12 +163,12 @@ FinnRedesign <- function(DesFRA,
   # Dvs omkodinger til en TIL som ikke har alle noedvendige deler i FRA filtreres bort
   # Merk at noen deler i FRA ikke er obligatoriske (slik som KJONN=9 for omkoding til KJONN=0)
   
-  # Rydd DesTIL$Design (Kan variere litt mht HAR avhengig av hvor kallet paa denne funksjonen er gjort fra. Skal ha 1 har felt)
-  if (is.null(DesTIL$Design)) {
-    FULL <- do.call(expand.grid.dt, DesTIL$Part)
+  # Rydd tildesign$Design (Kan variere litt mht HAR avhengig av hvor kallet paa denne funksjonen er gjort fra. Skal ha 1 har felt)
+  if (is.null(tildesign$Design)) {
+    FULL <- do.call(expand.grid.dt, tildesign$Part)
     FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$", names(FULL), value = T)]
   } else {
-    FULL <- DesTIL$Design[HAR == 1, ]
+    FULL <- tildesign$Design[HAR == 1, ]
     FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$|^HAR$", names(FULL), value = T)]
   }
   data.table::setnames(FULL, names(FULL), paste0(names(FULL), "_omk"))
@@ -214,21 +177,21 @@ FinnRedesign <- function(DesFRA,
   saveRDS(FULL, TempFile)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
   
-  betKols <- setdiff(names(DesFRA$SKombs$bet), "HAR")
+  betKols <- setdiff(names(fradesign$SKombs$bet), "HAR")
   if (length(betKols) > 0) {
-    FULL <- expand.grid.dt(FULL, DesFRA$SKombs$bet[, ..betKols])
+    FULL <- expand.grid.dt(FULL, fradesign$SKombs$bet[, ..betKols])
   }
-  for (del in DesFRA$UBeting) {
-    if (is.null(DesTIL$Part[[del]])) {
-      DesTIL$Part[[del]] <- data.table::copy(DesFRA$Part[[del]])
+  for (del in fradesign$UBeting) {
+    if (is.null(tildesign$Part[[del]])) {
+      tildesign$Part[[del]] <- data.table::copy(fradesign$Part[[del]])
     }
   }
   
   Parts <- list()
   # DEV: Denne delen kan hentes ut til en egen funksjon
   for (del in names(KB)) {
-    if (del %in% names(DesTIL$Part) & del %in% names(DesFRA$Part)) {
-      d <- data.table::copy(data.table::setDT(DesTIL$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
+    if (del %in% names(tildesign$Part) & del %in% names(fradesign$Part)) {
+      d <- data.table::copy(data.table::setDT(tildesign$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
       delH <- paste0(del, "_HAR")
       delP <- paste0(del, "_pri")
       delO <- paste0(del, "_obl")
@@ -253,11 +216,11 @@ FinnRedesign <- function(DesFRA,
       
       if (globs$DefDesign$DelType[del] == "COL") {
         if (nrow(KBD) > 0) {
-          # Filtrer bort TIL-koder i global-KB som ikke er i desTIL
+          # Filtrer bort TIL-koder i global-KB som ikke er i tildesign
           KBD <- KBD[get(kolomk) %in% d[[kol]]]
           setkeyv(KBD, kolomkpri)
           KBD[, (delH) := as.integer(0L)]
-          KBD[get(kol) %in% DesFRA$Part[[del]][[kol]], (delH) := 1L]
+          KBD[get(kol) %in% fradesign$Part[[del]][[kol]], (delH) := 1L]
           KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
           # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
           # Setter keep her, kaster til slutt
@@ -266,8 +229,8 @@ FinnRedesign <- function(DesFRA,
       } else if (globs$DefDesign$DelType[del] == "INT") {
         # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
         # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
-        Imin <- min(DesFRA$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "l")]])
-        Imax <- max(DesFRA$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "h")]])
+        Imin <- min(fradesign$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "l")]])
+        Imax <- max(fradesign$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "h")]])
         alle <- paste0(Imin, "_", Imax)
         if (nrow(KBD) > 0) {
           KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
@@ -281,14 +244,14 @@ FinnRedesign <- function(DesFRA,
         # Videre er disse bare med naar TilDes er satt fra FinnDesign(FG), ikke naar TilDes er fra Parts
         # Usikker paa om det alltid er best aa slippe disse gjennom.
         
-        IntFra <- DesFRA$Part[[del]][, ..kols]
+        IntFra <- fradesign$Part[[del]][, ..kols]
         IntTil <- d[, ..kols]
         # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
         IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
         IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
         KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
         KBInt[, (delO) := 1]
-
+        
         # DEVELOP:   DETTE ER TENMMELIG AD HOC!!!!!!!!!!
         if (del == "A") {
           KBInt[KBInt$ALDERl >= 90, (delO) := 0]
@@ -306,7 +269,7 @@ FinnRedesign <- function(DesFRA,
         
         # Koble paa "del_HAR"
         setkeyv(KBD, kols)
-        KBD <- collapse::join(DesFRA$Part[[del]], KBD, how = "r", verbose = 0)
+        KBD <- collapse::join(fradesign$Part[[del]], KBD, how = "r", verbose = 0)
         KBD[is.na(get(delH)), (delH) := 0]
         KBD <- SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)
         
@@ -317,8 +280,8 @@ FinnRedesign <- function(DesFRA,
         KBD[, keep := as.integer(any(get(delH) == 1) | get(delO) == 0), by = kolsomkpri]
       }
       
-    KBD <- KBD[keep == 1][, keep := NULL]
-    Parts[[del]] <- KBD
+      KBD <- KBD[keep == 1][, keep := NULL]
+      Parts[[del]] <- KBD
     }
   }
   
@@ -338,29 +301,29 @@ FinnRedesign <- function(DesFRA,
     delD <- paste0(del, "_Dekk")
     delP <- paste0(del, "_pri")
     delH <- paste0(del, "_HAR")
-    if (length(DesFRA[["UBeting"]]) > 0) {
-      if (del %in% DesFRA[["UBeting"]]) {
+    if (length(fradesign[["UBeting"]]) > 0) {
+      if (del %in% fradesign[["UBeting"]]) {
         kombn <- "bet"
       } else {
         kombn <- paste0("bet", del)
       }
-      # Koble med DeSFRA
+      # Koble med fradesign
       data.table::setkeyv(Parts[[del]], kols)
-      data.table::setkeyv(DesFRA$SKombs[[kombn]], kols)
-      betD <- collapse::join(DesFRA$SKombs[[kombn]], Parts[[del]], how = "right", multiple = T, verbose = F)
+      data.table::setkeyv(fradesign$SKombs[[kombn]], kols)
+      betD <- collapse::join(fradesign$SKombs[[kombn]], Parts[[del]], how = "right", multiple = T, verbose = F)
       betD[is.na(HAR), HAR := 0]
       # Maa kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
       # faa del_Dekk==1 under dersom del er i beting, da vil en annen del i beting faa NA og by=betcols gaar galt!)
       betD <- subset(betD, eval(parse(text = paste0(del, "_Dekk==1"))))
       betD <- betD[get(delD) == 1]
       # Sett (betinget) dekning
-      betcols <- unlist(globs$DefDesign$DelKols[setdiff(DesFRA[["UBeting"]], del)])
+      betcols <- unlist(globs$DefDesign$DelKols[setdiff(fradesign[["UBeting"]], del)])
       betD <- SettPartDekk(betD, del = del, har = "HAR", IntervallHull = IntervallHull, betcols = betcols, globs = globs)
     } else {
       betcols <- character()
       betD <- data.table::copy(Parts[[del]])
     }
-
+    
     # Finn beste alternativ
     bycols <- c(kolsomk, betcols)
     if (del %in% SkalAggregeresOpp) {

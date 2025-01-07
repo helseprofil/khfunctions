@@ -39,4 +39,5 @@ uselocal <- function(test = FALSE,
   csvcopy <<- FALSE
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
+  geonaboprikk <<- TRUE
 }

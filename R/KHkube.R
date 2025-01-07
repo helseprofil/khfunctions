@@ -20,7 +20,7 @@ LagKUBE <- function(KUBEid,
                     geonaboprikk = TRUE,
                     ...) {
   is_kh_debug()
-  if(!geonaboprikk) message("OBS! naboprikking pÃ¥ GEO er deaktivert!")
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
@@ -29,27 +29,24 @@ LagKUBE <- function(KUBEid,
   
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
-  parameters[["filedesign"]] <- get_filedesign(files = parameters$files, parameters = parameters, globs = globs)
+  parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
   
-  KUBEdscr <- parameters$CUBEinformation
-  TNPdscr <- parameters$TNPinformation
+  KUBEinformation <- parameters$CUBEinformation
+  TNPinformation <- parameters$TNPinformation
+  STNPinformation <- parameters$STNPinformation
+  fileinformation <- parameters$fileinformation
+  filedesign <- parameters$filedesign
   filer <- parameters$files
   PredFilter <- parameters$PredFilter
   D_develop_predtype <- parameters$PredFilter$D_develop_predtype
-  STNPdscr <- parameters$STNPinformation
-  FGPs <- parameters$fileinformation
-  FilDesL <- parameters$filedesign
   
-  stataspec <- kube_spec(spec = KUBEdscr, dims = NA)
+  stataspec <- kube_spec(spec = KUBEinformation)
   
   # If write = TRUE, save ACCESS specs
   if(isTRUE(write)){
     cat("Saving ACCESS specs to file:\n")
-    utfils <- file.path(getOption("khfunctions.root"), 
-                        getOption("khfunctions.kubedir"), 
-                        getOption("khfunctions.kube.specs"), 
-                        paste0("spec_", KUBEid, "_", batchdate, ".csv"))
-    specs <- GetAccessSpecs(KUBEid = KUBEid, kuber = KUBEdscr, tnp = TNPdscr, stnp = STNPdscr, filgrupper = FGPs, batchdate = batchdate, globs = globs)
+    utfils <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", KUBEid, "_", batchdate, ".csv"))
+    specs <- GetAccessSpecs(KUBEid = KUBEid, kuber = KUBEinformation, tnp = TNPinformation, stnp = STNPinformation, filgrupper = fileinformation, batchdate = batchdate, globs = globs)
     data.table::fwrite(specs, file = utfils, sep = ";")
     cat("\n", utfils)
   }
@@ -57,36 +54,36 @@ LagKUBE <- function(KUBEid,
   # LAG TNF ----
   
   cat("******LAGER TNF\n")
-  TNtab <- merge_teller_nevner(filer = filer, FilDesL = FilDesL, FGPs = FGPs, TNPdscr = TNPdscr, KUBEdscr = KUBEdscr, globs = globs)
+  TNtab <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = TNPinformation, KUBEparameters = KUBEinformation, globs = globs)
   TNF <- TNtab$TNF
   KUBEd <- TNtab$KUBEd
   rm(TNtab)
-  if (TNPdscr$NEVNERKOL != "-") TNF <- LeggTilNyeVerdiKolonner(TNF, "RATE={TELLER/NEVNER}")
+  if (TNPinformation$NEVNERKOL != "-") TNF <- LeggTilNyeVerdiKolonner(TNF, "RATE={TELLER/NEVNER}")
   cat("------FERDIG TNF\n")
   gc()
   
   # LAG STNF for prediksjon ----
-  if (KUBEdscr$REFVERDI_VP == "P") {
+  if (KUBEinformation$REFVERDI_VP == "P") {
     print("*****PREDIKER!!!")
     # Maa foerst finne design for (den syntetiske) koblinga ST, SN og PN
     # Bruk PREDfilter paa ST og evt SN
     # Finn saa FellesTab for disse
     cat("***Skal finne felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
-    STFd <- FinnDesignEtterFiltrering(FilDesL[[filer$STANDARDTELLER]], PredFilter$Design, PredFilter$Pkols, FGP = FGPs[[filer$STANDARDTELLER]], globs = globs)
+    STFd <- FinnDesignEtterFiltrering(filedesign[[filer$STANDARDTELLER]], PredFilter$Design, PredFilter$Pkols, FGP = fileinformation[[filer$STANDARDTELLER]], globs = globs)
     if (!is.na(filer$STANDARDNEVNER)) {
-      SNFd <- FinnDesignEtterFiltrering(FilDesL[[filer$STANDARDNEVNER]], PredFilter$Design, PredFilter$Pkols, FGP = FGPs[[filer$STANDARDNEVNER]], globs = globs)
+      SNFd <- FinnDesignEtterFiltrering(filedesign[[filer$STANDARDNEVNER]], PredFilter$Design, PredFilter$Pkols, FGP = fileinformation[[filer$STANDARDNEVNER]], globs = globs)
       STNFd <- FinnFellesTab(STFd, SNFd, globs = globs)$FDes
     } else {
       STNFd <- STFd
     }
     # Finn FellesTab ogsaa med PN, denne gjelder som Til-design for PN
-    STNPFd <- FinnFellesTab(STNFd, FilDesL[[filer$PREDNEVNER]], globs = globs)$FDes
+    STNPFd <- FinnFellesTab(STNFd, filedesign[[filer$PREDNEVNER]], globs = globs)$FDes
     # Maa filtrere STNPFd med Predfilter igjen for aa finne ny STNFd som gir til-design for ST og SN
     # (merge med PN kan ha endra fra STNFd-versjonen over
-    STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = FGPs[[filer$STANDARDTELLER]], globs = globs)
+    STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = fileinformation[[filer$STANDARDTELLER]], globs = globs)
     cat("---Satt felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     
-    STN <- data.table::copy(merge_teller_nevner(filer, FilDesL, FGPs, STNPdscr, TELLERFIL = "STANDARDTELLER", NEVNERFIL = "STANDARDNEVNER", Design = STNFd, globs = globs)$TNF)
+    STN <- data.table::copy(merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = STNPinformation, TELLERFIL = "STANDARDTELLER", NEVNERFIL = "STANDARDNEVNER", Design = STNFd, globs = globs)$TNF)
     
     # Fjern PredFilter$Pkols
     STN[, (PredFilter$Pkols) := NULL]
@@ -109,13 +106,13 @@ LagKUBE <- function(KUBEid,
     
     cat("------FERDIG med STN\n")
     cat("***Lager PN\n")
-    PNrd <- FinnRedesign(FilDesL[[filer$PREDNEVNER]], STNPFd, globs = globs)
+    PNrd <- FinnRedesign(filedesign[[filer$PREDNEVNER]], STNPFd, globs = globs)
     PN <- OmkodFil(FinnFilT(filer$PREDNEVNER), PNrd, globs = globs)
     
-    if (!(is.na(TNPdscr$PREDNEVNERFIL) | TNPdscr$PREDNEVNERFIL == "")) {
-      PredNevnerKol <- gsub("^(.*):(.*)", "\\2", TNPdscr$PREDNEVNERFIL)
+    if (!(is.na(TNPinformation$PREDNEVNERFIL) | TNPinformation$PREDNEVNERFIL == "")) {
+      PredNevnerKol <- gsub("^(.*):(.*)", "\\2", TNPinformation$PREDNEVNERFIL)
     } else {
-      PredNevnerKol <- TNPdscr$NEVNERKOL
+      PredNevnerKol <- TNPinformation$NEVNERKOL
     }
     PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(PN))
     data.table::setnames(PN, names(PN), PNnames)
@@ -135,7 +132,7 @@ LagKUBE <- function(KUBEid,
     
     # Finn omkoding til KUBEd, dvs design for TNF
     # NB: Her maa det aggregeres opp for standardisering
-    PNd <- FinnDesign(PN, FGP = FGPs[[filer$PREDNEVNER]], globs = globs)
+    PNd <- FinnDesign(PN, FGP = fileinformation[[filer$PREDNEVNER]], globs = globs)
     # Burde kanskje bruke STNFd i stedet, men da maa den faa paa PredFilterDimensjonene. Maa uansett sende til FinDesigmm
     RD <- FinnRedesign(PNd, list(Part = KUBEd$MAIN), SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
     cat("Foer merge: dim(PN)", dim(PN), " og dim(STN)", dim(STN))
@@ -155,7 +152,7 @@ LagKUBE <- function(KUBEid,
     data.table::setkeyv(TNF, tabkols)
     data.table::setkeyv(PT, tabkols)
     KUBE <- PT[TNF]
-    KUBE <- set_implicit_null_after_merge(KUBE, FGPs[[filer[["TELLER"]]]]$vals)
+    KUBE <- set_implicit_null_after_merge(KUBE, fileinformation[[filer[["TELLER"]]]]$vals)
     cat("Foer merge KUBE<-PT[TNF] er dim(TNF)", orgdim, " og etter merge dim(KUBE)", dim(KUBE), "\n")
     cat("------FERDIG MED PREDIKSJON\n")
   } else {
@@ -175,17 +172,17 @@ LagKUBE <- function(KUBEid,
   
   if (D_develop_predtype == "DIR") {
   # Sett skala for teller (maa gjoeres foer rate brukes i MEISskala)
-    if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-      KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+    if (!(is.na(KUBEinformation$RATESKALA) | KUBEinformation$RATESKALA == "")) {
+      KUBE[, RATE := RATE * as.numeric(KUBEinformation$RATESKALA)]
     }
     
     # FINN MEISskala. Merk at dette gjelder baade ved REFVERDI_VP=P og =V
-    if (KUBEdscr$REFVERDI_VP == "P") {
+    if (KUBEinformation$REFVERDI_VP == "P") {
       VF <- KUBE[eval(rlang::parse_expr(PredFilter$PfiltStr))]
       # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og maa lages
       if (nrow(VF) == 0) {
         cat("************************************\nNOE RART MED PredFilter, IKKE I KUBEDESIGN, MAA UT PAA NY OMKODING.\nER DETTE RETT?\n")
-        VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer$TELLER]], globs = globs)
+        VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = fileinformation[[filer$TELLER]], globs = globs)
       }
       
       VF[, MEISskala := RATE]
@@ -234,11 +231,11 @@ LagKUBE <- function(KUBEid,
   
   ma_satt <- 0
   orgintMult <- 1
-  if (KUBEdscr$MOVAV > 1) {
+  if (KUBEinformation$MOVAV > 1) {
     if (any(aar$AARl != aar$AARh)) {
       KHerr(paste0("Kan ikke sette snitt (ma=", ma, ") naar det er intervaller i originaldata"))
     } else {
-      ma <- KUBEdscr$MOVAV
+      ma <- KUBEinformation$MOVAV
       
       # Finner evt hull i aar for hele designet
       AntYMiss <- max(aar$AARl) - min(aar$AARl) + 1 - length(aar$AARl)
@@ -248,11 +245,11 @@ LagKUBE <- function(KUBEid,
       maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, globs = globs)
       
       # sett rate paa nytt
-      if (TNPdscr$NEVNERKOL != "-") {
+      if (TNPinformation$NEVNERKOL != "-") {
         maKUBE <- LeggTilNyeVerdiKolonner(maKUBE, "RATE={TELLER/NEVNER}")
         if (D_develop_predtype == "DIR") {
-          if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-            maKUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+          if (!(is.na(KUBEinformation$RATESKALA) | KUBEinformation$RATESKALA == "")) {
+            maKUBE[, RATE := RATE * as.numeric(KUBEinformation$RATESKALA)]
           }
         }
       }
@@ -264,7 +261,7 @@ LagKUBE <- function(KUBEid,
     valkols <- get_value_columns(names(KUBE))
     orgint_n <- int_lengde[1]
     n <- orgint_n
-    if (!is.na(FGPs[[filer$TELLER]]$ValErAarsSnitt)) {
+    if (!is.na(fileinformation[[filer$TELLER]]$ValErAarsSnitt)) {
       n <- 1
       orgintMult <- orgint_n
     }
@@ -272,7 +269,7 @@ LagKUBE <- function(KUBEid,
   }
   
   # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
-  fix_geo_special(d = KUBE, specs = FGPs[[filer$TELLER]], id = KUBEid)
+  fix_geo_special(d = KUBE, specs = fileinformation[[filer$TELLER]], id = KUBEid)
   
   if ("maKUBE0" %in% names(dumps)) {
     for (format in dumps[["maKUBE0"]]) {
@@ -305,17 +302,17 @@ LagKUBE <- function(KUBEid,
   }
   
   # Anonymiser, trinn 2 Ekte anonymisering basert paa liten teller, liten nevner og liten N-T
-  if (!(is.na(KUBEdscr$PRIKK_T) | KUBEdscr$PRIKK_T == "")) {
-    cat("T-PRIKKER", nrow(subset(KUBE, TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
-    KUBE[TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
-    cat("N-T-PRIKKER", nrow(subset(KUBE, NEVNER - TELLER <= KUBEdscr$PRIKK_T)), "rader\n")
-    KUBE[NEVNER - TELLER <= KUBEdscr$PRIKK_T & TELLER.f >= 0 & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+  if (!(is.na(KUBEinformation$PRIKK_T) | KUBEinformation$PRIKK_T == "")) {
+    cat("T-PRIKKER", nrow(subset(KUBE, TELLER <= KUBEinformation$PRIKK_T)), "rader\n")
+    KUBE[TELLER <= KUBEinformation$PRIKK_T & TELLER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+    cat("N-T-PRIKKER", nrow(subset(KUBE, NEVNER - TELLER <= KUBEinformation$PRIKK_T)), "rader\n")
+    KUBE[NEVNER - TELLER <= KUBEinformation$PRIKK_T & TELLER.f >= 0 & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
   }
   
-  if (!(is.na(KUBEdscr$PRIKK_N) | KUBEdscr$PRIKK_N == "")) {
+  if (!(is.na(KUBEinformation$PRIKK_N) | KUBEinformation$PRIKK_N == "")) {
     # N<PRIKK_N
-    cat("N-PRIKKER", nrow(subset(KUBE, NEVNER <= KUBEdscr$PRIKK_N)), "rader\n")
-    KUBE[NEVNER <= KUBEdscr$PRIKK_N & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
+    cat("N-PRIKKER", nrow(subset(KUBE, NEVNER <= KUBEinformation$PRIKK_N)), "rader\n")
+    KUBE[NEVNER <= KUBEinformation$PRIKK_N & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
   }
   
   if ("anoKUBE2" %in% names(dumps)) {
@@ -324,9 +321,9 @@ LagKUBE <- function(KUBEid,
     }
   }
   # Anonymiser trinn 3. Anonymiser naboer
-  if (!(is.na(KUBEdscr$OVERKAT_ANO) | KUBEdscr$OVERKAT_ANO == "")) {
+  if (!(is.na(KUBEinformation$OVERKAT_ANO) | KUBEinformation$OVERKAT_ANO == "")) {
     # DEVELOP: BRuk .f=4 her slik at ikke slaar ut i HULL under
-    KUBE <- AnonymiserNaboer(KUBE, KUBEdscr$OVERKAT_ANO, FGP = FGPs[[filer$TELLER]], D_develop_predtype, globs = globs)
+    KUBE <- AnonymiserNaboer(KUBE, KUBEinformation$OVERKAT_ANO, FGP = fileinformation[[filer$TELLER]], D_develop_predtype, globs = globs)
   }
   if ("anoKUBE3" %in% names(dumps)) {
     for (format in dumps[["anoKUBE3"]]) {
@@ -338,10 +335,10 @@ LagKUBE <- function(KUBEid,
   SvakAndelAvSerieGrense <- getOption("khfunctions.anon_svakandel")
   HullAndelAvSerieGrense <- getOption("khfunctions.anon_hullandel")
   
-  if (!(is.na(KUBEdscr$STATTOL_T) | KUBEdscr$STATTOL_T == "")) {
+  if (!(is.na(KUBEinformation$STATTOL_T) | KUBEinformation$STATTOL_T == "")) {
     tabkols <- setdiff(intersect(names(KUBE), globs$DefDesign$DesignKolsFA), c(globs$DefDesign$DelKols[["Y"]]))
     KUBE[TELLER.f < 9, AntAar := .N, by = tabkols]
-    KUBE[TELLER.f < 9, SVAK := sum(is.na(TELLER) | TELLER <= KUBEdscr$STATTOL_T), by = tabkols]
+    KUBE[TELLER.f < 9, SVAK := sum(is.na(TELLER) | TELLER <= KUBEinformation$STATTOL_T), by = tabkols]
     KUBE[TELLER.f < 9, HULL := sum(TELLER.f == 3), by = tabkols]
     KUBE[TELLER.f < 9, SKJUL := ifelse(SVAK / AntAar > SvakAndelAvSerieGrense | HULL / AntAar > HullAndelAvSerieGrense, 1, 0)]
     
@@ -368,8 +365,8 @@ LagKUBE <- function(KUBEid,
   
   ## RSYNT_SLUTTREDIGER ---- 
   
-  if (!(is.na(KUBEdscr$SLUTTREDIGER) | KUBEdscr$SLUTTREDIGER == "")) {
-    synt <- gsub("\\\r", "\\\n", KUBEdscr$SLUTTREDIGER)
+  if (!(is.na(KUBEinformation$SLUTTREDIGER) | KUBEinformation$SLUTTREDIGER == "")) {
+    synt <- gsub("\\\r", "\\\n", KUBEinformation$SLUTTREDIGER)
     error <- ""
     ok <- 1
     if (grepl("<STATA>", synt)) {
@@ -409,8 +406,8 @@ LagKUBE <- function(KUBEid,
   
   if (D_develop_predtype != "DIR") {
     # Sett skala for teller
-    if (!(is.na(KUBEdscr$RATESKALA) | KUBEdscr$RATESKALA == "")) {
-      KUBE[, RATE := RATE * as.numeric(KUBEdscr$RATESKALA)]
+    if (!(is.na(KUBEinformation$RATESKALA) | KUBEinformation$RATESKALA == "")) {
+      KUBE[, RATE := RATE * as.numeric(KUBEinformation$RATESKALA)]
     }
   }
   
@@ -440,15 +437,15 @@ LagKUBE <- function(KUBEid,
   }
   
   ## Nye verdikolonner ----
-  if (!(is.na(TNPdscr$NYEKOL_RAD_postMA) | TNPdscr$NYEKOL_RAD_postMA == "")) {
-    KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPdscr$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
+  if (!(is.na(TNPinformation$NYEKOL_RAD_postMA) | TNPinformation$NYEKOL_RAD_postMA == "")) {
+    KUBE <- LeggTilNyeVerdiKolonner(KUBE, TNPinformation$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
   }
   
   ## MALTALL ----
-  if (grepl("\\S", KUBEdscr$MTKOL)) {
-    maltall <- KUBEdscr$MTKOL
-    KUBE[, eval(parse(text = paste0("MALTALL:=", KUBEdscr$MTKOL)))]
-  } else if (TNPdscr$NEVNERKOL == "-") {
+  if (grepl("\\S", KUBEinformation$MTKOL)) {
+    maltall <- KUBEinformation$MTKOL
+    KUBE[, eval(parse(text = paste0("MALTALL:=", KUBEinformation$MTKOL)))]
+  } else if (TNPinformation$NEVNERKOL == "-") {
     maltall <- "TELLER"
     KUBE[, MALTALL := TELLER]
   } else {
@@ -459,10 +456,10 @@ LagKUBE <- function(KUBEid,
   ## SETT SMR og MEIS ----
   if (D_develop_predtype == "DIR") {
     
-    if (KUBEdscr$REFVERDI_VP == "P") {
+    if (KUBEinformation$REFVERDI_VP == "P") {
       KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
       KUBE[, MEIS := (sumTELLER / sumPREDTELLER) * MEISskala]
-    } else if (KUBEdscr$REFVERDI_VP == "V") {
+    } else if (KUBEinformation$REFVERDI_VP == "V") {
       KUBE[, SMR := NA_real_]
       KUBE[, MEIS := MALTALL]
     } else {
@@ -472,9 +469,9 @@ LagKUBE <- function(KUBEid,
   } else {
     # SETT SMRtmp. For aa lage NORMSMR under maa denne settes foer NORM. Derfor kan jeg ikke sette SMR=MALTALL/NORM naa.
     # Men NORMSMR er selvsagt alltid 100 for REFVERDI_P="V"
-    if (KUBEdscr$REFVERDI_VP == "P") {
+    if (KUBEinformation$REFVERDI_VP == "P") {
       KUBE[, SMRtmp := sumTELLER / sumPREDTELLER * 100]
-    } else if (KUBEdscr$REFVERDI_VP == "V") {
+    } else if (KUBEinformation$REFVERDI_VP == "V") {
       KUBE[, SMRtmp := 100]
     } else {
       KUBE[, SMRtmp := NA]
@@ -497,7 +494,7 @@ LagKUBE <- function(KUBEid,
   # Evt hvis en eller flere element i PredFilter ikke er med i Design for TNF og maa lages
   if (nrow(VF) == 0) {
     cat("************************************\nNOE RART MED LANDSNORM, IKKE I KUBEDESIGN, MAA UT PAA NY OMKODING.\nER DETTE RETT?\n")
-    VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = FGPs[[filer$TELLER]], globs = globs)
+    VF <- OmkodFilFraPart(TNF, PredFilter$Design, FGP = fileinformation[[filer$TELLER]], globs = globs)
   }
   
   if (D_develop_predtype == "IND") {
@@ -523,9 +520,9 @@ LagKUBE <- function(KUBEid,
     # Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
     # SMR>100 kan oppstaa dersom det f.eks. er noen med ukjent alder/kjoenn.
     # Ratene for ukjent alder/kjoenn vil ikke matche nevner fra BEF, derfor vil det predikeres for faar doede relativt til observert
-    if (KUBEdscr$REFVERDI_VP == "P") {
+    if (KUBEinformation$REFVERDI_VP == "P") {
       KUBE[, SMR := sumTELLER / sumPREDTELLER * 100]
-    } else if (KUBEdscr$REFVERDI_VP == "V") {
+    } else if (KUBEinformation$REFVERDI_VP == "V") {
       KUBE[, SMR := MALTALL / NORM * 100]
     } else {
       KUBE[, SMR := NA]
@@ -544,7 +541,7 @@ LagKUBE <- function(KUBEid,
   }
   
   # Bytt til eksterne TAB-navn for ekstradimensjoner
-  FGP <- FGPs[[filer$TELLER]]
+  FGP <- fileinformation[[filer$TELLER]]
   etabs <- character(0)
   for (etab in names(KUBE)[grepl("^TAB\\d+$", names(KUBE))]) {
     if (grepl("\\S", FGP[[etab]])) {
@@ -554,24 +551,24 @@ LagKUBE <- function(KUBEid,
   }
   
   # SETT UTKOLONNER FOR ALLVISKUBE
-  if (!(is.na(KUBEdscr$NESSTARTUPPEL) | KUBEdscr$NESSTARTUPPEL == "")) {
-    NstarTup <- unlist(stringr::str_split(KUBEdscr$NESSTARTUPPEL, ","))
-  } else if (KUBEdscr$REFVERDI_VP == "P") {
+  if (!(is.na(KUBEinformation$NESSTARTUPPEL) | KUBEinformation$NESSTARTUPPEL == "")) {
+    NstarTup <- unlist(stringr::str_split(KUBEinformation$NESSTARTUPPEL, ","))
+  } else if (KUBEinformation$REFVERDI_VP == "P") {
     NstarTup <- c("T", "RATE", "SMR", "MEIS")
   } else {
     NstarTup <- character(0)
   }
   OutVar <- as.character(getOption("khfunctions.valcols")[NstarTup])
   
-  if (!(is.na(KUBEdscr$EKSTRAVARIABLE) | KUBEdscr$EKSTRAVARIABLE == "")) {
-    hjelpeVar <- unlist(stringr::str_split(KUBEdscr$EKSTRAVARIABLE, ","))
+  if (!(is.na(KUBEinformation$EKSTRAVARIABLE) | KUBEinformation$EKSTRAVARIABLE == "")) {
+    hjelpeVar <- unlist(stringr::str_split(KUBEinformation$EKSTRAVARIABLE, ","))
     OutVar <- c(OutVar, hjelpeVar)
   }
   
   KHtabs <- getOption("khfunctions.khtabs")
   tabs <- c(KHtabs, etabs)
-  if (!(is.na(KUBEdscr$DIMDROPP) | KUBEdscr$DIMDROPP == "")) {
-    dimdropp <- unlist(stringr::str_split(KUBEdscr$DIMDROPP, ","))
+  if (!(is.na(KUBEinformation$DIMDROPP) | KUBEinformation$DIMDROPP == "")) {
+    dimdropp <- unlist(stringr::str_split(KUBEinformation$DIMDROPP, ","))
     tabs <- setdiff(tabs, dimdropp)
   }
   
@@ -595,8 +592,8 @@ LagKUBE <- function(KUBEid,
 
   # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
-  dims <- find_dims(dt = KUBE, spec = FGPs)
-  stataspec <- kube_spec(spec = KUBEdscr, dims = dims, geonaboprikk = geonaboprikk)
+  dims <- find_dims(dt = KUBE, spec = fileinformation)
+  stataspec <- kube_spec(spec = KUBEinformation, dims = dims, geonaboprikk = geonaboprikk)
   
   KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
   
@@ -607,8 +604,8 @@ LagKUBE <- function(KUBEid,
   }
   
   # RSYNT_POSTPROSESS ---- 
-  if (!(is.na(KUBEdscr$RSYNT_POSTPROSESS) | KUBEdscr$RSYNT_POSTPROSESS == "")) {
-    synt <- gsub("\\\r", "\\\n", KUBEdscr$RSYNT_POSTPROSESS)
+  if (!(is.na(KUBEinformation$RSYNT_POSTPROSESS) | KUBEinformation$RSYNT_POSTPROSESS == "")) {
+    synt <- gsub("\\\r", "\\\n", KUBEinformation$RSYNT_POSTPROSESS)
     if (grepl("<STATA>", synt)) {
       synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
       RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
@@ -672,7 +669,7 @@ LagKUBE <- function(KUBEid,
   ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
   
   if(isTRUE(write)){
-    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = FGPs[[filer$TELLER]], modus = KUBEdscr$MODUS, batchdate = batchdate, globs = globs)
+    LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = fileinformation[[filer$TELLER]], modus = KUBEinformation$MODUS, batchdate = batchdate, globs = globs)
   }
   
   ALLVIS <- ALLVIS[, c(..utkols, "SPVFLAGG")]

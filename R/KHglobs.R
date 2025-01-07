@@ -69,7 +69,6 @@ SettDefDesignKH <- function(dbcon) {
   
   DelKols <- as.list(DelKolN)
   DelKolsF <- DelKols
-  KolsDel <- list()
   for (del in names(DelKols)) {
     if (DelType[del] == "INT") {
       DelKols[[del]] <- paste0(DelKols[[del]], c("l", "h"))
@@ -77,9 +76,6 @@ SettDefDesignKH <- function(dbcon) {
     }
     if (!(is.na(DelKolE[[del]]) | DelKolE[[del]] == "")) {
       DelKolsF[[del]] <- c(DelKolsF[[del]], unlist(stringr::str_split(DelKolE[[del]], ",")))
-    }
-    for (kol in DelKols[[del]]) {
-      KolsDel[[kol]] <- del
     }
   }
   
@@ -96,7 +92,6 @@ SettDefDesignKH <- function(dbcon) {
     list(
       DelKols = DelKols,
       DelKolsF = DelKolsF,
-      KolsDel = KolsDel,
       DelKolN = DelKolN,
       DelType = DelType,
       DelFormat = DelFormat,

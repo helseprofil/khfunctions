@@ -226,10 +226,11 @@ get_filegroup_information <- function(files, filefilters, validdates, globs = Se
 #' @param files 
 #' @param parameters 
 #' @param globs 
-get_filedesign <- function(files, parameters, globs){
+get_filedesign <- function(parameters, globs){
   if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
   filedesign <- list()
-  for(file in unique(files)){
+  files <- unique(parameters$files)
+  for(file in files){
     if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     fileinfo <- parameters$fileinformation[[file]]
     filedesign[[file]] <- FinnDesign(FIL = .GlobalEnv$BUFFER[[file]], FGP = fileinfo, globs = globs)

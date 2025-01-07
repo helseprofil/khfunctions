@@ -1,31 +1,29 @@
 #' merge_teller_nevner
 #' 
-#' BØR VÆRE EGEN FIL
-#'
-#' @param filer 
-#' @param FilDesL 
-#' @param FGPs 
-#' @param TNPdscr 
-#' @param TT 
-#' @param NN 
+#' @param files 
+#' @param s 
+#' @param fileparameters 
+#' @param TNPparameters 
+#' @param TELLERFIL 
+#' @param NEVNERFIL 
 #' @param Design 
-#' @param KUBEdscr 
+#' @param KUBEparameters 
 #' @param globs 
-merge_teller_nevner <- function(filer, FilDesL, FGPs, TNPdscr, TELLERFIL = "TELLER", NEVNERFIL = "NEVNER", Design = NULL, KUBEdscr = NULL, globs = SettGlobs()) {
+merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameters, TELLERFIL = "TELLER", NEVNERFIL = "NEVNER", Design = NULL, KUBEparameters = NULL, globs = SettGlobs()) {
   is_kh_debug()
   
-  tellerfilnavn <- filer[[TELLERFIL]]
-  tellerfildesign <- FilDesL[[tellerfilnavn]]
-  isnevnerfil <- NEVNERFIL %in% names(filer)
+  tellerfilnavn <- files[[TELLERFIL]]
+  tellerfildesign <- filedesigns[[tellerfilnavn]]
+  isnevnerfil <- NEVNERFIL %in% names(files)
   nevnerfildesign <- NULL
   if(isnevnerfil) {
-    nevnerfilnavn <- filer[[NEVNERFIL]]
-    nevnerfildesign <- FilDesL[[nevnerfilnavn]]
+    nevnerfilnavn <- files[[NEVNERFIL]]
+    nevnerfildesign <- filedesigns[[nevnerfilnavn]]
   }
   InitDesign <- get_initialdesign(design = Design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
   
-  if(!is.null(KUBEdscr)){
-    KUBEdesign <- FinnKubeDesignB(KUBEdscr = KUBEdscr, ORGd = InitDesign, FGP = FGPs[[tellerfilnavn]], globs = globs)
+  if(!is.null(KUBEparameters)){
+    KUBEdesign <- FinnKubeDesignB(KUBEdscr = KUBEparameters, ORGd = InitDesign, FGP = fileparameters[[tellerfilnavn]], globs = globs)
     TNdesign <- list(Part = KUBEdesign$TMP)
   } else {
     KUBEdesign <- list()
@@ -40,8 +38,8 @@ merge_teller_nevner <- function(filer, FilDesL, FGPs, TNPdscr, TELLERFIL = "TELL
     nevnerfil <- do_redesign_recode_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, globs = globs)
   }
   
-  implicitnull_defs <- FGPs[[tellerfilnavn]]$vals
-  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, FGPs[[nevnerfilnavn]]$vals)
+  implicitnull_defs <- fileparameters[[tellerfilnavn]]$vals
+  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, fileparameters[[nevnerfilnavn]]$vals)
   
   if (length(KUBEdesign) > 0) {
     rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, globs = globs)
@@ -59,16 +57,16 @@ merge_teller_nevner <- function(filer, FilDesL, FGPs, TNPdscr, TELLERFIL = "TELL
     cat("--TNF ferdig, har ikke nevnerfil, så TNF == tellerfil\n")
   }
   
-  isNYEKOL_RAD <- !is.na(TNPdscr$NYEKOL_RAD) && TNPdscr$NYEKOL_RAD != ""
-  if (isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, TNPdscr$NYEKOL_RAD, FGP = FGPs[[tellerfilnavn]], globs = globs)
-  isNYEKOL_KOL <- !is.na(TNPdscr$NYEKOL_KOL) && TNPdscr$NYEKOL_KOL != ""
-  if (isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, TNPdscr$NYEKOL_KOL, slettInf = TRUE)
+  isNYEKOL_RAD <- !is.na(TNPparameters$NYEKOL_RAD) && TNPparameters$NYEKOL_RAD != ""
+  if (isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, TNPparameters$NYEKOL_RAD, FGP = fileparameters[[tellerfilnavn]], globs = globs)
+  isNYEKOL_KOL <- !is.na(TNPparameters$NYEKOL_KOL) && TNPparameters$NYEKOL_KOL != ""
+  if (isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, TNPparameters$NYEKOL_KOL, slettInf = TRUE)
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(TNF, KUBEdesign$MAIN, globs = globs)
   if (!identical(dimorg, dim(TNF))) cat("Siste filtrering av TNF, hadde dim(TNF)", dimorg, "fikk dim(TNF)", dim(TNF), "\n")
   
-  TNF <- set_teller_nevner_names(file = TNF, TNPdscr = TNPdscr)
+  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = TNPparameters)
   
   cat("---Ferdig i LagTNtabell\n")
   return(list(TNF = TNF, KUBEd = KUBEdesign))
@@ -94,9 +92,39 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
   return(fellesdesign)
 }
 
+#' FinnFellesTab (kb)
+#'
+#' @param DF1 
+#' @param DF2 
+#' @param globs 
+FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
+  # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
+  is_kh_debug()
+  cat("Starter i FinnFellesTab.")
+  FTabs <- list()
+  for (del in intersect(names(DF1$Part), names(DF2$Part))) {
+    FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
+  }
+  RD1 <- FinnRedesign(DF1, list(Part = FTabs), globs = globs)
+  RD2 <- FinnRedesign(DF2, list(Part = FTabs), globs = globs)
+  ### kommet hit ---- 
+  omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
+  data.table::setkeyv(RD1$FULL, omktabs)
+  data.table::setkeyv(RD2$FULL, omktabs)
+  Dekk1 <- unique(RD1$FULL[, omktabs, with = FALSE])
+  Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
+  Dekk12 <- Dekk1[Dekk2, nomatch = 0]
+  data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
+  FDes <- FinnDesign(Dekk12, globs = globs)
+  cat(" Ferdig i FinnFellesTab\n")
+  gc()
+  return(list(Dekk = Dekk12, FDes = FDes))
+}
+
+
+
 #' FinnKubeDesignB (kb)
 #'
-#' @param KUBEdscr 
 #' @param ORGd 
 #' @param FGP 
 #' @param globs 
@@ -115,7 +143,7 @@ FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), gl
 #' @param tndesign 
 #' @param globs 
 do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
-  redesign <- FinnRedesign(DesFRA = filedesign, DesTIL = tndesign, globs = globs)
+  redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, globs = globs)
   if (nrow(redesign$Udekk) > 0) KHerr(paste0("UDEKKA i redesign av", filename))
   file <- OmkodFil(FinnFilT(filename), redesign, globs = globs)
   return(file)
@@ -170,8 +198,6 @@ report_removed_codes <- function(file, cube){
   }
 }
 
-
-
 #' @title do_filter_file
 #'
 #' @param file 
@@ -189,10 +215,8 @@ do_filter_file <- function(file, design, globs = SettGlobs()) {
 
 #' @title set_teller_nevner_names
 #' @description Sets name of teller and nevner column to TELLER and NEVNER by reference
-set_teller_nevner_names <- function(file, TNPdscr){
-  newnames <- gsub(paste0("^", TNPdscr$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
-  newnames <- gsub(paste0("^", TNPdscr$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
+set_teller_nevner_names <- function(file, TNPparameters){
+  newnames <- gsub(paste0("^", TNPparameters$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
+  newnames <- gsub(paste0("^", TNPparameters$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
   data.table::setnames(file, names(file), newnames)
 }
-
-
