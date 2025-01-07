@@ -776,8 +776,9 @@ use_branch <- function(branch, debug = FALSE){
 }
 
 list_files_github <- function(branch){
-  req <- httr::GET(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
-  files <- unlist(lapply(httr::content(req)$tree, "[", "path"), use.names = F)
+  req <- httr2::request(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
+  response <- httr2::req_perform(req)
+  files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
   files <- basename(grep("^R/", files, value = T))
   return(files)
 }
