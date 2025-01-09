@@ -20,12 +20,13 @@ LagKUBE <- function(KUBEid,
                     geonaboprikk = TRUE,
                     ...) {
   is_kh_debug()
-  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
+  
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   on.exit(sink(), add = TRUE)
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
@@ -83,7 +84,8 @@ LagKUBE <- function(KUBEid,
     STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = fileinformation[[filer$STANDARDTELLER]], globs = globs)
     cat("---Satt felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     
-    STN <- data.table::copy(merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = STNPinformation, TELLERFIL = "STANDARDTELLER", NEVNERFIL = "STANDARDNEVNER", Design = STNFd, globs = globs)$TNF)
+    STN <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = STNPinformation, TELLERFIL = "STANDARDTELLER", NEVNERFIL = "STANDARDNEVNER", Design = STNFd, KUBEparameters = NULL, globs = globs)
+    STN <- STN$TNF
     
     # Fjern PredFilter$Pkols
     STN[, (PredFilter$Pkols) := NULL]
@@ -594,9 +596,9 @@ LagKUBE <- function(KUBEid,
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
   dims <- find_dims(dt = KUBE, spec = fileinformation)
   stataspec <- kube_spec(spec = KUBEinformation, dims = dims, geonaboprikk = geonaboprikk)
-  
+
   KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
-  
+
   if ("STATAPRIKKpost" %in% names(dumps)) {
     for (format in dumps[["STATAPRIKKpost"]]) {
       DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = format)
@@ -716,13 +718,12 @@ LagKUBE <- function(KUBEid,
 #' Wrapper around LagKUBE, with default options to save output files
 #'
 LagKubeDatertCsv <- function(KUBEID, 
-                             globs = SettGlobs(),
                              dumps = list(), 
                              versjonert = TRUE,
                              csvcopy = TRUE,
                              write = TRUE,
                              alarm = FALSE) {
-  invisible(LagKUBE(KUBEID, globs = globs, versjonert = versjonert, csvcopy = csvcopy, dumps = dumps, write = write, alarm = alarm))
+  invisible(LagKUBE(KUBEid = KUBEID, versjonert = versjonert, csvcopy = csvcopy, dumps = dumps, write = write, alarm = alarm))
 }
 
 #' LagFlereKuber
@@ -733,12 +734,11 @@ LagKubeDatertCsv <- function(KUBEID,
 #' @param ... Optional, can set versjonert, csvcopy, write arguments if TRUE not wanted
 #'
 LagFlereKuber <- function(KUBEid_ALLE, 
-                          globs = SettGlobs(),
                           dumps = list(), 
                           alarm = FALSE,
                           ...) {
   for (KUBEid in KUBEid_ALLE) {
-    LagKubeDatertCsv(KUBEid, globs = globs, dumps = dumps, alarm = alarm, ...)
+    LagKubeDatertCsv(KUBEid, dumps = dumps, alarm = alarm, ...)
   }
   sink()
 }
