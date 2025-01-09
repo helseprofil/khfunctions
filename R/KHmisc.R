@@ -755,3 +755,30 @@ KH_options <- function(){
 FormatSqlBatchdate <- function(batchdate){
   format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
 }
+
+#' @title usebranch
+#' @description
+#' use to test other branches, loads all functions from a specified branch
+use_branch <- function(branch, debug = FALSE){
+  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
+  show_functions <<- debug
+  show_arguments <<- debug
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  
+  rfiles <- list_files_github(branch = branch)
+  rfiles <- grep("KHmisc.R|KHglobs.R|KHsetup.R", rfiles, value = T, invert = T)
+  for(file in rfiles){
+    source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/", file), encoding = "latin1")
+  }
+  cat("\nLoaded functions from branch: ", branch)
+}
+
+list_files_github <- function(branch){
+  req <- httr2::request(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
+  response <- httr2::req_perform(req)
+  files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
+  files <- basename(grep("^R/", files, value = T))
+  return(files)
+}
