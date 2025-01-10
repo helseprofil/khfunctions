@@ -8,9 +8,8 @@ uselocal <- function(test = FALSE,
   source("./R/KHmisc.R", encoding = "latin1")
   KH_options()
   if(test) .useTest()
-  source("./R/KHglobs.R", encoding = "latin1")
   rfiles <- paste0("./R/", list.files("R", pattern = "\\.R"))
-  rfiles <- grep("KHmisc.R|KHglobs.R|KHsetup.R", rfiles, value = T, invert = T)
+  rfiles <- grep("KHmisc.R|KHsetup.R", rfiles, value = T, invert = T)
   for(i in rfiles) source(i, encoding = "latin1")
   cat("\nLoaded local functions")
 }

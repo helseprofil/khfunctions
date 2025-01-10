@@ -3,6 +3,9 @@ if(version$major >= 4 & version$minor >= 2){
   Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
 }
 
+githubpath <- "https://raw.githubusercontent.com/helseprofil/khfunctions/dev/"
+branch <- "dev"
+
 # Load packages
 library(conflicted)
 library(epitools) # Egentlig ikke i bruk, bare i direkte_stdz_jome.R
@@ -36,11 +39,10 @@ show_functions <- FALSE
 show_arguments <- FALSE
 
 # Load setup scripts (paths, global parameters, functions) to enable all functionality
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHmisc.R", encoding = "latin1")
+source(paste0(githubpath, branch, "/R/KHmisc.R"), encoding = "latin1")
 KH_options()
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHpaths.R", encoding = "latin1")
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHglobs.R", encoding = "latin1")
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfilgruppefunctions.R", encoding = "latin1")
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHfilgruppe.R", encoding = "latin1")
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkubefunctions.R", encoding = "latin1")
-source("https://raw.githubusercontent.com/helseprofil/khfunctions/master/R/KHkube.R", encoding = "latin1")
+rfiles <- grep("KHmisc.R|KHsetup.R", list_files_github(branch = branch), value = T, invert = T)
+for(file in rfiles){
+  source(paste0(githubpath, branch, "/R/", file), encoding = "latin1")
+}
+rm(githubpath)
