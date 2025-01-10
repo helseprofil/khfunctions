@@ -17,20 +17,17 @@
 #' @param localDir 
 LagFilgruppe <- function(gruppe,
                          batchdate = SettKHBatchDate(),
-                         globs = FinnGlobs(),
                          diagnose = 0,
                          printR = TRUE,
                          printCSV = FALSE,
                          printSTATA = FALSE,
-                         versjonert = FALSE,
+                         versjonert = TRUE,
                          dumps = list(),
-                         test = runtest,
-                         idtest = testfiles,
-                         localDir = setLocal) {
+                         test = FALSE,
+                         idtest = NULL,
+                         localDir = FALSE) {
   is_kh_debug()
-  
-  globs$dbh <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHdbname))
-  globs$log <- RODBC::odbcConnectAccess2007(file.path(globs$path, globs$KHlogg))
+  globs <-  SettGlobs()
   on.exit(RODBC::odbcCloseAll(), add = TRUE)
   
   ## test is TRUE when column 'TESTING' in ORIGINALFILER is used
@@ -44,9 +41,8 @@ LagFilgruppe <- function(gruppe,
   }
   
   ## To see which DB is currently used
-  ## that value in globs$KHdbname and globs$path
-  whichPath <- ifelse(localDir, setLocalPath, defpath)
-  whichDB <- ifelse(localDir, setDBFile, dbNameFile)
+  whichPath <- ifelse(localDir, setLocalPath, getOption("khfunctions.root"))
+  whichDB <- ifelse(localDir, setDBFile, getOption("khfunctions.db"))
   message(
     lineMsg,
     "  DB name: ", whichDB, "\n",
@@ -67,7 +63,7 @@ LagFilgruppe <- function(gruppe,
   
   
   # Essensielt bare loop over alle delfiler/orignalfiler
-  # For hver orignalfil kjøres LagTabellFraFil
+  # For hver orignalfil kjoeres LagTabellFraFil
   # Stables til tabellen FG
   # Finn filgruppeparametre
   FGP <- FinnFilgruppeParametre(gruppe, batchdate = batchdate, globs = globs)
@@ -83,14 +79,11 @@ LagFilgruppe <- function(gruppe,
       for (i in 1:nrow(delfiler)) {
         
         ## Need root path for raw files
-        getSti <- rawPath
-        
         filbesk <- delfiler[i, ]
         tm <- proc.time()
-        filbesk$filn <- file.path(getSti, filbesk$FILNAVN)
-        ## filbesk$filn<-paste(globs$path,filbesk$FILNAVN,sep="/")
+        filbesk$filn <- file.path(getOption("khfunctions.root"), filbesk$FILNAVN)
         filbesk$filn <- gsub("\\\\", "/", filbesk$filn)
-        # Sett evt default for år basert på aktuelt årstall
+        # Sett evt default for aar basert paa aktuelt aarstall
         filbesk$AAR <- gsub("<\\$y>", paste("<", filbesk$DEFAAR, ">", sep = ""), filbesk$AAR)
         # LagTabell
         DF <- LagTabellFraFil(filbesk, FGP, batchdate = batchdate, diagnose = diagnose, globs = globs, versjonert = versjonert, dumps = dumps)
@@ -103,20 +96,20 @@ LagFilgruppe <- function(gruppe,
         stid <- format(Sys.time(), "%Y-%m-%d %X")
       }
     } else {
-      # Må gi fornuftig tilbakemelding
+      # Maa gi fornuftig tilbakemelding
     }
     
     # DEV: SPESIALBEHANDLING AV FILGRUPPE HER!! F.EKS. IMPUTER NPR
     
-    # Diagnostisering og rapportering på hele filgruppa under ett
+    # Diagnostisering og rapportering paa hele filgruppa under ett
     
     if (nrow(Filgruppe) > 0 & diagnose == 1) {
       # Finn og rapporter duplikater
-      HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = KHglobs)
+      HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = globs)
       RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
       
       # Sjekk design
-      FGd <- FinnDesign(Filgruppe, FGP = FGP)
+      FGd <- FinnDesign(Filgruppe, FGP = FGP, globs = globs)
       
       # Er ubalansert?
       subset(FGd$Design, HAR != 1)
@@ -130,10 +123,10 @@ LagFilgruppe <- function(gruppe,
       tmp$FILGRUPPE <- gruppe
       tmp$BATCH <- batchdate
       tmp$SV <- "S"
-      RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+      RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       if (versjonert == TRUE) {
         tmp$SV <- "V"
-        RODBC::sqlSave(KHglobs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+        RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
       }
     }
     # Sett (eksterne) kolonnenavn
@@ -160,7 +153,7 @@ LagFilgruppe <- function(gruppe,
         synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
         RES <- KjorStataSkript(Filgruppe, synt, batchdate = batchdate, globs = globs)
         if (RES$feil != "") {
-          stop("Noe gikk galt i kjøring av STATA \n", RES$feil)
+          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
           ok <- 0
         } else {
           Filgruppe <- RES$TABLE
@@ -187,9 +180,9 @@ LagFilgruppe <- function(gruppe,
     RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
     
     # SKRIV RESULTAT
-    path <- globs$path
+    path <- getOption("khfunctions.root")
     
-    if (!exists("testmappe")) testmappe <- file.path(globs$path, "TEST")
+    if (!exists("testmappe")) testmappe <- file.path(getOption("khfunctions.root"), "TEST")
     
     if (test) {
       printR <- FALSE
@@ -200,12 +193,12 @@ LagFilgruppe <- function(gruppe,
     }
     
     if (printR) {
-      utfiln <- paste(path, "/", globs$StablaDirNy, "/", gruppe, ".rds", sep = "")
+      utfiln <- file.path(path, getOption("khfunctions.filegroups.ny"), paste0(gruppe, ".rds"))
       # save(Filgruppe,file=utfiln)
       print(utfiln)
       saveRDS(Filgruppe, file = utfiln)
       if (versjonert == TRUE) {
-        utfild <- paste(path, "/", globs$StablaDirDat, "/", gruppe, "_", batchdate, ".rds", sep = "")
+        utfild <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(gruppe, "_", batchdate, ".rds"))
         file.copy(utfiln, utfild)
       }
     }
@@ -224,11 +217,11 @@ LagFilgruppe <- function(gruppe,
 #' @param printCSV 
 #' @param printSTATA 
 #' @param versjonert 
-LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = FinnGlobs(), printR = TRUE, printCSV = FALSE, printSTATA = FALSE, versjonert = FALSE) {
+LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = SettGlobs(), printR = TRUE, printCSV = FALSE, printSTATA = FALSE, versjonert = FALSE) {
   is_kh_debug()
   
   # SKall rundt LagFilGruppe, lager og lagrer evt til fil
-  # Default er å ta alle grupper, ellers angis ønsket batch i filgrupper-argumentet
+  # Default er aa ta alle grupper, ellers angis oensket batch i filgrupper-argumentet
   if (length(filgrupper) == 0) {
     # filgrupper<-as.matrix(RODBC::sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
     filgrupper <- as.matrix(RODBC::sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
