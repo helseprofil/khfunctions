@@ -84,8 +84,8 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmpdo <- paste("STATAtmp_", batchdate, ".do", sep = "")
   tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
-  TABLE[TABLE == ""] <- " " # STATA støtter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tåler ikke numeriske kolonnenavn
+  TABLE[TABLE == ""] <- " " # STATA stÃ¸tter ikke "empty-string"
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tÃ¥ler ikke numeriske kolonnenavn
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   haven::write_dta(TABLE, tmpdta)
   
@@ -815,9 +815,9 @@ check_if_system_available <- function(file){
   continue <- TRUE
   if(file.exists(file)){
     force_continue <- utils::menu(choices = c("JA", "NEI"),
-                            title = paste0("Det ser ut til at du allerede kj�rer en kube p� denne maskinen.\n",
-                                           "For � hindre feil ved dobbelkj�ring tillates ikke parallellkj�ring av kuber\n",
-                                           "Dersom du ikke kj�rer noe parallellt kan du fortsette\n\n",
+                            title = paste0("Det ser ut til at du allerede kjører en kube på denne maskinen.\n",
+                                           "For å hindre feil ved dobbelkjøring tillates ikke parallellkjøring av kuber\n",
+                                           "Dersom du ikke kjører noe parallellt kan du fortsette\n\n",
                                            "Vil du fortsette?"))
     if(force_continue == 2) continue <- FALSE
   }

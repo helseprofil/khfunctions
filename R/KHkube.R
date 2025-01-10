@@ -24,7 +24,7 @@ LagKUBE <- function(KUBEid,
   system_available_file <- file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
   on.exit(fs::file_delete(system_available_file))
   system_available <- check_if_system_available(file = system_available_file)
-  if(!system_available) stop("LagKUBE stoppet grunnet parallellkj�ring, vent til den andre kuben er ferdig")
+  if(!system_available) stop("LagKUBE stoppet grunnet parallellkjøring, vent til den andre kuben er ferdig")
   
   is_kh_debug()
   batchdate <- SettKHBatchDate()
@@ -33,7 +33,7 @@ LagKUBE <- function(KUBEid,
   
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   on.exit(sink(), add = TRUE)
-  if(!geonaboprikk) message("OBS! naboprikking p� GEO er deaktivert!")
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
@@ -649,7 +649,7 @@ LagKUBE <- function(KUBEid,
   }
   
   ## ---- TODO: REKTANGULARISERE MANGLENDE RADER FOR BYDEL ----
-  ## Der bydel starter senere enn andre må disse radene genereres, da ALLVIS ikke takler manglende rader.
+  ## Der bydel starter senere enn andre mÃ¥ disse radene genereres, da ALLVIS ikke takler manglende rader.
   
   # LAYOUT
   utkols <- c(tabs, OutVar)
