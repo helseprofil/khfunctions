@@ -9,8 +9,10 @@
 #' @param Design 
 #' @param KUBEparameters 
 #' @param globs 
-merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameters, TELLERFIL = "TELLER", NEVNERFIL = "NEVNER", Design = NULL, KUBEparameters = NULL, globs = SettGlobs()) {
+merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameters, TELLERFIL = NULL, NEVNERFIL = NULL, Design = NULL, KUBEparameters = NULL, globs = SettGlobs()) {
   is_kh_debug()
+  if(is.null(TELLERFIL)) TELLERFIL <- "TELLER"
+  if(is.null(NEVNERFIL)) NEVNERFIL <- "NEVNER"
   
   tellerfilnavn <- files[[TELLERFIL]]
   tellerfildesign <- filedesigns[[tellerfilnavn]]

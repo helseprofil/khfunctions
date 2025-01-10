@@ -12,12 +12,13 @@ load_and_format_files <- function(parameters, batchdate, versjonert, globs){
   tellerfile <- parameters$files$TELLER
   isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
   if(!isbuffer) load_filegroup_to_buffer(filegroup = tellerfile, filter = tabfilter_tellerfile, parameters = parameters, versjonert = versjonert, globs = globs)
+  do_filter_alder_tellerfile(tellerfile = tellerfile, parameters = parameters)
   
-  tellerfile_filter <- set_tellerfile_filter(tellerfile = tellerfile)
+  nontellerfile_filter <- set_nontellerfile_filter(tellerfile = tellerfile)
   nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
   for (file in nonteller_files) {
     isbuffer <- file %in% names(BUFFER)
-    if(!isbuffer) load_filegroup_to_buffer(filegroup = file, filter = tellerfile_filter, parameters = parameters, versjonert = versjonert, globs = globs)
+    if(!isbuffer) load_filegroup_to_buffer(filegroup = file, filter = nontellerfile_filter, parameters = parameters, versjonert = versjonert, globs = globs)
     invisible(gc())
   }
 }
@@ -48,18 +49,36 @@ set_tabfilter_tellerfile <- function(cubeinformation){
   return(tabfilter)
 }
 
-#' @title set_tellerfile_filter
+do_filter_alder_tellerfile <- function(tellerfile, parameters){
+  isalder <- !is.na(parameters$CUBEinformation$ALDER) && parameters$CUBEinformation$ALDER != ""
+  if(!isalder) return(invisible(NULL))
+  
+  alder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
+  if("ALLE" %in% alder) return(invisible(NULL))
+    
+  aldersplit <- tstrsplit(alder, "_")
+  amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
+  amax <- max(as.numeric(aldersplit[[2]]), na.rm = T)
+  .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERl >= amin & ALDERh <= amax]
+}
+
+
+#' @title set_nontellerfile_filter
 #' @description
 #' Sets a filter according to available years and age groups in the teller file, 
 #' to filter other files accordingly. 
 #' @noRD
 #' @param tellerfile 
-set_tellerfile_filter <- function(tellerfile){
+set_nontellerfile_filter <- function(tellerfile, parameters){
   min_aarl <- min(.GlobalEnv$BUFFER[[tellerfile]]$AARl)
   max_aarh <- max(.GlobalEnv$BUFFER[[tellerfile]]$AARh)
+  min_alderl <- min(.GlobalEnv$BUFFER[[tellerfile]]$ALDERl)
+  max_alderh <- max(.GlobalEnv$BUFFER[[tellerfile]]$ALDERh)
   
-  paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh)
+  paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh, " & ALDERl >= ", min_alderl, " & ALDERh <= ", max_alderh)
 }
+
+
 
 #' @title do_filter_columns
 #' @description

@@ -254,6 +254,16 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   return(Design)
 }
 
+#' @title do_aggregate_file
+#'
+#' @param file 
+#' @param valsumbardef 
+#' @param globs 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
   if(!is(file, "data.table")) data.table::setDT(file)
   tabcols <- get_dimension_columns(names(file))
@@ -269,7 +279,6 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
     colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
   }
   file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".a")]
-  # collapse::settransformv(file, paste0(valcols, ".a"), fsum, g = g, TRA = 2)
   # Remove if marked as not "sumbar"
   for(val in valcols){
     if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
@@ -781,4 +790,37 @@ list_files_github <- function(branch){
   files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
   files <- basename(grep("^R/", files, value = T))
   return(files)
+}
+
+#' @title check_if_system_available
+#' @description
+#' Checks if file exists, indicating that the system is already running.
+#' If file doesn't exist, or if user overrides and force continue, the file
+#' is generated and TRUE is returned indicating that the function may continue. 
+#' If the file exists and the user does not override, FALSE is returned indicating 
+#' that the system is busy and data processing stops.
+#' 
+#' The path to the file must be generated in the main function, with an on.exit call to delete
+#' the file when the function finish or crash. This function checks if the file already exists, 
+#' and generate the file if not (or overridden by user). 
+#' 
+#'
+#' @param file 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+check_if_system_available <- function(file){
+  continue <- TRUE
+  if(file.exists(file)){
+    force_continue <- utils::menu(choices = c("JA", "NEI"),
+                            title = paste0("Det ser ut til at du allerede kjører en kube på denne maskinen.\n",
+                                           "For å hindre feil ved dobbelkjøring tillates ikke parallellkjøring av kuber\n",
+                                           "Dersom du ikke kjører noe parallellt kan du fortsette\n\n",
+                                           "Vil du fortsette?"))
+    if(force_continue == 2) continue <- FALSE
+  }
+  if(continue) fs::file_create(file)
+  return(continue)
 }

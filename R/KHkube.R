@@ -19,6 +19,13 @@ LagKUBE <- function(KUBEid,
                     alarm = FALSE,
                     geonaboprikk = TRUE,
                     ...) {
+  # Because temporary files are generated with standard names, parallell processing
+  # see check_if_system_available() function for description. 
+  system_available_file <- file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
+  on.exit(fs::file_delete(system_available_file))
+  system_available <- check_if_system_available(file = system_available_file)
+  if(!system_available) stop("LagKUBE stoppet grunnet parallellkjøring, vent til den andre kuben er ferdig")
+  
   is_kh_debug()
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()

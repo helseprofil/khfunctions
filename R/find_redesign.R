@@ -1,4 +1,4 @@
-#' @title FinnRedesign (kb)
+#' @title find_redesign
 #'
 #' @param fradesign 
 #' @param tildesign 
@@ -9,38 +9,21 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
   AggPri = globs$DefDesign$AggPri
-  # Merk assymtri mellom fradesign og tildesign.
-  # For tildesign brukes bare tildesign$Part og tildesign$OmkDesign.
-  # fradesign maa derfor komme fra FinnDesign med alle egenskaper satt der, mens tildesign kan vaere enklere og satt andre steder
   
-  # Deler i fradesign som ikke er i tildesign maa legegs til i tildesign (full kryss mot Part[del])
-  # Merk at deler i tildesign som ikke er i fradesign gaar greit (all omkoding er indirekte "betinget" paa disse)
-  
-  # Sett partiell omkoding
-  # For intervaller kalles FinnKodebokINtervaller, elllers hentes fast kodebok som utgnagspunkt
-  # Disse kodeboekene (KJONN etc) filtreres til de omkodingene som er aktuelle (boer gjoeres her for aa begrense kombinatorikk, selv om dette kunne vaert utsatt)
-  # Dvs omkodinger til en TIL som ikke har alle noedvendige deler i FRA filtreres bort
-  # Merk at noen deler i FRA ikke er obligatoriske (slik som KJONN=9 for omkoding til KJONN=0)
-  
-  # Rydd tildesign$Design (Kan variere litt mht HAR avhengig av hvor kallet paa denne funksjonen er gjort fra. Skal ha 1 har felt)
-  if (is.null(tildesign$Design)) {
-    FULL <- do.call(expand.grid.dt, tildesign$Part)
-    FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$", names(FULL), value = T)]
-  } else {
-    FULL <- tildesign$Design[HAR == 1, ]
-    FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$|^HAR$", names(FULL), value = T)]
-  }
-  data.table::setnames(FULL, names(FULL), paste0(names(FULL), "_omk"))
+  FULL <- set_all_dimension_combinations_tildesign(tildesign = tildesign)
   
   TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
   saveRDS(FULL, TempFile)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
   
+  # Her skjer det en tilsynelatende unødvendig stor rektangularisering som gjør FULL veldig stor.
+  # betkols er de frie dimensjonene Geoniv og AAR
+  # 
   betKols <- setdiff(names(fradesign$SKombs$bet), "HAR")
-  if (length(betKols) > 0) {
-    FULL <- expand.grid.dt(FULL, fradesign$SKombs$bet[, ..betKols])
-  }
-  for (del in fradesign$UBeting) {
+  if (length(betKols) > 0) FULL <- expand.grid.dt(FULL, fradesign$SKombs$bet[, ..betKols])
+
+  
+    for (del in fradesign$UBeting) {
     if (is.null(tildesign$Part[[del]])) {
       tildesign$Part[[del]] <- data.table::copy(fradesign$Part[[del]])
     }
@@ -238,4 +221,20 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
   
   gc()
   return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
+}
+
+
+
+#' @title find_all_dimension_combinations
+#' @param design tildesign
+#' @noRd
+set_all_dimension_combinations_tildesign <- function(tildesign){
+  ifelse(!is.null(tildesign$Design),
+         FULL <- tildesign$Design[HAR == 1],
+         FULL <- do.call(expand.grid.dt, tildesign$Part))
+  
+  HAR_columns <- grep("_HAR$|^HAR$", names(FULL), value = T)
+  FULL[, (HAR_columns) := NULL]
+  data.table::setnames(FULL, names(FULL), paste0(names(FULL), "_omk"))
+  return(FULL)    
 }
