@@ -72,13 +72,16 @@ do_filter_alder_tellerfile <- function(tellerfile, parameters){
 set_nontellerfile_filter <- function(tellerfile, parameters){
   min_aarl <- min(.GlobalEnv$BUFFER[[tellerfile]]$AARl)
   max_aarh <- max(.GlobalEnv$BUFFER[[tellerfile]]$AARh)
-  min_alderl <- min(.GlobalEnv$BUFFER[[tellerfile]]$ALDERl)
-  max_alderh <- max(.GlobalEnv$BUFFER[[tellerfile]]$ALDERh)
   
-  paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh, " & ALDERl >= ", min_alderl, " & ALDERh <= ", max_alderh)
+  isalder <- "ALDERl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])
+  if(isalder){
+    min_alderl <- min(.GlobalEnv$BUFFER[[tellerfile]]$ALDERl)
+    max_alderh <- max(.GlobalEnv$BUFFER[[tellerfile]]$ALDERh)
+  }
+  filterstring <- paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh)
+  if(isalder) filterstring <- paste0(filterstring, " & ALDERl >= ", min_alderl, " & ALDERh <= ", max_alderh)
+  return(filterstring)
 }
-
-
 
 #' @title do_filter_columns
 #' @description
