@@ -45,4 +45,4 @@ rfiles <- grep("KHmisc.R|KHsetup.R", list_files_github(branch = branch), value =
 for(file in rfiles){
   source(paste0(githubpath, branch, "/R/", file), encoding = "latin1")
 }
-rm(githubpath)
+rm(githubpath, file, rfiles)

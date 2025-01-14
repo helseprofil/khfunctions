@@ -551,25 +551,26 @@ expand.grid.df <- function(...) {
 }
 
 expand.grid.dt <- function(...){
-  DFs <- list(...)
-  for(i in seq_along(DFs)){
-    if(!is(DFs[[i]], "data.table")){
-      DFs[[i]] <- data.table::setDT(DFs[[i]])
+  DTs <- list(...)
+  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
+  for(i in seq_along(DTs)){
+    if(!is(DTs[[i]], "data.table")){
+      DTs[[i]] <- data.table::setDT(DTs[[i]])
     }
   }
   
-  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
   
-  for (i in seq_along(DFs)){
-    DFs[[i]] <- DFs[[i]][rows[[i]]]
+  for (i in seq_along(DTs)){
+    DTs[[i]] <- DTs[[i]][rows[[i]]]
   }
     
-  res <- DFs[[1L]]
-  for(i in 2:length(DFs)){
-    res[, names(DFs[[i]]) := DFs[[i]]]
+  res <- DTs[[1L]]
+  for(i in 2:length(DTs)){
+    res[, names(DTs[[i]]) := DTs[[i]]]
   }
     
-  rm(DFs, rows)
+  rm(DTs, rows)
   gc()
   return(res)
 }

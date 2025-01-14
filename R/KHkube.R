@@ -3,13 +3,13 @@
 #' The main function of the production line, producing the files going to FHI Statistikk and public health profiles
 #'
 #' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
-#' @param batchdate 
 #' @param versjonert 
 #' @param csvcopy Save a CSV-copy?
 #' @param globs global parameters, defaults to SettGlobs()
 #' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
+#' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
 #' @param ... 
 LagKUBE <- function(KUBEid,
                     versjonert = FALSE,
@@ -24,7 +24,7 @@ LagKUBE <- function(KUBEid,
   system_available_file <- file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
   on.exit(fs::file_delete(system_available_file))
   system_available <- check_if_system_available(file = system_available_file)
-  if(!system_available) stop("LagKUBE stoppet grunnet parallellkjÃ¸ring, vent til den andre kuben er ferdig")
+  if(!system_available) stop("LagKUBE stoppet grunnet parallellkjøring, vent til den andre kuben er ferdig")
   
   is_kh_debug()
   batchdate <- SettKHBatchDate()

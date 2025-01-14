@@ -233,7 +233,7 @@ get_filedesign <- function(parameters, globs){
   for(file in files){
     if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     fileinfo <- parameters$fileinformation[[file]]
-    filedesign[[file]] <- FinnDesign(FIL = .GlobalEnv$BUFFER[[file]], FGP = fileinfo, globs = globs)
+    filedesign[[file]] <- find_filedesign(file = .GlobalEnv$BUFFER[[file]], fileparameters = fileinfo, globs = globs)
   }
   return(filedesign)
 }
