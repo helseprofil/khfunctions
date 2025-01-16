@@ -2,13 +2,9 @@
 #' @description
 #' Finds design parameters for a file
 #' 
-#' @noRd
-#' 
-#' Erstatter FinnDesign()
-#'
-#' @param file 
-#' @param fileparameters 
-#' @param globs 
+#' @param file filegroup
+#' @param fileparameters parameters from ACCESS 
+#' @param globs global parameters
 find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
   if(is.null(fileparameters)) fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
   if(!is(file, "data.table")) data.table::setDT(file)
@@ -21,10 +17,10 @@ find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
   designs[["full"]] <- do.call(expand.grid.dt, output$Part)[, let(HAR = 0)]
   output[["Design"]] <- designs$full[designs$observed, on = names(designs$observed), let(HAR = 1)]
   output[["SKombs"]] <- set_column_combinations(designs = designs, args = args)
-  gc()
   return(output)
 }
 
+#' @noRd
 get_filedesign_args <- function(globs, columns_in_file){
   args <- list()
   args[["part_columns"]] <- globs$DefDesign$DelKols
@@ -36,6 +32,7 @@ get_filedesign_args <- function(globs, columns_in_file){
   return(args)
 }
 
+#' @noRd
 get_file_parts <- function(partcolumns, designcolumns){
   parts <- character()
   for(part in names(partcolumns)){
@@ -44,15 +41,17 @@ get_file_parts <- function(partcolumns, designcolumns){
   return(parts)
 }
 
+#' @noRd
 get_filedesign_initial_list <- function(observeddesign, fileparameters, args){
   designlist <- list()
   designlist[["UBeting"]] <- args$dims_unconditional[args$dims_unconditional %in% args$parts_in_file]
   designlist[["BetingOmk"]] <- args$dims_conditional[args$dims_conditional %in% args$parts_in_file]
   designlist[["BetingF"]] <- args$dims_tab[args$dims_tab %in% args$parts_in_file]
-  designlist[["Part"]] <- get_parts_design(designdata = designs$observed, fileparameters = fileparameters, args = args)
+  designlist[["Part"]] <- get_parts_design(designdata = observeddesign, fileparameters = fileparameters, args = args)
   return(designlist)
 }
 
+#' @noRd
 get_parts_design <- function(designdata, fileparameters, args){
   out <- list()
   for(part in args$parts_in_file){
@@ -65,6 +64,7 @@ get_parts_design <- function(designdata, fileparameters, args){
   return(out)
 }
 
+#' @noRd
 fill_age_interval_gaps <- function(agedata, agecolumns, fileparameters){
   age_interval_total <- intervals::Intervals(c(fileparameters$amin, fileparameters$amax), type = "Z")
   age_interval_covered <- intervals::Intervals(agedata[, ..agecolumns], type = "Z")
@@ -76,6 +76,7 @@ fill_age_interval_gaps <- function(agedata, agecolumns, fileparameters){
   return(data.table::rbindlist(list(agedata, age_interval_missing)))
 }
 
+#' @noRd
 set_column_combinations <- function(designs, args){
   combinations <- list()
   combinations[["bet"]] <- find_combination(part = character(), designs = designs, args = args)
@@ -85,6 +86,7 @@ set_column_combinations <- function(designs, args){
   return(combinations)
 }
 
+#' @noRd
 find_combination <- function(part, designs, args){
   part_combinations <- c(args$unconditional, part)
   columns <- character()

@@ -2,9 +2,9 @@
 #' 
 #' @param parameterlist parameters generated with get_cubeparameters()
 #' @param standardfiles Should standard teller and nevner files be used? default = FALSE
-#' @param Design Design list
+#' @param design Design list
 #' @param globs global parameters generated with SettGlobs()
-merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, Design = NULL, globs = SettGlobs()){
+merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, design = NULL, globs = SettGlobs()){
   is_kh_debug()
   args <- get_merge_teller_nevner_args(standardfiles = standardfiles, parameterlist = parameterlist)
   tellerfilnavn <- args$files[[args$TELLERFIL]]
@@ -15,7 +15,7 @@ merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, Design = N
     nevnerfilnavn <- args$files[[args$NEVNERFIL]]
     nevnerfildesign <- args$filedesigns[[nevnerfilnavn]]
   }
-  InitDesign <- get_initialdesign(design = Design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
+  InitDesign <- get_initialdesign(design = design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
   
   if(!is.null(args$KUBEparameters)){
     KUBEdesign <- FinnKubeDesignB(KUBEdscr = args$KUBEparameters, ORGd = InitDesign, FGP = args$fileparameters[[tellerfilnavn]], globs = globs)

@@ -129,7 +129,7 @@ load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, ve
     if(isnyekolkolprerad) FIL <- LeggTilNyeVerdiKolonner(FIL, filefilter$NYEKOL_KOL_preRAD, slettInf = TRUE)
     
     Filter <- SettFilterDesign(filefilter, bruk0 = FALSE, FGP = fileinfo, globs = globs)
-    # TODO: optimalisere leggtilnyeverdikolonner
+    # TODO: optimalisere OmkodFil
     if (length(Filter) > 0) FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL, globs = globs), list(Parts = Filter), globs = globs), globs = globs)
     
     isgeoharm <- filefilter$GEOHARM == 1

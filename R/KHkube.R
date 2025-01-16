@@ -19,21 +19,15 @@ LagKUBE <- function(KUBEid,
                     alarm = FALSE,
                     geonaboprikk = TRUE,
                     ...) {
-  # Because temporary files are generated with standard names, parallell processing
-  # see check_if_system_available() function for description. 
-  system_available_file <- file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
-  on.exit(fs::file_delete(system_available_file))
-  system_available <- check_if_system_available(file = system_available_file)
-  if(!system_available) stop("LagKUBE stoppet grunnet parallellkjøring, vent til den andre kuben er ferdig")
-  
   is_kh_debug()
+  # Because temporary files are generated with standard names, parallell processing is not allowed
+  check_if_lagkube_available()
+  on.exit(lagkube_cleanup(), add = TRUE)
+  
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()
-  on.exit(RODBC::odbcCloseAll(), add = TRUE)
-  
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
-  on.exit(sink(), add = TRUE)
-  if(!geonaboprikk) message("OBS! naboprikking pÃ¥ GEO er deaktivert!")
+  if(!geonaboprikk) message("OBS! naboprikking på GEO er deaktivert!")
   
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
@@ -62,7 +56,8 @@ LagKUBE <- function(KUBEid,
   # LAG TNF ----
   
   cat("******LAGER TNF\n")
-  TNtab <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = TNPinformation, KUBEparameters = KUBEinformation, globs = globs)
+  # TNtab <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = TNPinformation, KUBEparameters = KUBEinformation, globs = globs)
+  TNtab <- merge_teller_nevner(parameterlist = parameters, globs = globs)
   TNF <- TNtab$TNF
   KUBEd <- TNtab$KUBEd
   rm(TNtab)
@@ -91,7 +86,7 @@ LagKUBE <- function(KUBEid,
     STNFd <- FinnDesignEtterFiltrering(STNPFd, PredFilter$Design, FGP = fileinformation[[filer$STANDARDTELLER]], globs = globs)
     cat("---Satt felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     
-    STN <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = STNPinformation, TELLERFIL = "STANDARDTELLER", NEVNERFIL = "STANDARDNEVNER", Design = STNFd, KUBEparameters = NULL, globs = globs)
+    STN <- merge_teller_nevner(parameterlist = parameters, standardfiles = TRUE, design = STNFd, globs = globs)
     STN <- STN$TNF
     
     # Fjern PredFilter$Pkols
@@ -141,7 +136,8 @@ LagKUBE <- function(KUBEid,
     
     # Finn omkoding til KUBEd, dvs design for TNF
     # NB: Her maa det aggregeres opp for standardisering
-    PNd <- FinnDesign(PN, FGP = fileinformation[[filer$PREDNEVNER]], globs = globs)
+    # PNd <- FinnDesign(PN, FGP = fileinformation[[filer$PREDNEVNER]], globs = globs)
+    PNd <- find_filedesign(file = PN, fileparameters = fileinformation[[filer$PREDNEVNER]], globs = globs)
     # Burde kanskje bruke STNFd i stedet, men da maa den faa paa PredFilterDimensjonene. Maa uansett sende til FinDesigmm
     RD <- FinnRedesign(PNd, list(Part = KUBEd$MAIN), SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
     cat("Foer merge: dim(PN)", dim(PN), " og dim(STN)", dim(STN))
@@ -750,3 +746,37 @@ LagFlereKuber <- function(KUBEid_ALLE,
   sink()
 }
 
+#' @title check_if_lagkube_available
+#' @description
+#' Checks if guardfile exists, indicating that the system is already running.
+#' If file doesn't exist, or if user overrides and force continue, the file
+#' is generated and TRUE is returned indicating that the function may continue. 
+#' If the file exists and the user does not override, FALSE is returned indicating 
+#' that the system is busy and data processing stops.
+#' 
+#' An on.exit call must be included in the main function to delete
+#' the file when the function finish or crash. This function checks if the file already exists, 
+#' and generate the file if not (or overridden by user). 
+check_if_lagkube_available <- function(){
+  file <- get_lagkube_guardfile_path()
+  continue <- TRUE
+  if(file.exists(file)){
+    force_continue <- utils::menu(choices = c("JA", "NEI"),
+                                  title = paste0("Det ser ut til at du allerede kjÃ¸rer en kube pÃ¥ denne maskinen.\n",
+                                                 "For Ã¥ hindre feil ved dobbelkjÃ¸ring tillates ikke parallellkjÃ¸ring av kuber\n",
+                                                 "Dersom du ikke kjÃ¸rer noe parallellt kan du fortsette\n\n",
+                                                 "Vil du fortsette?"))
+    if(force_continue == 2) stop("LagKUBE stoppet grunnet parallellkjøring, vent til den andre kuben er ferdig og kjør igjen!")
+  }
+  if(continue) fs::file_create(file)
+}
+
+get_lagkube_guardfile_path <- function(){
+  file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
+}
+
+lagkube_cleanup <- function(){
+  fs::file_delete(get_lagkube_guardfile_path())
+  RODBC::odbcCloseAll()
+  sink()
+}

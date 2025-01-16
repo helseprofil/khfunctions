@@ -33,6 +33,7 @@ conflicted::conflict_prefer("as.Date.numeric", "zoo", quiet = T)
 conflicted::conflict_prefer("empty", "intervals", quiet = T)
 conflicted::conflict_prefer("join", "collapse", quiet = T)
 conflicted::conflict_prefer("D", "collapse", quiet = T)
+conflicted::conflict_prefer(":=", "data.table", quiet = T)
 
 # Set debugging to inactive
 show_functions <- FALSE

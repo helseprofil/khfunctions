@@ -39,17 +39,7 @@ uselocal <- function(test = FALSE,
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
   geonaboprikk <<- TRUE
+  globs <<- SettGlobs()
+  batchdate <<- SettKHBatchDate()
 }
 
-# 
-# ## TEST
-# fasit <- FinnDesign(FIL = BUFFER$HKR, FGP = parameters$fileinformation$HKR, globs = globs)
-# ny <- find_filedesign(BUFFER$HKR, fileparameters = parameters$fileinformation$HKR, globs = globs)
-# for(del in Deler){
-#   print(sum(all.equal(fasit$Part[[del]], ny$Part[[del]], check.attributes = F),
-#             all.equal(fasit$SKombs[[del]], ny$SKombs[[del]], check.attributes = F)))
-# }
-# library(microbenchmark)
-# microbenchmark(old = FinnDesign(BUFFER$BEF_GKa, parameters$fileinformation$BEF_GKa, globs = globs),
-#                new = find_filedesign(BUFFER$BEF_GKa,  parameters$fileinformation$BEF_GKa, globs),
-#                times = 5)
