@@ -100,6 +100,7 @@ report_godkjent_files_notfound <- function(notfoundfiles, year){
   message("\n********\n\n",
           length(notfoundfiles), " friskvikfiler ikke funnet i csv\n",
           "Sjekk at riktig datotag er lagt inn i KUBESTATUS_", year, "\n",
+          "Eventuelt sjekk om friskvikfil er produsert\n",
           paste0(" - ", notfoundfiles, collapse = "\n"))
 }
 
