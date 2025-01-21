@@ -568,6 +568,9 @@ LagKUBE <- function(KUBEid,
     tabs <- setdiff(tabs, "KJONN")
   }
   
+  # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
+  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
+  
   # EVT SPESIALBEHANDLING
   
   if ("STATAPRIKKpre" %in% names(dumps)) {
@@ -578,8 +581,10 @@ LagKUBE <- function(KUBEid,
 
   # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
-  dims <- find_dims(dt = KUBE, spec = parameters$fileinformation)
-  stataspec <- save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = geonaboprikk)
+  dims <- find_dims(dt = KUBE, spec = fileinformation)
+  geoprikk_triangles <- get_geonaboprikk_triangles(geoniv = unique(KUBE$GEOniv))
+  stataspec <- kube_spec(spec = KUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = geoprikk_triangles)
+
   KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
 
   if ("STATAPRIKKpost" %in% names(dumps)) {
@@ -614,9 +619,6 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
-  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
-  
   if ("ALDER" %in% names(KUBE)) {
     KUBE <- KUBE[!ALDER %in% c("999_999", "888_888"), ]
   }
@@ -648,10 +650,6 @@ LagKUBE <- function(KUBEid,
   }
   ALLVIS[is.na(SPVFLAGG), SPVFLAGG := 0]
   ALLVIS[, SPVFLAGG := plyr::mapvalues(SPVFLAGG, c(-1, 9, 4), c(3, 1, 3), warn_missing = FALSE)]
-  
-  # Filtrer bort GEO som ikke skal rapporteres
-  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
-  ALLVIS <- ALLVIS[GEO %in% globs$UtGeoKoder]
   
   if(isTRUE(write)){
     LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = parameters$fileinformation[[parameters$files$TELLER]], modus = parameters$CUBEinformation$MODUS, batchdate = batchdate, globs = globs)
