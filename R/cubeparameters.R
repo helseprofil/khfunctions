@@ -19,6 +19,7 @@ get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = Se
   parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
   parameters[["PredFilter"]] <- set_predictionfilter(REFVERDI = parameters$CUBEinformation$REFVERDI, globs = globs)
   parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
+  parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs)
   return(parameters)
 }
 
@@ -220,6 +221,20 @@ get_filegroup_information <- function(files, filefilters, validdates, globs = Se
   return(fileinfo)
 }
 
+#' @title get_friskvik_information
+#' @description
+#' Helper function for get_cubeparameters().
+#' Reads from table FRISKVIK in the ACCESS database
+#' @noRD
+#' @param KUBEid cube name
+#' @param globs global parameters
+get_friskvik_information <- function(KUBEid, globs){
+  FRISKVIK <- data.table::setDT(RODBC::sqlQuery(globs$dbh, 
+                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", getOption("khfunctions.year"), "AND KUBE_NAVN='", KUBEid, "'")), 
+                                   as.is = TRUE))
+  return(FRISKVIK)
+}
+
 #' @title get_filedesign
 #' @description
 #' @noRD
@@ -233,7 +248,7 @@ get_filedesign <- function(parameters, globs){
   for(file in files){
     if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     fileinfo <- parameters$fileinformation[[file]]
-    filedesign[[file]] <- FinnDesign(FIL = .GlobalEnv$BUFFER[[file]], FGP = fileinfo, globs = globs)
+    filedesign[[file]] <- find_filedesign(file = .GlobalEnv$BUFFER[[file]], fileparameters = fileinfo, globs = globs)
   }
   return(filedesign)
 }

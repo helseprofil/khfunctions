@@ -1,31 +1,24 @@
 #' merge_teller_nevner
 #' 
-#' @param files 
-#' @param s 
-#' @param fileparameters 
-#' @param TNPparameters 
-#' @param TELLERFIL 
-#' @param NEVNERFIL 
-#' @param Design 
-#' @param KUBEparameters 
-#' @param globs 
-merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameters, TELLERFIL = NULL, NEVNERFIL = NULL, Design = NULL, KUBEparameters = NULL, globs = SettGlobs()) {
+#' @param parameterlist parameters generated with get_cubeparameters()
+#' @param standardfiles Should standard teller and nevner files be used? default = FALSE
+#' @param design Design list
+#' @param globs global parameters generated with SettGlobs()
+merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, design = NULL, globs = SettGlobs()){
   is_kh_debug()
-  if(is.null(TELLERFIL)) TELLERFIL <- "TELLER"
-  if(is.null(NEVNERFIL)) NEVNERFIL <- "NEVNER"
-  
-  tellerfilnavn <- files[[TELLERFIL]]
-  tellerfildesign <- filedesigns[[tellerfilnavn]]
-  isnevnerfil <- NEVNERFIL %in% names(files)
+  args <- get_merge_teller_nevner_args(standardfiles = standardfiles, parameterlist = parameterlist)
+  tellerfilnavn <- args$files[[args$TELLERFIL]]
+  tellerfildesign <- args$filedesigns[[tellerfilnavn]]
+  isnevnerfil <- args$NEVNERFIL %in% names(args$files)
   nevnerfildesign <- NULL
   if(isnevnerfil) {
-    nevnerfilnavn <- files[[NEVNERFIL]]
-    nevnerfildesign <- filedesigns[[nevnerfilnavn]]
+    nevnerfilnavn <- args$files[[args$NEVNERFIL]]
+    nevnerfildesign <- args$filedesigns[[nevnerfilnavn]]
   }
-  InitDesign <- get_initialdesign(design = Design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
+  InitDesign <- get_initialdesign(design = design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
   
-  if(!is.null(KUBEparameters)){
-    KUBEdesign <- FinnKubeDesignB(KUBEdscr = KUBEparameters, ORGd = InitDesign, FGP = fileparameters[[tellerfilnavn]], globs = globs)
+  if(!is.null(args$KUBEparameters)){
+    KUBEdesign <- FinnKubeDesignB(KUBEdscr = args$KUBEparameters, ORGd = InitDesign, FGP = args$fileparameters[[tellerfilnavn]], globs = globs)
     TNdesign <- list(Part = KUBEdesign$TMP)
   } else {
     KUBEdesign <- list()
@@ -40,8 +33,8 @@ merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameter
     nevnerfil <- do_redesign_recode_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, globs = globs)
   }
   
-  implicitnull_defs <- fileparameters[[tellerfilnavn]]$vals
-  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, fileparameters[[nevnerfilnavn]]$vals)
+  implicitnull_defs <- args$fileparameters[[tellerfilnavn]]$vals
+  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, args$fileparameters[[nevnerfilnavn]]$vals)
   
   if (length(KUBEdesign) > 0) {
     rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, globs = globs)
@@ -59,19 +52,36 @@ merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameter
     cat("--TNF ferdig, har ikke nevnerfil, så TNF == tellerfil\n")
   }
   
-  isNYEKOL_RAD <- !is.na(TNPparameters$NYEKOL_RAD) && TNPparameters$NYEKOL_RAD != ""
-  if (isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, TNPparameters$NYEKOL_RAD, FGP = fileparameters[[tellerfilnavn]], globs = globs)
-  isNYEKOL_KOL <- !is.na(TNPparameters$NYEKOL_KOL) && TNPparameters$NYEKOL_KOL != ""
-  if (isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, TNPparameters$NYEKOL_KOL, slettInf = TRUE)
+  isNYEKOL_RAD <- !is.na(args$TNPparameters$NYEKOL_RAD) && args$TNPparameters$NYEKOL_RAD != ""
+  if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, args$TNPparameters$NYEKOL_RAD, FGP = args$fileparameters[[tellerfilnavn]], globs = globs)
+  isNYEKOL_KOL <- !is.na(args$TNPparameters$NYEKOL_KOL) && args$TNPparameters$NYEKOL_KOL != ""
+  if (isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, args$TNPparameters$NYEKOL_KOL, slettInf = TRUE)
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(TNF, KUBEdesign$MAIN, globs = globs)
   if (!identical(dimorg, dim(TNF))) cat("Siste filtrering av TNF, hadde dim(TNF)", dimorg, "fikk dim(TNF)", dim(TNF), "\n")
   
-  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = TNPparameters)
+  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = args$TNPparameters)
   
   cat("---Ferdig i LagTNtabell\n")
   return(list(TNF = TNF, KUBEd = KUBEdesign))
+}
+
+get_merge_teller_nevner_args <- function(standardfiles, parameterlist){
+  args <- list()
+  args[["files"]] <- parameterlist$files
+  args[["filedesigns"]] <- parameterlist$filedesign
+  args[["fileparameters"]] <- parameterlist$fileinformation
+  args[["TELLERFIL"]] <- ifelse(standardfiles, "STANDARDTELLER", "TELLER")
+  args[["NEVNERFIL"]] <- ifelse(standardfiles, "STANDARDEVNER", "NEVNER")
+  if(standardfiles){
+    args[["TNPparameters"]] <- parameterlist$STNPinformation
+    args[["KUBEparameters"]] <- NULL
+  } else {
+    args[["TNPparameters"]] <- parameterlist$TNPinformation
+    args[["KUBEparameters"]] <- parameterlist$CUBEinformation
+  }
+  return(args)
 }
 
 #' @title get_initialdesign

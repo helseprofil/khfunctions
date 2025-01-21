@@ -551,25 +551,26 @@ expand.grid.df <- function(...) {
 }
 
 expand.grid.dt <- function(...){
-  DFs <- list(...)
-  for(i in seq_along(DFs)){
-    if(!is(DFs[[i]], "data.table")){
-      DFs[[i]] <- data.table::setDT(DFs[[i]])
+  DTs <- list(...)
+  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
+  for(i in seq_along(DTs)){
+    if(!is(DTs[[i]], "data.table")){
+      DTs[[i]] <- data.table::setDT(DTs[[i]])
     }
   }
   
-  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
   
-  for (i in seq_along(DFs)){
-    DFs[[i]] <- DFs[[i]][rows[[i]]]
+  for (i in seq_along(DTs)){
+    DTs[[i]] <- DTs[[i]][rows[[i]]]
   }
     
-  res <- DFs[[1L]]
-  for(i in 2:length(DFs)){
-    res[, names(DFs[[i]]) := DFs[[i]]]
+  res <- DTs[[1L]]
+  for(i in 2:length(DTs)){
+    res[, names(DTs[[i]]) := DTs[[i]]]
   }
     
-  rm(DFs, rows)
+  rm(DTs, rows)
   gc()
   return(res)
 }
@@ -653,37 +654,4 @@ list_files_github <- function(branch){
   files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
   files <- basename(grep("^R/", files, value = T))
   return(files)
-}
-
-#' @title check_if_system_available
-#' @description
-#' Checks if file exists, indicating that the system is already running.
-#' If file doesn't exist, or if user overrides and force continue, the file
-#' is generated and TRUE is returned indicating that the function may continue. 
-#' If the file exists and the user does not override, FALSE is returned indicating 
-#' that the system is busy and data processing stops.
-#' 
-#' The path to the file must be generated in the main function, with an on.exit call to delete
-#' the file when the function finish or crash. This function checks if the file already exists, 
-#' and generate the file if not (or overridden by user). 
-#' 
-#'
-#' @param file 
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-check_if_system_available <- function(file){
-  continue <- TRUE
-  if(file.exists(file)){
-    force_continue <- utils::menu(choices = c("JA", "NEI"),
-                            title = paste0("Det ser ut til at du allerede kjører en kube på denne maskinen.\n",
-                                           "For å hindre feil ved dobbelkjøring tillates ikke parallellkjøring av kuber\n",
-                                           "Dersom du ikke kjører noe parallellt kan du fortsette\n\n",
-                                           "Vil du fortsette?"))
-    if(force_continue == 2) continue <- FALSE
-  }
-  if(continue) fs::file_create(file)
-  return(continue)
 }

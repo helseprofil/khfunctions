@@ -58,6 +58,7 @@ SettDefDesignKH <- function(dbcon) {
   is_kh_debug()
   
   Deler <- data.table::setDT(RODBC::sqlQuery(dbcon, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE))
+  Deler <- Deler[order(ID)]
   DelKolN <- setNames(Deler$DelKol, Deler$DEL)
   DelKolE <- setNames(Deler$DelKolE, Deler$DEL)
   DelType <- setNames(Deler$TYPE, Deler$DEL)

@@ -16,14 +16,10 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
   saveRDS(FULL, TempFile)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
   
-  # Her skjer det en tilsynelatende unødvendig stor rektangularisering som gjør FULL veldig stor.
-  # betkols er de frie dimensjonene Geoniv og AAR
-  # 
   betKols <- setdiff(names(fradesign$SKombs$bet), "HAR")
   if (length(betKols) > 0) FULL <- expand.grid.dt(FULL, fradesign$SKombs$bet[, ..betKols])
-
   
-    for (del in fradesign$UBeting) {
+  for (del in fradesign$UBeting) {
     if (is.null(tildesign$Part[[del]])) {
       tildesign$Part[[del]] <- data.table::copy(fradesign$Part[[del]])
     }

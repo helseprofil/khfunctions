@@ -2,104 +2,99 @@
 #' @description
 #' Finds design parameters for a file
 #' 
+#' @param file filegroup
+#' @param fileparameters parameters from ACCESS 
+#' @param globs global parameters
+find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
+  if(is.null(fileparameters)) fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
+  if(!is(file, "data.table")) data.table::setDT(file)
+  designs <- list()
+  args <- get_filedesign_args(globs = globs, columns_in_file = names(file))
+  designs[["observed"]] <- unique(file[, mget(args$design_columns)])
+  output <- get_filedesign_initial_list(observeddesign = designs$observed, fileparameters = fileparameters, args = args)
+  args[["unconditional"]] <- output$UBeting
+  args[["conditional"]] <- c(output$BetingOmk, output$BetingF)
+  designs[["full"]] <- do.call(expand.grid.dt, output$Part)[, let(HAR = 0)]
+  output[["Design"]] <- designs$full[designs$observed, on = names(designs$observed), let(HAR = 1)]
+  output[["SKombs"]] <- set_column_combinations(designs = designs, args = args)
+  return(output)
+}
+
 #' @noRd
-#' 
-#' Erstatter FinnDesign()
-#'
-#' @param file 
-#' @param fileparameters 
-#' @param globs 
-find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()) {
-  is_kh_debug()
-  if(is.null(fileparameters)) fileparameters <- list(amin = 0, amax = 120)
-  if(identical(class(file), "data.frame")) file <- data.table::data.table(file)
-  
-  keyorg <- data.table::key(file)
-  DelKols <- globs$DefDesign$DelKols
-  UBeting <- globs$DefDesign$UBeting
-  BetingOmk <- globs$DefDesign$BetingOmk
-  BetingF <- globs$DefDesign$BetingF
-  
-  DesignKols <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% names(file)]
-  
-  DesignKols <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% names(file)]
-  OmkKols <- globs$DefDesign$DesignKols[globs$DefDesign$DesignKols %in% names(file)]
-  
-  Design <- list()
-  Design[["KolNavn"]] <- names(file)
-  # Finn faktisk design
-  setkeym(file, c(DesignKols))
-  ObsDesign <- unique(file[, ..DesignKols])
-  
-  # Finn deler inneholdt i tabell
-  Deler <- character()
-  for (del in names(DelKols)) {
-    if (all(DelKols[[del]] %in% DesignKols)) {
-      Deler <- c(Deler, del)
-    }
+get_filedesign_args <- function(globs, columns_in_file){
+  args <- list()
+  args[["part_columns"]] <- globs$DefDesign$DelKols
+  args[["dims_unconditional"]] <- globs$DefDesign$UBeting
+  args[["dims_conditional"]] <- globs$DefDesign$BetingOmk
+  args[["dims_tab"]] <- globs$DefDesign$BetingF
+  args[["design_columns"]] <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% columns_in_file]
+  args[["parts_in_file"]] <- get_file_parts(partcolumns = args$part_columns, designcolumns = args$design_columns)
+  return(args)
+}
+
+#' @noRd
+get_file_parts <- function(partcolumns, designcolumns){
+  parts <- character()
+  for(part in names(partcolumns)){
+    if(all(partcolumns[[part]] %in% designcolumns)) parts <- c(parts, part)
   }
-  
-  # Sett omkodingskombinasjoner
-  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
-  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
-  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
-  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
-  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
-  
-  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
-  for (del in Deler) {
-    kols <- DelKols[[del]]
-    data.table::setkeyv(ObsDesign, kols)
-    # SETT HAR
-    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+  return(parts)
+}
+
+#' @noRd
+get_filedesign_initial_list <- function(observeddesign, fileparameters, args){
+  designlist <- list()
+  designlist[["UBeting"]] <- args$dims_unconditional[args$dims_unconditional %in% args$parts_in_file]
+  designlist[["BetingOmk"]] <- args$dims_conditional[args$dims_conditional %in% args$parts_in_file]
+  designlist[["BetingF"]] <- args$dims_tab[args$dims_tab %in% args$parts_in_file]
+  designlist[["Part"]] <- get_parts_design(designdata = observeddesign, fileparameters = fileparameters, args = args)
+  return(designlist)
+}
+
+#' @noRd
+get_parts_design <- function(designdata, fileparameters, args){
+  out <- list()
+  for(part in args$parts_in_file){
+    columns <- args$part_columns[[part]]
+    part_data <- unique(designdata[, ..columns])[, paste0(part, "_HAR") := 1]
+    if(part == "A") part_data <- fill_age_interval_gaps(agedata = part_data, agecolumns = columns, fileparameters = fileparameters)
+    setkeyv(part_data, columns)
+    out[[part]] <- part_data
   }
+  return(out)
+}
+
+#' @noRd
+fill_age_interval_gaps <- function(agedata, agecolumns, fileparameters){
+  age_interval_total <- intervals::Intervals(c(fileparameters$amin, fileparameters$amax), type = "Z")
+  age_interval_covered <- intervals::Intervals(agedata[, ..agecolumns], type = "Z")
+  age_interval_missing <- intervals::interval_difference(age_interval_total, age_interval_covered)
+  if(nrow(age_interval_missing) == 0) return(agedata)
   
-  # Fyll evt hull i aldersintervaller
-  if ("A" %in% names(Design$Part)) {
-    mangler <- intervals::interval_difference(Intervals(c(fileparameters$amin, fileparameters$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
-    if (nrow(mangler) > 0) {
-      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
-      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
-    }
+  age_interval_missing <- setNames(data.table::as.data.table(age_interval_missing), agecolumns)
+  age_interval_missing[, let(A_HAR = 0)]
+  return(data.table::rbindlist(list(agedata, age_interval_missing)))
+}
+
+#' @noRd
+set_column_combinations <- function(designs, args){
+  combinations <- list()
+  combinations[["bet"]] <- find_combination(part = character(), designs = designs, args = args)
+  for(part in args$conditional){
+    combinations[[paste0("bet", part)]] <- find_combination(part = part, designs = designs, args = args)
   }
+  return(combinations)
+}
+
+#' @noRd
+find_combination <- function(part, designs, args){
+  part_combinations <- c(args$unconditional, part)
+  columns <- character()
+  for(column_part in part_combinations) columns <- c(columns, args$part_columns[[column_part]])
   
-  # Finn fullt design, dvs kryssing av alle partielle.
-  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
-  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
-  setkeym(ObsDesign, names(ObsDesign))
-  setkeym(FullDesign, names(ObsDesign))
-  # Sett HAR=1 om denne finnes i fakttisk design
-  FullDesign[, HAR := 0]
-  FullDesign[ObsDesign, HAR := 1]
-  Design[["Design"]] <- FullDesign
-  
-  # Sett omkodingskombinasjone
-  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
-  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
-  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
-  komb <- Design[["UBeting"]]
-  for (del in Beting) {
-    if (del != "") {
-      komb <- c(Design[["UBeting"]], del)
-    }
-    if (length(komb) > 0) {
-      kols <- character(0)
-      for (k in komb) {
-        kols <- c(kols, DelKols[[k]])
-      }
-      data.table::setkeyv(ObsDesign, kols)
-      data.table::setkeyv(FullDesign, kols)
-      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
-      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
-      kombFull[, HAR := 0]
-      kombFull[kombObs, HAR := 1]
-      kombn <- paste("bet", del, sep = "")
-      Design[["SKombs"]][[kombn]] <- kombFull
-    }
-  }
-  
-  setkeym(ObsDesign, names(ObsDesign))
-  setkeym(file, keyorg)
-  gc()
-  return(Design)
+  combinations_observed <- unique(designs$observed[, ..columns])
+  combinations_full <- unique(designs$full[, ..columns])[, let(HAR = 0)]
+  combinations_full[combinations_observed, on = names(combinations_observed), let(HAR = 1)]
+  setkeyv(combinations_full, columns)
+  return(combinations_full)
 }
