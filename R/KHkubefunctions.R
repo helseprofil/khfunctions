@@ -1101,7 +1101,7 @@ var_num <- function(x){
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
+save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -1116,8 +1116,7 @@ kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
   if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
-  message("Create Stata spec in ", fileSpec)
-  return(specDF)
+  return(invisible(specDF))
 }
 
 #' find_dims (vl)
@@ -1328,71 +1327,50 @@ LagQCKube <- function(allvis,
 #' @param STPNdscr 
 #' @return
 #' @export
-GetAccessSpecs <- function(KUBEid,
-                           kuber, 
-                           tnp,
-                           filgrupper,
-                           stnp,
-                           batchdate,
-                           globs = SettGlobs()){
-  datef <- FormatSqlBatchdate(batchdate)
+save_access_specs <- function(KUBEid,
+                              parameterlist, 
+                              batchdate, 
+                              globs = SettGlobs()){
   
-  meltdscr <- function(dscr, name = NULL){
-    if(is.null(name)){
-      name <- deparse(substitute(dscr))
-    }
-    d <- data.table::as.data.table(dscr)
-    d[, names(d) := lapply(.SD, as.character)]
-    d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
-    d[, Tabell := name]
-    data.table::setcolorder(d, "Tabell")
-  }
+  specs <- data.table::rbindlist(list(melt_access_spec(parameterlist$CUBEinformation, name = "KUBER"),
+                                      melt_access_spec(parameterlist$TNPinformation, name = "TNP_PROD")))
+  if(length(stnp) > 0) specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$STNPinformation, 
+                                                                                   name = "STANDARD TNP")))
   
-  # Extract KUBER, TNP_PROD, and STNP specs
-  specs <- data.table::rbindlist(list(meltdscr(kuber, name = "KUBER"),
-                                      meltdscr(tnp, name = "TNP_PROD")))
-  
-  if(length(stnp) > 0){
-    specs <- data.table::rbindlist(list(specs,
-                                        meltdscr(stnp, name = "STANDARD TNP")))
-  }
-  
-  # Add FILGRUPPER and FILFILTRE specs
-  # Read FILFILTRE table
-  FilterDscr <- data.table::as.data.table(sqlQuery(globs$dbh, paste0("SELECT * FROM FILFILTRE WHERE VERSJONFRA<=", datef, " AND VERSJONTIL>", datef), as.is = TRUE))
-  
-  for(i in names(filgrupper)){
-    
-    fgp <- filgrupper[[i]]
-    # Columns after "from "vals" are created in FinnFilgruppeParametre()
-    # We only want to extract the access specs
+  for(i in names(parameterlist$fileinformation)){
+    fgp <- parameterlist$fileinformation[[i]]
     end = which(names(fgp) == "vals")-1
-    fgp <- fgp[1:end]
-    
-    specs <- data.table::rbindlist(list(specs,
-                            meltdscr(fgp, name = paste0("FILGRUPPER: ", i))))
-    
-    # Add FILFILTRE table if used
-    
-    if(i %in% FilterDscr$FILVERSJON){
-      
-      filfiltre <- FilterDscr[FILVERSJON == i]
-      
-      specs <- data.table::rbindlist(list(specs,
-                              meltdscr(filfiltre, name = paste0("FILFILTRE: ", i))))
+    specs <- data.table::rbindlist(list(specs, melt_access_spec(fgp[1:end], name = paste0("FILGRUPPER: ", i))))
+    if(i %in% parameterlist$FILFILTRE$FILVERSJON){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$FILFILTRE[FILVERSJON == i], 
+                                                                  name = paste0("FILFILTRE: ", i))))
     }
   }
   
-  # Add FRISKVIK
-  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", getOption("khfunctions.year"), "AND KUBE_NAVN='", KUBEid, "'"), as.is = TRUE))
-  
-  for(i in Friskvik$ID){
-    friskvikindikator <- Friskvik[ID == i]
-    specs <- data.table::rbindlist(list(specs,
-                                        meltdscr(friskvikindikator, name = paste0("FRISKVIK:ID-", i))))
+  if(length(parameterlist$friskvik$INDIKATOR) > 0){
+    for(i in parameterlist$friskvik$ID){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$friskvik[ID == i], 
+                                                                  name = paste0("FRISKVIK:ID-", i))))
+    }
   }
   
-  return(specs)
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", KUBEid, "_", batchdate, ".csv"))
+  data.table::fwrite(specs, file = file, sep = ";")
+}
+
+#' @title melt_access_spec
+#' @description
+#' helper function for save_access_specs
+#' @noRd
+melt_access_spec <- function(dscr, name = NULL){
+  if(is.null(name)){
+    name <- deparse(substitute(dscr))
+  }
+  d <- data.table::as.data.table(dscr)
+  d[, names(d) := lapply(.SD, as.character)]
+  d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
+  d[, Tabell := name]
+  data.table::setcolorder(d, "Tabell")
 }
 
 #' @fix_geo_special
