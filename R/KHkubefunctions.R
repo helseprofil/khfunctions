@@ -1101,7 +1101,7 @@ var_num <- function(x){
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
+kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -1114,10 +1114,29 @@ kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL){
   varDF <- specDF[, .SD, .SDcols = varSpec]
   if(!is.null(dims)) varDF[, DIMS := list(dims)]
   if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
+  if(!is.null(geoprikktriangel)) varDF[, Stata_naboprGeo := as.character(geoprikktriangel)]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   message("Create Stata spec in ", fileSpec)
   return(specDF)
+}
+
+get_geonaboprikk_triangles <- function(geoniv){
+  levels <- character()
+  for(niv in c("F", "K", "B")){
+    if(niv %in% geoniv) levels <- c(levels, niv)
+  }
+  
+  out <- "GEO~"
+  for(level in 1:length(levels)){
+    niv <- levels[level]
+    triangel <- switch(niv,
+                       "F" = getOption("khfunctions.geoprikk")$LF,
+                       "K" = getOption("khfunctions.geoprikk")$FK,
+                       "B" = getOption("khfunctions.geoprikk")$KB)
+    out <- paste0(out, "niva", level, triangel)
+  }
+  return(out)
 }
 
 #' find_dims (vl)
