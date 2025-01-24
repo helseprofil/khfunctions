@@ -61,7 +61,7 @@ LagKUBE <- function(KUBEid,
   
   # LAG TNF ----
   
-  cat("******LAGER TNF\n")
+  cat("\n******LAGER TNF\n")
   TNtab <- merge_teller_nevner(files = filer, filedesigns = filedesign, fileparameters = fileinformation, TNPparameters = TNPinformation, KUBEparameters = KUBEinformation, globs = globs)
   TNF <- TNtab$TNF
   KUBEd <- TNtab$KUBEd
@@ -78,7 +78,7 @@ LagKUBE <- function(KUBEid,
     # Finn saa FellesTab for disse
     cat("***Skal finne felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     STFd <- FinnDesignEtterFiltrering(filedesign[[filer$STANDARDTELLER]], PredFilter$Design, PredFilter$Pkols, FGP = fileinformation[[filer$STANDARDTELLER]], globs = globs)
-    if (!is.na(filer$STANDARDNEVNER)) {
+    if (!is.null(filer$STANDARDNEVNER) && !is.na(filer$STANDARDNEVNER)) {
       SNFd <- FinnDesignEtterFiltrering(filedesign[[filer$STANDARDNEVNER]], PredFilter$Design, PredFilter$Pkols, FGP = fileinformation[[filer$STANDARDNEVNER]], globs = globs)
       STNFd <- FinnFellesTab(STFd, SNFd, globs = globs)$FDes
     } else {
