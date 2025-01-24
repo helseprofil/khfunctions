@@ -48,22 +48,22 @@ KHerr <- function(error) {
 #'
 #' @param TABELL 
 #' @param TABELLnavn 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param format
 DumpTabell <- function(TABELL, TABELLnavn, globs = SettGlobs(), format = NULL) {
-  is_kh_debug()
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
-  
-  if (format == "CSV") {
-    write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
-  } else if (format == "R") {
-    .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
-    print(DUMPtabs)
-  } else if (format == "STATA") {
-    TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
-    names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
-    names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-    foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+  for(fmt in format){
+    if (fmt == "CSV") {
+      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
+    } else if (fmt == "R") {
+      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
+      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
+    } else if (fmt == "STATA") {
+      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
+      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+    }
   }
 }
 
@@ -157,7 +157,7 @@ get_dimension_columns <- function(columnnames) {
 #'
 #' @param FIL 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -258,7 +258,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
 #'
 #' @param file 
 #' @param valsumbardef 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #'
 #' @returns
 #' @export
@@ -296,7 +296,7 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
 #' @param FIL 
 #' @param vals 
 #' @param snitt 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -346,7 +346,7 @@ ht2 <- function(x, n = 3) {
 #' FinnFilGruppeFraKoblid (kb)
 #'
 #' @param koblid 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -360,7 +360,7 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
 #' @param filbesk 
 #' @param gruppe 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
@@ -410,7 +410,7 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' @param felt 
 #' @param verdi 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
@@ -462,7 +462,7 @@ LesMultiHead <- function(mhstr) {
 #' @param ROLLE 
 #' @param TYP 
 #' @param IDKOLS 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   

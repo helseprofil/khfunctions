@@ -46,11 +46,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       eval(parse(text = paste("DF<-DF[,-", filbesk$KASTKOLS, "]", sep = "")))
     }
     
-    if ("RESHAPEpre" %in% names(dumps)) {
-      for (format in dumps[["RESHAPEpre"]]) {
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpre", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("RESHAPEpre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpre", sep = "_"), globs = globs, format = dumps[["RESHAPEpre"]])
     
     # if (!(is.na(filbesk$RESHAPEid) || filbesk$RESHAPEid=='')){
     if (!(is.na(filbesk$RESHAPEvar) || filbesk$RESHAPEvar == "")) {
@@ -61,12 +57,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       # print(head(DF))
     }
     
-    if ("RESHAPEpost" %in% names(dumps)) {
-      for (format in dumps[["RESHAPEpost"]]) {
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpost", sep = "_"), globs = globs, format = format)
-      }
-    }
-    
+    if ("RESHAPEpost" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpost", sep = "_"), globs = globs, format = dumps[["RESHAPEpost"]])
     
     TilFilLogg(filbesk$KOBLID, "RESHAPEh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
   }
@@ -79,11 +70,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       DF[, mhl$colnames] <- stringr::str_split_fixed(DF[, mhl$varname], mhl$sep, 2)
     }
     
-    if ("RSYNT2pre" %in% names(dumps)) {
-      for (format in dumps[["RSYNT2pre"]]) {
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2pre", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("RSYNT2pre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2pre", sep = "_"), globs = globs, format = dumps[["RSYNT2pre"]])
     
     # EVT SPESIALBEHANDLING
     if (!is.na(filbesk$RSYNT2)) {
@@ -112,11 +99,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       }
     }
     
-    if ("RSYNT2post" %in% names(dumps)) {
-      for (format in dumps[["RSYNT2post"]]) {
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2post", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("RSYNT2post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2post", sep = "_"), globs = globs, format = dumps[["RSYNT2post"]])
   }
   
   if (ok == 1) {
@@ -193,11 +176,8 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   
   # SKILL EVT UT SOM EGEN FUNKSJON
   # Nullstill logg
-  if ("KODEBOKpre" %in% names(dumps)) {
-    for (format in dumps[["KODEBOKpre"]]) {
-      DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), globs = globs, format = format)
-    }
-  }
+  if ("KODEBOKpre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), globs = globs, format = dumps[["KODEBOKpre"]])
+  
   RODBC::sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
   if (ok == 1) {
     colClass <- sapply(DF, class)
@@ -348,11 +328,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
       DF$LANDBAK <- as.integer(plyr::mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
     }
     
-    if ("KODEBOKpost" %in% names(dumps)) {
-      for (format in dumps[["KODEBOKpost"]]) {
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpost", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("KODEBOKpost" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpost", sep = "_"), globs = globs, format = dumps[["KODEBOKpost"]])
     
     # DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER maatte tas over pga intervall)
     DF <- subset(DF, rowSums(DF[, names(DF) %in% getOption("khfunctions.taborgs")] == "-") == 0)
@@ -498,7 +474,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
 #'
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param dumps 
 LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), dumps = character()) {
   is_kh_debug()
@@ -627,22 +603,15 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), 
     TilFilLogg(filbesk$KOBLID, "modINNLESh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
     
     if ("RSYNT1pre" %in% names(dumps)) {
-      for (format in dumps[["RSYNT1pre"]]) {
-        
-        if(format == "STATA"){
-          # Add special variables used in RSYNT1 STATA code
-          DF$filgruppe <- filbesk$FILGRUPPE
-          DF$delid <- filbesk$DELID
-          DF$tab1_innles <- filbesk$TAB1
-        }
-        
-        DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = format)
-        
-        if(format == "STATA"){
-          # Delete special variables 
-          DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
-        }
+      if("STATA" %in% dumps[["RSYNT1pre"]]){
+        # Add special variables used in RSYNT1 STATA code
+        DF$filgruppe <- filbesk$FILGRUPPE
+        DF$delid <- filbesk$DELID
+        DF$tab1_innles <- filbesk$TAB1
       }
+      DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = dumps[["RSYNT1pre"]])
+        
+      if("STATA" %in% dumps[["RSYNT1pre"]]) DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
     }
     
     # EVT SPESIALBEHANDLING
@@ -680,11 +649,7 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), 
     }
   }
   
-  if ("RSYNT1post" %in% names(dumps)) {
-    for (format in dumps[["RSYNT1post"]]) {
-      DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), globs = globs, format = format)
-    }
-  }
+  if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), globs = globs, format = dumps[["RSYNT1post"]])
   
   # sink(file=paste(getOption("khfunctions.root"),"/hoder.txt",sep=""),append=TRUE)
   # cat("\n#################\nFIL: ")
@@ -743,7 +708,7 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
 #' @param TomRadSlutt 
 #' @param FjernTommeRader 
 #' @param FjernTommeKol 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param ... 
 cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = SettGlobs(), ...) {
   # Ved bruk av undertabeller med titler som ikke staar i egen kolonne
@@ -838,7 +803,7 @@ cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0)
 #'
 #' @param xlsfil 
 #' @param ark 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param brukfread 
 #' @param na.strings 
 #' @param ryddOpp 
@@ -893,7 +858,7 @@ Xls2R.KH <- function(xlsfil, ark = "", globs = SettGlobs(), brukfread = TRUE, na
 #'
 #' @param gruppe 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -958,7 +923,7 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
 #'
 #' @param filgruppe 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   datef <- FormatSqlBatchdate(batchdate)
   sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
@@ -983,7 +948,7 @@ FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = 
 #' @param FullResult 
 #' @param batchdate 
 #' @param versjonert 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -1100,7 +1065,7 @@ SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettK
 #' @param DELF 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #'
 #' @return
 #' @export
@@ -1166,7 +1131,7 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Set
 #' @param filbesk 
 #' @param valsubs 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -1229,7 +1194,7 @@ KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs
 #' @param geo 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), harlevekaar = F) {
   is_kh_debug()
   
@@ -1347,7 +1312,7 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
 #' @param filbesk 
 #' @param FGP 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -1406,7 +1371,7 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
 #' @param kjonn 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -1436,7 +1401,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
 #' @param utdann 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param regexp 
 UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
@@ -1469,7 +1434,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
 #' @param innvkat 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param regexp 
 INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
@@ -1504,7 +1469,7 @@ INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param landbak 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param regexp 
 LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
   is_kh_debug()
@@ -1542,7 +1507,7 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
 #' @param aar 
 #' @param filbesk 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   

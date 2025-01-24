@@ -3,7 +3,7 @@
 #' @param parameterlist parameters generated with get_cubeparameters()
 #' @param standardfiles Should standard teller and nevner files be used? default = FALSE
 #' @param design Design list
-#' @param globs global parameters generated with SettGlobs()
+#' @param globs global parameters, defaults to SettGlobs
 merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, design = NULL, globs = SettGlobs()){
   is_kh_debug()
   args <- get_merge_teller_nevner_args(standardfiles = standardfiles, parameterlist = parameterlist)
@@ -88,7 +88,7 @@ get_merge_teller_nevner_args <- function(standardfiles, parameterlist){
 #' @param design 
 #' @param tellerfildesign 
 #' @param nevnerfildesign 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
   
   if(!is.null(design)) return(design)
@@ -108,7 +108,7 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
 #'
 #' @param DF1 
 #' @param DF2 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
   is_kh_debug()
@@ -139,7 +139,7 @@ FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
 #'
 #' @param ORGd 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   KubeD <- list(
     TMP = FinnKubeDesign(KUBEdscr, ORGd, bruk0 = TRUE, FGP = FGP, globs = globs),
@@ -153,7 +153,7 @@ FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), gl
 #' @param filename 
 #' @param filedesign 
 #' @param tndesign 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
   redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, globs = globs)
   if (nrow(redesign$Udekk) > 0) KHerr(paste0("UDEKKA i redesign av", filename))
@@ -166,7 +166,7 @@ do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
 #' rectangularizes cube based on the given design
 #' @param colnames 
 #' @param design 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 set_rectangularized_cube_design <- function(colnames, design, globs = SettGlobs()) {
   GEOstdAAR <- getOption("khfunctions.year")
   DTlist <- list()
@@ -214,7 +214,7 @@ report_removed_codes <- function(file, cube){
 #'
 #' @param file 
 #' @param design 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_filter_file <- function(file, design, globs = SettGlobs()) {
   for (del in names(design)) {
     cols <- globs$DefDesign$DelKols[[del]]

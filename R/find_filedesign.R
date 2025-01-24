@@ -4,7 +4,7 @@
 #' 
 #' @param file filegroup
 #' @param fileparameters parameters from ACCESS 
-#' @param globs global parameters
+#' @param globs global parameters, defaults to SettGlobs
 find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
   if(is.null(fileparameters)) fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
   if(!is(file, "data.table")) data.table::setDT(file)

@@ -112,7 +112,7 @@ SettDefDesignKH <- function(dbcon) {
 
 #' SettKodeBokGlob (kb)
 #'
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettKodeBokGlob <- function(globs = SettGlobs()) {
   is_kh_debug()
   
@@ -148,7 +148,7 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
 
 #' SettLegitimeKoder (kb)
 #'
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettLegitimeKoder <- function(globs = SettGlobs()) {
   is_kh_debug()
 

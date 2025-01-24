@@ -5,7 +5,7 @@
 #' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param versjonert 
 #' @param csvcopy Save a CSV-copy?
-#' @param globs global parameters, defaults to SettGlobs()
+#' @param globs global parameters, defaults to SettGlobs
 #' @param dumps list of required dumps
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
@@ -53,9 +53,9 @@ LagKUBE <- function(KUBEid,
     # Bruk parameters$PredFilter paa ST og evt SN
     # Finn saa FellesTab for disse
     cat("***Skal finne felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
-    STFd <- FinnDesignEtterFiltrering(parameters$filedesign[[parameters$files$STANDARDTELLER]], parameters$PredFilter$Design, parameters$PredFilter$Pkols, FGP = parameters$fileinformation[[parameters$files$STANDARDTELLER]], globs = globs)
+    STFd <- find_design_after_filter(file = "STANDARDTELLER", parameterlist = parameters, globs = globs)
     if (!is.na(parameters$files$STANDARDNEVNER)) {
-      SNFd <- FinnDesignEtterFiltrering(parameters$filedesign[[parameters$files$STANDARDNEVNER]], parameters$PredFilter$Design, parameters$PredFilter$Pkols, FGP = parameters$fileinformation[[parameters$files$STANDARDNEVNER]], globs = globs)
+      SNFd <- find_design_after_filter(file = "STANDARDNEVNER", parameterlist = parameters, globs = globs)
       STNFd <- FinnFellesTab(STFd, SNFd, globs = globs)$FDes
     } else {
       STNFd <- STFd
@@ -64,7 +64,7 @@ LagKUBE <- function(KUBEid,
     STNPFd <- FinnFellesTab(STNFd, parameters$filedesign[[parameters$files$PREDNEVNER]], globs = globs)$FDes
     # Maa filtrere STNPFd med parameters$PredFilter igjen for aa finne ny STNFd som gir til-design for ST og SN
     # (merge med PN kan ha endra fra STNFd-versjonen over
-    STNFd <- FinnDesignEtterFiltrering(STNPFd, parameters$PredFilter$Design, FGP = parameters$fileinformation[[parameters$files$STANDARDTELLER]], globs = globs)
+    STNFd <- find_design_after_filter(file = "STANDARDTELLER", parameterlist = parameters, originaldesign = STNPFd, outpredfilter = FALSE, globs = globs)
     cat("---Satt felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     
     STN <- merge_teller_nevner(parameterlist = parameters, standardfiles = TRUE, design = STNFd, globs = globs)
@@ -148,11 +148,7 @@ LagKUBE <- function(KUBEid,
   rydd <- setdiff(names(.GlobalEnv$BUFFER), c("BEF_GKa", "BEF_GKu"))
   .GlobalEnv$BUFFER[rydd] <- NULL
   
-  if ("raaKUBE0" %in% names(dumps)) {
-    for (format in dumps[["raaKUBE0"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = format)
-    }
-  }
+  if ("raaKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = dumps[["raaKUBE0"]])
   
   # STANDARDISERING ----
   
@@ -257,11 +253,7 @@ LagKUBE <- function(KUBEid,
   # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
   fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
   
-  if ("maKUBE0" %in% names(dumps)) {
-    for (format in dumps[["maKUBE0"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), globs = globs, format = format)
-    }
-  }
+  if ("maKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), globs = globs, format = dumps[["maKUBE0"]])
   
   # Anonymiser og skjul ----
   
@@ -281,11 +273,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  if ("anoKUBE1" %in% names(dumps)) {
-    for (format in dumps[["anoKUBE1"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE1"), globs = globs, format = format)
-    }
-  }
+  if ("anoKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE1"), globs = globs, format = dumps[["anoKUBE1"]])
   
   # Anonymiser, trinn 2 Ekte anonymisering basert paa liten teller, liten nevner og liten N-T
   if (!(is.na(parameters$CUBEinformation$PRIKK_T) | parameters$CUBEinformation$PRIKK_T == "")) {
@@ -301,21 +289,14 @@ LagKUBE <- function(KUBEid,
     KUBE[NEVNER <= parameters$CUBEinformation$PRIKK_N & NEVNER.f >= 0, c("TELLER", "TELLER.f", "RATE", "RATE.f") := list(NA, 3, NA, 3)]
   }
   
-  if ("anoKUBE2" %in% names(dumps)) {
-    for (format in dumps[["anoKUBE2"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE2"), globs = globs, format = format)
-    }
-  }
-  # Anonymiser trinn 3. Anonymiser naboer
+  if ("anoKUBE2" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE2"), globs = globs, format = dumps[["anoKUBE2"]])
+
+    # Anonymiser trinn 3. Anonymiser naboer
   if (!(is.na(parameters$CUBEinformation$OVERKAT_ANO) | parameters$CUBEinformation$OVERKAT_ANO == "")) {
     # DEVELOP: BRuk .f=4 her slik at ikke slaar ut i HULL under
     KUBE <- AnonymiserNaboer(KUBE, parameters$CUBEinformation$OVERKAT_ANO, FGP = parameters$fileinformation[[parameters$files$TELLER]], parameters$standardmethod, globs = globs)
   }
-  if ("anoKUBE3" %in% names(dumps)) {
-    for (format in dumps[["anoKUBE3"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE3"), globs = globs, format = format)
-    }
-  }
+  if ("anoKUBE3" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE3"), globs = globs, format = dumps[["anoKUBE3"]])
   
   # Anonymiser trinn 4. Skjule svake og skjeve tidsserrier
   SvakAndelAvSerieGrense <- getOption("khfunctions.anon_svakandel")
@@ -335,19 +316,11 @@ LagKUBE <- function(KUBEid,
     KUBE[, c("SVAK", "HULL", "SKJUL", "AntAar") := NULL]
   }
 
-  if ("anoKUBE4" %in% names(dumps)) {
-    for (format in dumps[["anoKUBE4"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE4"), globs = globs, format = format)
-    }
-  }
+  if ("anoKUBE4" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_anoKUBE4"), globs = globs, format = dumps[["anoKUBE4"]])
   
   # LAYOUT ----
   
-  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) {
-    for (format in dumps[["KUBE_SLUTTREDIGERpre"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = format)
-    }
-  }
+  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpre"]])
   
   ## RSYNT_SLUTTREDIGER ---- 
   
@@ -372,11 +345,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) {
-    for (format in dumps[["KUBE_SLUTTREDIGERpost"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), globs = globs, format = format)
-    }
-  }
+  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpost"]])
   
   ## KOLONNER ----
   
@@ -568,16 +537,12 @@ LagKUBE <- function(KUBEid,
     tabs <- setdiff(tabs, "KJONN")
   }
   
-  # Filtrer bort GEO, ALDER og KJONN som ikke skal rapporteres
-  KUBE <- KUBE[GEO %in% globs$UtGeoKoder]
+  # Filtrer bort GEO alder og kjonn
+  KUBE <- filter_invalid_outcodes(data = KUBE, globs = globs)
   
   # EVT SPESIALBEHANDLING
   
-  if ("STATAPRIKKpre" %in% names(dumps)) {
-    for (format in dumps[["STATAPRIKKpre"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), globs = globs, format = format)
-    }
-  }
+  if ("STATAPRIKKpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), globs = globs, format = dumps[["STATAPRIKKpre"]])
 
   # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
@@ -587,11 +552,7 @@ LagKUBE <- function(KUBEid,
 
   KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
 
-  if ("STATAPRIKKpost" %in% names(dumps)) {
-    for (format in dumps[["STATAPRIKKpost"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = format)
-    }
-  }
+  if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = dumps[["STATAPRIKKpost"]])
   
   # RSYNT_POSTPROSESS ---- 
   if (!(is.na(parameters$CUBEinformation$RSYNT_POSTPROSESS) | parameters$CUBEinformation$RSYNT_POSTPROSESS == "")) {
@@ -613,18 +574,7 @@ LagKUBE <- function(KUBEid,
     }
   }
   
-  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) {
-    for (format in dumps[["RSYNT_POSTPROSESSpost"]]) {
-      DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), globs = globs, format = format)
-    }
-  }
-  
-  if ("ALDER" %in% names(KUBE)) {
-    KUBE <- KUBE[!ALDER %in% c("999_999", "888_888"), ]
-  }
-  if ("KJONN" %in% names(KUBE)) {
-    KUBE <- KUBE[!KJONN %in% c(8, 9), ]
-  }
+  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), globs = globs, format = dumps[["RSYNT_POSTPROSESSpost"]])
   
   ## ---- TODO: REKTANGULARISERE MANGLENDE RADER FOR BYDEL ----
   ## Der bydel starter senere enn andre mÃÂ¥ disse radene genereres, da ALLVIS ikke takler manglende rader.

@@ -181,7 +181,7 @@ load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, ve
 #' @param file 
 #' @param vals 
 #' @param rectangularize 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, globs = SettGlobs()) {
   GEOstdAAR = getOption("khfunctions.year")
   geoomk <- globs$KnrHarm
@@ -250,7 +250,7 @@ set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
 #' @noRD
 #' @param file 
 #' @param parts 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_filfiltre_kollapsdeler <- function(file, parts, globs){
   tabcols <- get_dimension_columns(names(file))
   parts <- unlist(strsplit(parts, ","))
@@ -311,7 +311,7 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
 #'
 #' @param FIL 
 #' @param RD 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -431,7 +431,7 @@ OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
 #' @param TNF 
 #' @param NYdscr 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -505,7 +505,7 @@ do_filfiltre_nykolsmerge <- function(file, filefilter){
 #' @param YL year lag
 #' @param AL age lag
 #' @param vals value to create lag value
-#' @param globs global parameters
+#' @param globs global parameters, defaults to SettGlobs
 YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
   ltag <- function(lag) {
     ltag <- ""

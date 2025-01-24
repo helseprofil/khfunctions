@@ -4,7 +4,7 @@
 #' @param ORGd 
 #' @param bruk0 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -69,7 +69,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param OrgParts 
 #' @param bruk0 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -144,7 +144,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 #' @param fradesign 
 #' @param tildesign 
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
   is_kh_debug()
   KB = globs$KB
@@ -504,7 +504,7 @@ handle_udekk <- function(FULL, namesFULL, TempFile){
 #' @param del 
 #' @param har 
 #' @param betcols 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param IntervallHull 
 #' SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)
 SettPartDekk <- function(KB, 
@@ -548,7 +548,7 @@ SettPartDekk <- function(KB,
 #'
 #' @param ORGd 
 #' @param Filter 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #'
 #' @return
 #' @export
@@ -564,19 +564,25 @@ FinnRedesignForFilter <- function(ORGd, Filter, globs = SettGlobs()) {
   return(FinnRedesign(ORGd, list(Part = MODd), globs = globs))
 }
 
-#' FinnDesignEtterFiltrering (kb)
+#' @title find_design_after_filter
 #'
-#' @param ORGd 
-#' @param Filter 
-#' @param FilterKols 
-#' @param FGP 
-#' @param globs 
-FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+#' @param file name of file to design
+#' @param parameterlist parameters
+#' @param originaldesign original design if existing. Default is design for file.
+#' @param outpredfilter shuld columns in predfilter be removed, default = TRUE
+#' @param globs global parameters, defaults to SettGlobs
+find_design_after_filter <- function(file, parameterlist, originaldesign = NULL, outpredfilter = TRUE, globs = SettGlobs()) {
+  filename <- parameterlist$files[[file]]
+  fileinformation <- parameterlist$fileinformation[[filename]]
+  designfilter <- parameterlist$PredFilter$Design
+  if(is.null(originaldesign)) originaldesign <- parameterlist$filedesign[[filename]]
+  filtercolumns <- character()
+  if(outpredfilter) filtercolumns <- parameterlist$PredFilter$Pkols
   
-  FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
-  FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
-  return(FinnDesign(FiltD, FGP = FGP, globs = globs))
+  outdesign <- FinnRedesignForFilter(originaldesign, designfilter, globs = globs)$Dekk
+  outcols <- setdiff(names(outdesign), filtercolumns)
+  outdesign <- outdesign[, ..outcols]
+  return(FinnDesign(outdesign, FGP = fileinformation, globs = globs))
 }
 
 #' LeggTilSumFraRader (kb)
@@ -585,7 +591,7 @@ FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), F
 #' @param TNF 
 #' @param NYdscr 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -639,7 +645,7 @@ LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), gl
 #' @param FIL 
 #' @param pstrorg 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -752,7 +758,7 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
 #' @param Fil 
 #' @param Part 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -766,7 +772,7 @@ OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs =
 #'
 #' @param Nytt 
 #' @param Org 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -825,7 +831,7 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
 #' @param per 
 #' @param FyllMiss 
 #' @param AntYMiss 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
   is_kh_debug()
   UT <- KUBE[0, ]
@@ -949,7 +955,7 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_d
 #'
 #' @param ovkatspec 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   Foverkat <- list()
@@ -1174,7 +1180,7 @@ find_dims <- function(dt, spec){
 #' @param FGP
 #' @param modus 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param ...
 LagAlleFriskvikIndikatorerForKube <- function(KUBEid, 
                                               KUBE, 
@@ -1205,7 +1211,7 @@ LagAlleFriskvikIndikatorerForKube <- function(KUBEid,
 #' @param modus
 #' @param aargang 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 LagFriskvikIndikator <- function(id, 
                                  KUBE = data.table(), 
                                  FGP = list(amin = 0, amax = 120), 
@@ -1423,4 +1429,11 @@ fix_geo_special <- function(d,
     d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
   }
   return(d)
+}
+
+filter_invalid_outcodes <- function(data, globs = SettGlobs()){
+  data <- data[GEO %in% globs$UtGeoKoder]
+  if("ALDER" %in% names(data)) data <- data[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
+  if("KJONN" %in% names(data)) data <- data[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
+  return(data)
 }

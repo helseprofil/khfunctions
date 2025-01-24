@@ -3,7 +3,7 @@
 #' @param fradesign 
 #' @param tildesign 
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
   is_kh_debug()
   KB = globs$KB
