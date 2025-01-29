@@ -566,10 +566,12 @@ expand.grid.dt <- function(...){
   }
     
   res <- DTs[[1L]]
-  for(i in 2:length(DTs)){
-    res[, names(DTs[[i]]) := DTs[[i]]]
+  if(length(DTs) > 1){
+    for(i in 2:length(DTs)){
+      res[, names(DTs[[i]]) := DTs[[i]]]
+    }
   }
-    
+  
   rm(DTs, rows)
   gc()
   return(res)

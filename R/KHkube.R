@@ -54,7 +54,7 @@ LagKUBE <- function(KUBEid,
     # Finn saa FellesTab for disse
     cat("***Skal finne felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
     STFd <- find_design_after_filter(file = "STANDARDTELLER", parameterlist = parameters, globs = globs)
-    if (!is.na(parameters$files$STANDARDNEVNER)) {
+    if ("STANDARDNEVNER" %in% names(parameters$files)) {
       SNFd <- find_design_after_filter(file = "STANDARDNEVNER", parameterlist = parameters, globs = globs)
       STNFd <- FinnFellesTab(STFd, SNFd, globs = globs)$FDes
     } else {
