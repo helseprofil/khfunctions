@@ -151,13 +151,14 @@ load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, ve
     
     isnykolsmerge <- grepl("\\S", filefilter$NYKOLSmerge)
     if(isnykolsmerge){
+      # ERSTATT MED NY FUNKSJON!
       # FIL <- do_filfiltre_nykolsmerge(file = FIL, filefilter = filefilter)
       # cat("\nFILFILTRE:NYKOLSmerge\n")
-      # NY <- eval(parse(text = filefilter$NYKOLSmerge))
-      # tabK <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
-      # data.table::setkeyv(NY, tabK)
-      # data.table::setkeyv(FIL, tabK)
-      # FIL <- NY[FIL]
+      NY <- eval(parse(text = filefilter$NYKOLSmerge))
+      tabK <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
+      data.table::setkeyv(NY, tabK)
+      data.table::setkeyv(FIL, tabK)
+      FIL <- NY[FIL]
     }
     
     isrsynt1 <- grepl("\\S", filefilter$FF_RSYNT1)

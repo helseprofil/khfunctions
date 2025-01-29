@@ -565,8 +565,10 @@ expand.grid.dt <- function(...){
   }
     
   res <- DFs[[1L]]
-  for(i in 2:length(DFs)){
-    res[, names(DFs[[i]]) := DFs[[i]]]
+  if(length(DFs) > 1){
+    for(i in 2:length(DFs)){ 
+      res[, names(DFs[[i]]) := DFs[[i]]]
+    }
   }
     
   rm(DFs, rows)
