@@ -73,7 +73,7 @@ get_merge_teller_nevner_args <- function(standardfiles, parameterlist){
   args[["filedesigns"]] <- parameterlist$filedesign
   args[["fileparameters"]] <- parameterlist$fileinformation
   args[["TELLERFIL"]] <- ifelse(standardfiles, "STANDARDTELLER", "TELLER")
-  args[["NEVNERFIL"]] <- ifelse(standardfiles, "STANDARDEVNER", "NEVNER")
+  args[["NEVNERFIL"]] <- ifelse(standardfiles, "STANDARDNEVNER", "NEVNER")
   if(standardfiles){
     args[["TNPparameters"]] <- parameterlist$STNPinformation
     args[["KUBEparameters"]] <- NULL

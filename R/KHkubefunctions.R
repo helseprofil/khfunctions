@@ -1031,11 +1031,11 @@ DFHeadToString <- function(innDF, topn = 10) {
 #' Function to censor the data using the STATA method (JRM)
 do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
   is_kh_debug()
-  
+
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
-  
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
+  spc <- data.table::as.data.table(spc)[, mget(c(stataVar, RprikkVar))]
+  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
   r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
   
   # Check that R prikk should be empty if Stata prikk should be used
@@ -1107,7 +1107,6 @@ var_num <- function(x){
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-
 save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
   is_kh_debug()
   
