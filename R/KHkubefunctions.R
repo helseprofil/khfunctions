@@ -1120,28 +1120,16 @@ save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktr
   varDF <- specDF[, .SD, .SDcols = varSpec]
   if(!is.null(dims)) varDF[, DIMS := list(dims)]
   if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
-  if(!is.null(geoprikktriangel)) varDF[, Stata_naboprGeo := as.character(geoprikktriangel)]
+  if(!is.null(geoprikktriangel)) varDF[, names(geoprikktriangel) := geoprikktriangel]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   return(invisible(specDF))
 }
 
 get_geonaboprikk_triangles <- function(geoniv){
-  levels <- character()
-  for(niv in c("F", "K", "B")){
-    if(niv %in% geoniv) levels <- c(levels, niv)
-  }
-  
-  out <- "GEO~"
-  for(level in 1:length(levels)){
-    niv <- levels[level]
-    triangel <- switch(niv,
-                       "F" = getOption("khfunctions.geoprikk")$LF,
-                       "K" = getOption("khfunctions.geoprikk")$FK,
-                       "B" = getOption("khfunctions.geoprikk")$KB)
-    out <- paste0(out, "niva", level, triangel)
-  }
-  return(out)
+  data.table::data.table("Stata_naboprGeo_LF" = paste0("niva1", getOption("khfunctions.geoprikk")$LF),
+                         "Stata_naboprGeo_FK" = paste0("niva2", getOption("khfunctions.geoprikk")$FK),
+                         "Stata_naboprGeo_KB" = paste0("niva3", getOption("khfunctions.geoprikk")$KB))
 }
 
 #' find_dims (vl)
