@@ -168,8 +168,7 @@ LagKUBE <- function(KUBEid,
     KUBE <- data.table::copy(TNF)
   }
   
-  rydd <- setdiff(names(.GlobalEnv$BUFFER), c("BEF_GKa", "BEF_GKu"))
-  .GlobalEnv$BUFFER[rydd] <- NULL
+  .GlobalEnv$BUFFER <- NULL
   
   if ("raaKUBE0" %in% names(dumps)) {
     for (format in dumps[["raaKUBE0"]]) {
