@@ -145,8 +145,7 @@ LagKUBE <- function(KUBEid,
     KUBE <- data.table::copy(TNF)
   }
   
-  rydd <- setdiff(names(.GlobalEnv$BUFFER), c("BEF_GKa", "BEF_GKu"))
-  .GlobalEnv$BUFFER[rydd] <- NULL
+  .GlobalEnv$BUFFER <- NULL
   
   if ("raaKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = dumps[["raaKUBE0"]])
   
