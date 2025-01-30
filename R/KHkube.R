@@ -605,8 +605,8 @@ LagKUBE <- function(KUBEid,
   # STATAPRIKKING ---- 
   # Lage stataspec og overskrive helseprofil/kubespec.csv inkludert DIMS 
   dims <- find_dims(dt = KUBE, spec = fileinformation)
-  geoprikk_triangles <- get_geonaboprikk_triangles(geoniv = unique(KUBE$GEOniv))
-  stataspec <- kube_spec(spec = KUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = geoprikk_triangles)
+  # geoprikk_triangles <- get_geonaboprikk_triangles(geoniv = unique(KUBE$GEOniv))
+  stataspec <- kube_spec(spec = KUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
 
   KUBE <- do_stata_prikk(dt = KUBE, spc = stataspec, batchdate = batchdate, geonaboprikk = geonaboprikk, globs = globs)
 
