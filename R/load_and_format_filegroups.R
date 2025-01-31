@@ -143,7 +143,7 @@ load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, ve
     # if(isnyetab) FIL <- AggregerRader(FIL, filefilter$NYETAB, FGP = FGP)
     
     isnyekolrad <- grepl("\\S", filefilter$NYEKOL_RAD)
-    if(isnyekolrad) FIL <- LeggTilSumFraRader(FIL, filefilter$NYEKOL_RAD, FGP = FGP, globs = globs)
+    if(isnyekolrad) FIL <- LeggTilSumFraRader(FIL, filefilter$NYEKOL_RAD, FGP = fileinfo, globs = globs)
     
     # INAKTIV, FJERNE FRA ACCESS?
     # isnyekolkol <- grepl("\\S", filefilter$NYEKOL_KOL)
