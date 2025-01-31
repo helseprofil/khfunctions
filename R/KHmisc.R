@@ -279,6 +279,8 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
     colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
   }
   file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".a")]
+  
+  file <- unique(file)
   # Remove if marked as not "sumbar"
   for(val in valcols){
     if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
