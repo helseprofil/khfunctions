@@ -54,12 +54,15 @@ do_filter_alder_tellerfile <- function(tellerfile, parameters){
   if(!isalder) return(invisible(NULL))
   
   alder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
-  if("ALLE" %in% alder) return(invisible(NULL))
-    
+  if(any(grepl("[^[:digit:]_]", alder))) return(invisible(NULL))
+  
   aldersplit <- tstrsplit(alder, "_")
   amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
-  amax <- max(as.numeric(aldersplit[[2]]), na.rm = T)
-  .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERl >= amin & ALDERh <= amax]
+  .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERl >= amin]
+  if(length(aldersplit) > 1){
+    amax <- max(as.numeric(aldersplit[[2]]), na.rm = T)
+    .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERh <= amax]
+  }
 }
 
 
