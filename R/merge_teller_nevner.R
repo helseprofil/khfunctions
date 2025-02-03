@@ -220,5 +220,16 @@ do_filter_file <- function(file, design, globs = SettGlobs()) {
 set_teller_nevner_names <- function(file, TNPparameters){
   newnames <- gsub(paste0("^", TNPparameters$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
   newnames <- gsub(paste0("^", TNPparameters$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
+  # warn_duplicated_teller_nevner_names(TNPparameters$TELLERKOL, TNPparameters$NEVNERKOL, names(file))
   data.table::setnames(file, names(file), newnames)
+  warn_duplicated_column_names(names(file))
+}
+
+warn_duplicated_column_names <- function(columnnames){
+  if(any(duplicated(columnnames))){
+    message(paste0("\nNB!!! DUPLICATED COLUMN NAMES!",
+                   "\nThe following column names were duplicated when trying to set TELLER and NEVNER according to what is provided in TNP_PROD:\n", 
+                   paste(" -", columnnames[duplicated(columnnames)], collapse = "\n"),
+                   "\nAre you trying to e.g. add a separate NEVNER file to a file already containing NEVNER?"))
+  } 
 }
