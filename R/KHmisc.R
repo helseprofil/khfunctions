@@ -269,28 +269,28 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
   tabcols <- get_dimension_columns(names(file))
   valcols <- get_value_columns(names(file))
   colorder <- tabcols 
-  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
-  
-  g <- collapse::GRP(file, tabcols)
-  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = valcols]
-  file[, names(.SD) := collapse::fmax(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".f")]
   for(val in valcols){
     file[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
     colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
   }
-  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".a")]
+  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
   
-  file <- unique(file)
+  g <- collapse::GRP(file, tabcols)
+  aggfile <- add_vars(g[["groups"]],
+                      collapse::fsum(collapse::get_vars(file, valcols), g = g),
+                      collapse::fmax(collapse::get_vars(file, paste0(valcols, ".f")), g = g),
+                      collapse::fsum(collapse::get_vars(file, paste0(valcols, ".a")), g = g))
+  
   # Remove if marked as not "sumbar"
   for(val in valcols){
     if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
       valA <- paste0(val, ".a")
       valF <- paste0(val, ".f")
-      file[get(valA) > 1, c(val, valF) := list(NA, 2)]
+      aggfile[get(valA) > 1, c(val, valF) := list(NA, 2)]
     }
   }
-  data.table::setcolorder(file, colorder)
-  return(file)
+  data.table::setcolorder(aggfile, colorder)
+  return(aggfile)
 }
 
 #' KHaggreger (kb)

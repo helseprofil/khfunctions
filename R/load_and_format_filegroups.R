@@ -106,7 +106,7 @@ do_filter_columns <- function(file, filter){
 #' @param filegroup 
 #' @param filter 
 #' @param filefilter 
-load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, versjonert, globs){
+load_filegroup_to_buffer <- function(filegroup, filter, parameters, versjonert, globs){
   
   filefilter <- parameters$FILFILTRE[FILVERSJON == filegroup]
   isfilefilter <- nrow(filefilter) > 0
@@ -189,7 +189,9 @@ load_filegroup_to_buffer <- function(filegroup, filename, filter, parameters, ve
 do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, globs = SettGlobs()) {
   GEOstdAAR = getOption("khfunctions.year")
   geoomk <- globs$KnrHarm
-  if(any(collapse::funique(file$GEO) %in% geoomk$GEO)){
+  georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
+  if(georecode > 0){
+    cat("\n-Recoding", georecode, "geo-codes\n")
     file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
     file[!is.na(GEO_omk), let(GEO = GEO_omk)][, let(GEO_omk = NULL, HARMstd = NULL)]
   }
