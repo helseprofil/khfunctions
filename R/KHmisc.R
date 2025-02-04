@@ -85,9 +85,10 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
   TABLE[TABLE == ""] <- " " # STATA stÃ¸tter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tÃ¥ler ikke numeriske kolonnenavn
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # replace numeric column names
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
-  haven::write_dta(TABLE, tmpdta)
+  # haven::write_dta(TABLE, tmpdta)
+  foreign::write.dta(TABLE, tmpdta)
   
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
@@ -115,6 +116,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
+  
   # delete data file
   file.remove(tmpdta)
   setwd(wdOrg)
@@ -269,28 +271,28 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
   tabcols <- get_dimension_columns(names(file))
   valcols <- get_value_columns(names(file))
   colorder <- tabcols 
-  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
-  
-  g <- collapse::GRP(file, tabcols)
-  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = valcols]
-  file[, names(.SD) := collapse::fmax(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".f")]
   for(val in valcols){
     file[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
     colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
   }
-  file[, names(.SD) := collapse::fsum(.SD, g = g, TRA = 2), .SDcols = paste0(valcols, ".a")]
+  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
   
-  file <- unique(file)
+  g <- collapse::GRP(file, tabcols)
+  aggfile <- add_vars(g[["groups"]],
+                      collapse::fsum(collapse::get_vars(file, valcols), g = g),
+                      collapse::fmax(collapse::get_vars(file, paste0(valcols, ".f")), g = g),
+                      collapse::fsum(collapse::get_vars(file, paste0(valcols, ".a")), g = g))
+  
   # Remove if marked as not "sumbar"
   for(val in valcols){
     if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
       valA <- paste0(val, ".a")
       valF <- paste0(val, ".f")
-      file[get(valA) > 1, c(val, valF) := list(NA, 2)]
+      aggfile[get(valA) > 1, c(val, valF) := list(NA, 2)]
     }
   }
-  data.table::setcolorder(file, colorder)
-  return(file)
+  data.table::setcolorder(aggfile, colorder)
+  return(aggfile)
 }
 
 #' KHaggreger (kb)
@@ -336,7 +338,7 @@ KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
   }
   if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
 
-  return(FIL)
+  return(unique(FIL))
 }
 
 ht2 <- function(x, n = 3) {

@@ -223,6 +223,7 @@ set_teller_nevner_names <- function(file, TNPparameters){
   # warn_duplicated_teller_nevner_names(TNPparameters$TELLERKOL, TNPparameters$NEVNERKOL, names(file))
   data.table::setnames(file, names(file), newnames)
   warn_duplicated_column_names(names(file))
+  return(file)
 }
 
 warn_duplicated_column_names <- function(columnnames){
