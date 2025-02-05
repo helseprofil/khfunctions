@@ -3,6 +3,8 @@ if(version$major >= 4 & version$minor >= 2){
   Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
 }
 
+invisible(system("git fetch"))
+
 githubpath <- "https://raw.githubusercontent.com/helseprofil/khfunctions/"
 branch <- "master"
 
