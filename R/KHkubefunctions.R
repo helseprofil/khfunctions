@@ -585,61 +585,6 @@ find_design_after_filter <- function(file, parameterlist, originaldesign = NULL,
   return(FinnDesign(outdesign, FGP = fileinformation, globs = globs))
 }
 
-#' LeggTilSumFraRader (kb)
-#'
-#' Helper function in KlargjorFil and LagTNtabell
-#' @param TNF 
-#' @param NYdscr 
-#' @param FGP 
-#' @param globs global parameters, defaults to SettGlobs
-LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
-  
-  if (!(is.na(NYdscr) | NYdscr == "")) {
-    for (sumfra in unlist(stringr::str_split(NYdscr, ";"))) {
-      # cat("SUMFRA: ",sumfra,"\n")
-      if (grepl("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", sumfra)) {
-        nycol <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\1", sumfra)
-        gmlcol <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\2", sumfra)
-        expr <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\3", sumfra)
-        # cat("nycol:",nycol,"gmlcol:",gmlcol,"expr:",expr,"\n")
-        NF <- EkstraherRadSummer(TNF, expr, FGP = FGP, globs = globs)
-        gmlcols <- paste0(gmlcol, c("", ".f", ".a"))
-        nycols <- paste0(nycol, c("", ".f", ".a"))
-        data.table::setnames(NF, gmlcols, nycols)
-        # print(NF)
-        # Sy sammen
-        commontabs <- globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(NF)]
-        
-        # Er usikker paa om hva som egentlig er best her.
-        # Siden OmkodFraPart brukt i EkstraherRadSummer gir full rektulangusering kan man ha satt
-        # deler i NF som er udekket i TNF. 1) Disse oenskes vel egentlig ikke med
-        # men motsatt, 2) dersom TNF ha manglende GEO-koder som finnes i NF er det kanskje oenskelig aa ha disse med
-        # Jeg velger aa sette venstre join TNF->NF slik at problem 1 faller bort
-        # Saa lenge hervaerende prosedyre bare kjoeres etter at TNF er rektangularisert mht GEO faller ogsaa 2) bort
-        # Dette gjelder i standard produskjonsloeype (LagTnTabell, LagKUBE etc)
-        
-        setkeym(TNF, commontabs)
-        setkeym(NF, commontabs)
-        dimorg <- dim(TNF)
-        TNF <- NF[, c(commontabs, nycols), with = FALSE][TNF]
-        cat("LeggTilSumFraRader. Foer er dim(TNF)", dimorg, "og dim(NF)", dim(NF), "etter er dim(TNF)", dim(TNF), "\n")
-        # altsaa ikke
-        # TNF<-merge(TNF,NF[,c(commontabs,nycols),with=FALSE],all=TRUE,by=commontabs)
-        
-        # TNF<-merge(TNF,NF[,c(commontabs,nycols),with=FALSE],all=TRUE,by=commontabs)
-        TNF <- set_implicit_null_after_merge(TNF, list(gmlcol = FGP$vals, nycol = FGP$vals[gmlcol]))
-        
-        # print(TNF)
-      } else {
-        cat("FEIL!!!!!: NYEKOL_RAD har feil format:", NYdscr, "\n")
-      }
-    }
-  }
-  
-  return(TNF)
-}
-
 #' EkstraherRadSummer (kb)
 #'
 #' @param FIL 

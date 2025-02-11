@@ -85,9 +85,10 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
   TABLE[TABLE == ""] <- " " # STATA stÃ¸tter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # STATA 14 tÃ¥ler ikke numeriske kolonnenavn
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # replace numeric column names
   names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
-  haven::write_dta(TABLE, tmpdta)
+  # haven::write_dta(TABLE, tmpdta)
+  foreign::write.dta(TABLE, tmpdta)
   
   sink(tmpdo)
   cat("use ", tmpdta, "\n", sep = "")
@@ -115,6 +116,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
+  
   # delete data file
   file.remove(tmpdta)
   setwd(wdOrg)
@@ -336,7 +338,7 @@ KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
   }
   if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
 
-  return(FIL)
+  return(unique(FIL))
 }
 
 ht2 <- function(x, n = 3) {
