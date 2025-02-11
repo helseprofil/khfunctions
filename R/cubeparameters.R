@@ -25,7 +25,7 @@ get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = Se
 
 #' @title get_cube_information
 #' @description
-#' Helper function for [get_cubeparameters()].
+#' Helper function for `get_cubeparameters()`.
 #' Reads from table KUBER in the ACCESS database
 #' @noRD
 #' @param KUBEid cube name
@@ -35,7 +35,7 @@ get_cube_information <- function(KUBEid, validdates, globs){
   KUBER <- as.list(RODBC::sqlQuery(globs$dbh, 
                                    query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND ", validdates), 
                                    as.is = TRUE))
-  
+  if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", KUBEid, "' i ACCESS::KUBER, har du skrevet riktig?")
   if ((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", KUBEid)
   return(KUBER)
 }
