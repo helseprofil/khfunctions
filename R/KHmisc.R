@@ -48,22 +48,22 @@ KHerr <- function(error) {
 #'
 #' @param TABELL 
 #' @param TABELLnavn 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param format
 DumpTabell <- function(TABELL, TABELLnavn, globs = SettGlobs(), format = NULL) {
-  is_kh_debug()
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
-  
-  if (format == "CSV") {
-    write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
-  } else if (format == "R") {
-    .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
-    print(DUMPtabs)
-  } else if (format == "STATA") {
-    TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
-    names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
-    names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-    foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+  for(fmt in format){
+    if (fmt == "CSV") {
+      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
+    } else if (fmt == "R") {
+      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
+      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
+    } else if (fmt == "STATA") {
+      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
+      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+    }
   }
 }
 
@@ -159,7 +159,7 @@ get_dimension_columns <- function(columnnames) {
 #'
 #' @param FIL 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -260,7 +260,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
 #'
 #' @param file 
 #' @param valsumbardef 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #'
 #' @returns
 #' @export
@@ -300,7 +300,7 @@ do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
 #' @param FIL 
 #' @param vals 
 #' @param snitt 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -350,7 +350,7 @@ ht2 <- function(x, n = 3) {
 #' FinnFilGruppeFraKoblid (kb)
 #'
 #' @param koblid 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -364,7 +364,7 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
 #' @param filbesk 
 #' @param gruppe 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
@@ -414,7 +414,7 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' @param felt 
 #' @param verdi 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
   is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
@@ -466,7 +466,7 @@ LesMultiHead <- function(mhstr) {
 #' @param ROLLE 
 #' @param TYP 
 #' @param IDKOLS 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -555,27 +555,28 @@ expand.grid.df <- function(...) {
 }
 
 expand.grid.dt <- function(...){
-  DFs <- list(...)
-  for(i in seq_along(DFs)){
-    if(!is(DFs[[i]], "data.table")){
-      DFs[[i]] <- data.table::setDT(DFs[[i]])
+  DTs <- list(...)
+  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
+  for(i in seq_along(DTs)){
+    if(!is(DTs[[i]], "data.table")){
+      DTs[[i]] <- data.table::setDT(DTs[[i]])
     }
   }
   
-  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
   
-  for (i in seq_along(DFs)){
-    DFs[[i]] <- DFs[[i]][rows[[i]]]
+  for (i in seq_along(DTs)){
+    DTs[[i]] <- DTs[[i]][rows[[i]]]
   }
     
-  res <- DFs[[1L]]
-  if(length(DFs) > 1){
-    for(i in 2:length(DFs)){ 
-      res[, names(DFs[[i]]) := DFs[[i]]]
+  res <- DTs[[1L]]
+  if(length(DTs) > 1){
+    for(i in 2:length(DTs)){
+      res[, names(DTs[[i]]) := DTs[[i]]]
     }
   }
-    
-  rm(DFs, rows)
+  
+  rm(DTs, rows)
   gc()
   return(res)
 }
@@ -659,37 +660,4 @@ list_files_github <- function(branch){
   files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
   files <- basename(grep("^R/", files, value = T))
   return(files)
-}
-
-#' @title check_if_system_available
-#' @description
-#' Checks if file exists, indicating that the system is already running.
-#' If file doesn't exist, or if user overrides and force continue, the file
-#' is generated and TRUE is returned indicating that the function may continue. 
-#' If the file exists and the user does not override, FALSE is returned indicating 
-#' that the system is busy and data processing stops.
-#' 
-#' The path to the file must be generated in the main function, with an on.exit call to delete
-#' the file when the function finish or crash. This function checks if the file already exists, 
-#' and generate the file if not (or overridden by user). 
-#' 
-#'
-#' @param file 
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-check_if_system_available <- function(file){
-  continue <- TRUE
-  if(file.exists(file)){
-    force_continue <- utils::menu(choices = c("JA", "NEI"),
-                            title = paste0("Det ser ut til at du allerede kjører en kube på denne maskinen.\n",
-                                           "For å hindre feil ved dobbelkjøring tillates ikke parallellkjøring av kuber\n",
-                                           "Dersom du ikke kjører noe parallellt kan du fortsette\n\n",
-                                           "Vil du fortsette?"))
-    if(force_continue == 2) continue <- FALSE
-  }
-  if(continue) fs::file_create(file)
-  return(continue)
 }

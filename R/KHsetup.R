@@ -3,6 +3,8 @@ if(version$major >= 4 & version$minor >= 2){
   Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
 }
 
+invisible(system("git fetch"))
+
 githubpath <- "https://raw.githubusercontent.com/helseprofil/khfunctions/"
 branch <- "master"
 
@@ -33,6 +35,7 @@ conflicted::conflict_prefer("as.Date.numeric", "zoo", quiet = T)
 conflicted::conflict_prefer("empty", "intervals", quiet = T)
 conflicted::conflict_prefer("join", "collapse", quiet = T)
 conflicted::conflict_prefer("D", "collapse", quiet = T)
+conflicted::conflict_prefer(":=", "data.table", quiet = T)
 
 # Set debugging to inactive
 show_functions <- FALSE
@@ -45,4 +48,4 @@ rfiles <- grep("KHmisc.R|KHsetup.R", list_files_github(branch = branch), value =
 for(file in rfiles){
   source(paste0(githubpath, branch, "/R/", file), encoding = "latin1")
 }
-rm(githubpath)
+rm(githubpath, file, rfiles)
