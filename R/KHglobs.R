@@ -58,6 +58,7 @@ SettDefDesignKH <- function(dbcon) {
   is_kh_debug()
   
   Deler <- data.table::setDT(RODBC::sqlQuery(dbcon, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE))
+  Deler <- Deler[order(ID)]
   DelKolN <- setNames(Deler$DelKol, Deler$DEL)
   DelKolE <- setNames(Deler$DelKolE, Deler$DEL)
   DelType <- setNames(Deler$TYPE, Deler$DEL)
@@ -111,7 +112,7 @@ SettDefDesignKH <- function(dbcon) {
 
 #' SettKodeBokGlob (kb)
 #'
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettKodeBokGlob <- function(globs = SettGlobs()) {
   is_kh_debug()
   
@@ -147,7 +148,7 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
 
 #' SettLegitimeKoder (kb)
 #'
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettLegitimeKoder <- function(globs = SettGlobs()) {
   is_kh_debug()
 
