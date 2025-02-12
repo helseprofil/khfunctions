@@ -8,13 +8,12 @@
 #' @return updated parameter list after loading and formatting files
 load_and_format_files <- function(parameters, batchdate, versjonert, globs){
   if(!exists("BUFFER", envir = .GlobalEnv)) .GlobalEnv$BUFFER <- list()
-  tabfilter_tellerfile <- set_tabfilter_tellerfile(parameters$CUBEinformation)
+  tabfilter_tellerfile <- set_filter_tab(parameters$CUBEinformation)
   tellerfile <- parameters$files$TELLER
   isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
   if(!isbuffer) load_filegroup_to_buffer(filegroup = tellerfile, filter = tabfilter_tellerfile, parameters = parameters, versjonert = versjonert, globs = globs)
-  do_filter_alder_tellerfile(tellerfile = tellerfile, parameters = parameters)
   
-  nontellerfile_filter <- set_nontellerfile_filter(tellerfile = tellerfile)
+  nontellerfile_filter <- set_filter_year(tellerfile = tellerfile, parameters = parameters)
   nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
   for (file in nonteller_files) {
     isbuffer <- file %in% names(BUFFER)
@@ -23,12 +22,12 @@ load_and_format_files <- function(parameters, batchdate, versjonert, globs){
   }
 }
 
-#' @title set_tabfilter
+#' @title set_filter_tab
 #' @description
 #' Creates a filtering string based on the TABX and TABX_0 columns in table KUBER in ACCESS
 #' @noRd
 #' @param cubeinformation read from talbe KUBER in ACCESS
-set_tabfilter_tellerfile <- function(cubeinformation){
+set_filter_tab <- function(cubeinformation){
   TabConds <- character()
   for (tab in names(cubeinformation)[grepl("^TAB\\d+$", names(cubeinformation))]) {
     istab <- !is.na(cubeinformation[[tab]]) && cubeinformation[[tab]] != ""
@@ -46,44 +45,58 @@ set_tabfilter_tellerfile <- function(cubeinformation){
     }
   } 
   tabfilter <- paste0(TabConds, collapse = " & ")
+  if(tabfilter == "") tabfilter <- NULL
   return(tabfilter)
 }
 
-do_filter_alder_tellerfile <- function(tellerfile, parameters){
-  isalder <- !is.na(parameters$CUBEinformation$ALDER) && parameters$CUBEinformation$ALDER != ""
-  if(!isalder) return(invisible(NULL))
-  
-  alder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
-  if(any(grepl("[^[:digit:]_]", alder))) return(invisible(NULL))
-  
-  aldersplit <- tstrsplit(alder, "_")
-  amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
-  .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERl >= amin]
-  if(length(aldersplit) > 1){
-    amax <- max(as.numeric(aldersplit[[2]]), na.rm = T)
-    .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERh <= amax]
-  }
-}
+# do_filter_alder_tellerfile <- function(tellerfile, parameters){
+#   isalder <- !is.na(parameters$CUBEinformation$ALDER) && parameters$CUBEinformation$ALDER != ""
+#   if(!isalder) return(invisible(NULL))
+#   
+#   alder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
+#   if(any(grepl("[^[:digit:]_]", alder))) return(invisible(NULL))
+#   
+#   aldersplit <- tstrsplit(alder, "_")
+#   amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
+#   .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERl >= amin]
+#   if(length(aldersplit) > 1){
+#     amax <- max(as.numeric(aldersplit[[2]]), na.rm = T)
+#     .GlobalEnv$BUFFER[[tellerfile]] <- .GlobalEnv$BUFFER[[tellerfile]][ALDERh <= amax]
+#   }
+# }
 
-
-#' @title set_nontellerfile_filter
+#' @title set_filter_year
 #' @description
 #' Sets a filter according to available years and age groups in the teller file, 
 #' to filter other files accordingly. 
 #' @noRD
 #' @param tellerfile 
-set_nontellerfile_filter <- function(tellerfile, parameters){
+set_filter_age <- function(parameters){
+  isalder <- !is.na(parameters$CUBEinformation$ALDER) && parameters$CUBEinformation$ALDER != ""
+  if(!isalder) return(NULL)
+  
+  accessalder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
+  if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
+  
+  aldersplit <- tstrsplit(accessalder, "_")
+  amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
+  amax <- ifelse(length(aldersplit) > 1, 
+                 max(as.numeric(aldersplit[[2]])),
+                 getOption("khfunctions.amax"))
+  return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
+}
+
+#' @title set_filter_year
+#' @description
+#' Sets a filter according to available years and age groups in the teller file, 
+#' to filter other files accordingly. 
+#' @noRD
+#' @param tellerfile 
+set_filter_year <- function(tellerfile, parameters){
+  # Can also read from access STARTAAR
   min_aarl <- min(.GlobalEnv$BUFFER[[tellerfile]]$AARl)
   max_aarh <- max(.GlobalEnv$BUFFER[[tellerfile]]$AARh)
-  
-  isalder <- "ALDERl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])
-  if(isalder){
-    min_alderl <- min(.GlobalEnv$BUFFER[[tellerfile]]$ALDERl)
-    max_alderh <- max(.GlobalEnv$BUFFER[[tellerfile]]$ALDERh)
-  }
-  filterstring <- paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh)
-  if(isalder) filterstring <- paste0(filterstring, " & ALDERl >= ", min_alderl, " & ALDERh <= ", max_alderh)
-  return(filterstring)
+  return(paste0("AARl >= ", min_aarl, " & AARh <= ", max_aarh))
 }
 
 #' @title do_filter_columns
@@ -110,7 +123,9 @@ load_filegroup_to_buffer <- function(filegroup, filter, parameters, versjonert, 
   
   filefilter <- parameters$FILFILTRE[FILVERSJON == filegroup]
   isfilefilter <- nrow(filefilter) > 0
-  isfilter <- filter != ""
+  alderfilter <- set_filter_age(parameters = parameters)
+  filter <- paste0(c(filter, alderfilter), collapse = " & ")
+  isfilter <- !is.null(filter) && filter != ""
   fileinfo <- parameters$fileinformation[[filegroup]]
   orgfile <- ifelse(isfilefilter, filefilter$ORGFIL, filegroup)
   
