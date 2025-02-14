@@ -25,11 +25,13 @@ merge_teller_nevner <- function(parameterlist, standardfiles = FALSE, design = N
     TNdesign <- InitDesign
   }
   
-  cat("***Lager tellerfil fra", tellerfilnavn, "\n")
+  tellerfiltype <- ifelse(standardfiles, "standard tellerfil", "tellerfil")
+  cat("*** Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
   tellerfil <- do_redesign_recode_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, globs = globs)
   
   if(isnevnerfil) {
-    cat("Lager nevnerfil fra", nevnerfilnavn, "\n")
+    nevnerfiltype <- ifelse(standardfiles, "standard nevnerfil", "nevnerfilfil")
+    cat("*** Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
     nevnerfil <- do_redesign_recode_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, globs = globs)
   }
   

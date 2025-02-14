@@ -59,5 +59,11 @@ test_formatting(sysvak_1_fasit, sysvak_1_ny)
 all.equal(sysvak_1_fasit, sysvak_1_ny)
 
 
+## TESTE KJØRETID, gjøres for hhv master branch og develop.
 
+KUBER <- c("HKR", "ENPERSON", "DEPRESJON_UNGDATA", "LIVSKVLAITET_UNGDATA", "NEED_INNVKAT", "SYSVAK", "SYSVAK_1", "FORSVARET_SVOMMING")
+tider <- list()
+for(i in KUBER){
+  tider[[i]] <- system.time(LagKUBE(i))[["elapsed"]]
+}
   

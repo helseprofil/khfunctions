@@ -28,6 +28,7 @@ LagKUBE <- function(KUBEid,
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   if(!geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   
+  cat("** Henter parametre og laster filer")
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
@@ -36,230 +37,37 @@ LagKUBE <- function(KUBEid,
   save_kubespec_csv(spec = parameters$CUBEinformation)
   if(isTRUE(write)) save_access_specs(KUBEid = KUBEid, parameterlist = parameters, batchdate = batchdate, globs = globs)
   
-  # LAG TNF ----
-  cat("******LAGER TNF\n")
+  # Kombiner teller og nevnerfil ----
+  cat("** Merger teller og nevnerfil\n")
   TNtab <- merge_teller_nevner(parameterlist = parameters, globs = globs)
-  TNF <- TNtab$TNF
-  KUBEd <- TNtab$KUBEd
+  KUBE <- TNtab$TNF
+  parameters[["CUBEdesign"]] <- TNtab$KUBEd
   rm(TNtab)
-  if (parameters$TNPinformation$NEVNERKOL != "-") TNF <- LeggTilNyeVerdiKolonner(TNF, "RATE={TELLER/NEVNER}")
-  cat("------FERDIG TNF\n")
-  gc()
+  if(parameters$TNPinformation$NEVNERKOL != "-") KUBE <- LeggTilNyeVerdiKolonner(KUBE, "RATE={TELLER/NEVNER}")
+  if("raaKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = dumps[["raaKUBE0"]])
   
-  # LAG STNF for prediksjon ----
-  if (parameters$CUBEinformation$REFVERDI_VP == "P") {
-    print("*****PREDIKER!!!")
-    # Maa foerst finne design for (den syntetiske) koblinga ST, SN og PN
-    # Bruk parameters$PredFilter paa ST og evt SN
-    # Finn saa FellesTab for disse
-    cat("***Skal finne felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
-    STFd <- find_design_after_filter(file = "STANDARDTELLER", parameterlist = parameters, globs = globs)
-    if ("STANDARDNEVNER" %in% names(parameters$files)) {
-      SNFd <- find_design_after_filter(file = "STANDARDNEVNER", parameterlist = parameters, globs = globs)
-      STNFd <- FinnFellesTab(STFd, SNFd, globs = globs)$FDes
-    } else {
-      STNFd <- STFd
-    }
-    # Finn FellesTab ogsaa med PN, denne gjelder som Til-design for PN
-    STNPFd <- FinnFellesTab(STNFd, parameters$filedesign[[parameters$files$PREDNEVNER]], globs = globs)$FDes
-    # Maa filtrere STNPFd med parameters$PredFilter igjen for aa finne ny STNFd som gir til-design for ST og SN
-    # (merge med PN kan ha endra fra STNFd-versjonen over
-    STNFd <- find_design_after_filter(file = "STANDARDTELLER", parameterlist = parameters, originaldesign = STNPFd, outpredfilter = FALSE, globs = globs)
-    cat("---Satt felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
-    
-    STN <- merge_teller_nevner(parameterlist = parameters, standardfiles = TRUE, design = STNFd, globs = globs)
-    STN <- STN$TNF
-    
-    # Fjern parameters$PredFilter$Pkols
-    STN[, (parameters$PredFilter$Pkols) := NULL]
-    
-    # SETT RATE HER er mest effektivt!
-    STN[!(NEVNER == 0 & NEVNER.f == 0), c("PREDRATE", "PREDRATE.f", "PREDRATE.a") := list(TELLER / NEVNER, pmax(TELLER.f, NEVNER.f), pmax(TELLER.a, NEVNER.a))]
-    STN[NEVNER == 0 & NEVNER.f == 0, c("PREDRATE", "PREDRATE.f", "PREDRATE.a") := list(0, pmax(TELLER.f, 2), pmax(TELLER.a, NEVNER.a))]
-    # Maa JUKSE DET TIL LITT MED NEVNER 0. Bruken her er jo slik at dette er tomme celler, og ikke minst vil raten nesten garantert skulle ganges med et PREDTELLER=0
-    # Tillater TELLER<=2 for aa unngaa evt numeriske problemer. Virker helt uskyldig gitt bruken
-    STN[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, c("PREDRATE", "PREDRATE.f", "PREDRATE.a") := list(0, 0, pmax(TELLER.a, NEVNER.a))]
-    
-    ukurante <- nrow(subset(STN, is.na(TELLER) | is.na(NEVNER)))
-    if (ukurante > 0) {
-      cat("!!! NAs i ST og/eller SN (", ukurante, "), dette vil gi problemer i PREDTELLER\n")
-    }
-    soppelkols <- setdiff(names(STN), c(get_dimension_columns(names(STN)), paste0("PREDRATE", c("", ".f", ".a"))))
-    if (length(soppelkols) > 0) {
-      STN[, (soppelkols) := NULL]
-    }
-    
-    cat("------FERDIG med STN\n")
-    cat("***Lager PN\n")
-    PNrd <- FinnRedesign(parameters$filedesign[[parameters$files$PREDNEVNER]], STNPFd, globs = globs)
-    PN <- OmkodFil(FinnFilT(parameters$files$PREDNEVNER), PNrd, globs = globs)
-    
-    if (!(is.na(parameters$TNPinformation$PREDNEVNERFIL) | parameters$TNPinformation$PREDNEVNERFIL == "")) {
-      PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
-    } else {
-      PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
-    }
-    PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(PN))
-    data.table::setnames(PN, names(PN), PNnames)
-    soppelkols <- setdiff(names(PN), c(get_dimension_columns(names(PN)), paste0("PREDNEVNER", c("", ".f", ".a"))))
-    if (length(soppelkols) > 0) {
-      PN[, (soppelkols) := NULL]
-    }
-    cat("---Ferdig PN\n")
-    cat("******Lager STNP, dette kan bli en stor tabell foer kollaps til PT\n")
-    commonkols <- intersect(get_dimension_columns(names(PN)), get_dimension_columns(names(STN)))
-    data.table::setkeyv(STN, commonkols)
-    data.table::setkeyv(PN, commonkols)
-    mismatch <- nrow(STN[!PN, allow.cartesian = TRUE])
-    if (mismatch > 0) {
-      cat("!!!!!ADVARSEL: Mismatch i STN[PN,] paa ", mismatch, "kolonner\n")
-    }
-    
-    # Finn omkoding til KUBEd, dvs design for TNF
-    # NB: Her maa det aggregeres opp for standardisering
-    # PNd <- FinnDesign(PN, FGP = parameters$fileinformation[[parameters$files$PREDNEVNER]], globs = globs)
-    PNd <- find_filedesign(file = PN, fileparameters = parameters$fileinformation[[parameters$files$PREDNEVNER]], globs = globs)
-    # Burde kanskje bruke STNFd i stedet, men da maa den faa paa PredFilterDimensjonene. Maa uansett sende til FinDesigmm
-    RD <- FinnRedesign(PNd, list(Part = KUBEd$MAIN), SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
-    cat("Foer merge: dim(PN)", dim(PN), " og dim(STN)", dim(STN))
-    STNP <- STN[PN, allow.cartesian = TRUE]
-    STNP[, c("PREDTELLER", "PREDTELLER.f", "PREDTELLER.a") := list(PREDRATE * PREDNEVNER, pmax(PREDRATE.f, PREDNEVNER.f), pmax(PREDRATE.a, PREDNEVNER.a))]
-    # Kast overfloedige kolonner
-    kastkols <- setdiff(names(STNP), c(get_dimension_columns(names(STNP)), "PREDTELLER", "PREDTELLER.f", "PREDTELLER.a"))
-    STNP[, (kastkols) := NULL]
-    cat(" og etter mergre dim(STNP)", dim(STNP), "\n")
-    PT <- OmkodFil(STNP, RD, globs = globs)
-    cat("-----PREDTELLER (PT) ferdig med dim(PT)", dim(PT), "\n")
-    cat("***Merger med TNF\n")
-    orgdim <- dim(TNF)
-    
-    # Merge PT med TNF til ferdig kube
-    tabkols <- get_dimension_columns(names(TNF))
-    data.table::setkeyv(TNF, tabkols)
-    data.table::setkeyv(PT, tabkols)
-    KUBE <- PT[TNF]
-    KUBE <- set_implicit_null_after_merge(KUBE, parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
-    cat("Foer merge KUBE<-PT[TNF] er dim(TNF)", orgdim, " og etter merge dim(KUBE)", dim(KUBE), "\n")
-    cat("------FERDIG MED PREDIKSJON\n")
-  } else {
-    KUBE <- data.table::copy(TNF)
-  }
+  # Legge til kolonner for standardisering ---- 
+  KUBE <- add_predteller(dt = KUBE, parameters = parameters, globs = globs)
+  KUBE <- add_meisskala(dt = KUBE, parameters = parameters, globs = globs)
+  if("raaKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE1"), globs = globs, format = dumps[["raaKUBE1"]])
   
   .GlobalEnv$BUFFER <- NULL
-  
-  if ("raaKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE0"), globs = globs, format = dumps[["raaKUBE0"]])
-  
-  # STANDARDISERING ----
-  
-  if (parameters$standardmethod == "DIR") {
-  # Sett skala for teller (maa gjoeres foer rate brukes i MEISskala)
-    if (!(is.na(parameters$CUBEinformation$RATESKALA) | parameters$CUBEinformation$RATESKALA == "")) {
-      KUBE[, RATE := RATE * as.numeric(parameters$CUBEinformation$RATESKALA)]
-    }
-    
-    # FINN MEISskala. Merk at dette gjelder baade ved REFVERDI_VP=P og =V
-    if (parameters$CUBEinformation$REFVERDI_VP == "P") {
-      VF <- KUBE[eval(rlang::parse_expr(parameters$PredFilter$PfiltStr))]
-      # Evt hvis en eller flere element i parameters$PredFilter ikke er med i Design for TNF og maa lages
-      if (nrow(VF) == 0) {
-        cat("************************************\nNOE RART MED parameters$PredFilter, IKKE I KUBEDESIGN, MAA UT PAA NY OMKODING.\nER DETTE RETT?\n")
-        VF <- OmkodFilFraPart(TNF, parameters$PredFilter$Design, FGP = parameters$fileinformation[[parameters$files$TELLER]], globs = globs)
-      }
-      
-      VF[, MEISskala := RATE]
-      VFtabkols <- setdiff(intersect(names(VF), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Pkols)
-      VF <- VF[, c(VFtabkols, "MEISskala"), with = FALSE]
-      
-      data.table::setkeyv(KUBE, VFtabkols)
-      data.table::setkeyv(VF, VFtabkols)
-      KUBE <- VF[KUBE]
-    } else {
-      KUBE[, MEISskala := NA_real_]
-    }
-  }
+  gc()
   
   # AGGREGER PERIODE ----
-  # Finn "snitt" for ma-aar.
-  # DVs, egentlig lages forloepig bare summer, snitt settes etter prikking under
-  # Snitt tolerer missing av type .f=1 ("random"), men bare noen faa anonyme .f>1, se KHaggreger
-  # Rapporterer variabelspesifikk VAL.n som angir antall aar brukt i summen naar NA holdt utenom
-  
-  data.table::setkeyv(KUBE, c("AARl", "AARh"))
-  aar <- unique(KUBE[, c("AARl", "AARh"), with = FALSE])
-  int_lengde <- as.integer(unique(KUBE[, AARh - AARl + 1]))
-  if (length(int_lengde) > 1) {
-    KHerr("!!!!!!HAR ULIKE LENGDER PAA INTERVALLER!!")
-  }
-  
-  # Maa "balansere" NA i teller og nevner slik sumrate og sumnevner balanserer  (Bedre/enklere aa gjoere det her enn i KHaggreger)
-  # Kunne med god grunn satt SPVFLAGG her og saa bare operert med denne som en egenskap for hele linja i det som kommer
-  # Men for aa ha muligheten for aa haandtere de forskjellige varibalene ulikt og i full detalj lar jeg det staa mer generelt
-  # Slik at dataflyten stoetter en slik endring
-  
-  tuppel <- intersect(c("TELLER", "NEVNER", "RATE"), names(KUBE))
-  tuppel.f <- paste0(tuppel, ".f")
-  fmax <- rlang::parse_expr(paste0("pmax(", paste(tuppel.f, collapse = ","), ")"))
-  if (length(tuppel) > 0) {
-    KUBE[eval(fmax) > 0, (tuppel) := list(NA)]
-    KUBE[eval(fmax) > 0, (tuppel.f) := eval(fmax)]
-    # Om enkeltobservasjoner ikke skal brukes, men samtidig tas ut av alle summeringer
-    # kan man ha satt VAL=0,VAL.f=-1
-    # Dette vil ikke oedelegge summer der tallet inngaar. Tallet selv, eller sumemr av kun slike tall, settes naa til NA
-    # Dette brukes f.eks naar SVANGERROYK ekskluderer Oslo, Akershus. Dette er skjuling, saa VAL.f=3
-    KUBE[eval(fmax) == -1, (tuppel) := list(NA)]
-    KUBE[eval(fmax) == -1, (tuppel) := list(3)]
-  }
-  
-  ma_satt <- 0
-  orgintMult <- 1
-  if (parameters$CUBEinformation$MOVAV > 1) {
-    if (any(aar$AARl != aar$AARh)) {
-      KHerr(paste0("Kan ikke sette snitt (ma=", ma, ") naar det er intervaller i originaldata"))
-    } else {
-      ma <- parameters$CUBEinformation$MOVAV
-      
-      # Finner evt hull i aar for hele designet
-      AntYMiss <- max(aar$AARl) - min(aar$AARl) + 1 - length(aar$AARl)
-      if (AntYMiss > 0) {
-        cat("Setter SumOverAar med AntYMiss=", AntYMiss, "\n")
-      }
-      maKUBE <- FinnSumOverAar(KUBE, per = ma, FyllMiss = TRUE, AntYMiss = AntYMiss, globs = globs)
-      
-      # sett rate paa nytt
-      if (parameters$TNPinformation$NEVNERKOL != "-") {
-        maKUBE <- LeggTilNyeVerdiKolonner(maKUBE, "RATE={TELLER/NEVNER}")
-        if (parameters$standardmethod == "DIR") {
-          if (!(is.na(parameters$CUBEinformation$RATESKALA) | parameters$CUBEinformation$RATESKALA == "")) {
-            maKUBE[, RATE := RATE * as.numeric(parameters$CUBEinformation$RATESKALA)]
-          }
-        }
-      }
-      ma_satt <- 1
-      KUBE <- maKUBE
-    }
-  } else {
-    # Maa legge til VAL.n for regning under naar orignale periodesummer, evt n=1 naar originale snitt
-    valkols <- get_value_columns(names(KUBE))
-    orgint_n <- int_lengde[1]
-    n <- orgint_n
-    if (!is.na(parameters$fileinformation[[parameters$files$TELLER]]$ValErAarsSnitt)) {
-      n <- 1
-      orgintMult <- orgint_n
-    }
-    KUBE[, paste0(names(.SD), ".n") := list(n), .SDcols = valkols]
-  }
+  parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
+  KUBE <- aggregate_to_moving_average(dt = KUBE, parameters = parameters, globs = globs)
   
   # Fikser BYDEL_STARTAAR, DK2020START og AALESUND/HARAM 2020-23
   fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
-  
   if ("maKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), globs = globs, format = dumps[["maKUBE0"]])
   
   # Anonymiser og skjul ----
   
-  # Anonymiser, trinn 1   Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
-  if (ma_satt == 1) {
+  # Anonymiser, trinn 1 Filtrer snitt som ikke skal brukes pga for mye anonymt fra original
+  if (parameters$MOVAVparameters$is_movav) {
     valkols <- get_value_columns(names(KUBE))
-    anon_tot_tol <- getOption("khfunctions.anon_tot_tol") #0.2
+    anon_tot_tol <- getOption("khfunctions.anon_tot_tol") 
     
     for(kol in valkols){
     kol.f <- paste0(kol, ".f")
@@ -319,31 +127,9 @@ LagKUBE <- function(KUBEid,
   
   # LAYOUT ----
   
-  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpre"]])
-  
   ## RSYNT_SLUTTREDIGER ---- 
-  
-  if (!(is.na(parameters$CUBEinformation$SLUTTREDIGER) | parameters$CUBEinformation$SLUTTREDIGER == "")) {
-    synt <- gsub("\\\r", "\\\n", parameters$CUBEinformation$SLUTTREDIGER)
-    error <- ""
-    ok <- 1
-    if (grepl("<STATA>", synt)) {
-      synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-      RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-      if (RES$feil != "") {
-        stop("Something went wrong in STATA, SLUTTREDIGER", RES$feil, sep = "\n")
-      } else {
-        KUBE <- RES$TABLE
-      }
-    } else {
-      rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-      if ("try-error" %in% class(rsynterr)) {
-        print(rsynterr)
-        stop("Something went wrong in R, SLUTTREDIGER")
-      }
-    }
-  }
-  
+  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpre"]])
+  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, batchdate = batchdate, globs = globs)
   if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpost"]])
   
   ## KOLONNER ----
@@ -373,13 +159,14 @@ LagKUBE <- function(KUBEid,
     KUBE[, (missKol) := NA]
   }
   
-  ## sumTELLER-NEVNER-PREDTELLER ----
+  ## sumTELLER-NEVNER-PREDTELLER
   # Behold sum, disse sendes til Friskvik
+  orgintMult <- parameters$MOVAVparameters$orgintMult
   KUBE[, sumTELLER := orgintMult * TELLER]
   KUBE[, sumNEVNER := orgintMult * NEVNER]
   KUBE[, sumPREDTELLER := orgintMult * PREDTELLER]
   
-  ## Gjennomsnitt ---- 
+  ## Gjennomsnitt
   # Ta snitt for alt annet enn RATE (der forholdstallet gjoer snitt uoensket)
   valkols <- setdiff(get_value_columns(names(KUBE)), c("RATE", "SMR"))
   if (length(valkols) > 0) {
@@ -390,7 +177,7 @@ LagKUBE <- function(KUBEid,
     KUBE[, eval(parse(text = lp))]
   }
   
-  ## Nye verdikolonner ----
+  ## Nye verdikolonner
   if (!(is.na(parameters$TNPinformation$NYEKOL_RAD_postMA) | parameters$TNPinformation$NYEKOL_RAD_postMA == "")) {
     KUBE <- LeggTilNyeVerdiKolonner(KUBE, parameters$TNPinformation$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
   }
@@ -552,29 +339,11 @@ LagKUBE <- function(KUBEid,
 
   if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = dumps[["STATAPRIKKpost"]])
   
-  # RSYNT_POSTPROSESS ---- 
-  if (!(is.na(parameters$CUBEinformation$RSYNT_POSTPROSESS) | parameters$CUBEinformation$RSYNT_POSTPROSESS == "")) {
-    synt <- gsub("\\\r", "\\\n", parameters$CUBEinformation$RSYNT_POSTPROSESS)
-    if (grepl("<STATA>", synt)) {
-      synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-      RES <- KjorStataSkript(KUBE, synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-      if (RES$feil != "") {
-        stop("Something went wrong in STATA, RSYNT_POSTPROSESS", RES$feil, sep = "\n")
-      } else {
-        KUBE <- RES$TABLE
-      }
-    } else {
-      rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-      if ("try-error" %in% class(rsynterr)) {
-        print(rsynterr)
-        stop("Something went wrong in R, RSYNT_POSTPROSESS")
-      }
-    }
-  }
-  
+  # RSYNT_POSTPROSESS ----
+  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, batchdate = batchdate, globs = globs)
   if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), globs = globs, format = dumps[["RSYNT_POSTPROSESSpost"]])
   
-  ## ---- TODO: REKTANGULARISERE MANGLENDE RADER FOR BYDEL ----
+  ## TODO: REKTANGULARISERE MANGLENDE RADER FOR BYDEL
   ## Der bydel starter senere enn andre mÃÂ¥ disse radene genereres, da ALLVIS ikke takler manglende rader.
   
   # LAYOUT

@@ -83,6 +83,7 @@ set_filter_age <- function(parameters){
   amax <- ifelse(length(aldersplit) > 1, 
                  max(as.numeric(aldersplit[[2]])),
                  getOption("khfunctions.amax"))
+  if(is.na(amax)) amax <- getOption("khfunctions.amax")
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
 }
 
