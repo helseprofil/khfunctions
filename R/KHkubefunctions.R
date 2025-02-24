@@ -54,12 +54,14 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
           delL <- paste0(delN, "l")
           delH <- paste0(delN, "h")
           Deler[[del]] <- ORGd$Part[[del]][get(delL) >= start & get(delH) <= stopp, mget(c(delL, delH))]
-          }
         } else {
-          Deler[[del]] <- ORGd$Part[[del]][, ..koldel]
+          Deler[[del]] <- ORGd$Part[[del]]  
         }
-      } 
-    }
+      } else {
+        Deler[[del]] <- ORGd$Part[[del]][, ..koldel]
+      }
+    } 
+  }
   return(Deler)
 }
 
