@@ -79,10 +79,13 @@ set_filter_age <- function(parameters){
   if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
   
   aldersplit <- tstrsplit(accessalder, "_")
-  amin <- min(as.numeric(aldersplit[[1]]), na.rm = T)
-  amax <- ifelse(length(aldersplit) > 1, 
+  amin <- ifelse(!sum(is.na(aldersplit[[1]])) > 0,
+                 min(as.numeric(aldersplit[[1]])),
+                 getOption("khfunctions.amin"))
+  amax <- ifelse(length(aldersplit) > 1 && !sum(is.na(aldersplit[[2]])) > 0, 
                  max(as.numeric(aldersplit[[2]])),
                  getOption("khfunctions.amax"))
+  if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne må være tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
 }
 
