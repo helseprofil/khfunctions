@@ -79,12 +79,13 @@ set_filter_age <- function(parameters){
   if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
   
   aldersplit <- tstrsplit(accessalder, "_")
-  amin <- ifelse(!sum(is.na(aldersplit[[1]])) > 0,
+  amin <- ifelse(sum(is.na(aldersplit[[1]])) == 0,
                  min(as.numeric(aldersplit[[1]])),
                  getOption("khfunctions.amin"))
-  amax <- ifelse(length(aldersplit) > 1 && !sum(is.na(aldersplit[[2]])) > 0, 
+  amax <- ifelse(length(aldersplit) > 1 && sum(is.na(aldersplit[[2]])) == 0, 
                  max(as.numeric(aldersplit[[2]])),
                  getOption("khfunctions.amax"))
+
   if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne må være tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
 }
@@ -150,7 +151,7 @@ load_filegroup_to_buffer <- function(filegroup, filter, parameters, versjonert, 
     if(isnyekolkolprerad) FIL <- LeggTilNyeVerdiKolonner(FIL, filefilter$NYEKOL_KOL_preRAD, slettInf = TRUE)
     
     Filter <- SettFilterDesign(filefilter, bruk0 = FALSE, FGP = fileinfo, globs = globs)
-    # TODO: optimalisere leggtilnyeverdikolonner
+    # TODO: optimalisere OmkodFil
     if (length(Filter) > 0) FIL <- OmkodFil(FIL, FinnRedesign(FinnDesign(FIL, globs = globs), list(Parts = Filter), globs = globs), globs = globs)
     
     isgeoharm <- filefilter$GEOHARM == 1
@@ -203,7 +204,7 @@ load_filegroup_to_buffer <- function(filegroup, filter, parameters, versjonert, 
 #' @param file 
 #' @param vals 
 #' @param rectangularize 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, globs = SettGlobs()) {
   GEOstdAAR = getOption("khfunctions.year")
   geoomk <- globs$KnrHarm
@@ -274,7 +275,7 @@ set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
 #' @noRD
 #' @param file 
 #' @param parts 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 do_filfiltre_kollapsdeler <- function(file, parts, globs){
   tabcols <- get_dimension_columns(names(file))
   parts <- unlist(strsplit(parts, ","))
@@ -335,7 +336,7 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, slettInf = TRUE, postMA = FALS
 #'
 #' @param FIL 
 #' @param RD 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
   is_kh_debug()
   
@@ -455,7 +456,7 @@ OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
 #' @param TNF 
 #' @param NYdscr 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 LeggTilSumFraRader <- function(TNF, NYdscr, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -529,7 +530,7 @@ do_filfiltre_nykolsmerge <- function(file, filefilter){
 #' @param YL year lag
 #' @param AL age lag
 #' @param vals value to create lag value
-#' @param globs global parameters
+#' @param globs global parameters, defaults to SettGlobs
 YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
   ltag <- function(lag) {
     ltag <- ""

@@ -1546,3 +1546,12 @@ KlargjorFil <- function(filename, tabfilter  = "", versjonert = FALSE, batchdate
   FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
   return(list(FIL = FIL, FGP = FGP, FILd = FILd))
 } 
+
+#' superseeded by find_design_after_filter()
+FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
+  FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
+  return(FinnDesign(FiltD, FGP = FGP, globs = globs))
+}
