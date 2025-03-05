@@ -1,23 +1,24 @@
 #' @title get_cubeparameters
 #' @description
-#' Helper function for [LagKUBE()]. 
+#' Helper function for `LagKUBE()`. 
 #' The function reads tables from ACCESS to get information on which files are used and how they need to be handled. 
 #' @param KUBEid name of cube
 #' @param batchdate date of current cube batch. Needed to filter out active parameters from ACCESS
 #' @param globs global parameters, defaults to SettGlobs
 #' @return A list of relevant parameters
 get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  
+  cat("* Henter parametre")
   parameters <- list()
   parameters[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(batchdate))
   parameters[["CUBEinformation"]] <- get_cube_information(KUBEid = KUBEid, validdates = parameters$validdates, globs = globs)
   parameters[["TNPinformation"]] <- get_tnp_information(TNPname = parameters$CUBEinformation$TNP, validdates = parameters$validdates, globs = globs)
   isrefverdiP <- parameters$CUBEinformation$REFVERDI_VP == "P"
-  isSTNP <- !is.na(parameters$TNPinformation$STANDARDTNFIL) && parameters$TNPinformation$STANDARDTNFIL != ""
+  isSTNP <- is_not_empty(parameters$TNPinformation$STANDARDTNFIL)
   parameters[["STNPinformation"]] <- get_stnp_information(TNP = parameters$TNPinformation, validdates = parameters$validdates, isrefverdiP = isrefverdiP, isSTNP = isSTNP, globs = globs)
   parameters[["files"]] <- get_filenames(parameters = parameters, isrefverdiP = isrefverdiP, isSTNP = isSTNP)
   parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
   parameters[["PredFilter"]] <- set_predictionfilter(REFVERDI = parameters$CUBEinformation$REFVERDI, globs = globs)
+  parameters[["ref_year_type"]] <- parameters$PredFilter$ref_year_type
   parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
   parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs)
   return(parameters)
@@ -84,14 +85,14 @@ get_stnp_information <- function(TNP, validdates, isrefverdiP = F, isSTNP = F, g
 #' @param isSTNP TRUE/FALSE, indicating if standard files should be different from the main files. This is indicated in the STANDARDTNFIL in TNP_PROD table.
 get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
   files <- list()
-  isteller <- !is.na(parameters$TNPinformation$TELLERFIL) && parameters$TNPinformation$TELLERFIL != ""
+  isteller <- is_not_empty(parameters$TNPinformation$TELLERFIL)
   if(!isteller) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt!")
   files[["TELLER"]] <- parameters$TNPinformation$TELLERFIL
-  isnevnerfil <- !is.na(parameters$TNPinformation$NEVNERFIL) && parameters$TNPinformation$NEVNERFIL != ""
+  isnevnerfil <- is_not_empty(parameters$TNPinformation$NEVNERFIL)
   if(isnevnerfil) files[["NEVNER"]] <- parameters$TNPinformation$NEVNERFIL
   
   if(isrefverdiP){
-    isprednevnerfil <- !is.na(parameters$TNPinformation$PREDNEVNERFIL) && parameters$TNPinformation$PREDNEVNERFIL != ""
+    isprednevnerfil <- is_not_empty(parameters$TNPinformation$PREDNEVNERFIL)
     if(isprednevnerfil){
       files[["PREDNEVNER"]] <- gsub("^(.*):.*", "\\1", parameters$TNPinformation$PREDNEVNERFIL)
     } else if(isnevnerfil) {
@@ -104,11 +105,11 @@ get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
       files[["STANDARDTELLER"]] <- files$TELLER
       if(isnevnerfil) files[["STANDARDNEVNER"]] <- files$NEVNER
     } else {
-      isSTNPtellerfilfil <- !is.na(parameters$STNPinformation$TELLERFIL) && parameters$STNPinformation$TELLERFIL != ""
+      isSTNPtellerfilfil <- is_not_empty(parameters$STNPinformation$TELLERFIL)
       if(!isSTNPtellerfil) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt for STANDARDTNFIL: ", parameters$TNPinformation$STANDARDTNFIL)
       files[["STANDARDTELLER"]] <- parameters$STNPinformation$TELLERFIL
       
-      isSTNPnevnerfil <- !is.na(parameters$STNPinformation$NEVNERFIL) && parameters$STNPinformation$NEVNERFIL != ""
+      isSTNPnevnerfil <- is_not_empty(parameters$STNPinformation$NEVNERFIL)
       if(isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- parameters$STNPinformation$NEVNERFIL
       if(!isSTNPnevnerfil) files[["STANDARDNEVNER"]] <- parameters$STNPinformation$TELLERFIL
     }
@@ -135,8 +136,8 @@ get_filfiltre <- function(files = NULL, validdates, globs){
 #' @param REFVERDI Corresponds to ACCESS::KUBER::REFVERDI
 #' @param globs global parameters, defaults to SettGlobs
 set_predictionfilter <- function(REFVERDI, globs = SettGlobs()) {
-  
-  D_develop_predtype <- ifelse(grepl("AAR", REFVERDI), "DIR", "IND")
+  if(is_empty(REFVERDI)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
+  ref_year_type <- ifelse(grepl("AAR", REFVERDI), "Specific", "Moving")
   PredFilter <- list()
   Pcols <- character(0)
   delkolN <- globs$DefDesign$DelKolN
@@ -144,34 +145,30 @@ set_predictionfilter <- function(REFVERDI, globs = SettGlobs()) {
   delformat <- globs$DefDesign$DelFormat
   delkolsF <- globs$DefDesign$DelKolsF
   
-  if (is.null(REFVERDI) || is.na(REFVERDI)) {
-    PredFilter <- list(Gn = data.frame(GEOniv = "L"))
-  } else {
-    refverdicolumns <- delkolN[sapply(paste0(delkolN, "(l|h)? *="), grepl, REFVERDI)]
-    for (del in names(refverdicolumns)) {
-      delN <- refverdicolumns[del]
-      if (deltype[del] == "COL") {
-        val <- gsub(paste0(".*", delN, " *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-        if (delformat[del] == "integer") val <- as.integer(val)
-        PredFilter[[del]] <- data.table::setDT(setNames(as.list(val), delN))
-      } else if (deltype[del] == "INT") {
-        if (grepl(paste0(delN, "l *=="), REFVERDI) && grepl(paste0(delN, "h *=="), REFVERDI)) {
-          vall <- gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-          valh <- gsub(paste0(".*", delN, "h *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-          intval <- list(vall, valh)
-          PredFilter[[del]] <- eval(parse(text = paste0("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)")))
-          PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
-        } else if (grepl(paste0(delN, "l *=="), REFVERDI)) {
-          intval1 <- as.integer(gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI))
-          intval <- list(intval1, intval1)
-          REFVERDI <- gsub(paste0(delN, " *="), paste0(delN, "l="), REFVERDI)
-          PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
-        }
+  refverdicolumns <- delkolN[sapply(paste0(delkolN, "(l|h)? *="), grepl, REFVERDI)]
+  for (del in names(refverdicolumns)) {
+    delN <- refverdicolumns[del]
+    if (deltype[del] == "COL") {
+      val <- gsub(paste0(".*", delN, " *== *\'(.*?)\'.*"), "\\1", REFVERDI)
+      if (delformat[del] == "integer") val <- as.integer(val)
+      PredFilter[[del]] <- data.table::setDT(setNames(as.list(val), delN))
+    } else if (deltype[del] == "INT") {
+      if (grepl(paste0(delN, "l *=="), REFVERDI) && grepl(paste0(delN, "h *=="), REFVERDI)) {
+        vall <- gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI)
+        valh <- gsub(paste0(".*", delN, "h *== *\'(.*?)\'.*"), "\\1", REFVERDI)
+        intval <- list(vall, valh)
+        PredFilter[[del]] <- eval(parse(text = paste0("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)")))
+        PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
+      } else if (grepl(paste0(delN, "l *=="), REFVERDI)) {
+        intval1 <- as.integer(gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI))
+        intval <- list(intval1, intval1)
+        REFVERDI <- gsub(paste0(delN, " *="), paste0(delN, "l="), REFVERDI)
+        PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
       }
-      Pcols <- c(Pcols, delkolsF[[del]])
     }
+    Pcols <- c(Pcols, delkolsF[[del]])
   }
-  return(list(Design = PredFilter, PfiltStr = REFVERDI, Pkols = Pcols, D_develop_predtype = D_develop_predtype))
+  return(list(Design = PredFilter, PfiltStr = REFVERDI, Pkols = Pcols, ref_year_type = ref_year_type))
 }
 
 #' @title get_filegroup_information

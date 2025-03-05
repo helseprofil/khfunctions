@@ -751,73 +751,6 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
   return(Org)
 }
 
-#' AnonymiserNaboer (kb)
-#' 
-#' Potentially deprecated?
-#'
-#' @param FG 
-#' @param ovkatstr 
-#' @param FGP 
-#' @param D_develop_predtype 
-#' @param globs
-AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_develop_predtype = "IND", globs = SettGlobs()) {
-  is_kh_debug()
-  FG <- data.table::copy(FG)
-  AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
-  
-  vals <- get_value_columns(names(FG))
-  # FinnValKolsF funker ikke riktig!!!! Baade pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
-  # Maa utbedres gjennomgripende, men kan ikke gjoere dette naa derfor bare denne ad hoc loesninga
-  if (D_develop_predtype == "IND") {
-    alletabs <- setdiff(names(FG), get_value_columns(names(FG), full = TRUE))
-  } else {
-    alletabs <- intersect(c("GEO", "GEOniv", "FYLKE", "AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "TAB1", "TAB2", "UTDANN", "INNVKAT", "LANDBAK"), names(FG))
-  }
-  for (ovkSpec in AoverkSpecs) {
-    FGt <- FG[eval(parse(text = ovkSpec$subcond)), ]
-    FGr <- FG[!eval(parse(text = ovkSpec$subcond)), ]
-    overkats <- ovkSpec$overkat
-    for (val in vals) {
-      eval(parse(text = paste0(
-        "FGt[,", val, ".na:=0]"
-      )))
-    }
-    for (i in 1:length(overkats)) {
-      kombs <- combn(names(overkats), i)
-      for (j in 1:ncol(kombs)) {
-        substrs <- character(0)
-        overtabs <- character(0)
-        for (del in kombs[, j]) {
-          substrs <- c(substrs, overkats[[del]]$over)
-          overtabs <- c(overtabs, overkats[[del]]$kols)
-        }
-        substr <- paste0("(", substrs, ")", collapse = " | ")
-        for (val in vals) {
-          bycols <- setdiff(alletabs, overtabs)
-          eval(parse(text = paste0(
-            "FGt[!(", substr, "),", val, ".na:=ifelse((", val, ".na==1 | any(", val, ".f %in% 3:4)),1,0),by=bycols]"
-          )))
-        }
-      }
-    }
-    
-    for (val in vals) {
-      eval(parse(text = paste0(
-        "FGt[", val, ".na==1,", val, ".f:=4]"
-      )))
-      eval(parse(text = paste0(
-        "FGt[", val, ".na==1,", val, ":=NA]"
-      )))
-      eval(parse(text = paste0(
-        "FGt[,", val, ".na:=NULL]"
-      )))
-    }
-    
-    FG <- rbind(FGt, FGr)
-  }
-  return(FG)
-}
-
 #' SettNaboAnoSpec (kb)
 #'
 #' @param ovkatspec 
@@ -892,98 +825,6 @@ DFHeadToString <- function(innDF, topn = 10) {
   return(head)
 }
 
-## Stata prikking do file
-#' do_stata_prikk (ybk)
-#' 
-#' Function to censor the data using the STATA method (JRM)
-do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
-  is_kh_debug()
-
-  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  spc <- data.table::as.data.table(spc)[, mget(c(stataVar, RprikkVar))]
-  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
-  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
-  
-  # Check that R prikk should be empty if Stata prikk should be used
-  warn_prikk(r_prikk, s_prikk)
-  RES <- NULL
-  
-  if (s_prikk > 0){
-    ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
-    synt <- paste0('include "', sfile, '"')
-    
-    RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    dt <- RES$TABLE
-  } else {
-    RES[["feil"]] <- ""
-  }
-  
-  if (RES$feil != "") {
-    stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
-  }
-  
-  return(dt)
-}
-
-#' warn_prikk
-#' 
-#' helper function in STATA censoring
-warn_prikk <- function(r, s){
-  is_kh_debug()
-  
-  if (r > 0 & s > 0){
-    stop("You can't prikk for both R and Stata way. Choose either one!")
-  }
-  
-  invisible()
-}
-
-#' get_col (ybk)
-#' 
-#' helper function in STATA censoring
-#' Easier to check with sum by converting valid col value to 1
-get_col <- function(var, num = TRUE){
-  is_kh_debug()
-  
-  if (is.na(var) || var == ""){
-    var <- NA
-  }
-  
-  if (num){
-    var <- var_num(var)
-  }
-  
-  if (!is.na(var) && num){
-    var <- 1
-  }
-  
-  return(var)
-}
-
-#' var_num (ybk)
-#' 
-#' Helper function for STATA censoring
-#' Avoid warning message "NAs introduced by coercion" when using as.numeric
-#'
-#' @param x 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-var_num <- function(x){
-  is_kh_debug()
-  
-  v <- is.numeric(x)
-  if (!v){
-    x <- NA
-  }
-  
-  return(x)
-}
-
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
@@ -1015,29 +856,9 @@ get_geonaboprikk_triangles <- function(geoniv){
 #' find_dims (vl)
 #' 
 #' Helper function for kube_spec, finding dimensions in KUBE
-find_dims <- function(dt, spec){
-  is_kh_debug()
-  # List standarddims
-  standarddims <- c("GEO",
-                    "AAR",
-                    "ALDER",
-                    "KJONN",
-                    "UTDANN",
-                    "INNVKAT",
-                    "LANDBAK")
-  
-  # Extract everything written in TAB1, TAB2, and TAB3 in the files involved
-  tabdims <- vector()
-  for(i in 1:length(spec)){
-    tabdims <- c(tabdims, 
-                 unlist(spec[[i]][c("TAB1", "TAB2", "TAB3")], use.names = F))
-  }
-  
-  # Remove NA from tabdims, combine with standarddims
-  tabdims <- tabdims[!is.na(tabdims)]
-  alldims <- c(standarddims, tabdims)
-  # Extract column names from dt included in dimension list
-  names(dt)[names(dt) %in% alldims]
+find_dims_for_stataprikk <- function(dt, etabs){
+  alldims <- c(getOption("khfunctions.khtabs"), etabs$tabnames)
+  alldims[alldims %in% names(dt)]
 }
 
 #' LagAlleFriskvikIndikatorerForKube (kb)
@@ -1266,41 +1087,4 @@ melt_access_spec <- function(dscr, name = NULL){
   data.table::setcolorder(d, "Tabell")
 }
 
-#' @fix_geo_special
-#' @description Manuall handle bydel startaar, DK2020 and AALESUND/HARAM
-fix_geo_special <- function(d, 
-                            specs, 
-                            id = KUBEid){
-  
-  valK <- get_value_columns(names(d))
-  bydelstart <- specs[["B_STARTAAR"]]
-  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
-  dk2020start <- specs[["DK2020_STARTAAR"]]
-  
-  if (!is.na(bydelstart) && bydelstart > 0) {
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
-  }
-  
-  if (!is.na(dk2020start) && dk2020start > 0) {
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
-    
-    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-    .years <- 2020:2023
-    if(id == "VALGDELTAKELSE"){
-      .years <- 2019:2022
-    } 
-    .geos <- c("1508", "1580")
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
-  }
-  return(d)
-}
 
-filter_invalid_outcodes <- function(data, globs = SettGlobs()){
-  data <- data[GEO %in% globs$UtGeoKoder]
-  if("ALDER" %in% names(data)) data <- data[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
-  if("KJONN" %in% names(data)) data <- data[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
-  return(data)
-}

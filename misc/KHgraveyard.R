@@ -1555,3 +1555,56 @@ FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), F
   FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
   return(FinnDesign(FiltD, FGP = FGP, globs = globs))
 }
+
+#' superseeded by calculate_period_sums()
+FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
+  is_kh_debug()
+  UT <- KUBE[0, ]
+  tabs <- setdiff(get_dimension_columns(names(KUBE)), c("AARl", "AARh"))
+  valkols <- get_value_columns(names(KUBE))
+  # Utrykk for KH-aggregering (med hjelpestoerrelses for snitt)
+  lpv <- paste0(valkols, "=sum(", valkols, ",na.rm=TRUE),",
+                valkols, ".f=0,",
+                valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
+                valkols, ".fn1=sum(", valkols, ".f %in% 1:2),",
+                valkols, ".fn3=sum(", valkols, ".f==3),",
+                valkols, ".fn9=sum(", valkols, ".f==9),",
+                valkols, ".n=sum(", valkols, ".f==0)",
+                # valkols,".n=sum(as.numeric(!is.na(",valkols,")))",
+                collapse = ","
+  )
+  lpsvars <- unlist(lapply(valkols, function(x) {
+    paste0(x, c(".fn1", ".fn3", ".fn9", ".n"))
+  }))
+  UT[, (lpsvars) := NA_integer_]
+  
+  aara <- unique(KUBE$AARh)
+  if (FyllMiss == TRUE) {
+    aara <- (min(aara) + per - 1):max(aara)
+  } else {
+    aara <- intersect((min(aara) + per - 1):max(aara), aara)
+  }
+  cat("Finner", per, "-aars sum for ")
+  for (aar in aara) {
+    cat(aar, " ")
+    lp <- paste0("list(AARl=", aar - per + 1, ",AARh=", aar, ",", lpv, ")")
+    UT <- rbind(UT, KUBE[AARh %in% c((aar - per + 1):aar), eval(parse(text = lp)), by = tabs][, names(UT), with = FALSE])
+  }
+  cat("\n")
+  for (valkol in valkols) {
+    eval(parse(text = paste0("UT[", valkol, ".f>0,", valkol, ":=list(NA)]")))
+  }
+  
+  if (AntYMiss <= per) {
+    for (valkol in valkols) {
+      eval(parse(text = paste0("UT[", valkol, ".fn9>", AntYMiss, ",c(\"", valkol, "\",\"", valkol, ".f\"):=list(NA,9)]")))
+    }
+  }
+  
+  f9s <- names(UT)[grepl(".f9$", names(UT))]
+  if (length(f9s) > 0) {
+    UT[, (f9s) := NULL]
+  }
+  
+  return(UT)
+}

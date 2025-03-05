@@ -1,6 +1,5 @@
 get_movav_information <- function(dt, parameters){
   out <- list()
-  data.table::setkeyv(dt, c("AARl", "AARh"))
   out[["aar"]] <- unique(dt[, mget(c("AARl", "AARh"))])
   out[["int_lengde"]] <- unique(out$aar[, AARh - AARl + 1])
   if (length(out$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
@@ -19,24 +18,22 @@ get_movav_information <- function(dt, parameters){
 #' DVs, egentlig lages forloepig bare summer, snitt settes etter prikking under
 #' Snitt tolerer missing av type .f=1 ("random"), men bare noen faa anonyme .f>1, se KHaggreger
 #' Rapporterer variabelspesifikk VAL.n som angir antall aar brukt i summen naar NA holdt utenom
+#' 
+#' Dersom is_movav = FALSE, legges val.n til for alle verdikolonner, satt til 1 dersom originale snitt
+#' og satt til antall år dersom originale summer. 
 #'
 #' @param dt KUBE to be aggregated 
 #' @param parameters cube parameters
 #' @param globs global parameters
-aggregate_to_moving_average <- function(dt, parameters, globs){
-  
+aggregate_to_periods <- function(dt, parameters, globs){
   dt <- do_balance_missing_teller_nevner(dt = dt)
   
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods(dt = dt, parameters = parameters, globs = globs)
-    return(dt)
+    dt <- do_filter_periods_with_missing_original(dt)
+  } else {
+    dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }
-  
-  # USIKKER PÅ OM DETTE HÅNDTERES KORREKT
-  # SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
-  # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
-  n <- ifelse(parameters$MOVAVparameters$is_orig_snitt, 1, parameters$MOVAVparameters$int_lengde) 
-  dt[, paste0(names(.SD), ".n") := n, .SDcols = get_value_columns(names(dt))]
   return(dt)
 }
 
@@ -76,19 +73,19 @@ do_balance_missing_teller_nevner <- function(dt){
 #' @param parameters cube parameters
 #' @param globs global parameters
 do_aggregate_periods <- function(dt, parameters, globs){
-  movav = parameters$MOVAVparameters$movav
+  period = parameters$MOVAVparameters$movav
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
   n_missing_year <- find_missing_year(aarl = parameters$MOVAVparameters$aar$AARl)
-  aggregated_dt <- FinnSumOverAar(KUBE = dt, per = movav, FyllMiss = TRUE, AntYMiss = n_missing_year, globs = globs)
+  aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year, globs = globs)
   
   if(parameters$TNPinformation$NEVNERKOL != "-") {
     aggregated_dt <- LeggTilNyeVerdiKolonner(aggregated_dt, "RATE={TELLER/NEVNER}")
-    israteskala <- !is.na(parameters$CUBEinformation$RATESKALA) && parameters$CUBEinformation$RATESKALA != ""
-    if(parameters$standardmethod == "DIR" & israteskala) aggregated_dt[, RATE := RATE * as.numeric(parameters$CUBEinformation$RATESKALA)]
   }
   return(aggregated_dt)
 }
 
+#' @title find_missing_year
+#' @noRD
 find_missing_year <- function(aarl){
   aarl_min_max <- min(aarl):max(aarl)
   aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
@@ -96,63 +93,62 @@ find_missing_year <- function(aarl){
   return(length(aarl_missing))
 }
 
-#' FinnSumOverAar (kb)
-#'
-#' @param KUBE 
-#' @param per 
-#' @param FyllMiss 
-#' @param AntYMiss 
-#' @param globs global parameters, defaults to SettGlobs
-FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
-  is_kh_debug()
-  UT <- KUBE[0, ]
-  tabs <- setdiff(get_dimension_columns(names(KUBE)), c("AARl", "AARh"))
-  valkols <- get_value_columns(names(KUBE))
-  # Utrykk for KH-aggregering (med hjelpestoerrelses for snitt)
-  lpv <- paste0(valkols, "=sum(", valkols, ",na.rm=TRUE),",
-                valkols, ".f=0,",
-                valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
-                valkols, ".fn1=sum(", valkols, ".f %in% 1:2),",
-                valkols, ".fn3=sum(", valkols, ".f==3),",
-                valkols, ".fn9=sum(", valkols, ".f==9),",
-                valkols, ".n=sum(", valkols, ".f==0)",
-                # valkols,".n=sum(as.numeric(!is.na(",valkols,")))",
-                collapse = ","
-  )
-  lpsvars <- unlist(lapply(valkols, function(x) {
-    paste0(x, c(".fn1", ".fn3", ".fn9", ".n"))
-  }))
-  UT[, (lpsvars) := NA_integer_]
+#' @title calculate_period_sums
+#' @description
+#' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
+#' @noRD
+calculate_period_sums <- function(dt, period, n_missing_year, globs = SettGlobs()){
+  cat("* Aggregerer til ", period, "-årige tall\n", sep = "")
+  allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
+  dt <- extend_to_periods(dt = dt, periods = allperiods)
+  values <- get_value_columns(names(dt))
+  dt[, paste0(rep(values, each = 4), c(".fn1", ".fn3", ".fn9", ".n")) := NA_integer_]
+  dims <- get_dimension_columns(names(dt))
+  colorder <- dims
+  for(val in values){
+    dt[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    dt[get(paste0(val, ".f")) %in% c(1,2), paste0(val, ".fn1") := 1]
+    dt[get(paste0(val, ".f")) == 3, paste0(val, ".fn3") := 1]
+    dt[get(paste0(val, ".f")) == 9, paste0(val, ".fn9") := 1]
+    dt[get(paste0(val, ".f")) == 0, paste0(val, ".n") := 1]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a", ".fn1",".fn3", ".fn9", ".n")))
+  }
+  g <- collapse::GRP(dt, dims)
+  aggdt <- add_vars(g[["groups"]],
+                    collapse::fsum(collapse::get_vars(dt, values), g = g, fill = T),
+                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".a")), g = g, fill = T),
+                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn1")), g = g, fill = T),
+                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn3")), g = g, fill = T),
+                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn9")), g = g, fill = T),
+                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".n")), g = g, fill = T))
+  aggdt[, (paste0(values, ".f")) := 0]
+  data.table::setcolorder(aggdt, colorder)
   
-  aara <- unique(KUBE$AARh)
-  if (FyllMiss == TRUE) {
-    aara <- (min(aara) + per - 1):max(aara)
-  } else {
-    aara <- intersect((min(aara) + per - 1):max(aara), aara)
-  }
-  cat("Finner", per, "-aars sum for ")
-  for (aar in aara) {
-    cat(aar, " ")
-    lp <- paste0("list(AARl=", aar - per + 1, ",AARh=", aar, ",", lpv, ")")
-    UT <- rbind(UT, KUBE[AARh %in% c((aar - per + 1):aar), eval(parse(text = lp)), by = tabs][, names(UT), with = FALSE])
-  }
-  cat("\n")
-  for (valkol in valkols) {
-    eval(parse(text = paste0("UT[", valkol, ".f>0,", valkol, ":=list(NA)]")))
+  if(n_missing_year <= period){
+    for(val in values) aggdt[aggdt[[paste0(val, ".fn9")]] > n_missing_year, (c(val, paste0(val, ".f"))) := list(NA, 9)]
   }
   
-  if (AntYMiss <= per) {
-    for (valkol in valkols) {
-      eval(parse(text = paste0("UT[", valkol, ".fn9>", AntYMiss, ",c(\"", valkol, "\",\"", valkol, ".f\"):=list(NA,9)]")))
-    }
+  f9s <- names(aggdt)[grepl(".f9$", names(aggdt))]
+  if (length(f9s) > 0) aggdt[, (f9s) := NULL]
+
+  return(aggdt)
+}
+
+find_periods <- function(aarh, period){
+  max_aar <- (min(aarh) + period - 1):max(aarh)
+  min_aar <- max_aar - period + 1
+  return(data.table::data.table(aarl = min_aar, aarh = max_aar))
+}
+
+extend_to_periods <- function(dt, periods){
+  out <- data.table::copy(dt)[0, ]
+  for(i in 1:nrow(periods)){
+    aarl <- periods[i, aarl]
+    aarh <- periods[i, aarh]
+    newperiod <- dt[AARl >= aarl & AARh <= aarh][, let(AARl = aarl, AARh = aarh)]
+    out <- data.table::rbindlist(list(out, newperiod))
   }
-  
-  f9s <- names(UT)[grepl(".f9$", names(UT))]
-  if (length(f9s) > 0) {
-    UT[, (f9s) := NULL]
-  }
-  
-  return(UT)
+  return(out)
 }
 
 #' @title handle_indata_periods
@@ -163,10 +159,40 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs 
 #' @export
 #'
 #' @examples
-do_handle_indata_periods <- function(){
-  if (parameters$CUBEinformation$MOVAV <= 1){}
+do_handle_indata_periods <- function(dt, parameters){
+  # USIKKER PÅ OM DETTE HÅNDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
+  # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
+  n <- ifelse(parameters$MOVAVparameters$is_orig_snitt, 1, parameters$MOVAVparameters$int_lengde) 
+  dt[, paste0(names(.SD), ".n") := n, .SDcols = get_value_columns(names(dt))]
+  return(dt)
 }
 
-get_orgintmult <- function(dt, parameters){
-  
+#' @title filter_periods_with_missing_original
+#' @description
+#' Filters out averages with too much missing from original data. The 
+#' tolerance is set by the option anon_tot_tol in the config file, and
+#' for rows where the proportion of original val.f == 3 (as indicated 
+#' by the helper column val.fn3) > the tolerance, the average is set to 
+#' NA and val.f = 3
+#' 
+#' @param dt data
+do_filter_periods_with_missing_original <- function(dt){
+  values <- get_value_columns(names(dt))
+  anonymous_tolerance <- getOption("khfunctions.anon_tot_tol") 
+  for(val in values){
+      val.f <- paste0(val, ".f")
+      val.n <- paste0(val, ".n")
+      val.fn3 <- paste0(val, ".fn3")
+      dt[get(val.n) > 0 & get(val.fn3)/get(val.n) >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
+  }
+  return(dt)
+}
+
+#' @title organize_file_for_moving_average
+#' @description
+#' Make sure dt is arranged according to AARl and AARh last
+organize_file_for_moving_average <- function(dt){
+  tabcols_minus_aar <- grep("^AARl$|^AARh$", get_dimension_columns(names(dt)), value = T, invert = T)
+  key <- c(tabcols_minus_aar, "AARl", "AARh")
+  if(!identical(key(dt), key)) data.table::setkeyv(dt, key)
 }

@@ -67,18 +67,22 @@ DumpTabell <- function(TABELL, TABELLnavn, globs = SettGlobs(), format = NULL) {
   }
 }
 
-#' get_value_columns
+#' @title get_value_columns
 get_value_columns <- function(columnnames, full = FALSE) {
   valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
   valcols <- gsub("\\.f$", "", valcols)
-  if(full) valcols <- paste0(rep(valcols, each = 4), c("", ".f", ".a", ".n"))
+  if(full) valcols <- paste0(rep(valcols, each = 7), c("", ".f", ".a", ".n", ".fn1", ".fn3", ".fn9"))
   return(intersect(columnnames, valcols))
 }
 
-#' get_dimension_columns
+#' @title get_dimension_columns
 get_dimension_columns <- function(columnnames) {
-  notab <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
-  return(setdiff(columnnames, notab))
+  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
+  return(setdiff(columnnames, nodim))
+}
+
+get_tab_columns <- function(columnnames){
+  grep("^TAB\\d+$", columnnames, value = T)
 }
 
 #' FinnDesign (kb)
@@ -588,4 +592,22 @@ list_files_github <- function(branch){
   files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
   files <- basename(grep("^R/", files, value = T))
   return(files)
+}
+
+#' @title is_not_empty
+#' @description Checks if a parameter value is not empty
+#' @param value The value to check
+#' @returns TRUE/FALSE
+#' @noRd
+is_not_empty <- function(value){
+  !is.null(value) && !is.na(value) && value != ""
+}
+
+#' @title is_empty
+#' @description Checks if a parameter value is empty
+#' @param value The value to check
+#' @returns TRUE/FALSE
+#' @noRd
+is_empty <- function(value){
+  is.null(value) || is.na(value) || value == "" 
 }

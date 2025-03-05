@@ -68,7 +68,10 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
     log_start <- which(grepl(paste("do", tmpdo), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
   } else {
-    TABLE <- haven::read_dta(tmpdta, encoding = "UTF-8")
+    # Byttet fra foreign::read.dta fordi den ikke klarte å lese inn norske tegn
+    # Satte opprinnelig encoding = "UTF-8", men dette krasjet for en SYSVAK-originalfil. 
+    # Usikker på om det er nødvendig å spesifisere encoding, det ser ut til å fungere fint uten. 
+    TABLE <- haven::read_dta(tmpdta)
   }
   # Reverserer omforminger for aa kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
