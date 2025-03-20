@@ -1,4 +1,13 @@
-do_special_handling <- function(dt, code, batchdate, globs){
+#' @title do_special_handling
+#' @description
+#' Do special handling of data files, either in R or STATA. 
+#' code must be provided in specific files and specified in STATA to be used at certain points in data processing. 
+#' 
+#' @param dt data to be processed 
+#' @param code code to be performed, either R or STATA
+#' @param batchdate batchdate, used to create filepaths for stata processing
+#' @param globs global parameters
+do_special_handling <- function(dt, code, batchdate, stata_exe, DTout = TRUE){
   is_code <- !is.null(code) && !is.na(code) && code != ""
   if(!is_code) return(dt)
   code <- gsub("\\\r", "\\\n", code)
@@ -6,9 +15,8 @@ do_special_handling <- function(dt, code, batchdate, globs){
   
   if(is_stata){
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
-    RES <- KjorStataSkript(TABLE = dt, script = code, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    if (RES$feil != "") stop("Something went wrong in STATA", RES$feil, sep = "\n")
-    return(RES$TABLE)
+    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = batchdate, stata_exe = stata_exe, DTout = DTout)
+    return(dt)
   }
   
   code_env <- new.env()
@@ -25,64 +33,81 @@ do_special_handling <- function(dt, code, batchdate, globs){
   return(dt)
 }
 
-#' KjorStataScript (kb, ybk?)
-#'
-#' @param TABLE 
-#' @param script 
-#' @param tableTYP 
-#' @param batchdate 
-#' @param globs
-KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  is_kh_debug()
-  
+#' @title do_stata_processing
+#' @description
+#' Fix column names not allowed in STATA. 
+#' Save data to ..helseprofil/STATAtmp/
+#' Generate .do-file based on STATA syntax passed to script
+#' Start STATA and run .do-file with the .dta, overwrites .dta file.
+#' Reads .log file to check for errors, function stops if any error occured.
+#' Read, revert column name changes, and return processed file as data.table. 
+#' @param TABLE data to be processed
+#' @param script stata script
+#' @param batchdate used to generate file names
+#' @param stata_exe path to STATA program
+do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), stata_exe, DTout = TRUE) {
+  statafiles <- set_stata_filenames(batchdate = batchdate)
+  TABLE <- fix_column_names_pre_stata(TABLE = TABLE)
+  foreign::write.dta(TABLE, statafiles$dta)
+  on.exit(file.remove(statafiles$dta), add = T)
+  generate_stata_do_file(script = script, statafiles = statafiles)
+  run_stata_script(dofile = statafiles$do, stata_exe = stata_exe)
+  check_stata_log_for_error(statafiles = statafiles)
+  TABLE <- haven::read_dta(statafiles$tmpdta)
+  TABLE <- fix_column_names_post_stata(TABLE = TABLE)
+  if(DTout) data.table::setDT(TABLE)
+  return(TABLE)
+}
+
+#' @noRd
+fix_column_names_pre_stata <- function(TABLE){
+  TABLE[TABLE == ""] <- " " 
+  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE))
+  names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", names(TABLE))
+  return(TABLE)
+}
+
+#' @noRd
+set_stata_filenames <- function(batchdate){
   tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
   if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
-  wdOrg <- getwd()
-  setwd(tmpdir)
-  tmpdo <- paste("STATAtmp_", batchdate, ".do", sep = "")
-  tmpdta <- paste("STATAtmp_", batchdate, ".dta", sep = "")
-  tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
-  TABLE[TABLE == ""] <- " " # STATA stÃƒÂ¸tter ikke "empty-string"
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # replace numeric column names
-  names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
-  # haven::write_dta(TABLE, tmpdta)
-  foreign::write.dta(TABLE, tmpdta)
-  
-  sink(tmpdo)
-  cat("use ", tmpdta, "\n", sep = "")
+  statafiles <- list()
+  statafiles[["do"]] <-  file.path(tmpdir, paste0("STATAtmp_", batchdate, ".do"))
+  statafiles[["dta"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".dta"))
+  statafiles[["log"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".log"))
+  return(statafiles)
+}
+
+#' @noRd
+generate_stata_do_file <- function(script, statafiles){
+  sink(statafiles$do)
+  cat("use ", statafiles$dta, "\n", sep = "")
   cat(script, "\n")
-  
-  if (globs$StataVers < 12) {
-    cat("save ", tmpdta, ",  replace\n", sep = "")
-  } else if (globs$StataVers %in% 12:13) {
-    cat("saveold ", tmpdta, ", replace\n", sep = "")
-  } else {
-    cat("saveold ", tmpdta, ", version(11) replace\n", sep = "")
-  }
+  cat("save ", statafiles$dta, ", replace\n", sep = "")
   sink()
-  statacall <- paste("\"", globs$StataExe, "\" /e do ", tmpdo, " \n", sep = "")
-  system(statacall, intern = TRUE)
-  log <- readLines(tmplog)
-  feil <- ""
-  if (log[length(log)] != "end of do-file") {
-    log_start <- which(grepl(paste("do", tmpdo), log))
+}
+
+#' @noRd
+run_stata_script <- function(dofile, stata_exe){
+  call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
+  system(call, intern = TRUE)
+}
+
+#' @noRd
+check_stata_log_for_error <- function(statafiles){
+  log <- readLines(statafiles$log)
+  if(log[length(log)] != "end of do-file") {
+    log_start <- which(grepl(paste("do", statafiles$do), log))
     feil <- paste(log[log_start:length(log)], collapse = "\n")
-  } else {
-    # Byttet fra foreign::read.dta fordi den ikke klarte å lese inn norske tegn
-    # Satte opprinnelig encoding = "UTF-8", men dette krasjet for en SYSVAK-originalfil. 
-    # Usikker på om det er nødvendig å spesifisere encoding, det ser ut til å fungere fint uten. 
-    TABLE <- haven::read_dta(tmpdta)
+    stop("Something went wrong in STATA", feil, sep = "\n")
   }
-  # Reverserer omforminger for aa kunne skrive til STATA
+  return(invisible(NULL))
+}
+
+#' @noRd
+fix_column_names_post_stata <- function(TABLE){
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
-  names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
-  
-  # delete data file
-  file.remove(tmpdta)
-  setwd(wdOrg)
-  if (tableTYP == "DT") {
-    data.table::setDT(TABLE)
-  }
-  return(list(TABLE = TABLE, feil = feil))
+  names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", names(TABLE))
+  return(TABLE)
 }

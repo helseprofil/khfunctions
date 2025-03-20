@@ -113,38 +113,31 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref
 }
 
 
-## Stata prikking do file
-#' do_stata_prikk (ybk)
-#' 
-#' Function to censor the data using the STATA method (JRM)
-do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
-  is_kh_debug()
-  
+#' @title do_stata_censoring
+#' @description
+#' Reads censoring information from ACCESS. 
+#' If Stata_PRIKK parameters are set, the STATA censoring script (by Jørgen Meisfjord) 
+#' is run using the do_stata_processing function
+#' @param dt data file to be censored
+#' @param spc KUBE spec
+#' @param batchdate batchdate, to be used for temporary files
+#' @param stata_exe path to STATA program
+do_stata_censoring <- function(dt, spc, batchdate, stata_exe){
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
   spc <- data.table::as.data.table(spc)[, mget(c(stataVar, RprikkVar))]
   s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
   r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
+  check_if_only_r_or_stata_prikk(r = r_prikk, s = s_prikk)
+  if(s_prikk == 0) return(dt)
   
-  # Check that R prikk should be empty if Stata prikk should be used
-  warn_prikk(r_prikk, s_prikk)
-  RES <- NULL
-  
-  if (s_prikk > 0){
-    sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
-    synt <- paste0('include "', sfile, '"')
-    
-    RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    dt <- RES$TABLE
-  } else {
-    RES[["feil"]] <- ""
-  }
-  
-  if (RES$feil != "") stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
+  sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
+  synt <- paste0('include "', sfile, '"')
+  dt <- do_stata_processing(TABLE = dt, script = synt, batchdate = batchdate, stata_exe = stata_exe)
   return(dt)
 }
 
-warn_prikk <- function(r, s){
+check_if_only_r_or_stata_prikk <- function(r, s){
   if (r > 0 & s > 0) stop("You can't prikk for both R and Stata way. Choose either one!")
   invisible()
 }

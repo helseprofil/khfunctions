@@ -136,36 +136,9 @@ LagFilgruppe <- function(gruppe,
         names(Filgruppe) <- gsub(paste("^", val, "(\\.[fa]|)$", sep = ""), paste(FGP[[valn]], "\\1", sep = ""), names(Filgruppe))
       }
     }
-    FGP1 <- data.table::copy(Filgruppe)
     
     if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), globs = globs, format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
-    
-    # EVT SPESIALBEHANDLING
-    if (!is.na(FGP$RSYNT_PRE_FGLAGRING)) {
-      synt <- gsub("\\\r", "\\\n", FGP$RSYNT_PRE_FGLAGRING)
-      error <- ""
-      ok <- 1
-      if (grepl("<STATA>", synt)) {
-        synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-        RES <- KjorStataSkript(Filgruppe, synt, batchdate = batchdate, globs = globs)
-        if (RES$feil != "") {
-          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
-          ok <- 0
-        } else {
-          Filgruppe <- RES$TABLE
-        }
-      } else {
-        rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if ("try-error" %in% class(rsynterr)) {
-          ok <- 0
-          error <- rsynterr
-        }
-      }
-      if (ok == 0) {
-        print(error)
-      }
-    }
-    
+    Filgruppe <- do_special_handling(dt = Filgruppe, code = FGP$RSYNT_PRE_FGLAGRING, batchdate = batchdate, stata_exe = globs$StataExe, DTout = T)
     if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), globs = globs, format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
     
     # Datostempel

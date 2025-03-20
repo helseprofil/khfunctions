@@ -71,34 +71,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
     
     if ("RSYNT2pre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2pre", sep = "_"), globs = globs, format = dumps[["RSYNT2pre"]])
-    
-    # EVT SPESIALBEHANDLING
-    if (!is.na(filbesk$RSYNT2)) {
-      synt <- gsub("\\\r", "\\\n", filbesk$RSYNT2)
-      error <- ""
-      ok <- 1
-      if (grepl("<STATA>", synt)) {
-        synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-        RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
-        if (RES$feil != "") {
-          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
-          ok <- 0
-        } else {
-          DF <- RES$TABLE
-        }
-      } else {
-        rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if ("try-error" %in% class(rsynterr)) {
-          ok <- 0
-          error <- rsynterr
-        }
-      }
-      if (ok == 0) {
-        print(error)
-        TilFilLogg(filbesk$KOBLID, "RSYNT2ERR", error, batchdate = batchdate, globs = globs)
-      }
-    }
-    
+    DF <- do_special_handling(dt = DF, code = filbesk$RSYNT2, batchdate = batchdate, stata_exe = globs$StataExe, DTout = FALSE)
     if ("RSYNT2post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2post", sep = "_"), globs = globs, format = dumps[["RSYNT2post"]])
   }
   
@@ -602,54 +575,16 @@ LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), 
     
     TilFilLogg(filbesk$KOBLID, "modINNLESh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
     
-    if ("RSYNT1pre" %in% names(dumps)) {
-      if("STATA" %in% dumps[["RSYNT1pre"]]){
-        # Add special variables used in RSYNT1 STATA code
-        DF$filgruppe <- filbesk$FILGRUPPE
-        DF$delid <- filbesk$DELID
-        DF$tab1_innles <- filbesk$TAB1
-      }
-      DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = dumps[["RSYNT1pre"]])
-        
-      if("STATA" %in% dumps[["RSYNT1pre"]]) DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
-    }
-    
     # EVT SPESIALBEHANDLING
-    if (!is.na(filbesk$RSYNT1)) {
-      synt <- gsub("\\\r", "\\\n", filbesk$RSYNT1)
-      error <- ""
-      ok <- 1
-      if (grepl("<STATA>", synt)) {
-        synt <- gsub("<STATA>[ \n]*(.*)", "\\1", synt)
-        
-        ## These variables are to be use in Stata process (request from Joergen)
-        ## They will be deleted when Stata RSYNT1 is completed below
-        DF$filgruppe <- filbesk$FILGRUPPE
-        DF$delid <- filbesk$DELID
-        DF$tab1_innles <- filbesk$TAB1
-        
-        RES <- KjorStataSkript(DF, synt, batchdate = batchdate, globs = globs)
-        if (RES$feil != "") {
-          stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
-          ok <- 0
-        } else {
-          DF <- RES$TABLE
-        }
-      } else {
-        rsynterr <- try(eval(parse(text = synt)), silent = TRUE)
-        if ("try-error" %in% class(rsynterr)) {
-          ok <- 0
-          error <- rsynterr
-        }
-      }
-      if (ok == 0) {
-        print(error)
-        TilFilLogg(filbesk$KOBLID, "RSYNT1ERR", error, batchdate = batchdate, globs = globs)
-      }
-    }
+    # Add special variables used in RSYNT1 STATA code
+    if ("RSYNT1pre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = dumps[["RSYNT1pre"]])
+    DF$filgruppe <- filbesk$FILGRUPPE
+    DF$delid <- filbesk$DELID
+    DF$tab1_innles <- filbesk$TAB1
+    DF <- do_special_handling(dt = DF, code = filbesk$RSYNT1, batchdate = batchdate, stata_exe = globs$StataExe, DTout = FALSE)
+    DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
+    if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), globs = globs, format = dumps[["RSYNT1post"]])
   }
-  
-  if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), globs = globs, format = dumps[["RSYNT1post"]])
   
   # sink(file=paste(getOption("khfunctions.root"),"/hoder.txt",sep=""),append=TRUE)
   # cat("\n#################\nFIL: ")
