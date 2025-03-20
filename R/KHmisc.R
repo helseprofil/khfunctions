@@ -86,7 +86,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   tmplog <- paste("STATAtmp_", batchdate, ".log", sep = "")
   TABLE[TABLE == ""] <- " " # STATA stÃ¸tter ikke "empty-string"
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE)) # replace numeric column names
-  names(TABLE) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
+  names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", names(TABLE)) # Endre .a, .f, .n og .fn1/3/9 til _
   # haven::write_dta(TABLE, tmpdta)
   foreign::write.dta(TABLE, tmpdta)
   
@@ -115,7 +115,7 @@ KjorStataSkript <- function(TABLE, script, tableTYP = "DF", batchdate = SettKHBa
   # Reverserer omforminger for aa kunne skrive til STATA
   TABLE[TABLE == " "] <- ""
   names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
-  names(TABLE) <- gsub("^(.*)_([afn].*)$", "\\1.\\2", names(TABLE)) # Endre _a, _f, _n og _fn1/3/9 til .
+  names(TABLE) <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", names(TABLE))
   
   # delete data file
   file.remove(tmpdta)
