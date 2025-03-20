@@ -39,4 +39,7 @@ uselocal <- function(test = FALSE,
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
   geonaboprikk <<- TRUE
+  globs <<- SettGlobs()
+  batchdate <<- SettKHBatchDate()
 }
+

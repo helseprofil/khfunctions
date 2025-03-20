@@ -4,7 +4,7 @@
 #' @param ORGd 
 #' @param bruk0 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -71,7 +71,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param OrgParts 
 #' @param bruk0 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -146,7 +146,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 #' @param fradesign 
 #' @param tildesign 
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
   is_kh_debug()
   KB = globs$KB
@@ -506,7 +506,7 @@ handle_udekk <- function(FULL, namesFULL, TempFile){
 #' @param del 
 #' @param har 
 #' @param betcols 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param IntervallHull 
 #' SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)
 SettPartDekk <- function(KB, 
@@ -550,7 +550,7 @@ SettPartDekk <- function(KB,
 #'
 #' @param ORGd 
 #' @param Filter 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #'
 #' @return
 #' @export
@@ -566,27 +566,12 @@ FinnRedesignForFilter <- function(ORGd, Filter, globs = SettGlobs()) {
   return(FinnRedesign(ORGd, list(Part = MODd), globs = globs))
 }
 
-#' FinnDesignEtterFiltrering (kb)
-#'
-#' @param ORGd 
-#' @param Filter 
-#' @param FilterKols 
-#' @param FGP 
-#' @param globs 
-FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
-  
-  FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
-  FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
-  return(FinnDesign(FiltD, FGP = FGP, globs = globs))
-}
-
 #' EkstraherRadSummer (kb)
 #'
 #' @param FIL 
 #' @param pstrorg 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -699,7 +684,7 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
 #' @param Fil 
 #' @param Part 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -713,7 +698,7 @@ OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs =
 #'
 #' @param Nytt 
 #' @param Org 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
   is_kh_debug()
   
@@ -766,137 +751,11 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
   return(Org)
 }
 
-#' FinnSumOverAar (kb)
-#'
-#' @param KUBE 
-#' @param per 
-#' @param FyllMiss 
-#' @param AntYMiss 
-#' @param globs 
-FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
-  is_kh_debug()
-  UT <- KUBE[0, ]
-  tabs <- setdiff(get_dimension_columns(names(KUBE)), c("AARl", "AARh"))
-  valkols <- get_value_columns(names(KUBE))
-  # Utrykk for KH-aggregering (med hjelpestoerrelses for snitt)
-  lpv <- paste0(valkols, "=sum(", valkols, ",na.rm=TRUE),",
-               valkols, ".f=0,",
-               valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
-               valkols, ".fn1=sum(", valkols, ".f %in% 1:2),",
-               valkols, ".fn3=sum(", valkols, ".f==3),",
-               valkols, ".fn9=sum(", valkols, ".f==9),",
-               valkols, ".n=sum(", valkols, ".f==0)",
-               # valkols,".n=sum(as.numeric(!is.na(",valkols,")))",
-               collapse = ","
-  )
-  lpsvars <- unlist(lapply(valkols, function(x) {
-    paste0(x, c(".fn1", ".fn3", ".fn9", ".n"))
-  }))
-  UT[, (lpsvars) := NA_integer_]
-  
-  aara <- unique(KUBE$AARh)
-  if (FyllMiss == TRUE) {
-    aara <- (min(aara) + per - 1):max(aara)
-  } else {
-    aara <- intersect((min(aara) + per - 1):max(aara), aara)
-  }
-  cat("Finner", per, "-aars sum for ")
-  for (aar in aara) {
-    cat(aar, " ")
-    lp <- paste0("list(AARl=", aar - per + 1, ",AARh=", aar, ",", lpv, ")")
-    UT <- rbind(UT, KUBE[AARh %in% c((aar - per + 1):aar), eval(parse(text = lp)), by = tabs][, names(UT), with = FALSE])
-  }
-  cat("\n")
-  for (valkol in valkols) {
-    eval(parse(text = paste0("UT[", valkol, ".f>0,", valkol, ":=list(NA)]")))
-  }
-  
-  if (AntYMiss <= per) {
-    for (valkol in valkols) {
-      eval(parse(text = paste0("UT[", valkol, ".fn9>", AntYMiss, ",c(\"", valkol, "\",\"", valkol, ".f\"):=list(NA,9)]")))
-    }
-  }
-  
-  f9s <- names(UT)[grepl(".f9$", names(UT))]
-  if (length(f9s) > 0) {
-    UT[, (f9s) := NULL]
-  }
-  
-  return(UT)
-}
-
-#' AnonymiserNaboer (kb)
-#' 
-#' Potentially deprecated?
-#'
-#' @param FG 
-#' @param ovkatstr 
-#' @param FGP 
-#' @param D_develop_predtype 
-#' @param globs
-AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), D_develop_predtype = "IND", globs = SettGlobs()) {
-  is_kh_debug()
-  FG <- data.table::copy(FG)
-  AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
-  
-  vals <- get_value_columns(names(FG))
-  # FinnValKolsF funker ikke riktig!!!! Baade pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
-  # Maa utbedres gjennomgripende, men kan ikke gjoere dette naa derfor bare denne ad hoc loesninga
-  if (D_develop_predtype == "IND") {
-    alletabs <- setdiff(names(FG), get_value_columns(names(FG), full = TRUE))
-  } else {
-    alletabs <- intersect(c("GEO", "GEOniv", "FYLKE", "AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "TAB1", "TAB2", "UTDANN", "INNVKAT", "LANDBAK"), names(FG))
-  }
-  for (ovkSpec in AoverkSpecs) {
-    FGt <- FG[eval(parse(text = ovkSpec$subcond)), ]
-    FGr <- FG[!eval(parse(text = ovkSpec$subcond)), ]
-    overkats <- ovkSpec$overkat
-    for (val in vals) {
-      eval(parse(text = paste0(
-        "FGt[,", val, ".na:=0]"
-      )))
-    }
-    for (i in 1:length(overkats)) {
-      kombs <- combn(names(overkats), i)
-      for (j in 1:ncol(kombs)) {
-        substrs <- character(0)
-        overtabs <- character(0)
-        for (del in kombs[, j]) {
-          substrs <- c(substrs, overkats[[del]]$over)
-          overtabs <- c(overtabs, overkats[[del]]$kols)
-        }
-        substr <- paste0("(", substrs, ")", collapse = " | ")
-        for (val in vals) {
-          bycols <- setdiff(alletabs, overtabs)
-          eval(parse(text = paste0(
-            "FGt[!(", substr, "),", val, ".na:=ifelse((", val, ".na==1 | any(", val, ".f %in% 3:4)),1,0),by=bycols]"
-          )))
-        }
-      }
-    }
-    
-    for (val in vals) {
-      eval(parse(text = paste0(
-        "FGt[", val, ".na==1,", val, ".f:=4]"
-      )))
-      eval(parse(text = paste0(
-        "FGt[", val, ".na==1,", val, ":=NA]"
-      )))
-      eval(parse(text = paste0(
-        "FGt[,", val, ".na:=NULL]"
-      )))
-    }
-    
-    FG <- rbind(FGt, FGr)
-  }
-  return(FG)
-}
-
 #' SettNaboAnoSpec (kb)
 #'
 #' @param ovkatspec 
 #' @param FGP 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
   is_kh_debug()
   Foverkat <- list()
@@ -966,89 +825,10 @@ DFHeadToString <- function(innDF, topn = 10) {
   return(head)
 }
 
-## Stata prikking do file
-#' do_stata_prikk (ybk)
-#' 
-#' Function to censor the data using the STATA method (JRM)
-do_stata_prikk <- function(dt, spc, batchdate, geonaboprikk, globs){
-  is_kh_debug()
-  
-  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
-  
-  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
-  
-  # Check that R prikk should be empty if Stata prikk should be used
-  warn_prikk(r_prikk, s_prikk)
-  RES <- NULL
-  
-  if (s_prikk > 0){
-    ## synt <- 'include "F:\\Forskningsprosjekter\\PDB 2455 - Helseprofiler og til_\\PRODUKSJON\\BIN\\Z_Statasnutter\\Rsynt_Postprosess_naboprikking_del_1_LESEFERD_INNV.do'
-    sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
-    synt <- paste0('include "', sfile, '"')
-    
-    RES <- KjorStataSkript(dt, script = synt, tableTYP = "DT", batchdate = batchdate, globs = globs)
-    dt <- RES$TABLE
-  } else {
-    RES[["feil"]] <- ""
-  }
-  
-  if (RES$feil != "") {
-    stop("Noe gikk galt i kjoering av STATA \n", RES$feil)
-  }
-  
-  return(dt)
-}
-
-#' get_col (ybk)
-#' 
-#' helper function in STATA censoring
-#' Easier to check with sum by converting valid col value to 1
-get_col <- function(var, num = TRUE){
-  is_kh_debug()
-  
-  if (is.na(var) || var == ""){
-    var <- NA
-  }
-  
-  if (num){
-    var <- var_num(var)
-  }
-  
-  if (!is.na(var) && num){
-    var <- 1
-  }
-  
-  return(var)
-}
-
-#' var_num (ybk)
-#' 
-#' Helper function for STATA censoring
-#' Avoid warning message "NAs introduced by coercion" when using as.numeric
-#'
-#' @param x 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-var_num <- function(x){
-  is_kh_debug()
-  
-  v <- is.numeric(x)
-  if (!v){
-    x <- NA
-  }
-  
-  return(x)
-}
-
 #' kube_spec (ybk)
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
-kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
+save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
   is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
@@ -1064,8 +844,7 @@ kube_spec <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel =
   if(!is.null(geoprikktriangel)) varDF[, names(geoprikktriangel) := geoprikktriangel]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
-  message("Create Stata spec in ", fileSpec)
-  return(specDF)
+  return(invisible(specDF))
 }
 
 get_geonaboprikk_triangles <- function(geoniv){
@@ -1077,29 +856,9 @@ get_geonaboprikk_triangles <- function(geoniv){
 #' find_dims (vl)
 #' 
 #' Helper function for kube_spec, finding dimensions in KUBE
-find_dims <- function(dt, spec){
-  is_kh_debug()
-  # List standarddims
-  standarddims <- c("GEO",
-                    "AAR",
-                    "ALDER",
-                    "KJONN",
-                    "UTDANN",
-                    "INNVKAT",
-                    "LANDBAK")
-  
-  # Extract everything written in TAB1, TAB2, and TAB3 in the files involved
-  tabdims <- vector()
-  for(i in 1:length(spec)){
-    tabdims <- c(tabdims, 
-                 unlist(spec[[i]][c("TAB1", "TAB2", "TAB3")], use.names = F))
-  }
-  
-  # Remove NA from tabdims, combine with standarddims
-  tabdims <- tabdims[!is.na(tabdims)]
-  alldims <- c(standarddims, tabdims)
-  # Extract column names from dt included in dimension list
-  names(dt)[names(dt) %in% alldims]
+find_dims_for_stataprikk <- function(dt, etabs){
+  alldims <- c(getOption("khfunctions.khtabs"), etabs$tabnames)
+  alldims[alldims %in% names(dt)]
 }
 
 #' LagAlleFriskvikIndikatorerForKube (kb)
@@ -1109,7 +868,7 @@ find_dims <- function(dt, spec){
 #' @param FGP
 #' @param modus 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param ...
 LagAlleFriskvikIndikatorerForKube <- function(KUBEid, 
                                               KUBE, 
@@ -1140,7 +899,7 @@ LagAlleFriskvikIndikatorerForKube <- function(KUBEid,
 #' @param modus
 #' @param aargang 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 LagFriskvikIndikator <- function(id, 
                                  KUBE = data.table(), 
                                  FGP = list(amin = 0, amax = 120), 
@@ -1282,101 +1041,50 @@ LagQCKube <- function(allvis,
 #' @param STPNdscr 
 #' @return
 #' @export
-GetAccessSpecs <- function(KUBEid,
-                           kuber, 
-                           tnp,
-                           filgrupper,
-                           stnp,
-                           batchdate,
-                           globs = SettGlobs()){
-  datef <- FormatSqlBatchdate(batchdate)
+save_access_specs <- function(KUBEid,
+                              parameterlist, 
+                              batchdate, 
+                              globs = SettGlobs()){
   
-  meltdscr <- function(dscr, name = NULL){
-    if(is.null(name)){
-      name <- deparse(substitute(dscr))
-    }
-    d <- data.table::as.data.table(dscr)
-    d[, names(d) := lapply(.SD, as.character)]
-    d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
-    d[, Tabell := name]
-    data.table::setcolorder(d, "Tabell")
-  }
+  specs <- data.table::rbindlist(list(melt_access_spec(parameterlist$CUBEinformation, name = "KUBER"),
+                                      melt_access_spec(parameterlist$TNPinformation, name = "TNP_PROD")))
+  if(length(stnp) > 0) specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$STNPinformation, 
+                                                                                   name = "STANDARD TNP")))
   
-  # Extract KUBER, TNP_PROD, and STNP specs
-  specs <- data.table::rbindlist(list(meltdscr(kuber, name = "KUBER"),
-                                      meltdscr(tnp, name = "TNP_PROD")))
-  
-  if(length(stnp) > 0){
-    specs <- data.table::rbindlist(list(specs,
-                                        meltdscr(stnp, name = "STANDARD TNP")))
-  }
-  
-  # Add FILGRUPPER and FILFILTRE specs
-  # Read FILFILTRE table
-  FilterDscr <- data.table::as.data.table(sqlQuery(globs$dbh, paste0("SELECT * FROM FILFILTRE WHERE VERSJONFRA<=", datef, " AND VERSJONTIL>", datef), as.is = TRUE))
-  
-  for(i in names(filgrupper)){
-    
-    fgp <- filgrupper[[i]]
-    # Columns after "from "vals" are created in FinnFilgruppeParametre()
-    # We only want to extract the access specs
+  for(i in names(parameterlist$fileinformation)){
+    fgp <- parameterlist$fileinformation[[i]]
     end = which(names(fgp) == "vals")-1
-    fgp <- fgp[1:end]
-    
-    specs <- data.table::rbindlist(list(specs,
-                            meltdscr(fgp, name = paste0("FILGRUPPER: ", i))))
-    
-    # Add FILFILTRE table if used
-    
-    if(i %in% FilterDscr$FILVERSJON){
-      
-      filfiltre <- FilterDscr[FILVERSJON == i]
-      
-      specs <- data.table::rbindlist(list(specs,
-                              meltdscr(filfiltre, name = paste0("FILFILTRE: ", i))))
+    specs <- data.table::rbindlist(list(specs, melt_access_spec(fgp[1:end], name = paste0("FILGRUPPER: ", i))))
+    if(i %in% parameterlist$FILFILTRE$FILVERSJON){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$FILFILTRE[FILVERSJON == i], 
+                                                                  name = paste0("FILFILTRE: ", i))))
     }
   }
   
-  # Add FRISKVIK
-  Friskvik <- data.table::as.data.table(sqlQuery(globs$dbh, paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", getOption("khfunctions.year"), "AND KUBE_NAVN='", KUBEid, "'"), as.is = TRUE))
-  
-  for(i in Friskvik$ID){
-    friskvikindikator <- Friskvik[ID == i]
-    specs <- data.table::rbindlist(list(specs,
-                                        meltdscr(friskvikindikator, name = paste0("FRISKVIK:ID-", i))))
+  if(length(parameterlist$friskvik$INDIKATOR) > 0){
+    for(i in parameterlist$friskvik$ID){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameterlist$friskvik[ID == i], 
+                                                                  name = paste0("FRISKVIK:ID-", i))))
+    }
   }
   
-  return(specs)
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", KUBEid, "_", batchdate, ".csv"))
+  data.table::fwrite(specs, file = file, sep = ";")
 }
 
-#' @fix_geo_special
-#' @description Manuall handle bydel startaar, DK2020 and AALESUND/HARAM
-fix_geo_special <- function(d, 
-                            specs, 
-                            id = KUBEid){
-  
-  valK <- get_value_columns(names(d))
-  bydelstart <- specs[["B_STARTAAR"]]
-  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
-  dk2020start <- specs[["DK2020_STARTAAR"]]
-  
-  if (!is.na(bydelstart) && bydelstart > 0) {
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
+#' @title melt_access_spec
+#' @description
+#' helper function for save_access_specs
+#' @noRd
+melt_access_spec <- function(dscr, name = NULL){
+  if(is.null(name)){
+    name <- deparse(substitute(dscr))
   }
-  
-  if (!is.na(dk2020start) && dk2020start > 0) {
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
-    
-    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-    .years <- 2020:2023
-    if(id == "VALGDELTAKELSE"){
-      .years <- 2019:2022
-    } 
-    .geos <- c("1508", "1580")
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
-  }
-  return(d)
+  d <- data.table::as.data.table(dscr)
+  d[, names(d) := lapply(.SD, as.character)]
+  d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
+  d[, Tabell := name]
+  data.table::setcolorder(d, "Tabell")
 }
+
+

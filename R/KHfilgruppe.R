@@ -5,7 +5,7 @@
 #'
 #' @param gruppe 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param diagnose 
 #' @param printR 
 #' @param printCSV 
@@ -138,11 +138,7 @@ LagFilgruppe <- function(gruppe,
     }
     FGP1 <- data.table::copy(Filgruppe)
     
-    if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) {
-      for (format in dumps[["RSYNT_PRE_FGLAGRINGpre"]]) {
-        DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), globs = globs, format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
     
     # EVT SPESIALBEHANDLING
     if (!is.na(FGP$RSYNT_PRE_FGLAGRING)) {
@@ -170,11 +166,7 @@ LagFilgruppe <- function(gruppe,
       }
     }
     
-    if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) {
-      for (format in dumps[["RSYNT_PRE_FGLAGRINGpost"]]) {
-        DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), globs = globs, format = format)
-      }
-    }
+    if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), globs = globs, format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
     
     # Datostempel
     RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
@@ -212,7 +204,7 @@ LagFilgruppe <- function(gruppe,
 #'
 #' @param filgrupper 
 #' @param batchdate 
-#' @param globs 
+#' @param globs global parameters, defaults to SettGlobs
 #' @param printR 
 #' @param printCSV 
 #' @param printSTATA 
