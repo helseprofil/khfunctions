@@ -25,7 +25,7 @@ do_censor_secondary <- function(dt, parameters, globs){
   dt <- AnonymiserNaboer(FG = dt, 
                          ovkatstr = parameters$CUBEinformation$OVERKAT_ANO, 
                          FGP = parameters$fileinformation[[parameters$files$TELLER]], 
-                         ref_year_type = parameters$ref_year_type, 
+                         ref_year_type = parameters$PredFilter$ref_year_type, 
                          globs = globs)  
   return(dt)
 }

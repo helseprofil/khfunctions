@@ -1,15 +1,15 @@
 get_movav_information <- function(dt, parameters){
-  out <- list()
-  out[["aar"]] <- unique(dt[, mget(c("AARl", "AARh"))])
-  out[["int_lengde"]] <- unique(out$aar[, AARh - AARl + 1])
-  if (length(out$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
-  out[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
-  out[["movav"]] <- parameters$CUBEinformation$MOVAV
-  out[["snitt"]] <- parameters$fileinformation[[parameters$files$TELLER]]$ValErAarsSnitt
-  out[["is_orig_snitt"]] <- !is.na(out$snitt) && out$snitt != 0
-  snitt_orgintmult <- ifelse(out$is_orig_snitt, out$int_lengde, 1)
-  out[["orgintMult"]] <- ifelse(out$is_movav, 1, snitt_orgintmult)
-  return(out)
+  mapar <- list()
+  mapar[["aar"]] <- unique(dt[, mget(c("AARl", "AARh"))])
+  mapar[["int_lengde"]] <- unique(mapar$aar[, AARh - AARl + 1])
+  if(length(mapar$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
+  mapar[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
+  mapar[["movav"]] <- parameters$CUBEinformation$MOVAV
+  mapar[["snitt"]] <- parameters$fileinformation[[parameters$files$TELLER]]$ValErAarsSnitt
+  mapar[["is_orig_snitt"]] <- !is.na(mapar$snitt) && mapar$snitt != 0
+  snitt_orgintmult <- ifelse(mapar$is_orig_snitt, mapar$int_lengde, 1)
+  mapar[["orgintMult"]] <- ifelse(mapar$is_movav, 1, snitt_orgintmult)
+  return(mapar)
 }
 
 #' @title aggregate_to_moving_average
@@ -23,14 +23,16 @@ get_movav_information <- function(dt, parameters){
 #' og satt til antall år dersom originale summer. 
 #'
 #' @param dt KUBE to be aggregated 
+#' @param setrate Reset RATE after aggregating to periods?
 #' @param parameters cube parameters
 #' @param globs global parameters
-aggregate_to_periods <- function(dt, parameters, globs){
+aggregate_to_periods <- function(dt, setrate = TRUE, parameters, globs){
   dt <- do_balance_missing_teller_nevner(dt = dt)
   
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods(dt = dt, parameters = parameters, globs = globs)
     dt <- do_filter_periods_with_missing_original(dt)
+    if(setrate && parameters$TNPinformation$NEVNERKOL != "-") dt <- LeggTilNyeVerdiKolonner(dt, NYEdscr = "RATE={TELLER/NEVNER}", postMA = TRUE)
   } else {
     dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }
@@ -53,7 +55,7 @@ aggregate_to_periods <- function(dt, parameters, globs){
 do_balance_missing_teller_nevner <- function(dt){
   vals <- intersect(c("TELLER", "NEVNER", "RATE"), names(dt))
   valsF <- paste0(vals, ".f")
-  n = length(vals)
+  if(length(vals) == 0) return(dt)
   dt[, maxF := do.call(pmax, .SD), .SDcols = valsF]
   if (length(vals) > 0) {
     dt[maxF > 0, (vals) := NA]
@@ -77,10 +79,6 @@ do_aggregate_periods <- function(dt, parameters, globs){
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
   n_missing_year <- find_missing_year(aarl = parameters$MOVAVparameters$aar$AARl)
   aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year, globs = globs)
-  
-  if(parameters$TNPinformation$NEVNERKOL != "-") {
-    aggregated_dt <- LeggTilNyeVerdiKolonner(aggregated_dt, "RATE={TELLER/NEVNER}")
-  }
   return(aggregated_dt)
 }
 
@@ -183,7 +181,7 @@ do_filter_periods_with_missing_original <- function(dt){
       val.f <- paste0(val, ".f")
       val.n <- paste0(val, ".n")
       val.fn3 <- paste0(val, ".fn3")
-      dt[get(val.n) > 0 & get(val.fn3)/get(val.n) >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
+      if(val.n %in% names(dt)) dt[get(val.n) > 0 & get(val.fn3)/get(val.n) >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
   }
   return(dt)
 }

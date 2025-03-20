@@ -18,8 +18,7 @@ add_predteller <- function(dt, parameters, globs){
   prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters, globs = globs)
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters, globs = globs)
   
-  cat("* Merger med KUBE\n")
-  cat("** Før merge dim:", dim(dt), "\n")
+  cat("* Merger med KUBE\n** Før merge dim:", dim(dt), "\n")
   tabcols <- get_dimension_columns(names(dt))
   dt <- collapse::join(dt, predteller, how = "l", on = tabcols, overid = 2, verbose = 0)
   cat("** Etter merge dim:", dim(dt), "\n")
@@ -58,7 +57,8 @@ find_common_standard_teller_nevner_prednevner_design <- function(parameters, glo
 estimate_predrate <- function(design, parameters, globs){
   cat("* Estimerer PREDRATE...\n")
   STNF <- merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design, globs = globs)$TNF
-  STNF[, (parameters$PredFilter$Pkols) := NULL]
+  STNF <- aggregate_to_periods(dt = STNF, setrate = FALSE, parameters = parameters, globs = globs)
+  STNF[, (parameters$PredFilter$Predfiltercolumns) := NULL]
   STNF[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
   STNF[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
   STNF[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = 0)]
@@ -77,13 +77,12 @@ estimate_prednevner <- function(design, parameters, globs){
   cat("* Estimerer PREDNEVNER...\n")
   PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, globs = globs)
   PN <- OmkodFil(FinnFilT(parameters$files$PREDNEVNER), PNrd, globs = globs)
-  
-  PNfil <- parameters$TNPinformation$PREDNEVNERFIL
-  is_PNfil <- !is.na(PNfil) && PNfil != ""
-  PredNevnerKol <- ifelse(is_PNfil, gsub("^(.*):(.*)", "\\2", PNfil), parameters$TNPinformation$NEVNERKOL)
+  PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
+  if(is_empty(PredNevnerKol)) PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
   PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(PN))
   data.table::setnames(PN, names(PN), PNnames)
-  PN <- PN[, .SD, .SDcols = c(get_dimension_columns(names(PN)), paste0("PREDNEVNER", c("", ".f", ".a")))]
+  PN <- PN[, .SD, .SDcols = c(get_dimension_columns(names(PN)), grep("^PREDNEVNER", names(PN), value= T))]
+  PN <- aggregate_to_periods(dt = PN, setrate = FALSE, parameters = parameters, globs = globs)
   return(PN)
 }
 
@@ -105,14 +104,14 @@ estimate_predteller <- function(predrate, prednevner, parameters, globs){
   STNP <- STNP[, .SD, .SDcols = c(get_dimension_columns(names(STNP)), paste0("PREDTELLER", c("", ".f", ".a")))]
   cat("** Etter merge dim:", dim(STNP), "\n")
   
-  # Finn omkoding til KUBEd, dvs design for TNF, NB: Her maa det aggregeres opp for standardisering
-  prednevnerfil <- parameters$files$PREDNEVNER
-  prednevnerparameters <- parameters$fileinformation[[prednevnerfil]]
-  PNdesign <- find_filedesign(file = prednevner, fileparameters = prednevnerparameters, globs = globs)
-  redesign <- FinnRedesign(PNdesign, list(Part = parameters$CUBEdesign$MAIN), SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
-  PT <- OmkodFil(FIL = STNP, RD = redesign, globs = globs)
-  cat("** PREDTELLER ferdig med dim:", dim(PT), "\n")
-  return(PT)
+  prednevnerparameters <- parameters$fileinformation[[parameters$files$PREDNEVNER]]
+  prednevnerdesign <- find_filedesign(file = prednevner, fileparameters = prednevnerparameters, globs = globs)
+  cubedesign <- list(Part = parameters$CUBEdesign)
+  redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
+  predteller <- OmkodFil(FIL = STNP, RD = redesign, globs = globs)
+  
+  cat("** PREDTELLER ferdig med dim:", dim(STNP), "\n")
+  return(predteller)
 }
 
 #' @title find_design_after_filter
@@ -128,7 +127,7 @@ find_design_after_filter <- function(file, parameterlist, originaldesign = NULL,
   designfilter <- parameterlist$PredFilter$Design
   if(is.null(originaldesign)) originaldesign <- parameterlist$filedesign[[filename]]
   filtercolumns <- character()
-  if(outpredfilter) filtercolumns <- parameterlist$PredFilter$Pkols
+  if(outpredfilter) filtercolumns <- parameterlist$PredFilter$Predfiltercolumns
   
   outdesign <- FinnRedesignForFilter(originaldesign, designfilter, globs = globs)$Dekk
   outcols <- setdiff(names(outdesign), filtercolumns)
@@ -141,19 +140,19 @@ find_design_after_filter <- function(file, parameterlist, originaldesign = NULL,
 #' Adds scale to standardize MEIS
 #' @noRD
 add_meisskala <- function(dt, parameters, globs){
-  if(parameters$ref_year_type != "Specific") return(dt)
+  if(parameters$PredFilter$ref_year_type != "Specific") return(dt)
   cat("* Legger til MEISskala for standardisering\n")
 
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
     dt[, MEISskala := NA_real_]
     return(dt)
   }
-
-  subset_meisskala <- dt[eval(rlang::parse_expr(parameters$PredFilter$PfiltStr))]
+  
+  subset_meisskala <- dt[eval(rlang::parse_expr(parameters$PredFilter$meisskalafilter))]
   if (nrow(subset_meisskala) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   # Tidligere ble subset omkodet på nytt fra dt om det ikke fantes: OmkodFilFraPart(dt, parameters$PredFilter$Design, FGP = parameters$fileinformation[[parameters$files$TELLER]], globs = globs)
   subset_meisskala[, MEISskala := RATE]
-  joincolumns <- setdiff(intersect(names(subset_meisskala), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Pkols)
+  joincolumns <- setdiff(intersect(names(subset_meisskala), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
   dt <- collapse::join(dt, subset_meisskala[, mget(c(joincolumns, "MEISskala"))], how = "l", on = joincolumns, overid = 2, verbose = 0)
   return(dt) 
 }

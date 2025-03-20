@@ -11,11 +11,19 @@ test_formatting <- function(fasit, ny){
   
 # FORSVARET_SVOMMMING
 LagKUBE("FORSVARET_SVOMMING_3")
-forsvaret_svomming_fasit <- readRDS("O:/Prosjekt/FHP/PRODUKSJON/PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/FORSVARET_SVOMMING_3_2025-02-24-10-51.rds")
+forsvaret_svomming_3_fasit <- readRDS("O:/Prosjekt/FHP/PRODUKSJON/PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/FORSVARET_SVOMMING_3_2025-02-24-10-51.rds")
+forsvaret_svomming_3_ny <- RESULTAT$KUBE
+test_formatting(forsvaret_svomming_3_fasit, forsvaret_svomming_3_ny)
+all.equal(forsvaret_svomming_3_fasit, forsvaret_svomming_3_ny)
+# OK 18.03.2025 - før standardisering til periode
+
+# FORSVARET_SVOMMMING
+LagKUBE("FORSVARET_SVOMMING_1")
+forsvaret_svomming_fasit <- readRDS("O:/Prosjekt/FHP/PRODUKSJON/PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/FORSVARET_SVOMMING_1_2025-02-24-10-52.rds")
 forsvaret_svomming_ny <- RESULTAT$KUBE
 test_formatting(forsvaret_svomming_fasit, forsvaret_svomming_ny)
 all.equal(forsvaret_svomming_fasit, forsvaret_svomming_ny)
-# OK 18.03.2025
+# OK 20.03.2025
 
 # BARNEVERN_TILTAK
 barnevern_tiltak_fasit <- readRDS("O:/Prosjekt/FHP/PRODUKSJON/PRODUKTER/KUBER/KOMMUNEHELSA/DATERT/R/BARNEVERN_TILTAK_2025-03-17-14-52.rds")

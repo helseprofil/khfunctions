@@ -17,7 +17,6 @@ get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = Se
   parameters[["STNPinformation"]] <- get_stnp_information(TNP = parameters$TNPinformation, validdates = parameters$validdates, isrefverdiP = isrefverdiP, isSTNP = isSTNP, globs = globs)
   parameters[["files"]] <- get_filenames(parameters = parameters, isrefverdiP = isrefverdiP, isSTNP = isSTNP)
   parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
-  parameters[["PredFilter"]] <- set_predictionfilter(REFVERDI = parameters$CUBEinformation$REFVERDI, globs = globs)
   parameters[["ref_year_type"]] <- parameters$PredFilter$ref_year_type
   parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
   parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs)
@@ -130,47 +129,6 @@ get_filfiltre <- function(files = NULL, validdates, globs){
   return(filfiltre)
 }
 
-#' @title set_predictionfilter (kb)
-#' @description 
-#' Helper function for [get_cubeparameters()]
-#' @param REFVERDI Corresponds to ACCESS::KUBER::REFVERDI
-#' @param globs global parameters, defaults to SettGlobs
-set_predictionfilter <- function(REFVERDI, globs = SettGlobs()) {
-  if(is_empty(REFVERDI)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
-  ref_year_type <- ifelse(grepl("AAR", REFVERDI), "Specific", "Moving")
-  PredFilter <- list()
-  Pcols <- character(0)
-  delkolN <- globs$DefDesign$DelKolN
-  deltype <- globs$DefDesign$DelType
-  delformat <- globs$DefDesign$DelFormat
-  delkolsF <- globs$DefDesign$DelKolsF
-  
-  refverdicolumns <- delkolN[sapply(paste0(delkolN, "(l|h)? *="), grepl, REFVERDI)]
-  for (del in names(refverdicolumns)) {
-    delN <- refverdicolumns[del]
-    if (deltype[del] == "COL") {
-      val <- gsub(paste0(".*", delN, " *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-      if (delformat[del] == "integer") val <- as.integer(val)
-      PredFilter[[del]] <- data.table::setDT(setNames(as.list(val), delN))
-    } else if (deltype[del] == "INT") {
-      if (grepl(paste0(delN, "l *=="), REFVERDI) && grepl(paste0(delN, "h *=="), REFVERDI)) {
-        vall <- gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-        valh <- gsub(paste0(".*", delN, "h *== *\'(.*?)\'.*"), "\\1", REFVERDI)
-        intval <- list(vall, valh)
-        PredFilter[[del]] <- eval(parse(text = paste0("data.frame(", delN, "l=", as.integer(vall), ",", delN, "h=", as.integer(valh), ",stringsAsFactors=FALSE)")))
-        PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
-      } else if (grepl(paste0(delN, "l *=="), REFVERDI)) {
-        intval1 <- as.integer(gsub(paste0(".*", delN, "l *== *\'(.*?)\'.*"), "\\1", REFVERDI))
-        intval <- list(intval1, intval1)
-        REFVERDI <- gsub(paste0(delN, " *="), paste0(delN, "l="), REFVERDI)
-        PredFilter[[del]] <- data.table::setDT(setNames(intval, paste0(delN, c("l", "h"))))
-      }
-    }
-    Pcols <- c(Pcols, delkolsF[[del]])
-  }
-  return(list(Design = PredFilter, PfiltStr = REFVERDI, Pkols = Pcols, ref_year_type = ref_year_type))
-}
-
 #' @title get_filegroup_information
 #' @description 
 #' Helper function for [get_cubeparameters()]
@@ -250,3 +208,57 @@ get_filedesign <- function(parameters, globs){
   return(filedesign)
 }
 
+#' @title set_predictionfilter (kb)
+#' @description 
+#' Helper function for `get_cubeparameters()`
+#' @param REFVERDI Corresponds to ACCESS::KUBER::REFVERDI
+#' @param globs global parameters, defaults to SettGlobs
+set_predictionfilter <- function(parameters, globs) {
+  refverdi <- parameters$CUBEinformation$REFVERDI
+  tellerfile <- parameters$files$TELLER
+  maxaar <- max(BUFFER[[tellerfile]]$AARh)
+  movav <- parameters$CUBEinformation$MOVAV
+  if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
+  
+  out <- list(Design = list())
+  delkolN <- globs$DefDesign$DelKolN
+  refverdicolumns <- delkolN[sapply(delkolN, grepl, refverdi)]
+  out[["Predfiltercolumns"]] <- as.character(unlist(globs$DefDesign$DelKolsF[names(refverdicolumns)]))
+  out[["ref_year_type"]] <- ifelse(grepl("AAR", refverdi), "Specific", "Moving")
+  meisskalafilter <- character()
+  
+  for (del in names(refverdicolumns)) {
+    delN <- refverdicolumns[del]
+    if(del == "Gn"){
+      val <- gsub(paste0(".*", delN, " *== *\'(.*?)\'.*"), "\\1", refverdi)
+      out$Design[[del]] <- data.table::setDT(setNames(as.list(val), delN))
+      meisfilter <- paste0("GEOniv == '", val, "'")
+      meisskalafilter <- c(meisskalafilter, meisfilter)
+    }
+    
+    if(del == "Y"){
+      aar <- as.numeric(ifelse(grepl("siste", refverdi), maxaar, gsub(paste0(".*AAR[lh]*== *\'(.*?)\'.*"), "\\1", refverdi)))
+      if(movav > 1) aar <- (aar-movav+1):aar
+      out$Design[[del]] <- data.table::setDT(setNames(list(aar, aar), c("AARl", "AARh")))
+      meisfilter <- paste0("AARh == '", max(aar), "'")
+      meisskalafilter <- c(meisskalafilter, meisfilter)
+    }
+  }
+  out[["meisskalafilter"]] <- paste(meisskalafilter, collapse = " & ")
+  return(out)
+}
+
+#' @title update_cubedesign_after_moving_average
+#' @description
+#' updates cubedesign after aggregating to moving average. Changes the year part, to reflect periods. 
+#' This is crucial when recoding predteller before merging onto cube. 
+#'
+#' @param dt cube
+#' @param origdesign Cubedesign after merging teller and nevner. 
+#' @noRd
+update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
+  if(!parameters$MOVAVparameters$is_movav) return(origdesign)
+  aar <- unique(dt[, mget(c("AARl", "AARh"))])
+  origdesign$Y <- aar
+  return(origdesign)
+}

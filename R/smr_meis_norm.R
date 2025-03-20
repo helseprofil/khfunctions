@@ -1,6 +1,6 @@
 add_smr_and_meis <- function(dt, parameters){
-  if(parameters$ref_year_type == "Specific") dt <- calculate_smr_and_meis(dt = dt, parameters = parameters)
-  if(parameters$ref_year_type == "Moving") dt <- calculate_smrtmp(dt = dt, parameters = parameters)
+  if(parameters$PredFilter$ref_year_type == "Specific") dt <- calculate_smr_and_meis(dt = dt, parameters = parameters)
+  if(parameters$PredFilter$ref_year_type == "Moving") dt <- calculate_smrtmp(dt = dt, parameters = parameters)
   return(dt)
 }
 
@@ -32,22 +32,22 @@ adjust_smr_and_meis_to_country_normal <- function(dt, parameters, globs){
 }
 
 get_normsubset <- function(dt, parameters, globs){
-  if(parameters$ref_year_type == "Specific") normsubset <- dt[GEOniv == "L"]
-  if(parameters$ref_year_type == "Moving") normsubset <- dt[eval(rlang::parse_expr(parameters$PredFilter$PfiltStr))]
+  if(parameters$PredFilter$ref_year_type == "Specific") normsubset <- dt[GEOniv == "L"]
+  if(parameters$PredFilter$ref_year_type == "Moving") normsubset <- dt[eval(rlang::parse_expr(parameters$PredFilter$PfiltStr))]
   if(nrow(normsubset) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke hente subset for landsnormal")
   normsubset <- format_normsubset(dt = normsubset, parameters = parameters, globs = globs)
   return(normsubset)  
 }
 
 format_normsubset <- function(dt, parameters, globs){
-  if(parameters$ref_year_type == "Specific"){
+  if(parameters$PredFilter$ref_year_type == "Specific"){
     dt[, lopendeMEISref := MEIS]
     outcols <- setdiff(intersect(names(dt), globs$DefDesign$DesignKolsFA), c("GEOniv", "GEO", "FYLKE"))
     dt <- dt[, c(..outcols, "lopendeMEISref")]
     return(dt)
   }
   
-  outcols <- setdiff(intersect(names(dt), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Pkols)
+  outcols <- setdiff(intersect(names(dt), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
   maltall <- parameters$MALTALL
   if (maltall %in% c("TELLER", "RATE")) {
     data.table::setnames(dt, c(paste0(maltall, c("", ".f", ".a", ".n")), "SMRtmp"), c(paste0("NORM", c("", ".f", ".a", ".n")), "NORMSMR"))
@@ -66,7 +66,7 @@ format_normsubset <- function(dt, parameters, globs){
 #' Ratene for ukjent alder/kjoenn vil ikke matche nevner fra BEF, derfor vil det predikeres for faa doede relativt til observert
 #' @noRd
 do_adjust_smr_and_meis <- function(dt, parameters){
-  if(parameters$ref_year_type == "Specific"){
+  if(parameters$PredFilter$ref_year_type == "Specific"){
     dt[, lopendeFORHOLDSVERDI := MEIS / lopendeMEISref * 100]
     dt[, let(SMR = lopendeFORHOLDSVERDI, NORM = lopendeMEISref)]
     return(dt)

@@ -23,21 +23,22 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
+  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters, globs = globs)
   save_kubespec_csv(spec = parameters$CUBEinformation)
-  if(isTRUE(write)) save_access_specs(KUBEid = KUBEid, parameterlist = parameters, batchdate = batchdate, globs = globs)
+  if(write) save_access_specs(KUBEid = KUBEid, parameterlist = parameters, batchdate = batchdate, globs = globs)
   
   TNF <- merge_teller_nevner(parameters = parameters, globs = globs)
   KUBE <- TNF$TNF
-  parameters[["CUBEdesign"]] <- TNF$KUBEd
   if(parameters$TNPinformation$NEVNERKOL != "-") KUBE <- LeggTilNyeVerdiKolonner(KUBE, "RATE={TELLER/NEVNER}")
+  organize_file_for_moving_average(dt = KUBE)
+  parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
+  KUBE <- aggregate_to_periods(dt = KUBE, setrate = TRUE, parameters = parameters, globs = globs)
+  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
+  
   KUBE <- add_predteller(dt = KUBE, parameters = parameters, globs = globs)
   KUBE <- add_meisskala(dt = KUBE, parameters = parameters, globs = globs)
   if("raaKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE1"), globs = globs, format = dumps[["raaKUBE1"]])
   remove_original_files_from_buffer()
-  
-  organize_file_for_moving_average(dt = KUBE)
-  parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters, globs = globs)
   
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
   fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
@@ -71,8 +72,6 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   if(isTRUE(write)) LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = parameters$fileinformation[[parameters$files$TELLER]], modus = parameters$CUBEinformation$MODUS, batchdate = batchdate, globs = globs)
   ALLVIS <- ALLVIS[, c(..outdimensions, ..outvalues, "SPVFLAGG")]
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = outdimensions, kube = KUBE)
-  
-  cat("---------------------KUBE FERDIG\n\n")
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   if(isTRUE(write)) save_cube_output(outputlist = RESULTAT, KUBEid = KUBEid, batchdate = batchdate, versjonert = versjonert, geonaboprikk = geonaboprikk)
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
