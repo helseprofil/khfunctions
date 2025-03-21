@@ -37,17 +37,17 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   
   KUBE <- add_predteller(dt = KUBE, parameters = parameters, globs = globs)
   KUBE <- add_meisskala(dt = KUBE, parameters = parameters, globs = globs)
-  if("raaKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE1"), globs = globs, format = dumps[["raaKUBE1"]])
+  if("raaKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE1"), format = dumps[["raaKUBE1"]])
   remove_original_files_from_buffer()
   
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
-  fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
-  if ("maKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), globs = globs, format = dumps[["maKUBE0"]])
+  KUBE <- fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
+  if ("maKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), format = dumps[["maKUBE0"]])
 
   KUBE <- do_censor_kube_r(dt = KUBE, parameters = parameters, globs = globs)
-  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpre"]])
+  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), format = dumps[["KUBE_SLUTTREDIGERpre"]])
   KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, batchdate = batchdate, stata_exe = globs$StataExe)
-  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), globs = globs, format = dumps[["KUBE_SLUTTREDIGERpost"]])
+  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), format = dumps[["KUBE_SLUTTREDIGERpost"]])
   
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
@@ -59,13 +59,13 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   outvalues <- get_outvalues_allvis(parameters = parameters)
   outdimensions <- get_outdimensions(dt = KUBE, etabs = etabs$tabnames, parameters = parameters)
   
-  if ("STATAPRIKKpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), globs = globs, format = dumps[["STATAPRIKKpre"]])
+  if ("STATAPRIKKpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), format = dumps[["STATAPRIKKpre"]])
   dims <- find_dims_for_stataprikk(dt = KUBE, etabs = etabs)
   save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
   KUBE <- do_stata_censoring(dt = KUBE, spc = parameters$CUBEinformation, batchdate = batchdate, stata_exe = globs$StataExe)
-  if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), globs = globs, format = dumps[["STATAPRIKKpost"]])
+  if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), format = dumps[["STATAPRIKKpost"]])
   KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, batchdate = batchdate, stata_exe = globs$StataExe)
-  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), globs = globs, format = dumps[["RSYNT_POSTPROSESSpost"]])
+  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), format = dumps[["RSYNT_POSTPROSESSpost"]])
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = outvalues)
@@ -73,7 +73,7 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   ALLVIS <- ALLVIS[, c(..outdimensions, ..outvalues, "SPVFLAGG")]
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = outdimensions, kube = KUBE)
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
-  if(isTRUE(write)) save_cube_output(outputlist = RESULTAT, KUBEid = KUBEid, batchdate = batchdate, versjonert = versjonert, geonaboprikk = geonaboprikk)
+  if(isTRUE(write)) save_cube_output(outputlist = RESULTAT, name = KUBEid, batchdate = batchdate, versjonert = versjonert, geonaboprikk = geonaboprikk)
   cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))

@@ -36,7 +36,7 @@ get_cube_information <- function(KUBEid, validdates, globs){
                                    query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND ", validdates), 
                                    as.is = TRUE))
   if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", KUBEid, "' i ACCESS::KUBER, har du skrevet riktig?")
-  if ((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", KUBEid)
+  if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", KUBEid)
   return(KUBER)
 }
 
@@ -131,49 +131,28 @@ get_filfiltre <- function(files = NULL, validdates, globs){
 
 #' @title get_filegroup_information
 #' @description 
-#' Helper function for [get_cubeparameters()]
-#' reads from FILGRUPPER in access
+#' Helper function for `get_cubeparameters()`
+#' Loops through filegroups used, and uses read_filgrupper_and_add_vals() to get filegroup information.
 #' @noRD
 #' @param files list of files to be used in the cube 
 #' @param validdates valid dates to specify active rows in the ACCESS table
 #' @param globs global parameters, defaults to SettGlobs
-get_filegroup_information <- function(files, filefilters, validdates, globs = SettGlobs()){
+get_filegroup_information <- function(files, filefilters = NULL, validdates, globs = SettGlobs()){
   fileinfo <- list()
   
   for(file in unique(files)){
-    filefilter <- filefilters[FILVERSJON == file]
-    if(nrow(filefilter) > 1) stop("> 1 rad i FILFILTRE funnet for FILVERSJON = ", file)
-    filename <- ifelse(nrow(filefilter) == 1, filefilter$ORGFIL, file)
-    FILGRUPPER <- as.list(RODBC::sqlQuery(globs$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filename, "' AND ", validdates), as.is = TRUE))
-    if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filename, " finnes ikke, er duplisert, eller er satt til inaktiv"))
-    
-    isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)
-    if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filename)
-    if(isalderalle){
-      alle_aldre <- as.integer(tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
-      amin <- alle_aldre[1]
-      amax <- alle_aldre[2]
-    } else {
-      amin <- getOption("khfunctions.amin")
-      amax <- getOption("khfunctions.amax")
-    }
-    
-    vals <- list()
-    for(val in grep("^VAL", getOption("khfunctions.kolorgs"), value = T)) {
-      valname <- paste0(val, "navn")
-      isvalname <- !is.na(FILGRUPPER[[valname]]) && FILGRUPPER[[valname]] != ""
-      valname <- ifelse(isvalname, FILGRUPPER[[valname]], val)
-      valmiss <- paste0(val, "miss")
-      isvalmiss <-  !is.na(FILGRUPPER[[valmiss]]) && FILGRUPPER[[valmiss]] != ""
-      valmiss <- ifelse(isvalmiss, FILGRUPPER[[valmiss]], "0")
-      valsumbar <- paste0(val, "sumbar")
-      isvalsumbar <- !is.na(FILGRUPPER[[valsumbar]]) && FILGRUPPER[[valsumbar]] != ""
-      valsumbar <- ifelse(isvalsumbar, FILGRUPPER[[valsumbar]], "0")
-      vals[[valname]] <- list(miss = valmiss, sumbar = valsumbar)
-    }
-    fileinfo[[file]] <- c(FILGRUPPER, list(vals = vals, amin = amin, amax = amax))
+    filename <- replace_filename_if_filefilters(filename = file, filefilters = filefilters)
+    fileinfo[[file]] <- read_filgrupper_and_add_vals(filegroup_name = filename, validdates = validdates, globs = globs)
   }
   return(fileinfo)
+}
+
+#' @noRd
+replace_filename_if_filefilters <- function(filename, filefilters){
+  if(is.null(filefilters)) return(filename)
+  filefilter <- filefilters[FILVERSJON == filename]
+  if(nrow(filefilter) > 1) stop("> 1 rad i FILFILTRE funnet for FILVERSJON = ", filename)
+  filename <- ifelse(nrow(filefilter) == 1, filefilter$ORGFIL, filename)
 }
 
 #' @title get_friskvik_information

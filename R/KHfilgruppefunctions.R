@@ -1,4 +1,4 @@
-LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnose = 0, globs = SettGlobs(), versjonert = FALSE, dumps = list()) {
+LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), globs = SettGlobs(), versjonert = FALSE, dumps = list()) {
   is_kh_debug()
   
   klokke <- proc.time()
@@ -8,13 +8,6 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
   LestFil <- LesFil(filbesk, batchdate = batchdate, globs = globs, dumps = dumps)
   ok <- LestFil$ok
   DF <- LestFil$DF
-  
-  #   #EVT SPESIALBEHANDLING
-  #   if (!is.na(filbesk$RSYNT1)){
-  #     filbesk$RSYNT1<-gsub("\\\r","\\\n",filbesk$RSYNT1)
-  #     eval(parse(text=filbesk$RSYNT1))
-  #   }
-  # cat("\nETTER INNLES\n#############################\n")
   kolorgs <- getOption("khfunctions.kolorgs")
   
   if (ok == 1) {
@@ -30,7 +23,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     names(DF) <- plyr::mapvalues(names(DF), HarCols, names(HarCols))
     
     # EVT INNFYLLING AV TABULATOR N?R DENNE ER INNRYKKET
-    if (!is.na(filbesk$FYLLTAB)) {
+    if (is_not_empty(filbesk$FYLLTAB)) {
       TAB <- as.character(read.csv(text = filbesk$FYLLTAB, header = FALSE, stringsAsFactors = FALSE))
       if (all(TAB %in% names(DF))) {
         DF[, TAB][DF[, TAB] == ""] <- NA
@@ -42,7 +35,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
     }
     
     # EVT KASTING AV KOLONNER FoeR RESHAPE (GJoeR melt LETTERE aa BRUKE)
-    if (!is.na(filbesk$KASTKOLS)) {
+    if(is_not_empty(filbesk$KASTKOLS)) {
       eval(parse(text = paste("DF<-DF[,-", filbesk$KASTKOLS, "]", sep = "")))
     }
     
@@ -315,6 +308,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), diagnos
         DF[is.na(DF[, val]), val] <- ""
         
         valKB <- KBomkod(DF[, val], type = val, valsubs = TRUE, filbesk = filbesk, batchdate = batchdate, globs = globs)
+        valKB <- KBomkod(DF[[val]], type = val, valsubs = TRUE, filbesk = filbesk, batchdate = batchdate, globs = globs)
         valKBut <- valKB$subsant
         
         valok <- 1
@@ -631,7 +625,6 @@ KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", 
   return(csvT)
 }
 
-
 #' cSVmod (kb)
 #'
 #' @param DF 
@@ -805,75 +798,47 @@ FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs 
                                                    sep = ""
   ), as.is = TRUE))
   FGPfinnes <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
-  ok <- 0
   resultat <- list()
-  if (FGPfinnes == 0) {
-    KHerr(paste("Filgruppe", gruppe, "finnes ikke. Droppes."))
-  } else if (FGPaktiv == 0) {
-    KHerr(paste("Filgruppe", gruppe, "finnes, men er satt inaktiv. Droppes."))
-  } else {
-    ok <- 1
-    FGP <- as.list(RODBC::sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
-                                             "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
-                                          ",
-                                             sep = ""
-    ), as.is = TRUE))
-    # Sette endelig default alder ALLE
-    # Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
-    amin <- 0
-    amax <- as.numeric(RODBC::sqlQuery(dbh, "SELECT ALDinf FROM HOVEDPARAMETREg")[1])
-    # Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
-    if (!is.na(FGP$ALDER_ALLE)) {
-      if (grepl("^\\d+_(\\d+|)$", FGP$ALDER_ALLE)) {
-        alle_aldre <- unlist(strsplit(FGP$ALDER_ALLE, "_"))
-        if (length(alle_aldre) == 1) {
-          amin <- as.numeric(alle_aldre[1])
-        } else if (length(alle_aldre) == 2) {
-          amin <- as.numeric(alle_aldre[1])
-          amax <- as.numeric(alle_aldre[2])
-        }
-      } else {
-        cat("FEIL!!!!!! Feil format FGP$ALDER_ALLE", FGP$ALDER_ALLE, "\n")
+  if(FGPfinnes == 0) stop(paste("Filgruppe", gruppe, "finnes ikke. Droppes."))
+  if(FGPaktiv == 0) stop(paste("Filgruppe", gruppe, "finnes, men er satt inaktiv"))
+  FGP <- as.list(RODBC::sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+                                           "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
+                                        ",
+                                           sep = ""
+  ), as.is = TRUE))
+  # Sette endelig default alder ALLE
+  # Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
+  amin <- getOption("khfunctions.amin")
+  amax <- getOption("khfunctions.amax")
+  # Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
+  if (!is.na(FGP$ALDER_ALLE)) {
+    if (grepl("^\\d+_(\\d+|)$", FGP$ALDER_ALLE)) {
+      alle_aldre <- unlist(strsplit(FGP$ALDER_ALLE, "_"))
+      if (length(alle_aldre) == 1) {
+        amin <- as.numeric(alle_aldre[1])
+      } else if (length(alle_aldre) == 2) {
+        amin <- as.numeric(alle_aldre[1])
+        amax <- as.numeric(alle_aldre[2])
       }
+    } else {
+      cat("FEIL!!!!!! Feil format FGP$ALDER_ALLE", FGP$ALDER_ALLE, "\n")
     }
-    
-    vals <- list()
-    for (valf in names(FGP)[grepl("^VAL\\d+navn$", names(FGP))]) {
-      val <- gsub("(VAL\\d+)navn", "\\1", valf)
-      valn <- ifelse(is.na(FGP[[valf]]) || FGP[[valf]] == "", val, FGP[[valf]])
-      valmissf <- paste(val, "miss", sep = "")
-      valmiss <- ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]] == "", "0", FGP[[valmissf]])
-      valsumf <- paste(val, "sumbar", sep = "")
-      valsum <- ifelse(is.na(FGP[[valsumf]]) || FGP[[valsumf]] == "", "0", FGP[[valsumf]])
-      vals[[valn]] <- list(miss = valmiss, sumbar = valsum)
-    }
-    resultat <- c(FGP, list(vals = vals, amin = amin, amax = amax))
   }
   
+  vals <- list()
+  for (valf in names(FGP)[grepl("^VAL\\d+navn$", names(FGP))]) {
+    val <- gsub("(VAL\\d+)navn", "\\1", valf)
+    valn <- ifelse(is.na(FGP[[valf]]) || FGP[[valf]] == "", val, FGP[[valf]])
+    valmissf <- paste(val, "miss", sep = "")
+    valmiss <- ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]] == "", "0", FGP[[valmissf]])
+    valsumf <- paste(val, "sumbar", sep = "")
+    valsum <- ifelse(is.na(FGP[[valsumf]]) || FGP[[valsumf]] == "", "0", FGP[[valsumf]])
+    vals[[valn]] <- list(miss = valmiss, sumbar = valsum)
+  }
+  resultat <- c(FGP, list(vals = vals, amin = amin, amax = amax))
+  
   gc()
-  return(c(resultat, list(ok = ok)))
-}
-
-#' FinnFilBeskGruppe (kb)
-#'
-#' @param filgruppe 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  datef <- FormatSqlBatchdate(batchdate)
-  sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
-              FROM INNLESING INNER JOIN
-              (  ORGINNLESkobl INNER JOIN ORIGINALFILER
-              ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
-              ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
-              AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
-              WHERE INNLESING.FILGRUPPE='", filgruppe, "'
-              AND ORIGINALFILER.IBRUKFRA<=", datef, "
-              AND ORIGINALFILER.IBRUKTIL>", datef, "
-              AND INNLESING.VERSJONFRA<=", datef, "
-              AND INNLESING.VERSJONTIL>", datef, sep = "")
-  fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
-  invisible(fb)
+  return(c(resultat))
 }
 
 #' SjekkDuplikater (kb)
@@ -1016,8 +981,6 @@ ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = Set
   } else {
     idvars <- NULL
   }
-  # idvars<-SettCols(filbesk$RESHAPEid,names(T))
-  # mevars<-SettCols(filbesk$RESHAPEmeas,names(T))
   mevars <- NULL
   if (!(is.na(filbesk$RESHAPEmeas) || filbesk$RESHAPEmeas == "")) {
     mevars <- eval(parse(text = paste("c(", filbesk$RESHAPEmeas, ")")))
@@ -1312,7 +1275,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
   
   if (nrow(filbesk) == 0) {
     kjonn <- setNames(as.data.frame(kjonn, stringsAsFactors = FALSE), c("KJONN"))
-    kjonn$KBOMK <- kjonn[, 1]
+    kjonn <- kjonn[, 1]
   } else {
     kjonn$KBOMK <- KBomkod(kjonn$ORG, type = "KJONN", filbesk = filbesk, batchdate = batchdate, globs = globs)
   }

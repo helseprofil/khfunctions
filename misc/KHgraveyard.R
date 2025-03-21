@@ -1608,3 +1608,21 @@ FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs 
   
   return(UT)
 }
+
+#superseeded by get_read_parameters()
+FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  datef <- FormatSqlBatchdate(batchdate)
+  sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+              FROM INNLESING INNER JOIN
+              (  ORGINNLESkobl INNER JOIN ORIGINALFILER
+              ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
+              ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
+              AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
+              WHERE INNLESING.FILGRUPPE='", filgruppe, "'
+              AND ORIGINALFILER.IBRUKFRA<=", datef, "
+              AND ORIGINALFILER.IBRUKTIL>", datef, "
+              AND INNLESING.VERSJONFRA<=", datef, "
+              AND INNLESING.VERSJONTIL>", datef, sep = "")
+  fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
+  invisible(fb)
+}

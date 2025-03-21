@@ -48,9 +48,8 @@ KHerr <- function(error) {
 #'
 #' @param TABELL 
 #' @param TABELLnavn 
-#' @param globs global parameters, defaults to SettGlobs
 #' @param format
-DumpTabell <- function(TABELL, TABELLnavn, globs = SettGlobs(), format = NULL) {
+DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
   for(fmt in format){
     if (fmt == "CSV") {
@@ -365,30 +364,7 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
   # cat("********\n",tmp,"__________\n")
 }
 
-#' LesMultiHead (kb)
-#'
-#' @param mhstr 
-LesMultiHead <- function(mhstr) {
-  # Leser parameterstreng for multihead og gjoer om til relevante variable
-  # Velger aa kalle paa denne funksjonen ved behov for samme inputstreng heller enn aa porssessere strengen en gang og sende bitene rundt
-  # Finn evt angitt separator (trengs bare settes dersom det er snakk om en originalt pastet rad med annen seaprator enn "|"
-  is_kh_debug()
-  
-  if (grepl("sep=\".\"", mhstr)) {
-    sep <- sub(".*,sep=\"(.)\"", "\\1", mhstr)
-    mhstr <- sub("(.*),sep=\".\"", "\\1", mhstr)
-  } else {
-    sep <- "&"
-  }
-  # Les inn rader som inneholder deler
-  eval(parse(text = paste("mh<-c(", mhstr, ")")))
-  colnames <- names(mh)
-  # Sett paste av tabnavn. Denne blir senere splitta til kolonnenavn
-  varname <- paste(names(mh), collapse = "_")
-  # Fjern rader som er duplikater, dvs som allerede er pastet sammen originalt
-  rader <- mh[!duplicated(mh)]
-  return(list(rader = rader, sep = sep, colnames = colnames, varname = varname))
-}
+
 
 #' FinnFil (kb)
 #'

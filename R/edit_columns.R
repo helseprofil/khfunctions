@@ -165,7 +165,7 @@ fix_geo_special <- function(d, specs, id = KUBEid){
   isbydelstart <- !is.na(bydelstart) && bydelstart > 0
   isdk2020 <- !is.na(dk2020start) && dk2020start > 0
   
-  if(!isbydelstart && !isdk2020) return(dt)
+  if(!isbydelstart && !isdk2020) return(invisible(d))
   
   cat("* Håndterer bydelsstartår og delingskommuner\n")
   
@@ -190,5 +190,5 @@ fix_geo_special <- function(d, specs, id = KUBEid){
     d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
     d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
   }
-  return(d)
+  return(invisible(d))
 }

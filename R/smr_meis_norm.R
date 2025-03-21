@@ -33,7 +33,7 @@ adjust_smr_and_meis_to_country_normal <- function(dt, parameters, globs){
 
 get_normsubset <- function(dt, parameters, globs){
   if(parameters$PredFilter$ref_year_type == "Specific") normsubset <- dt[GEOniv == "L"]
-  if(parameters$PredFilter$ref_year_type == "Moving") normsubset <- dt[eval(rlang::parse_expr(parameters$PredFilter$PfiltStr))]
+  if(parameters$PredFilter$ref_year_type == "Moving") normsubset <- dt[eval(rlang::parse_expr(parameters$PredFilter$meisskalafilter))]
   if(nrow(normsubset) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke hente subset for landsnormal")
   normsubset <- format_normsubset(dt = normsubset, parameters = parameters, globs = globs)
   return(normsubset)  

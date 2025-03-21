@@ -21,7 +21,7 @@ do_censor_nevner <- function(dt, limit){
 }
 
 do_censor_secondary <- function(dt, parameters, globs){
-  # DEVELOP: BRuk .f=4 her slik at ikke slaar ut i HULL under
+  # Naboprikking gir .f=4  slik at ikke slaar ut i HULL under
   dt <- AnonymiserNaboer(FG = dt, 
                          ovkatstr = parameters$CUBEinformation$OVERKAT_ANO, 
                          FGP = parameters$fileinformation[[parameters$files$TELLER]], 
@@ -40,7 +40,7 @@ do_censor_statistical_tolerance <- function(dt, limit){
   dt[TELLER.f < 9, let(n_year = .N, n_weak = sum(is.na(TELLER) | TELLER <= limit), n_missing = sum(TELLER.f == 3)), by = dims]
   dt[TELLER.f < 9, censor := ifelse(n_weak / n_year > weak_limit | n_missing / n_year > missing_limit, 1, 0)]
   
-  cat("Skjuler", dt[censor == 1, .N], "rader\n")
+  cat("Skjuler", dt[censor == 1, .N], "rader (serieprikking og svake tidsserier)\n")
   dt[censor == 1, let(TELLER = NA, TELLER.f = 3, RATE = NA, RATE.f = 3)]
   dt[, (helper_columns) := NULL]
   return(dt)

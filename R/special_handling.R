@@ -46,31 +46,51 @@ do_special_handling <- function(dt, code, batchdate, stata_exe, DTout = TRUE){
 #' @param batchdate used to generate file names
 #' @param stata_exe path to STATA program
 do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), stata_exe, DTout = TRUE) {
-  statafiles <- set_stata_filenames(batchdate = batchdate)
+  tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
+  if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
+  orgwd <- getwd()
+  setwd(tmpdir)
+  statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   TABLE <- fix_column_names_pre_stata(TABLE = TABLE)
-  foreign::write.dta(TABLE, statafiles$dta)
+  haven::write_dta(TABLE, statafiles$dta)
   on.exit(file.remove(statafiles$dta), add = T)
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = stata_exe)
   check_stata_log_for_error(statafiles = statafiles)
-  TABLE <- haven::read_dta(statafiles$tmpdta)
+  TABLE <- haven::read_dta(statafiles$dta)
   TABLE <- fix_column_names_post_stata(TABLE = TABLE)
   if(DTout) data.table::setDT(TABLE)
+  setwd(orgwd)
   return(TABLE)
 }
 
+#' @description 
+#' Fix column names to comply with STATA rules. 
+#' Some specific conversions are later reversed when data is read back into R.
+#' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(TABLE){
   TABLE[TABLE == ""] <- " " 
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", names(TABLE))
+  
+  names(TABLE) <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", names(TABLE))
+  names(TABLE) <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", names(TABLE), perl = TRUE)
+  names(TABLE) <- gsub("^_+$", "var", names(TABLE))
+  names(TABLE) <- substr(names(TABLE), 1, 32)
   return(TABLE)
 }
 
 #' @noRd
-set_stata_filenames <- function(batchdate){
-  tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
-  if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
+fix_column_names_post_stata <- function(TABLE){
+  TABLE[TABLE == " "] <- ""
+  names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
+  names(TABLE) <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", names(TABLE))
+  return(TABLE)
+}
+
+#' @noRd
+set_stata_filenames <- function(batchdate, tmpdir){
   statafiles <- list()
   statafiles[["do"]] <-  file.path(tmpdir, paste0("STATAtmp_", batchdate, ".do"))
   statafiles[["dta"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".dta"))
@@ -104,10 +124,4 @@ check_stata_log_for_error <- function(statafiles){
   return(invisible(NULL))
 }
 
-#' @noRd
-fix_column_names_post_stata <- function(TABLE){
-  TABLE[TABLE == " "] <- ""
-  names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
-  names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", names(TABLE))
-  return(TABLE)
-}
+
