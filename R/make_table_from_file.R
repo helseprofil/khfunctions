@@ -14,7 +14,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_reshape_var(dt = DF, filedescription = filedescription, dumps = dumps)
   do_split_multihead(dt = DF, filedescription = filedescription)
   if ("RSYNT2pre" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT2pre", sep = "_"), format = dumps[["RSYNT2pre"]])
-  DF <- do_special_handling(dt = DF, code = filedescription$RSYNT2, batchdate = batchdate, stata_exe = parameters$StataExe, DTout = FALSE)
+  DF <- do_special_handling(dt = DF, code = filedescription$RSYNT2, batchdate = parameters$batchdate, stata_exe = parameters$StataExe, DTout = FALSE)
   if ("RSYNT2post" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT2post", sep = "_"), format = dumps[["RSYNT2post"]])
   give_columns_default_names(dt = DF, filedescription = filedescription, defcolumns = filecolumns$have)
   do_set_default_values(dt = DF, filedescription = filedescription, defaultcolumns = filecolumns$default)
