@@ -197,7 +197,7 @@ set_predictionfilter <- function(parameters, globs) {
   tellerfile <- parameters$files$TELLER
   maxaar <- max(BUFFER[[tellerfile]]$AARh)
   movav <- parameters$CUBEinformation$MOVAV
-  if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
+  if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne mÃ¥ settes!")
   
   out <- list(Design = list())
   delkolN <- globs$DefDesign$DelKolN

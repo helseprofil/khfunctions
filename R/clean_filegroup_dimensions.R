@@ -62,7 +62,7 @@ set_unknown_geo_99 <- function(dt, parameters){
     unknown99 <- gsub("^(\\d{2})\\d{2}$", paste("\\1", "99", sep = ""), unknown99) # Ukjent kommune
     unknown99 <- sub("^(\\d{2})(\\d{2})00$", paste("\\1", "9900", sep = ""), unknown99) # Ukjent kommune/sone
     unknown99 <- sub("^(\\d{4})(0[1-9]|[1-9]\\d)$", paste("\\1", "99", sep = ""), unknown99) # Ukjent bydel (ikke XXXX00)
-    unknown99 <- sub("^(\\d{6})\\d{4}$", paste("\\1", "9999", sep = ""), unknown99) # Ukjent levekårssone
+    unknown99 <- sub("^(\\d{6})\\d{4}$", paste("\\1", "9999", sep = ""), unknown99) # Ukjent levekÃ¥rssone
     valid99_ind <- which(unknown99 %in% parameters$GeoKoder$GEO)
     invalid99_ind <- which(!unknown99 %in% parameters$GeoKoder$GEO)
     
@@ -124,7 +124,7 @@ check_if_geo_ok <- function(dt, parameters, cleanlog){
 do_clean_AAR <- function(dt, cleanlog){
   cat("\n** Renser AAR")
   dt[, let(AAR = trimws(AAR))]
-  dt[grepl("^Høsten ", AAR), let(AAR = sub("^Høsten ", "", AAR))]
+  dt[grepl("^HÃ¸sten ", AAR), let(AAR = sub("^HÃ¸sten ", "", AAR))]
   dt[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), let(AAR = sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", AAR))]
   dt[grepl("^ *(\\d+) *$", AAR), let(AAR = sub("^ *(\\d+) *$", "\\1_\\1", AAR))]
   dt[!grepl("^\\d{4}_\\d{4}$", AAR), let(AAR = getOption("khfunctions.aar_illegal"))]
@@ -147,23 +147,23 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
   amin <- ifelse(isalder, parameters$filegroup_information$amin, getOption("khfunctions.amin"))
   amax <- ifelse(isalder, parameters$filegroup_information$amax, getOption("khfunctions.amax"))
   dt[, let(ALDER = trimws(ALDER))]
-  dt[grepl("_år$", ALDER), let(ALDER = sub("_år$", " år", ALDER))]
+  dt[grepl("_Ã¥r$", ALDER), let(ALDER = sub("_Ã¥r$", " Ã¥r", ALDER))]
   
   pattern <- "^(\\d+)\\s*[-_]\\s*(\\d+).*" # XX-_YY
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\2", ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(?:år)?$" # XX (år)
+  pattern <- "^(\\d+)\\s*(?:Ã¥r)?$" # XX (Ã¥r)
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\1", ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(?:\\+\\s*(?:år)?|år\\s*\\+|\\+)$" # XX(+|år+|+år)
+  pattern <- "^(\\d+)\\s*(?:\\+\\s*(?:Ã¥r)?|Ã¥r\\s*\\+|\\+)$" # XX(+|Ã¥r+|+Ã¥r)
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(?:-\\s*(?:år)?|år\\s*-|-)$" # XX(-|år-|-år)
+  pattern <- "^(\\d+)\\s*(?:-\\s*(?:Ã¥r)?|Ã¥r\\s*-|-)$" # XX(-|Ã¥r-|-Ã¥r)
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
-  pattern <- "^-\\s*(\\d+)(?:\\s*år)$" # -XX(år)
+  pattern <- "^-\\s*(\\d+)(?:\\s*Ã¥r)$" # -XX(Ã¥r)
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*eldre" # XX (år)(og|eller) eldre
+  pattern <- "^(\\d+)\\s*(:?Ã¥r)?\\s*(og|eller)\\s*eldre" # XX (Ã¥r)(og|eller) eldre
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
-  pattern <- "^over\\s*(\\d+)\\s*(?:år)?" # over xx (år)
+  pattern <- "^over\\s*(\\d+)\\s*(?:Ã¥r)?" # over xx (Ã¥r)
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*(yngre|under)"# xx (år)(og|eller)yngre
+  pattern <- "^(\\d+)\\s*(:?Ã¥r)?\\s*(og|eller)\\s*(yngre|under)"# xx (Ã¥r)(og|eller)yngre
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
   pattern <- "^Alle\\s*(aldre.*|)|(Totalt|I alt)"
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_", amax), ALDER, ignore.case = TRUE)]
@@ -187,7 +187,7 @@ do_clean_KJONN <- function(dt, cleanlog){
   dt[, let(KJONN = trimws(KJONN))]
   dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
   dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
-  dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
+  dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjÃ¸nn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
   dt[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), let(KJONN = getOption("khfunctions.ukjent"))]
   dt[is.na(KJONN), let(KJONN = getOption("khfunctions.ukjent"))]
   dt[!KJONN %in% c("0","1","2", getOption("khfunctions.ukjent")), let(KJONN = getOption("khfunctions.illegal"))]
@@ -242,7 +242,7 @@ check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
   rawfiles_not_ok <- dim_ok_log[ok == 0, unique(KOBLID)]
   cleanlog[dim_ok_log, on = "KOBLID", paste0(col, "_ok") := i.ok]
   if(n_not_ok > 0) cat("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
-                       "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
+                       "\n - RÃ¥filer med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
   if(n_not_ok == 0) cat("\n*** Alle ", col, " ok", sep = "")
 }
   

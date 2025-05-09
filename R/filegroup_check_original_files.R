@@ -11,7 +11,7 @@ filegroup_check_original_files_and_spec <- function(parameters){
   
   # Hvis noe feil oppdages, skriv en feilrapport som .txt-fil ved hjelp av sink(), 
   # og lagre denne et sted. For alle elementer over som ikke er NULL, limes disse inn 
-  # i rapporten. Stopp så kjøringen og vis til denne rapporten for hva som må fikses i ACCESS.
+  # i rapporten. Stopp sÃ¥ kjÃ¸ringen og vis til denne rapporten for hva som mÃ¥ fikses i ACCESS.
   
   if(length(checks) > 0){
     # feilrapport <- file.path("STI TIL FEILRAPPORTMAPPE", paste0("filgruppe_feil_", parameters$batchdate, ".txt"))
@@ -45,8 +45,8 @@ check_if_files_exists_and_are_readable <- function(files){
     return(invisible(NULL))
   } 
   msg <- character()
-  if(length(not_exist) > 0) msg <- paste0(msg, "\n** Følgende fil(er) eksisterer ikke:\n", paste(" - ", not_exist, collapse = "\n"))
-  if(length(not_readable) > 0) msg <- paste0(msg,"\n\n** Følgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
+  if(length(not_exist) > 0) msg <- paste0(msg, "\n** FÃ¸lgende fil(er) eksisterer ikke:\n", paste(" - ", not_exist, collapse = "\n"))
+  if(length(not_readable) > 0) msg <- paste0(msg,"\n\n** FÃ¸lgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
   return(msg)
 }
 
@@ -62,7 +62,7 @@ check_if_format_is_ok <- function(read_parameters){
   }
   
   msg <- character()
-  if(nrow(not_valid_format)) msg <- paste0(msg, "\n** Følgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN))
-  if(nrow(mismatch_extension)) msg <- paste0(msg, "\n\n** Følgende fil(er) har mismatch mellom FORMAT og filtype", paste(" - ", mismatch_extension$FILNAVN))
+  if(nrow(not_valid_format)) msg <- paste0(msg, "\n** FÃ¸lgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN))
+  if(nrow(mismatch_extension)) msg <- paste0(msg, "\n\n** FÃ¸lgende fil(er) har mismatch mellom FORMAT og filtype", paste(" - ", mismatch_extension$FILNAVN))
   return(msg)
 }

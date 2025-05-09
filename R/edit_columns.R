@@ -167,21 +167,21 @@ fix_geo_special <- function(d, specs, id = KUBEid){
   
   if(!isbydelstart && !isdk2020) return(invisible(d))
   
-  cat("* Håndterer bydelsstartår og delingskommuner\n")
+  cat("* HÃ¥ndterer bydelsstartÃ¥r og delingskommuner\n")
   
   if (isbydelstart) {
-    cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")
+    cat(" - Sletter bydelstall for Ã¥r fÃ¸r ", bydelstart, "\n", sep = "")
     d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
     d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
   }
   
   if (isdk2020) {
-    cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
+    cat(" - Sletter kommunetall for delingskommuner for Ã¥r fÃ¸r ", dk2020start, "\n", sep = "")
     d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
     d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-    cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
+    cat(" - HÃ¥ndterer Ã…lesund/Haram for Ã¥rene 2020-2023\n")
     .years <- 2020:2023
     if(id == "VALGDELTAKELSE"){
       .years <- 2019:2022

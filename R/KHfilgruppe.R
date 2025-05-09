@@ -20,7 +20,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   for(file_number in 1:parameters$n_files){
     new_file <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     Filgruppe <- data.table::rbindlist(list(Filgruppe, new_file), fill = T)
-    cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
+    cat("\n* Fil stablet, antall rader nÃ¥: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
   write_codebooklog(log = codebooklog, parameters = parameters, write = write)
@@ -38,7 +38,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, batchdate = parameters$batchdate, stata_exe = parameters$StataExe, DTout = T)
   if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
   
-  # DEV: KAN GEOHARMONISERING SKJE HER?? MÅ I SÅFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
+  # DEV: KAN GEOHARMONISERING SKJE HER?? MÃ¥ I SÃ¥FALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   
   if(write) write_filegroup_output(outfile = Filgruppe, name = gruppe, versjonert = versjonert, batchdate = parameters$batchdate)
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
@@ -48,7 +48,7 @@ lagfilgruppe_cleanup <- function(){
   RODBC::odbcCloseAll()
 }
 
-#' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
+#' BÃ¸r implementeres i lagfilgruppe_cleanup for Ã¥ rydde opp etter kjÃ¸ring, men da mÃ¥ fÃ¸rst all kodeboklogg med SV = 'S' fjernes fÃ¸rst
 delete_old_filegroup_log <- function(filegroup, parameters){
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
@@ -84,7 +84,7 @@ analyze_cleanlog <- function(log){
   cat("\nTabellen viser hvilke filer og hvilke kolonner det er funnet feil i\n-----\n")
   print(out)
   cat("\n-----\n")
-  stop("Kolonnene vist i tabellen over med verdi = 0 må ordnes i kodebok")
+  stop("Kolonnene vist i tabellen over med verdi = 0 mÃ¥ ordnes i kodebok")
 }
 
 #' @title write_codebooklog
@@ -95,8 +95,8 @@ write_codebooklog <- function(log, parameters, write){
   
   if(!write) return(invisible(NULL))
   cat("\n* Skriver kodebok-logg")
-  # KODE FOR Å TØMME GAMMEL LOGG
-  # KODE FOR Å SKRIVE NY LOGG
+  # KODE FOR Ã… TÃ˜ME GAMMEL LOGG
+  # KODE FOR Ã… SKRIVE NY LOGG
 }
 
 #' @title remove_helper_columns

@@ -170,7 +170,7 @@ set_manheader <- function(file, manheader){
   manheader_split <- trimws(unlist(strsplit(manheader, "=")))
   old <- format_colname_string_as_vector(string = manheader_split[1], old_new = "old", file = file)
   new <- format_colname_string_as_vector(string = manheader_split[2], old_new = "new", file = file)
-  if(length(old) != length(new)) stop("Feil i MANHEADER: Ulikt antall kolonner angitt på hver side av '='")
+  if(length(old) != length(new)) stop("Feil i MANHEADER: Ulikt antall kolonner angitt pÃ¥ hver side av '='")
   data.table::setnames(file, old = old, new = new)
   return(file)
 }
@@ -192,7 +192,7 @@ format_colname_string_as_vector <- function(string, old_new = c("old", "new"), f
     if(!all(colnames %in% names(file))) stop("Feil i MANHEADER: Minst ett angitt gammelt kolonnenavn [", paste(colnames, collapse = ", "), "] eksisterer ikke i filen")
     return(colnames)
   }
-  stop("Feil i MANHEADER: både kolonnenavn og posisjon angitt som gamle kolonnenavn")
+  stop("Feil i MANHEADER: bÃ¥de kolonnenavn og posisjon angitt som gamle kolonnenavn")
 }
 
 #' @noRd
@@ -208,7 +208,7 @@ initiate_read_log <- function(filedescription, parameters){
 # TO BE DELETED ----
 #' @noRd
 #' @description
-#' sannsynligvis overflødig
+#' sannsynligvis overflÃ¸dig
 handle_multihead <- function(file, args, filedescription){
   # Bruk av flernivaa header. Ikke saerlig elegant syntaks, men prinsippet er rett fram
   # Disse pastes (evt) sammen til en header. Etter reshape splittes kolonneraden (som naa har blitt en kolonne)

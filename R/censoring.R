@@ -116,7 +116,7 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref
 #' @title do_stata_censoring
 #' @description
 #' Reads censoring information from ACCESS. 
-#' If Stata_PRIKK parameters are set, the STATA censoring script (by Jørgen Meisfjord) 
+#' If Stata_PRIKK parameters are set, the STATA censoring script (by JÃ¸rgen Meisfjord) 
 #' is run using the do_stata_processing function
 #' @param dt data file to be censored
 #' @param spc KUBE spec
@@ -158,9 +158,9 @@ var_num <- function(x){
 #' @description
 #' Removes censored observations and set SPVFLAGG
 #' 
-#' Først beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
+#' FÃ¸rst beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
 #' Dette er unoedvendig kronglete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1. 
-#' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
+#' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for Ã¥ sette SPVFLAGG.
 #' @noRD
 do_remove_censored_observations <- function(dt, outvalues){
   valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")

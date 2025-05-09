@@ -70,7 +70,7 @@ set_filter_age <- function(parameters){
                  max(as.numeric(aldersplit[[2]])),
                  getOption("khfunctions.amax"))
 
-  if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne må være tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
+  if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne mÃ¥ vÃ¦re tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
 }
 
@@ -227,7 +227,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, globs =
 #' @param implicitnull_defs 
 set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
   
-  cat("** Håndterer implisitte nuller\n")
+  cat("** HÃ¥ndterer implisitte nuller\n")
   vals <- get_value_columns(names(file))
   
   for (val in vals) {
@@ -265,7 +265,7 @@ do_filfiltre_kollapsdeler <- function(file, parts, globs){
   parts <- unlist(strsplit(parts, ","))
   columns <- as.character(globs$DefDesign$DelKolsF[parts])
   file[, (columns) := globs$TotalKoder[parts]]
-  cat(paste0("Kollapser kolonnene: ", paste0(columns, collapse = ", "), ". Før er dim "), dim(file))
+  cat(paste0("Kollapser kolonnene: ", paste0(columns, collapse = ", "), ". FÃ¸r er dim "), dim(file))
   file <- file[, collapse::fsum(collapse::gby(.SD, tabcols))]
   cat(" og etter", dim(file), "\n")
   return(file)
@@ -337,7 +337,7 @@ OmkodFil <- function(FIL, RD, globs = SettGlobs()) {
     for (del in names(RD$Filters)) {
       data.table::setkeyv(FIL, names(RD$Filters[[del]]))
       data.table::setkeyv(RD$Filters[[del]], names(RD$Filters[[del]]))
-      cat(" - Filtrerer ", del, ", dim før: ", dim(FIL), sep = "")
+      cat(" - Filtrerer ", del, ", dim fÃ¸r: ", dim(FIL), sep = "")
       if (any(duplicated(RD$Filters[[del]]))) {
         print("CARTESIAN????")
         print(RD$Filters[[del]])

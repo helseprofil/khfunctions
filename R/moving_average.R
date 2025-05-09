@@ -2,7 +2,7 @@ get_movav_information <- function(dt, parameters){
   mapar <- list()
   mapar[["aar"]] <- unique(dt[, mget(c("AARl", "AARh"))])
   mapar[["int_lengde"]] <- unique(mapar$aar[, AARh - AARl + 1])
-  if(length(mapar$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
+  if(length(mapar$int_lengde) > 1) stop("Inndata har ulike Ã¥rsintervaller!")
   mapar[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
   mapar[["movav"]] <- parameters$CUBEinformation$MOVAV
   mapar[["snitt"]] <- parameters$fileinformation[[parameters$files$TELLER]]$ValErAarsSnitt
@@ -20,7 +20,7 @@ get_movav_information <- function(dt, parameters){
 #' Rapporterer variabelspesifikk VAL.n som angir antall aar brukt i summen naar NA holdt utenom
 #' 
 #' Dersom is_movav = FALSE, legges val.n til for alle verdikolonner, satt til 1 dersom originale snitt
-#' og satt til antall år dersom originale summer. 
+#' og satt til antall Ã¥r dersom originale summer. 
 #'
 #' @param dt KUBE to be aggregated 
 #' @param setrate Reset RATE after aggregating to periods?
@@ -76,7 +76,7 @@ do_balance_missing_teller_nevner <- function(dt){
 #' @param globs global parameters
 do_aggregate_periods <- function(dt, parameters, globs){
   period = parameters$MOVAVparameters$movav
-  if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
+  if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-Ã¥rige tall er Ã¸nsket, men originaldata inneholder allerede flerÃ¥rige tall og kan derfor ikke aggregeres!"))
   n_missing_year <- find_missing_year(aarl = parameters$MOVAVparameters$aar$AARl)
   aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year, globs = globs)
   return(aggregated_dt)
@@ -96,7 +96,7 @@ find_missing_year <- function(aarl){
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
 #' @noRD
 calculate_period_sums <- function(dt, period, n_missing_year, globs = SettGlobs()){
-  cat("* Aggregerer til ", period, "-årige tall\n", sep = "")
+  cat("* Aggregerer til ", period, "-Ã¥rige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
   dt <- extend_to_periods(dt = dt, periods = allperiods)
   values <- get_value_columns(names(dt))
@@ -158,8 +158,8 @@ extend_to_periods <- function(dt, periods){
 #'
 #' @examples
 do_handle_indata_periods <- function(dt, parameters){
-  # USIKKER PÅ OM DETTE HÅNDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
-  # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
+  # USIKKER PÃ… OM DETTE HÃ…NDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÃ…RIGE SNITT ELLER SUMMER
+  # MÃ¥ legge til VAL.n nÃ¥r originale summer, VAL.n = 1 om originale snit
   n <- ifelse(parameters$MOVAVparameters$is_orig_snitt, 1, parameters$MOVAVparameters$int_lengde) 
   dt[, paste0(names(.SD), ".n") := n, .SDcols = get_value_columns(names(dt))]
   return(dt)

@@ -74,7 +74,7 @@ fix_column_names_pre_stata <- function(TABLE){
   names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE))
   names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", names(TABLE))
   
-  names(TABLE) <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", names(TABLE))
+  names(TABLE) <- gsub("[^a-zA-Z0-9_Ã¦Ã†Ã¸Ã˜Ã¥Ã…]", "_", names(TABLE))
   names(TABLE) <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", names(TABLE), perl = TRUE)
   names(TABLE) <- gsub("^_+$", "var", names(TABLE))
   names(TABLE) <- substr(names(TABLE), 1, 32)

@@ -18,13 +18,13 @@ add_predteller <- function(dt, parameters, globs){
   prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters, globs = globs)
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters, globs = globs)
   
-  cat("* Merger med KUBE\n** Før merge dim:", dim(dt), "\n")
+  cat("* Merger med KUBE\n** FÃ¸r merge dim:", dim(dt), "\n")
   tabcols <- get_dimension_columns(names(dt))
   dt <- collapse::join(dt, predteller, how = "l", on = tabcols, overid = 2, verbose = 0)
   cat("** Etter merge dim:", dim(dt), "\n")
   
   dt <- set_implicit_null_after_merge(dt, parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
-  cat("*** FERDIG MED Å ESTIMERE PREDTELLER\n")
+  cat("*** FERDIG MED Ã… ESTIMERE PREDTELLER\n")
   return(dt)
 }
 
@@ -96,7 +96,7 @@ estimate_predteller <- function(predrate, prednevner, parameters, globs){
   mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
   if(mismatch > 0) cat("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
   
-  cat("** Før merge:\n - dim(prednevner):", dim(prednevner), "\n - dim(predrate):", dim(predrate), "\n")
+  cat("** FÃ¸r merge:\n - dim(prednevner):", dim(prednevner), "\n - dim(predrate):", dim(predrate), "\n")
   STNP <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
   STNP[, let(PREDTELLER = PREDRATE * PREDNEVNER,
              PREDTELLER.f = pmax(PREDRATE.f, PREDNEVNER.f),
@@ -150,7 +150,7 @@ add_meisskala <- function(dt, parameters, globs){
   
   subset_meisskala <- dt[eval(rlang::parse_expr(parameters$PredFilter$meisskalafilter))]
   if (nrow(subset_meisskala) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
-  # Tidligere ble subset omkodet på nytt fra dt om det ikke fantes: OmkodFilFraPart(dt, parameters$PredFilter$Design, FGP = parameters$fileinformation[[parameters$files$TELLER]], globs = globs)
+  # Tidligere ble subset omkodet pÃ¥ nytt fra dt om det ikke fantes: OmkodFilFraPart(dt, parameters$PredFilter$Design, FGP = parameters$fileinformation[[parameters$files$TELLER]], globs = globs)
   subset_meisskala[, MEISskala := RATE]
   joincolumns <- setdiff(intersect(names(subset_meisskala), globs$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
   dt <- collapse::join(dt, subset_meisskala[, mget(c(joincolumns, "MEISskala"))], how = "l", on = joincolumns, overid = 2, verbose = 0)

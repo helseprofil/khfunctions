@@ -53,7 +53,7 @@ check_if_value_ok <- function(dt, val, cleanlog){
   rawfiles_not_ok <- val_ok_log[ok == 0, unique(KOBLID)]
   cleanlog[val_ok_log, on = "KOBLID", paste0(val, "_ok") := i.ok]
   if(n_not_ok > 0) cat("\n*** Fant ", n_not_ok, " ugyldige verdier for ", val, 
-                       "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
+                       "\n - RÃ¥filer med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
   if(n_not_ok == 0) cat("\n*** Alle ", val, " ok", sep = "")
 }
 

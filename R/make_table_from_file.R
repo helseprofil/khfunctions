@@ -93,7 +93,7 @@ do_reshape_var <- function(dt, filedescription, dumps){
   cols <- get_reshape_parameters(filedescription = filedescription)
   if(!is.null(cols$id) && !all(cols$id %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
   if(!is.null(cols$measure) && !all(cols$measure %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
-  if(!is.null(cols$id) && is.null(cols$measure)) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
+  if(!is.null(cols$id) && is.null(cols$measure)) stop("Feil i RESHAPE: BÃ¥de RESHAPEid og RESHAPEmeas er tomme")
   reshape <- data.table::melt(dt, id.vars = cols$id, measure.vars = cols$measure, variable.name = cols$var, value.name = cols$val)
   dt[, names(dt) := NULL]
   dt[, (names(reshape)) := reshape]
@@ -139,7 +139,7 @@ check_if_all_columns_exist <- function(dt, filecolumns){
   default <- filecolumns$default
   if(!all(oblig %in% names(dt))) stop("Feil i innlesing: Kolonnene <", oblig[!(oblig %in% names(dt))], "> finnes ikke\n")
   if(!all(have %in% names(dt))) stop("Feil i innlesing: Kolonnene <", have[!(have %in% names(dt))], "> finnes ikke\n")
-  if(!all(default %in% names(dt))) stop("Feil i innlesing: Kolonnene <", default[!(default %in% names(dt))], "> skulle fått default verdi, men finnes ikke\n")
+  if(!all(default %in% names(dt))) stop("Feil i innlesing: Kolonnene <", default[!(default %in% names(dt))], "> skulle fÃ¥tt default verdi, men finnes ikke\n")
   return(invisible(NULL))
 }
 
@@ -184,7 +184,7 @@ update_codebooklog <- function(codebooklog, recodelog){
 merge_geo_d2 <- function(dt, filedescription){
   # Merge GEO delt i to
   if (filbesk$GEOd2 != "-" & !is.na(filbesk$GEOd2)) {
-    DF[, filbesk$GEOd2] <- gsub("^(\\d|\\d{3})$", "0\\1", DF[, filbesk$GEOd2]) # setter på ledende 0
+    DF[, filbesk$GEOd2] <- gsub("^(\\d|\\d{3})$", "0\\1", DF[, filbesk$GEOd2]) # setter pÃ¥ ledende 0
     DF$GEO <- paste(DF$GEO, DF[, filbesk$GEOd2], sep = "") # limer sammen GEO og GEOd2-kolonnen
   }
 }

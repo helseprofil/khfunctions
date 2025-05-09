@@ -51,7 +51,7 @@ godkjent_summary_msg <- function(friskvik, alle){
   all <- friskvik[, length(unique(KUBE_NAVN))]
   complete <- alle[, length(unique(KUBE_NAVN))]
   remaining <- all - complete
-  message("Per nå er ", complete, " av ", all, " kuber godkjent, ", remaining, " kuber gjenstår")
+  message("Per nÃ¥ er ", complete, " av ", all, " kuber godkjent, ", remaining, " kuber gjenstÃ¥r")
 }
 
 #' @noRd

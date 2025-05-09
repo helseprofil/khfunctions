@@ -29,7 +29,7 @@ read_filgrupper_and_add_vals <- function(filegroup_name, validdates, globs){
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup_name, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
   isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)
-  if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filegroup_name)
+  if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format pÃ¥ ALDER_ALLE for FILGRUPPE ", filegroup_name)
   if(isalderalle){
     alle_aldre <- as.integer(tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
     amin <- alle_aldre[1]

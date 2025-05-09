@@ -55,7 +55,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     cat("*** Ferdig merget teller-nevner-fil, dim:", dim(TNF), "\n")
   } else {
     TNF <- tellerfil
-    cat("*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF), "\n")
+    cat("*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, sÃ¥ TNF == tellerfil. dim:", dim(TNF), "\n")
   }
   
   isNYEKOL_RAD <- !is.na(args$TNPparameters$NYEKOL_RAD) && args$TNPparameters$NYEKOL_RAD != ""
