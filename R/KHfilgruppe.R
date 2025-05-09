@@ -30,17 +30,9 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   analyze_cleanlog(log = cleanlog)
+  do_set_value_names(dt = Filgruppe, parameters = parameters)
   cat("-----\n* Alle dimensjoner og verdikolonner vasket og ok")
-  
-  # remove_helper_columns(dt = dt)
-  
-  # Sett (eksterne) kolonnenavn
-  for (val in names(Filgruppe)[grepl("^VAL\\d+$", names(Filgruppe))]) {
-    valn <- paste(val, "navn", sep = "")
-    if (grepl("\\S", parameters$filegroup_information[[valn]])) {
-      names(Filgruppe) <- gsub(paste("^", val, "(\\.[fa]|)$", sep = ""), paste(parameters$filegroup_information[[valn]], "\\1", sep = ""), names(Filgruppe))
-    }
-  }
+  remove_helper_columns(dt = Filgruppe)
   
   if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
   Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, batchdate = batchdate, stata_exe = globs$StataExe, DTout = T)
@@ -49,7 +41,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   # DEV: KAN GEOHARMONISERING SKJE HER?? MÅ I SÅFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   
   if(write) write_filegroup_output(outfile = Filgruppe, name = gruppe, versjonert = versjonert, batchdate = batchdate, globs = globs)
-  return(Filgruppe)
+  return(list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog))
 }
 
 lagfilgruppe_cleanup <- function(){
@@ -84,7 +76,7 @@ initiate_cleanlog <- function(dt, codebooklog){
 
 analyze_cleanlog <- function(log){
   ok_cols <- grep("_ok$", names(log), value = T)
-  any_not_ok <- cleanlog[rowSums(cleanlog[, .SD, .SDcols = ok_cols] == 0) > 0]
+  any_not_ok <- log[rowSums(log[, .SD, .SDcols = ok_cols] == 0) > 0]
   if(nrow(any_not_ok) == 0) return(invisible(NULL))
   
   not_ok_cols <- ok_cols[sapply(any_not_ok[, .SD, .SDcols = ok_cols], function(col) any(col == 0))]
@@ -111,7 +103,7 @@ write_codebooklog <- function(log, parameters){
 #' @title remove_helper_columns
 #' @noRd
 remove_helper_columns <- function(dt){
-  helpers <- c("KOBLID", "LEVEL")
+  helpers <- c("LEVEL")
   helpers <- helpers[helpers %in% names(dt)]
   dt[, (helpers) := NULL]
 }

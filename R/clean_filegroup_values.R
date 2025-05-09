@@ -1,7 +1,6 @@
 clean_filegroup_values <- function(dt, parameters, cleanlog){
   cat("\n* Starter rensing av verdikolonner...")
-  vals <- c("VAL1", "VAL2", "VAL3") 
-  vals <- vals[vals %in% names(dt)]
+  vals <- names(dt)[names(dt) %in% c("VAL1", "VAL2", "VAL3")]
   dt[, (paste0(vals, ".a")) := 1]
   
   for(val in vals){
@@ -56,4 +55,13 @@ check_if_value_ok <- function(dt, val, cleanlog){
   if(n_not_ok > 0) cat("\n*** Fant ", n_not_ok, " ugyldige verdier for ", val, 
                        "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
   if(n_not_ok == 0) cat("\n*** Alle ", val, " ok", sep = "")
+}
+
+do_set_value_names <- function(dt, parameters){
+  vals <- get_value_columns(names(dt))
+  valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
+  suffixes <- c("", ".a", ".f")
+  vals <- unlist(lapply(vals, function(x) paste0(x, suffixes)))
+  valnames <- unlist(lapply(valnames, function(x) paste0(x, suffixes)))
+  data.table::setnames(dt, vals, valnames)
 }

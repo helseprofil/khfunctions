@@ -20,7 +20,7 @@ do_clean_GEO <- function(dt, parameters, cleanlog){
   dt[, let(GEO = trimws(GEO))]
   format_raw_geo(dt = dt)
   recode_geo_from_name(dt = dt, parameters = parameters)
-  dt[GEO != "0" & nchar(GEO) %in% c(1,3,5,7), GEO := paste0("0", GEO)]
+  dt[GEO != "0" & nchar(GEO) %in% c(1,3,5,7,9), GEO := paste0("0", GEO)]
   set_unknown_geo_99(dt = dt, parameters = parameters)
   set_geoniv(dt = dt, parameters = parameters)
   set_fylke(dt = dt)
@@ -124,21 +124,23 @@ check_if_geo_ok <- function(dt, parameters, cleanlog){
 do_clean_AAR <- function(dt, cleanlog){
   cat("\n** Renser AAR")
   dt[, let(AAR = trimws(AAR))]
-  aarint <- c("AARl", "AARh")
   dt[grepl("^Høsten ", AAR), let(AAR = sub("^Høsten ", "", AAR))]
   dt[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), let(AAR = sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", AAR))]
   dt[grepl("^ *(\\d+) *$", AAR), let(AAR = sub("^ *(\\d+) *$", "\\1_\\1", AAR))]
   dt[!grepl("^\\d{4}_\\d{4}$", AAR), let(AAR = getOption("khfunctions.aar_illegal"))]
+  
+  aarint <- c("AARl", "AARh")
   dt[, (aarint) := tstrsplit(AAR, "_")]
   dt[AARl > AARh, let(AAR = getOption("khfunctions.aar_illegal"))]
   dt[AARl > AARh, (aarint) := tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
-
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
+  dt[, let(AAR = NULL)]
 }
 
 #' @title do_clean_ALDER
 #' @noRd
 do_clean_ALDER <- function(dt, parameters, cleanlog){
+  if(!"ALDER" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser ALDER")
   
   isalder <- is_not_empty(parameters$filegroup_information$ALDER_ALLE)
@@ -169,18 +171,26 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
   dt[grepl(pattern, ALDER), ALDER := sub(pattern, getOption("khfunctions.alder_ukjent"), ALDER, ignore.case = TRUE)]
   dt[!grepl("^\\d+_\\d+$", ALDER), ALDER := getOption("khfunctions.alder_illegal")]
   
+  alderint <- c("ALDERl", "ALDERh")
+  dt[, (alderint) := tstrsplit(ALDER, "_")]
+  dt[ALDERl > ALDERh, let(ALDER = getOption("khfunctions.aar_illegal"))]
+  dt[ALDERl > ALDERh, (alderint) := tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
+  dt[, let(ALDER = NULL)]
 }
 
 #' @title do_clean_KJONN
 #' @noRd
 do_clean_KJONN <- function(dt, cleanlog){
+  if(!"KJONN" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser KJONN")
   dt[, let(KJONN = trimws(KJONN))]
-  dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
-  dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
-  dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
-  dt[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), let(KJONN = getOption("khfunctions.ukjent"))]
+  if("LEVEL" %in% names(dt)){
+    dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
+    dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
+    dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
+    dt[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), let(KJONN = getOption("khfunctions.ukjent"))]
+  }
   dt[is.na(KJONN), let(KJONN = getOption("khfunctions.ukjent"))]
   dt[!KJONN %in% c("0","1","2", getOption("khfunctions.ukjent")), let(KJONN = getOption("khfunctions.illegal"))]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "KJONN", illegal = getOption("khfunctions.illegal"))
@@ -189,6 +199,7 @@ do_clean_KJONN <- function(dt, cleanlog){
 #' @title do_clean_UTDANN
 #' @noRd
 do_clean_UTDANN <- function(dt, cleanlog){
+  if(!"UTDANN" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser UTDANN")
   dt[, let(UTDANN = trimws(UTDANN))]
   dt[grepl("^0[0-4]$", UTDANN), let(UTDANN = sub("^0([0-4])$", "\\1", UTDANN))]
@@ -201,6 +212,7 @@ do_clean_UTDANN <- function(dt, cleanlog){
 #' @title do_clean_INNVKAT
 #' @noRd
 do_clean_INNVKAT <- function(dt, cleanlog){
+  if(!"INNVKAT" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser INNVKAT")
   dt[, let(INNVKAT = trimws(INNVKAT))]
   dt[grepl("^alle$", INNVKAT, ignore.case = TRUE), let(INNVKAT = "0")]
@@ -212,6 +224,7 @@ do_clean_INNVKAT <- function(dt, cleanlog){
 #' @title do_clean_LANDBAK
 #' @noRd
 do_clean_LANDBAK <- function(dt, cleanlog){
+  if(!"LANDBAK" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser LANDBAK")
   dt[, let(LANDBAK = trimws(LANDBAK))]
   dt[grepl("^alle$", LANDBAK, ignore.case = TRUE), let(LANDBAK = "0")]

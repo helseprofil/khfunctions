@@ -26,7 +26,8 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   if(is_not_empty(filedescription$RSYNT1)){
     DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
     DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, batchdate = parameters$batchdate, stata_exe = parameters$StataExe, DTout = TRUE)
-    DF[, names(.SD) := NULL, .SDcols = c("filgruppe", "delid", "tab1_innles")]
+    extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
+    if(length(extracols) > 0) DF[, (extracols) := NULL]
   }
   if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), format = dumps[["RSYNT1post"]])
   return(DF)
@@ -34,8 +35,7 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
 
 #' @title format_innlesarg_as_list
 #' @description
-#' Splitter args ved komma, beholder uttrykk i hermetegn eller c() ved hjelp av:
-#' gregexpr('(\\w+=(?:\"[^\"]*\"|c\\([^\\)]*\\)|[^,]+))(,|$)', args, perl = FALSE))
+#' Splitter args ved komma, beholder uttrykk i hermetegn eller c()
 #' @param args INNLESARG
 #' @returns a list of argument name-value pairs, or empty list if no INNLESARG provided
 format_innlesarg_as_list <- function(args){
