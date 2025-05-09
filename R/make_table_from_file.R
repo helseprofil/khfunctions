@@ -32,6 +32,14 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   return(DF)
 }
 
+#' @title report_filegroup_progress
+#' @noRd
+report_filegroup_progress <- function(file_number, parameters){
+  n_files <- parameters$n_files
+  filename <- parameters$read_parameters[file_number]$FILNAVN
+  cat("\n", file_number, "/", n_files, ": ", filename, sep = "")
+}
+
 #' @title identify_columns_in_file
 #' @description
 #' Reads filedescription and indentify default columns existing in the file and columns that 

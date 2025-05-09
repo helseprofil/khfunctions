@@ -23,7 +23,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
-  write_codebooklog(log = codebooklog, parameters = parameters)
+  write_codebooklog(log = codebooklog, parameters = parameters, write = write)
   
   # Clean dimension columns
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog)
@@ -41,7 +41,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   # DEV: KAN GEOHARMONISERING SKJE HER?? MÅ I SÅFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   
   if(write) write_filegroup_output(outfile = Filgruppe, name = gruppe, versjonert = versjonert, batchdate = parameters$batchdate)
-  return(list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog))
+  RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
 }
 
 lagfilgruppe_cleanup <- function(){
@@ -53,12 +53,6 @@ delete_old_filegroup_log <- function(filegroup, parameters){
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
   return(invisible(NULL))
-}
-
-report_filegroup_progress <- function(file_number, parameters){
-  n_files <- parameters$n_files
-  filename <- parameters$read_parameters[file_number]$FILNAVN
-  cat("\n", file_number, "/", n_files, ": ", filename, sep = "")
 }
 
 #' @title initiate_cleanlog
@@ -74,6 +68,11 @@ initiate_cleanlog <- function(dt, codebooklog){
   return(log)
 }
 
+#' @title analyze_cleanlog
+#' @description
+#' Analyzes log after cleaning dimensions and values, and stops data processing 
+#' if any invalid values are found and prints a report. 
+#' @noRd
 analyze_cleanlog <- function(log){
   ok_cols <- grep("_ok$", names(log), value = T)
   any_not_ok <- log[rowSums(log[, .SD, .SDcols = ok_cols] == 0) > 0]
@@ -90,11 +89,11 @@ analyze_cleanlog <- function(log){
 
 #' @title write_codebooklog
 #' @noRd
-write_codebooklog <- function(log, parameters){
+write_codebooklog <- function(log, parameters, write){
   log[, let(FILGRUPPE = parameters$filegroup_name, BATCHDATE = parameters$batchdate, SV = "S", OK = 1)]
   data.table::setcolorder(log, c("KOBLID", "FILGRUPPE", "DELID", "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ", "SV", "BATCHDATE", "OK")) # sett som options
-  return(invisible(NULL))
   
+  if(!write) return(invisible(NULL))
   cat("\n* Skriver kodebok-logg")
   # KODE FOR Å TØMME GAMMEL LOGG
   # KODE FOR Å SKRIVE NY LOGG
@@ -107,60 +106,3 @@ remove_helper_columns <- function(dt){
   helpers <- helpers[helpers %in% names(dt)]
   dt[, (helpers) := NULL]
 }
-
-#' LagFlereFilgrupper (kb)
-#'
-#' @param filgrupper 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-#' @param printR 
-#' @param printCSV 
-#' @param printSTATA 
-#' @param versjonert 
-LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = SettGlobs(), printR = TRUE, printSTATA = FALSE, versjonert = FALSE) {
-  is_kh_debug()
-  
-  # SKall rundt LagFilGruppe, lager og lagrer evt til fil
-  # Default er aa ta alle grupper, ellers angis oensket batch i filgrupper-argumentet
-  if (length(filgrupper) == 0) {
-    # filgrupper<-as.matrix(RODBC::sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
-    filgrupper <- as.matrix(RODBC::sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
-  }
-  cat("BATCH:", batchdate, "\n")
-  # HOVEDLOOP
-  for (gruppe in filgrupper) {
-    FG <- LagFilgruppe(gruppe, batchdate = batchdate, globs = globs, versjonert = versjonert)
-  }
-}
-
-#   # Diagnostisering og rapportering paa hele filgruppa under ett
-#   
-#   # Lå opprinnelig før eksterne kolonnenavn ble satt. 
-#   
-#   if (nrow(Filgruppe) > 0 & diagnose == 1) {
-#     # Finn og rapporter duplikater
-#     HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = globs)
-#     RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
-#     
-#     # Sjekk design
-#     FGd <- FinnDesign(Filgruppe, FGP = FGP, globs = globs)
-#     
-#     # Er ubalansert?
-#     subset(FGd$Design, HAR != 1)
-#     
-#     FGdT <- FGd$Design
-#     RODBC::sqlQuery(globs$log, paste("DELETE * FROM DESIGN WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
-#     # Legg til resterende kolonner
-#     tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DESIGN WHERE FILGRUPPE=''")
-#     tmp[1:nrow(FGdT), ] <- NA
-#     tmp[, names(FGdT)] <- FGdT
-#     tmp$FILGRUPPE <- gruppe
-#     tmp$BATCH <- batchdate
-#     tmp$SV <- "S"
-#     RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
-#     if (versjonert == TRUE) {
-#       tmp$SV <- "V"
-#       RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
-#     }
-#   }
-# }
