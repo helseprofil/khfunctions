@@ -32,8 +32,8 @@ do_clean_GEO <- function(dt, parameters, cleanlog){
 #' @description special fix for text variants
 #' @noRd
 format_raw_geo <- function(dt){
-  if("LEVEL" %in% names(dt)) return(invisible(NULL))
   dt[, GEO := trimws(GEO)]
+  if("LEVEL" %in% names(dt)) return(invisible(NULL))
   dt[GEO != "0" & (
     grepl("^0{1,2}(( hele|) landet| *)$", GEO, ignore.case = TRUE) |
     grepl("^(Hele +|)landet( i alt|) *$", GEO, ignore.case = TRUE)), GEO := "0"]
@@ -185,7 +185,7 @@ do_clean_KJONN <- function(dt, cleanlog){
   if(!"KJONN" %in% names(dt)) return(invisible(NULL))
   cat("\n** Renser KJONN")
   dt[, let(KJONN = trimws(KJONN))]
-  if("LEVEL" %in% names(dt)){
+  if(!"LEVEL" %in% names(dt)){
     dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
     dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
     dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]

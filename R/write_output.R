@@ -34,9 +34,7 @@ write_cube_output <- function(outputlist, name, batchdate, versjonert, csvcopy, 
   }
 }
 
-write_filegroup_output <- function(outfile, name, versjonert, batchdate, globs){
-  RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET PRODDATO='", format(Sys.time(), "%Y-%m-%d %X"), "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
-  
+write_filegroup_output <- function(outfile, name, versjonert, batchdate){
   cat("SAVING OUTPUT FILES:\n")
   root <- getOption("khfunctions.root")
   nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(name, ".rds"))
