@@ -24,7 +24,7 @@ SySammenTabeller <- function(F1, F2, SJEF = 0, FGP1 = list(amin = 0, amax = 120)
   orgkey1 <- key(F1)
   orgkey2 <- key(F2)
   
-  # MÅ FIKSE EVT KOLLISJON AV FELTNAVN!
+  # M? FIKSE EVT KOLLISJON AV FELTNAVN!
   
   FU <- data.table()
   
@@ -38,7 +38,7 @@ SySammenTabeller <- function(F1, F2, SJEF = 0, FGP1 = list(amin = 0, amax = 120)
   
   if (etabmatchOK == FALSE && length(etabs1) > 0 && length(etabs2) > 0) {
     ok <- 0
-    print("FEIL!!!!! Noe tull med etabmatchOK") # Usikker på hvorfor jeg har satt denne muligheten, bruker den ikke
+    print("FEIL!!!!! Noe tull med etabmatchOK") # Usikker p? hvorfor jeg har satt denne muligheten, bruker den ikke
   } else {
     DF1 <- FinnDesign(F1, FGP = FGP1)
     DF2 <- FinnDesign(F2, FGP = FGP2)
@@ -268,7 +268,7 @@ ListAlleOriginalFiler <- function(globs = FinnGlobs()) {
 FinnFilBeskFilid <- function(filid, batchdate = NULL, globs = FinnGlobs()) {
   is_kh_debug()
   
-  # Default er å finne filbesk gyldige nå (Sys.time)
+  # Default er ? finne filbesk gyldige n? (Sys.time)
   datef <- format(Sys.time(), "#%Y-%m-%d#")
   # ALternativt kan man finne for en historisk batchdate
   if (!is.null(batchdate)) {
@@ -345,7 +345,7 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
   is_kh_debug()
   
   ## force : TRUE hvis man skal arkivere filen uansett ellers
-  ## for KHFunction.R sjekkes det dato filen er lagret først
+  ## for KHFunction.R sjekkes det dato filen er lagret f?rst
   
   if (isTRUE(grepl("function", filename))) {
     valgFil <- "fun"
@@ -431,7 +431,7 @@ SettPredFilterGml <- function(refvstr, FGP = list(amin = 0, amax = 120), globs =
   is_kh_debug()
   PredFilter <- list()
   Pcols <- character(0)
-  # Må utvikles til å lese KUBEdscr$REFVERDI
+  # M? utvikles til ? lese KUBEdscr$REFVERDI
   if (is.null(refvstr) || is.na(refvstr)) {
     PredFilter <- list(Gn = data.frame(GEOniv = "L"))
   } else {
@@ -487,7 +487,7 @@ KHaggregerM <- function(FILn = "FG", orgcols, vals = list(), snitt = FALSE, glob
   valkols <- names(FIL)[!orgcols %in% tabnames]
   valkols <- valkols[!grepl("\\.(f|a)", valkols)]
   valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
-  setkeym(FIL, tabnames) # Sjekk om key ok for å effektivisere?
+  setkeym(FIL, tabnames) # Sjekk om key ok for ? effektivisere?
   if (snitt == FALSE) {
     sumexp$tr1 <- paste("list(",
                         paste(valkols, "=sum(", valkols, "),",
@@ -500,7 +500,7 @@ KHaggregerM <- function(FILn = "FG", orgcols, vals = list(), snitt = FALSE, glob
     )
     # FILa<-FIL[, eval(parse(text=lp)), by=tabnames]
   } else {
-    # Sett også hjelpestørrelser to vurdering av snitt
+    # Sett ogs? hjelpest?rrelser to vurdering av snitt
     sumexp$tr1 <- paste("list(",
                         paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
                               valkols, ".f=max(", valkols, ".f),",
@@ -588,9 +588,9 @@ ModifiserDesignFullRekt <- function(Nytt, Org = list(), globs = FinnGlobs()) {
   setkeym(FullDesign, OmkKols)
   Org[["OmkDesign"]] <- FullDesign[, list(HAR = max(HAR)), by = OmkKols]
   
-  # Merk, det gir bare mening å bruke denne for å lage et TIL-design, da trengs ikke de følgende delene
-  # Om det modifiserte designet skal brukes som et FRA-design må også disse endres. Det er en klønete operasjon (og som vel knapt er veldefinert)
-  # Kan altså IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  # Merk, det gir bare mening ? bruke denne for ? lage et TIL-design, da trengs ikke de f?lgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design m? ogs? disse endres. Det er en kl?nete operasjon (og som vel knapt er veldefinert)
+  # Kan alts? IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
   
   Org[["Design"]] <- NULL
   Org[["SKombs"]] <- NULL
@@ -1456,7 +1456,7 @@ GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatch
     
     FDes <- FDesign$Design
     
-    # SAMME LOGIKK SOM I set_rectangularized_cube_design, bør ekstraheres ut.
+    # SAMME LOGIKK SOM I set_rectangularized_cube_design, b?r ekstraheres ut.
     for (Gn in FDesign$Part[["Gn"]][["GEOniv"]]) {
       GEOK <- subset(globs$GeoKoder, FRA <= GEOstdAAR & TIL > GEOstdAAR & GEOniv == Gn)$GEO
       FDesG <- FDes[HAR == 1 & GEOniv == Gn, intersect(names(FIL), names(FDes)), with = FALSE]
@@ -1843,7 +1843,7 @@ LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), globs =
     # RENSK ALDER
     # Sett intervall for alder ALLE
     if ("ALDER" %in% names(DF)) {
-      DF$ALDER <- gsub(" \\Wr\\b", " år", DF$ALDER, perl = TRUE) # Problem med codebook i dbf
+      DF$ALDER <- gsub(" \\Wr\\b", " ?r", DF$ALDER, perl = TRUE) # Problem med codebook i dbf
       
       org <- setNames(as.data.frame(table(DF$ALDER, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
       alder <- ALDERvask(org, FGP = FGP, filbesk = filbesk, batchdate = batchdate, globs = globs)
@@ -2743,14 +2743,14 @@ GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   geo$OMK <- sub("^0{1,2}(( hele|) landet| *$)", "0", geo$OMK, ignore.case = TRUE)
   geo$OMK <- sub("^(Hele +|)landet( i alt|) *$", "0", geo$OMK, ignore.case = TRUE)
   geo$OMK <- sub("^Fylke (\\d{1,2})$", "\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{8})a{0,1}( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{7})a{0,1}( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{6})a{0,1}( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{5})a{0,1}( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{4})( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
-  geo$OMK <- sub("^(\\d{3})( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
-  geo$OMK <- sub("^([012][1-9]|10|20|88|99)( +[A-ZÆØÅ].*| *$)", "\\1", geo$OMK)
-  geo$OMK <- sub("^([1-9])( +[A-ZÆØÅ].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{8})a{0,1}( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{7})a{0,1}( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{6})a{0,1}( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{5})a{0,1}( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{4})( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{3})( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^([012][1-9]|10|20|88|99)( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^([1-9])( +[A-Z???].*| *$)", "0\\1", geo$OMK)
   
   geo$OMK <- sub("^(\\d{4})xx*", "\\1", geo$OMK, ignore.case = TRUE)
   
@@ -2854,21 +2854,21 @@ ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax =
   alder$OMK <- alder$KBOMK
   alder$OK <- 1
   # alder$OMK<-sub("^ *(\\d+) *[\\_\\-] *(\\d+) *(.r|) *, *totalt$","\\1_\\2",alder$OMK,ignore.case = TRUE)
-  alder$OMK <- sub("_år$", " år", alder$OMK)
+  alder$OMK <- sub("_?r$", " ?r", alder$OMK)
   alder$OMK <- sub("(.+?),* *totalt *$", "\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *[-_] *(\\d+)( +år| *$)", "\\1_\\2", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *- *high( +år| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *low *- *(\\d+)( +år| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *\\+( +år| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) +år +\\+ *$", "\\1_", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *-( +år| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *år *-$", "_\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *- *(\\d+)( +år| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) år (og|eller) eldre", "\\1_", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *over (\\d+)( å?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
-  # alder$OMK<-sub("^ *under (\\d+)( +år| *$)","_\\1",alder$OMK,ignore.case = TRUE)  # Dette blri galt, maa erstatte med "_(\\1-1)", men faar ikke det til. Maa bruke kdoebok
+  alder$OMK <- sub("^ *(\\d+) *[-_] *(\\d+)( +?r| *$)", "\\1_\\2", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *- *high( +?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *low *- *(\\d+)( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *\\+( +?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) +?r +\\+ *$", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *-( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *?r *-$", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *- *(\\d+)( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) ?r (og|eller) eldre", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *over (\\d+)( ??r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  # alder$OMK<-sub("^ *under (\\d+)( +?r| *$)","_\\1",alder$OMK,ignore.case = TRUE)  # Dette blri galt, maa erstatte med "_(\\1-1)", men faar ikke det til. Maa bruke kdoebok
   alder$OMK <- sub("^ *(\\d+)( ?r|) *(og|eller) (yngre|under)", "_\\1", alder$OMK, ignore.case = TRUE)
-  alder$OMK <- sub("^ *(\\d+) *( +år| *$)", "\\1_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *( +?r| *$)", "\\1_\\1", alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(Alle( *aldre.*|)|Totalt{0,1}|I alt) *$", paste(amin, "_", amax, sep = ""), alder$OMK, ignore.case = TRUE)
   alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", getOption("khfunctions.alder_ukjent"), alder$OMK, ignore.case = TRUE)
   
@@ -2912,7 +2912,7 @@ KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate
   kjonn$OMK <- kjonn$KBOMK
   kjonn$OMK <- sub("^ *(M|Menn|Mann|gutt(er|)|g|1) *$", "1", kjonn$OMK, ignore.case = TRUE)
   kjonn$OMK <- sub("^ *(K|F|Kvinner|Kvinne|jente(r|)|j|2) *$", "2", kjonn$OMK, ignore.case = TRUE)
-  kjonn$OMK <- sub("^ *(Tot(alt{0,1}|)|Begge([ \\._]*kjønn|)|Alle|A|0|M\\+K) *$", "0", kjonn$OMK, ignore.case = TRUE)
+  kjonn$OMK <- sub("^ *(Tot(alt{0,1}|)|Begge([ \\._]*kj?nn|)|Alle|A|0|M\\+K) *$", "0", kjonn$OMK, ignore.case = TRUE)
   kjonn$OMK <- sub("^ *(Uspesifisert|Uoppgitt|Ikke spesifisert|Ikke oppgitt|Ukjent|) *$", "9", kjonn$OMK, ignore.case = TRUE)
   # kjonn$OMK[is.na(kjonn$ORG)]<-9
   
@@ -2944,7 +2944,7 @@ UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDa
   utdann$OMK <- sub("^0([0-4])$", "\\1", utdann$OMK, ignore.case = TRUE)
   if (regexp == TRUE) {
     utdann$OMK <- sub("^ *(grunnskole) *$", "1", utdann$OMK, ignore.case = TRUE)
-    utdann$OMK <- sub("^ *(videregående( skole|)) *$", "2", utdann$OMK, ignore.case = TRUE)
+    utdann$OMK <- sub("^ *(videreg?ende( skole|)) *$", "2", utdann$OMK, ignore.case = TRUE)
     utdann$OMK <- sub("^ *(Universitet.*) *$", "3", utdann$OMK, ignore.case = TRUE)
     utdann$OMK <- sub("^ *(anne[nt]|ingen|uopgitt|ukjent) *$", "4", utdann$OMK, ignore.case = TRUE)
   }
@@ -3014,9 +3014,9 @@ LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatch
     landbak$OMK <- sub("^ *(Afrika) *$", "2", landbak$OMK, ignore.case = TRUE)
     landbak$OMK <- sub("^ *(Asia.*) *$", "3", landbak$OMK, ignore.case = TRUE)
     landbak$OMK <- sub("^ *(Nord[ -]{1,3}Amerika) *$", "4", landbak$OMK, ignore.case = TRUE)
-    landbak$OMK <- sub("^ *(Sør.*Amerika) *$", "5", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(S?r.*Amerika) *$", "5", landbak$OMK, ignore.case = TRUE)
     landbak$OMK <- sub("^ *(Oseania) *$", "6", landbak$OMK, ignore.case = TRUE)
-    landbak$OMK <- sub("^ *(Statsløse) *$", "7", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Statsl?se) *$", "7", landbak$OMK, ignore.case = TRUE)
     landbak$OMK <- sub("^ *(Uoppgitt|Ukjent) *$", "8", landbak$OMK, ignore.case = TRUE)
     landbak$OMK <- sub("^ *(Andre) *$", "9", landbak$OMK, ignore.case = TRUE)
   }
@@ -3047,7 +3047,7 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   aar$OMK <- aar$KBOMK
   aar$OK <- 1
   
-  aar$OMK <- sub("^Høsten ", "", aar$OMK)
+  aar$OMK <- sub("^H?sten ", "", aar$OMK)
   aar$OMK <- sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", aar$OMK)
   aar$OMK <- sub("^ *(\\d+) *$", "\\1_\\1", aar$OMK)
   
@@ -3075,7 +3075,7 @@ excelcols <- function(){
 
 #   # Diagnostisering og rapportering paa hele filgruppa under ett
 #   
-#   # Lå opprinnelig før eksterne kolonnenavn ble satt. 
+#   # L? opprinnelig f?r eksterne kolonnenavn ble satt. 
 #   
 #   if (nrow(Filgruppe) > 0 & diagnose == 1) {
 #     # Finn og rapporter duplikater
@@ -3128,4 +3128,50 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   for (gruppe in filgrupper) {
     FG <- LagFilgruppe(gruppe, batchdate = batchdate, globs = globs, versjonert = versjonert)
   }
+}
+
+#' KHaggreger (kb)
+#'
+#' @param FIL 
+#' @param vals 
+#' @param snitt 
+#' @param globs global parameters, defaults to SettGlobs
+KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
+  # is_kh_debug()
+  
+  orgclass <- class(FIL)
+  orgcols <- names(FIL)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.table::setDT(FIL)
+  }
+  orgkeys <- data.table::key(FIL)
+  tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
+  valkols <- get_value_columns(names(FIL))
+  if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
+  
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+  colorder <- tabnames
+  for(val in valkols){
+    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+  data.table::setcolorder(FIL, colorder)
+  
+  vals <- vals[valkols]
+  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
+    x$sumbar == 0
+  }))]
+  for (val in valkols) {
+    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
+      eval(parse(text = paste(
+        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        sep = ""
+      )))
+    }
+  }
+  if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
+  
+  return(unique(FIL))
 }

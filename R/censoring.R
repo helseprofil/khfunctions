@@ -55,7 +55,7 @@ do_censor_statistical_tolerance <- function(dt, limit){
 #' @param ref_year_type 
 #' @param globs
 AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref_year_type = "Moving", globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   FG <- data.table::copy(FG)
   AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
   
@@ -77,7 +77,7 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref
       )))
     }
     for (i in 1:length(overkats)) {
-      kombs <- combn(names(overkats), i)
+      kombs <- utils::combn(names(overkats), i)
       for (j in 1:ncol(kombs)) {
         substrs <- character(0)
         overtabs <- character(0)
@@ -161,7 +161,7 @@ var_num <- function(x){
 #' Først beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
 #' Dette er unoedvendig kronglete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1. 
 #' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
-#' @noRD
+#' @noRd
 do_remove_censored_observations <- function(dt, outvalues){
   valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
   valF <- intersect(names(dt), valF)

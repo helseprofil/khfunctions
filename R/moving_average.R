@@ -83,7 +83,7 @@ do_aggregate_periods <- function(dt, parameters, globs){
 }
 
 #' @title find_missing_year
-#' @noRD
+#' @noRd
 find_missing_year <- function(aarl){
   aarl_min_max <- min(aarl):max(aarl)
   aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
@@ -94,7 +94,7 @@ find_missing_year <- function(aarl){
 #' @title calculate_period_sums
 #' @description
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
-#' @noRD
+#' @noRd
 calculate_period_sums <- function(dt, period, n_missing_year, globs = SettGlobs()){
   cat("* Aggregerer til ", period, "-årige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)

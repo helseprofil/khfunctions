@@ -1,4 +1,4 @@
-#' @title add_standard_columns
+#' @title add_predteller
 #' @description
 #' Adds predicted teller for age- and gender standardization
 #' 
@@ -138,7 +138,7 @@ find_design_after_filter <- function(file, parameterlist, originaldesign = NULL,
 #' @title add_meisskala
 #' @description
 #' Adds scale to standardize MEIS
-#' @noRD
+#' @noRd
 add_meisskala <- function(dt, parameters, globs){
   if(parameters$PredFilter$ref_year_type != "Specific") return(dt)
   cat("* Legger til MEISskala for standardisering\n")

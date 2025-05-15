@@ -196,7 +196,7 @@ merge_geo_d2 <- function(dt, filedescription){
 do_split_multihead <- function(dt, filedescription){
   if(is_empty(filedescription$MULTIHEAD)) return(invisible(NULL))
   mhl <- LesMultiHead(filedescription$MULTIHEAD)
-  dt[, (mhl$colnames) := tstrsplit(mhl$varname, mhl$sep)]
+  dt[, (mhl$colnames) := data.table::tstrsplit(mhl$varname, mhl$sep)]
 }
 
 #' @title do_handle_fylltab
@@ -219,7 +219,7 @@ do_handle_fylltab <- function(dt, filedescription){
 #' If original data is provided on grunnkrets level, aggregate
 #' Potentially deprecated, not needed if parameter INNLESING::GRUNNKRETS
 #' is not active.
-#' @noRD
+#' @noRd
 do_aggregate_if_grunnkrets <- function(dt, filedescription, parameters){
   if(is_empty(filedescription$GRUNNKRETS) || filedescription$GRUNNKRETS != 1) return(invisible(NULL))
   cat("\n* Aggregerer fra grunnkrets...")

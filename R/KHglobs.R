@@ -1,48 +1,29 @@
-#' SettGlobs (kb)
-SettGlobs <- function() {
-  is_kh_debug()
+#' @title SettGlobs
+#' @description
+#' Sets global parameters used for filgruppe and kube. 
+#' @returns list
+SettGlobs <- function(){
   RODBC::odbcCloseAll()
   path <- getOption("khfunctions.root")
   dbFile <- getOption("khfunctions.db")
   logFile <- getOption("khfunctions.logg")
   
-  if (!dir.exists(path)) {
-    stop(paste0(path, " ikke funnet, Har du tilgang til O:/?"))
-  }
-
-  if (!file.exists(file.path(path, dbFile))) {
-    stop(dbFile, " ikke funnet i ", path)
-  }
+  if (!dir.exists(path)) stop(paste0(path, " ikke funnet, Har du tilgang til O:/?"))
+  if (!file.exists(file.path(path, dbFile))) stop(dbFile, " ikke funnet i ", path)
+  globs <- list(dbh = connect_khelsa(), log = connect_khlogg())
   
-  # # If local path is set:
-  # if (path != "" & exists("setLocalPath", envir = .GlobalEnv)) {
-  #   path <- setLocalPath
-  # }
-  # 
-  # If path is valid, connect to database and reset path to rawPath for global parameters to work
-  # if(path != ""){
-  #   KHELSA <- RODBC::odbcConnectAccess2007(file.path(path, dbFile))
-  #   KHLOGG <- RODBC::odbcConnectAccess2007(file.path(path, logFile))
-  # 
-  #   path <- getOption("khfunctions.root")
-  # }
-  
-  KHELSA <- connect_khelsa()
-  KHLOGG <- connect_khlogg()
-  globs <- list(dbh = KHELSA, log = KHLOGG)
-  
-  # globs[["GeoNavn"]] <- data.table::data.table(RODBC::sqlQuery(KHELSA, "SELECT * from GeoNavn", as.is = TRUE))
-  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from GEOKoder", as.is = TRUE), key = c("GEO"))
-  globs[["UtGeoKoder"]] <- globs$GeoKoder[TYP == "O" & TIL == 9999]$GEO
-  globs[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  globs[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
-  KnrHarm <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from GEOKoder", as.is = TRUE), key = "GEO")
+  globs[["UtGeoKoder"]] <- globs[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
+  globs[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  KnrHarm <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   globs[["KnrHarm"]] <- data.table::rbindlist(list(KnrHarm, KnrHarmS))
-  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(KHELSA, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
-  globs[["DefDesign"]] <- SettDefDesignKH(dbcon = KHELSA)
+  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+
+  DELER <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE))
+  globs[["DefDesign"]] <- SettDefDesignKH(deler = DELER)
   globs[["KB"]] <- SettKodeBokGlob(globs = globs)
-  globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs) 
+  globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs)
   globs[["TotalKoder"]] <- getOption("khfunctions.totals")
   Stata <- FinnStataExe()
   globs[["StataExe"]] <- Stata$Exe
@@ -50,23 +31,21 @@ SettGlobs <- function() {
   return(globs)
 }
 
-#' SettDefDesignKH (kb)
-#' 
-#' Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
+#' @title SettDefDesignKH
+#' @author Kåre Bævre
+#' @description Setter standard designegenskaper, slik som delenes kolonnenavn og status i omkoding
 #' Se tabell KH_DELER
-SettDefDesignKH <- function(dbcon) {
-  is_kh_debug()
-  
-  Deler <- data.table::setDT(RODBC::sqlQuery(dbcon, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE))
-  Deler <- Deler[order(ID)]
-  DelKolN <- setNames(Deler$DelKol, Deler$DEL)
-  DelKolE <- setNames(Deler$DelKolE, Deler$DEL)
-  DelType <- setNames(Deler$TYPE, Deler$DEL)
-  DelFormat <- setNames(Deler$FORMAT, Deler$DEL)
-  AggPri <- Deler$DEL[order(Deler$AGGREGERPRI)]
-  AggVedStand <- Deler$DEL[Deler$AGGREGERvedPRED == 1]
-  IntervallHull <- setNames(Deler$INTERVALLHULL, Deler$DEL)
-  IntervallHull <- IntervallHull[!(is.na(IntervallHull) | IntervallHull == "")]
+#' @param deler 
+SettDefDesignKH <- function(deler) {
+  data.table::setorder(deler, "ID")
+  DelKolN <- setNames(deler$DelKol, deler$DEL)
+  DelKolE <- setNames(deler$DelKolE, deler$DEL)
+  DelType <- setNames(deler$TYPE, deler$DEL)
+  DelFormat <- setNames(deler$FORMAT, deler$DEL)
+  AggPri <- deler[order(AGGREGERPRI), DEL]
+  AggVedStand <- deler[AGGREGERvedPRED == 1, DEL]
+  IH <- deler[!is.na(INTERVALLHULL) & INTERVALLHULL != "", .(INTERVALLHULL, DEL)]
+  IH <- setNames(IH$INTERVALLHULL, IH$DEL)
   
   DelKols <- as.list(DelKolN)
   DelKolsF <- DelKols
@@ -76,13 +55,13 @@ SettDefDesignKH <- function(dbcon) {
       DelKolsF[[del]] <- DelKols[[del]]
     }
     if (!(is.na(DelKolE[[del]]) | DelKolE[[del]] == "")) {
-      DelKolsF[[del]] <- c(DelKolsF[[del]], unlist(stringr::str_split(DelKolE[[del]], ",")))
+      DelKolsF[[del]] <- c(DelKolsF[[del]], unlist(strsplit(DelKolE[[del]], ",")))
     }
   }
   
-  UBeting <- Deler$DEL[Deler$OMKODbet == "U"]
-  BetingOmk <- Deler$DEL[Deler$OMKODbet == "B"]
-  BetingF <- Deler$DEL[Deler$OMKODbet == "F"]
+  UBeting <- deler$DEL[deler$OMKODbet == "U"]
+  BetingOmk <- deler$DEL[deler$OMKODbet == "B"]
+  BetingF <- deler$DEL[deler$OMKODbet == "F"]
   OmkDel <- c(UBeting, BetingOmk)
   
   DesignKols <- c(unlist(DelKols[c(UBeting, BetingOmk)]))
@@ -105,17 +84,15 @@ SettDefDesignKH <- function(dbcon) {
       DesignKolsFA = DesignKolsFA,
       AggPri = AggPri,
       AggVedStand = AggVedStand,
-      IntervallHull = IntervallHull
+      IntervallHull = IH
     )
   )
 }
 
-#' SettKodeBokGlob (kb)
-#'
+#' @title SettKodeBokGlob
+#' @author Kåre Bævre
 #' @param globs global parameters, defaults to SettGlobs
-SettKodeBokGlob <- function(globs = SettGlobs()) {
-  is_kh_debug()
-  
+SettKodeBokGlob <- function(globs) {
   OmkodD <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_OMKOD
                                               UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE, stringsAsFactors = FALSE))
   OmkodD <- OmkodD[DEL != "S"]
@@ -146,18 +123,16 @@ SettKodeBokGlob <- function(globs = SettGlobs()) {
   return(KB)
 }
 
-#' SettLegitimeKoder (kb)
-#'
+#' @title SettLegitimeKoder
+#' @author Kåre Bævre
 #' @param globs global parameters, defaults to SettGlobs
-SettLegitimeKoder <- function(globs = SettGlobs()) {
-  is_kh_debug()
-
+SettLegitimeKoder <- function(globs) {
   Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_KODER WHERE DEL <> 'S'", as.is = TRUE))
   KodeL <- list()
   for (del in unique(Koder$DEL)) {
     KodeD <- Koder[DEL == del]
     if (globs$DefDesign$DelType[del] == "INT") {
-      KodeD[, (globs$DefDesign$DelKols[[del]]) := tstrsplit(KODE, "_", fixed = TRUE)]
+      KodeD[, (globs$DefDesign$DelKols[[del]]) := data.table::tstrsplit(KODE, "_", fixed = TRUE)]
     } else if (globs$DefDesign$DelFormat[del] == "integer") {
       KodeD[, (globs$DefDesign$DelKols[[del]]) := NA_integer_]
       KodeD[!grepl("[^0-9]", KODE), (globs$DefDesign$DelKols[[del]]) := as.integer(KODE)]
@@ -169,9 +144,10 @@ SettLegitimeKoder <- function(globs = SettGlobs()) {
   return(KodeL)
 }
 
-#' FinnStataExe (ybk)
-#'
-#' Find the most recent version of locally installed Stata
+#' @title FinnStataExe 
+#' @author Yusman Kamaleri
+#' @description Find the most recent version of locally installed Stata
+#' @noRd
 FinnStataExe <- function() {
   stata_bin <- "StataSE-64.exe"
   program_path <- c("C:/Program Files/", "C:/Program Files (x86)/")
@@ -184,11 +160,16 @@ FinnStataExe <- function() {
   return(list(Exe = Exe, Vers = Vers))
 }
 
+
+#' @title connect_khelsa
+#' @description connects to khelsa.mdb
 connect_khelsa <- function(){
   RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
                                          getOption("khfunctions.db")))
 }
 
+#' @title connect_khlogg
+#' @description connects to khlogg.mdb
 connect_khlogg <- function(){
   RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
                                          getOption("khfunctions.logg")))

@@ -5,7 +5,7 @@
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
 #' @param globs global parameters, defaults to SettGlobs
 find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
   AggPri = globs$DefDesign$AggPri
@@ -72,8 +72,8 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         alle <- paste0(Imin, "_", Imax)
         if (nrow(KBD) > 0) {
           KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
-          KBD[, (kols) := tstrsplit(get(kol), "_", fixed = TRUE)]
-          KBD[, (kolsomk) := tstrsplit(get(kolomk), "_", fixed = TRUE)]
+          KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
+          KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
           # Filtrer KBD mot TIL!!
           KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
         }

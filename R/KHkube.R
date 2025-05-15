@@ -10,17 +10,19 @@
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
 #' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
+#' @param year year to get valid GEO codes and to produce correct FRISKVIK files. If NuLL, getOption("khfunctions.year") is used
 #' @param ... 
 #' @return complete data file, publication ready file, and quality control file.
-LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),write = FALSE, alarm = FALSE, geonaboprikk = TRUE, ...) {
+LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = NULL, ...) {
   check_if_lagkube_available()
   on.exit(lagkube_cleanup(), add = TRUE)
   batchdate <- SettKHBatchDate()
   globs <- SettGlobs()
+  globs[["khyear"]] <- ifelse(is.null(year), getOption("khfunctions.year"), year)
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   if(!geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   
-  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
+  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs, year = year)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters, globs = globs)
@@ -69,7 +71,7 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = outvalues)
-  if(isTRUE(write)) LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, FGP = parameters$fileinformation[[parameters$files$TELLER]], modus = parameters$CUBEinformation$MODUS, batchdate = batchdate, globs = globs)
+  if(isTRUE(write)) LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = year, FGP = parameters$fileinformation[[parameters$files$TELLER]], modus = parameters$CUBEinformation$MODUS, batchdate = batchdate, globs = globs)
   ALLVIS <- ALLVIS[, c(..outdimensions, ..outvalues, "SPVFLAGG")]
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = outdimensions, kube = KUBE)
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)

@@ -2,8 +2,8 @@
 #' for development, sources all files in the R folder
 uselocal <- function(test = FALSE, debug = FALSE){
   rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
-  show_functions <<- debug
-  show_arguments <<- debug
+  # show_functions <<- debug
+  # show_arguments <<- debug
   source("./R/KHmisc.R", encoding = "latin1")
   KH_options()
   if(test) .useTest()

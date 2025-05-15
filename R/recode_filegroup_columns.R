@@ -44,7 +44,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
 #' Codebook is subset to only use data actually existing in the data. 
 #' @returns recoded data (by reference) and updated recode_log to be appended to 
 #' complete recode log. 
-#' @noRD
+#' @noRd
 do_recode_kb <- function(dt, cb, col, log){
   cb <- cb[TYPE == "KB" & ORGKODE %in% unique(dt[[col]])]
   if(nrow(cb) == 0) return(log)
@@ -62,7 +62,7 @@ do_recode_kb <- function(dt, cb, col, log){
 #' Recode data using regex with sub() function to allow for regex also in the replacement value. 
 #' @returns recoded data (by reference) and updated recode_log to be appended to 
 #' complete recode log. 
-#' @noRD
+#' @noRd
 do_recode_regex <- function(dt, cb, col, log){
   cb <- cb[TYPE == "SUB"]
   if(nrow(cb) == 0) return(log)
@@ -94,7 +94,7 @@ do_remove_deleted_rows <- function(dt, cols){
 #' @title do_recode_tknr
 #' @description
 #' Recode data provided with TKNR using the TKNR table from ACCESS
-#' @noRD
+#' @noRd
 do_recode_tknr <- function(dt, tknr, parameters){
   if(is_empty(tknr) || tknr != "1") return(invisible(NULL))
   cat("\n* Omkoder fra TKNR")

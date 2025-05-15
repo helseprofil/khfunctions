@@ -4,28 +4,28 @@
 #' 
 #' Debugging all other functions in the project
 #' To use, set show_functions or show_arguments = TRUE
-is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
-  
-  # If both are TRUE then show_arguments will be deactivated automatically.
-  if (fun & arg)
-    arg <- FALSE
-  
-  if (arg) {
-    show = show_arguments
-    out = sys.calls()[[1]]
-  }
-  
-  if (fun) {
-    show = show_functions
-    out = sys.calls()[[1]][1]
-  }
-  
-  if (show) {
-    message("Execute: ", deparse(out))
-  }
-  
-  invisible()
-}
+# is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
+#   
+#   # If both are TRUE then show_arguments will be deactivated automatically.
+#   if (fun & arg)
+#     arg <- FALSE
+#   
+#   if (arg) {
+#     show = show_arguments
+#     out = sys.calls()[[1]]
+#   }
+#   
+#   if (fun) {
+#     show = show_functions
+#     out = sys.calls()[[1]][1]
+#   }
+#   
+#   if (show) {
+#     message("Execute: ", deparse(out))
+#   }
+#   
+#   invisible()
+# }
 
 #' SettKHBatchDate
 #' 
@@ -92,7 +92,7 @@ get_tab_columns <- function(columnnames){
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   if (identical(class(FIL), "data.frame")) {
     FIL <- data.table::data.table(FIL)
@@ -187,93 +187,8 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   return(Design)
 }
 
-#' @title do_aggregate_file
-#'
-#' @param file 
-#' @param valsumbardef 
-#' @param globs global parameters, defaults to SettGlobs
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-do_aggregate_file <- function(file, valsumbardef = list(), globs = SettGlobs()){
-  if(!is(file, "data.table")) data.table::setDT(file)
-  tabcols <- get_dimension_columns(names(file))
-  valcols <- get_value_columns(names(file))
-  colorder <- tabcols 
-  for(val in valcols){
-    file[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
-    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
-  }
-  if(!identical(key(file), tabcols)) setkeyv(file, tabcols)
-  
-  g <- collapse::GRP(file, tabcols)
-  aggfile <- add_vars(g[["groups"]],
-                      collapse::fsum(collapse::get_vars(file, valcols), g = g),
-                      collapse::fmax(collapse::get_vars(file, paste0(valcols, ".f")), g = g),
-                      collapse::fsum(collapse::get_vars(file, paste0(valcols, ".a")), g = g))
-  
-  # Remove if marked as not "sumbar"
-  for(val in valcols){
-    if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
-      valA <- paste0(val, ".a")
-      valF <- paste0(val, ".f")
-      aggfile[get(valA) > 1, c(val, valF) := list(NA, 2)]
-    }
-  }
-  data.table::setcolorder(aggfile, colorder)
-  return(aggfile)
-}
-
-#' KHaggreger (kb)
-#'
-#' @param FIL 
-#' @param vals 
-#' @param snitt 
-#' @param globs global parameters, defaults to SettGlobs
-KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
-  is_kh_debug()
-  
-  orgclass <- class(FIL)
-  orgcols <- names(FIL)
-  if (identical(orgclass, "data.frame")) {
-    FIL <- data.table::setDT(FIL)
-  }
-  orgkeys <- data.table::key(FIL)
-  tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
-  valkols <- get_value_columns(names(FIL))
-  if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
-  
-  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
-  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
-  colorder <- tabnames
-  for(val in valkols){
-    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
-    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
-  }
-  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
-  data.table::setcolorder(FIL, colorder)
-
-  vals <- vals[valkols]
-  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
-    x$sumbar == 0
-  }))]
-  for (val in valkols) {
-    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
-      eval(parse(text = paste(
-        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
-        sep = ""
-      )))
-    }
-  }
-  if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
-
-  return(unique(FIL))
-}
-
 ht2 <- function(x, n = 3) {
-  is_kh_debug()
+  # is_kh_debug()
   
   rbind(head(x, n), tail(x, n))
 }
@@ -283,7 +198,7 @@ ht2 <- function(x, n = 3) {
 #' @param koblid 
 #' @param globs global parameters, defaults to SettGlobs
 FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
 }
@@ -297,7 +212,7 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
 SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
   sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
 }
@@ -308,7 +223,7 @@ SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate()
 #' @param table 
 #' @param koblid 
 SVcloneRecord <- function(dbh, table, koblid) {
-  is_kh_debug()
+  # is_kh_debug()
   design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
   felt <- paste(design, collapse = ",")
   feltm <- sub("SV", "'V' AS SV", felt)
@@ -326,7 +241,7 @@ SVcloneRecord <- function(dbh, table, koblid) {
 #' @param IDKOLS 
 #' @param ... 
 readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
-  is_kh_debug()
+  # is_kh_debug()
   FIL <- readRDS(file, ...)
   if (IDKOLS == FALSE) {
     if ("KOBLID" %in% names(FIL)) {
@@ -347,7 +262,7 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
 TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
   if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
     print("**************Hvorfor er jeg egentlig her?*********************'")
@@ -376,7 +291,7 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
 #' @param IDKOLS 
 #' @param globs global parameters, defaults to SettGlobs
 FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   FT <- data.frame()
   if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
@@ -418,7 +333,7 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
 #'
 #' @param ... 
 FinnFilT <- function(filid) {
-  is_kh_debug()
+  # is_kh_debug()
   
   return(FinnFil(filid, globs = globs)$FT)
 }
@@ -428,7 +343,7 @@ FinnFilT <- function(filid) {
 #'
 #' @param ... 
 expand.grid.df <- function(...) {
-  is_kh_debug()
+  # is_kh_debug()
   
   DFs <- list(...)
   
@@ -494,7 +409,7 @@ expand.grid.dt <- function(...){
 #' @param DTo 
 #' @param keys 
 setkeym <- function(DTo, keys) {
-  is_kh_debug()
+  # is_kh_debug()
   
   # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
   if (!("data.table" %in% class(DTo) && identical(key(DTo), keys))) {
@@ -534,7 +449,7 @@ KH_options <- function(){
   if(!isTRUE(corrglobs)){
     x <- utils::askYesNo("Options are not the same as in the config file, update options now?")
     if(isTRUE(x)){
-      orgdata:::update_globs("khfunctions")
+      orgdata::update_globs("khfunctions")
     }
   }
 }
@@ -548,8 +463,8 @@ FormatSqlBatchdate <- function(batchdate){
 #' use to test other branches, loads all functions from a specified branch
 use_branch <- function(branch, debug = FALSE){
   rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
-  show_functions <<- debug
-  show_arguments <<- debug
+  # show_functions <<- debug
+  # show_arguments <<- debug
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
   KH_options()
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")

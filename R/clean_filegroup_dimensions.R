@@ -130,9 +130,9 @@ do_clean_AAR <- function(dt, cleanlog){
   dt[!grepl("^\\d{4}_\\d{4}$", AAR), let(AAR = getOption("khfunctions.aar_illegal"))]
   
   aarint <- c("AARl", "AARh")
-  dt[, (aarint) := tstrsplit(AAR, "_")]
+  dt[, (aarint) := data.table::tstrsplit(AAR, "_")]
   dt[AARl > AARh, let(AAR = getOption("khfunctions.aar_illegal"))]
-  dt[AARl > AARh, (aarint) := tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
+  dt[AARl > AARh, (aarint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
   dt[, let(AAR = NULL)]
 }
@@ -172,9 +172,9 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
   dt[!grepl("^\\d+_\\d+$", ALDER), ALDER := getOption("khfunctions.alder_illegal")]
   
   alderint <- c("ALDERl", "ALDERh")
-  dt[, (alderint) := tstrsplit(ALDER, "_")]
+  dt[, (alderint) := data.table::tstrsplit(ALDER, "_")]
   dt[ALDERl > ALDERh, let(ALDER = getOption("khfunctions.aar_illegal"))]
-  dt[ALDERl > ALDERh, (alderint) := tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
+  dt[ALDERl > ALDERh, (alderint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
   dt[, let(ALDER = NULL)]
 }

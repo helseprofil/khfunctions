@@ -2,7 +2,7 @@
 #' @description
 #' Writes KUBE, ALLVIS, and QC files from lagKUBE
 #' 
-#' REDUCE NUMBER OF ARGUMENTS TO A LIST OF INPUT-args, which can be added to parameters[["input_args"]] and passed to other functions
+#' REDUCE NUMBER OF ARGUMENTS TO A LIST OF INPUT-args, which can be added to parameters-"input_args" and passed to other functions
 #' @param outputlist list of output to write
 #' @param name KUBEid
 #' @param batchdate batchdate

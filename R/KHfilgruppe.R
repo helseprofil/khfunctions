@@ -2,12 +2,10 @@
 #' @description
 #' Loops over all original files, creates a table and append to the complete file group 
 #'
-#' @param gruppe 
-#' @param printR 
-#' @param printSTATA 
-#' @param versjonert 
-#' @param dumps 
-#' @param localDir 
+#' @param gruppe name of filegroup
+#' @param versjonert save file with date tag? default = TRUE
+#' @param write save output files? default = TRUE
+#' @param dumps list of intermediate files to save, used for debugging and development. 
 LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
   parameters <- get_filegroup_parameters(name = gruppe, versjonert = versjonert, dumps = dumps)
@@ -25,7 +23,6 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   cat("-----\n* Alle originalfiler lest og stablet")
   write_codebooklog(log = codebooklog, parameters = parameters, write = write)
   
-  # Clean dimension columns
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
@@ -48,7 +45,9 @@ lagfilgruppe_cleanup <- function(){
   RODBC::odbcCloseAll()
 }
 
+#' @title delete_old_filegroup_log
 #' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
+#' @noRd
 delete_old_filegroup_log <- function(filegroup, parameters){
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))

@@ -20,6 +20,7 @@ get_filegroup_parameters <- function(name, versjonert, dumps){
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
   parameters[["codebook"]] <- get_codebook(filegroup_name = name, validdates = parameters$validdates, globs = globs)
   parameters[["GeoNavn"]] <- setDT(RODBC::sqlQuery(globs$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
+  parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   return(c(parameters, globs))
 }
 
@@ -31,7 +32,7 @@ read_filgrupper_and_add_vals <- function(filegroup_name, validdates, globs){
   isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)
   if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filegroup_name)
   if(isalderalle){
-    alle_aldre <- as.integer(tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
+    alle_aldre <- as.integer(data.table::tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
     amin <- alle_aldre[1]
     amax <- alle_aldre[2]
   } else {

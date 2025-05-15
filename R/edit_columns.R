@@ -1,7 +1,7 @@
 #' @title scale_rate_and_meisskala
 #' @description
 #' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
-#' @noRD
+#' @noRd
 scale_rate_and_meisskala <- function(dt, parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
   scale <- as.numeric(parameters$CUBEinformation$RATESKALA)
@@ -154,8 +154,9 @@ get_outdimensions <- function(dt, etabs, parameters){
   return(dims)
 }
 
-#' @fix_geo_special
-#' @description Manuall handle bydel startaar, DK2020 and AALESUND/HARAM
+#' @title fix_geo_special
+#' @description Manually handle bydel startaar, DK2020 and AALESUND/HARAM
+#' @noRd
 fix_geo_special <- function(d, specs, id = KUBEid){
   
   valK <- get_value_columns(names(d))

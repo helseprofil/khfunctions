@@ -6,7 +6,7 @@
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   Deler <- list()
   for (del in names(globs$DefDesign$DelKolN)) {
@@ -73,7 +73,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   Deler <- list()
   for (del in names(globs$DefDesign$DelKolN)) {
@@ -148,7 +148,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
 #' @param globs global parameters, defaults to SettGlobs
 FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
   AggPri = globs$DefDesign$AggPri
@@ -236,8 +236,8 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
         alle <- paste0(Imin, "_", Imax)
         if (nrow(KBD) > 0) {
           KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
-          KBD[, (kols) := tstrsplit(get(kol), "_", fixed = TRUE)]
-          KBD[, (kolsomk) := tstrsplit(get(kolomk), "_", fixed = TRUE)]
+          KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
+          KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
           # Filtrer KBD mot TIL!!
           KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
         }
@@ -389,7 +389,7 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
 #' @param TIL 
 #' @param delnavn 
 FinnKodebokIntervaller <- function(FRA, TIL, delnavn = "INT") {
-  is_kh_debug()
+  # is_kh_debug()
   
   # I tilfelle input er data.table
   # FRA <- as.data.frame(FRA)
@@ -438,7 +438,7 @@ FinnKodebokIntervaller <- function(FRA, TIL, delnavn = "INT") {
 #' @param result 
 #' @param utcolnavn 
 FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utcolnavn) {
-  is_kh_debug()
+  # is_kh_debug()
   
   if (DekkerInt(FRA[Find], TILint)) {
     jobb <- Find[Find > letn]
@@ -478,7 +478,7 @@ FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utc
 #' @param FRA 
 #' @param TIL 
 DekkerInt <- function(FRA, TIL) {
-  is_kh_debug()
+  # is_kh_debug()
   
   # Sjekker at hele intervallet TIL[,1]-TIL[,2] dekkes av intervallene i FRA
   # Bryr seg ikke om overlapp her, det gjoeres andre steder
@@ -492,7 +492,7 @@ DekkerInt <- function(FRA, TIL) {
 #' @param namesFULL 
 #' @param TempFile 
 handle_udekk <- function(FULL, namesFULL, TempFile){
-  is_kh_debug()
+  # is_kh_debug()
   Udekk <- readRDS(TempFile)
   data.table::setkeyv(Udekk, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
@@ -515,7 +515,7 @@ SettPartDekk <- function(KB,
                          betcols = character(0), 
                          IntervallHull = globs$DefDesign$IntervallHull,
                          globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   kol <- as.character(globs$DefDesign$DelKolN[del])
   kolsomkpri <- names(KB)[grepl("_(omk|pri)$", names(KB))]
@@ -557,7 +557,7 @@ SettPartDekk <- function(KB,
 #'
 #' @examples
 FinnRedesignForFilter <- function(ORGd, Filter, globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   MODd <- Filter
   for (del in setdiff(names(ORGd$Part), names(Filter))) {
@@ -573,7 +573,7 @@ FinnRedesignForFilter <- function(ORGd, Filter, globs = SettGlobs()) {
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   data.table::setDT(FIL)
   amin <- FGP$amin
@@ -651,7 +651,7 @@ EkstraherRadSummer <- function(FIL, pstrorg, FGP = list(amin = 0, amax = 120), g
 #' @param nyeexpr 
 #' @param FGP 
 AggregerRader <- function(FG, nyeexpr, FGP) {
-  is_kh_debug()
+  # is_kh_debug()
   
   if (!(is.na(nyeexpr) || nyeexpr == "")) {
     nytabs <- unlist(stringr::str_split(nyeexpr, ";"))
@@ -686,7 +686,7 @@ AggregerRader <- function(FG, nyeexpr, FGP) {
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   Dorg <- FinnDesign(Fil, FGP = FGP, globs = globs)
   Dmod <- ModifiserDesign(Part, Dorg, globs = globs)
@@ -700,7 +700,7 @@ OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), globs =
 #' @param Org 
 #' @param globs global parameters, defaults to SettGlobs
 ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   
   Nkombs <- 1
   for (del in names(Org$Part)) {
@@ -757,7 +757,7 @@ ModifiserDesign <- function(Nytt, Org = list(), globs = SettGlobs()) {
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
 SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  is_kh_debug()
+  # is_kh_debug()
   Foverkat <- list()
   if (!(is.null(ovkatspec) || is.na(ovkatspec))) {
     specs <- unlist(stringr::str_split(ovkatspec, ";"))
@@ -813,7 +813,7 @@ SettNaboAnoSpec <- function(ovkatspec, FGP = list(amin = 0, amax = 120), globs =
 #' @param innDF 
 #' @param topn 
 DFHeadToString <- function(innDF, topn = 10) {
-  is_kh_debug()
+  # is_kh_debug()
   
   # Bruker data.table print for summary
   DT <- data.table::data.table(innDF)
@@ -829,7 +829,7 @@ DFHeadToString <- function(innDF, topn = 10) {
 #' 
 #' Saves ACCESS specs + list of dimensions to be used in STATA censoring
 save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
-  is_kh_debug()
+  # is_kh_debug()
   
   rootDir <- file.path(fs::path_home(), "helseprofil")
   if (!fs::dir_exists(rootDir))
@@ -872,15 +872,14 @@ find_dims_for_stataprikk <- function(dt, etabs){
 #' @param ...
 LagAlleFriskvikIndikatorerForKube <- function(KUBEid, 
                                               KUBE, 
+                                              aargang,
                                               FGP, 
-                                              modus = NULL, 
+                                              modus, 
                                               batchdate, 
                                               globs = SettGlobs(),  
                                               ...) {
   
-  is_kh_debug()
-  aargang <- getOption("khfunctions.year")
-  # indikatorer<-unlist(sqlQuery(globs$dbh,paste("SELECT INDIKATOR FROM ",friskvikTAB,aargang," WHERE KUBE_NAVN='",KUBEid,"'",sep=""),as.is=TRUE))
+  if(is_empty(modus)) stop("KUBER::MODUS er ikke satt for kuben")
   indikatorer <- sqlQuery(globs$dbh, paste0("SELECT INDIKATOR, ID FROM FRISKVIK WHERE AARGANG=", aargang, "AND KUBE_NAVN='", KUBEid, "'"), as.is = TRUE)
   
   if (dim(indikatorer)[1] > 0) {
@@ -903,13 +902,11 @@ LagAlleFriskvikIndikatorerForKube <- function(KUBEid,
 LagFriskvikIndikator <- function(id, 
                                  KUBE = data.table(), 
                                  FGP = list(amin = 0, amax = 120), 
-                                 modus = NULL, 
-                                 aargang = NULL,
+                                 modus, 
+                                 aargang,
                                  batchdate = SettKHBatchDate(), 
                                  globs = SettGlobs()) {
   
-  is_kh_debug()
-  if(is.null(aargang)) aargang <- getOption("khfunctions.year")
   FVdscr <- sqlQuery(globs$dbh, paste0("SELECT * FROM FRISKVIK WHERE ID=", id), as.is = TRUE)
   
   moduser <- unlist(stringr::str_split(FVdscr$MODUS, ""))
@@ -1022,7 +1019,7 @@ LagFriskvikIndikator <- function(id,
 LagQCKube <- function(allvis,
                       allvistabs,
                       kube){
-  is_kh_debug()
+  # is_kh_debug()
   qcvals <- getOption("khfunctions.qcvals")
   QC <- data.table::copy(allvis)
   uprikk <- data.table::copy(kube)[, mget(c(allvistabs, qcvals))]

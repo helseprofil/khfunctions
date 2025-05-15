@@ -8,7 +8,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   if(!standardfiles) cat("* Merger teller- og nevnerfil\n")
   if(standardfiles) cat("* Merger standardteller- og standardnevnerfil\n")
   
-  is_kh_debug()
+  # is_kh_debug()
   args <- get_merge_teller_nevner_args(standardfiles = standardfiles, parameters = parameters)
   tellerfilnavn <- args$files[[args$TELLERFIL]]
   tellerfildesign <- args$filedesigns[[tellerfilnavn]]
@@ -115,7 +115,7 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
 #' @param globs global parameters, defaults to SettGlobs
 FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
-  is_kh_debug()
+  # is_kh_debug()
   cat("Starter i FinnFellesTab.")
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
@@ -172,7 +172,6 @@ do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
 #' @param design 
 #' @param globs global parameters, defaults to SettGlobs
 set_rectangularized_cube_design <- function(colnames, design, globs = SettGlobs()) {
-  GEOstdAAR <- getOption("khfunctions.year")
   DTlist <- list()
   delkolonner <- character(0)
   for (del in names(design)) {
@@ -186,7 +185,7 @@ set_rectangularized_cube_design <- function(colnames, design, globs = SettGlobs(
   
   rektangularisert <- data.table::data.table()    
   for (Gn in design[["Gn"]][["GEOniv"]]) {
-    GEOK <- globs$GeoKoder[GEOniv == Gn & FRA <= getOption("khfunctions.year") & TIL > getOption("khfunctions.year")]
+    GEOK <- globs$GeoKoder[GEOniv == Gn & FRA <= globs$khyear & TIL > globs$khyear]
     subfylke <- which(GEOK$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
     GEOK$FYLKE <- NA_character_
     GEOK$FYLKE[subfylke] <- substr(GEOK$GEO[subfylke], 1, 2)
