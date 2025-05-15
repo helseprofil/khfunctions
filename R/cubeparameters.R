@@ -19,7 +19,7 @@ get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = Se
   parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
   parameters[["ref_year_type"]] <- parameters$PredFilter$ref_year_type
   parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
-  parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs, year = year)
+  parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs)
   return(parameters)
 }
 
@@ -162,9 +162,9 @@ replace_filename_if_filefilters <- function(filename, filefilters){
 #' @noRd
 #' @param KUBEid cube name
 #' @param globs global parameters, defaults to SettGlobs
-get_friskvik_information <- function(KUBEid, globs, year){
+get_friskvik_information <- function(KUBEid, globs){
   FRISKVIK <- data.table::setDT(RODBC::sqlQuery(globs$dbh, 
-                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", year, "AND KUBE_NAVN='", KUBEid, "'")), 
+                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", globs$khyear, "AND KUBE_NAVN='", KUBEid, "'")), 
                                    as.is = TRUE))
   return(FRISKVIK)
 }

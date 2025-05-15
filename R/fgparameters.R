@@ -19,7 +19,7 @@ get_filegroup_parameters <- function(name, versjonert, dumps){
   parameters[["read_parameters"]] <- get_read_parameters(filegroup_name = name, validdates = parameters$validdates, globs = globs)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
   parameters[["codebook"]] <- get_codebook(filegroup_name = name, validdates = parameters$validdates, globs = globs)
-  parameters[["GeoNavn"]] <- setDT(RODBC::sqlQuery(globs$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
+  parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   return(c(parameters, globs))
 }

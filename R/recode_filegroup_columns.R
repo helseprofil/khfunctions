@@ -53,7 +53,7 @@ do_recode_kb <- function(dt, cb, col, log){
   freq <- data.table::setnames(dt[get(col) %in% cb$ORGKODE, .N, by = col], c("ORG", "FREQ"))
   newlog <- newlog[freq, on = "ORG", FREQ := i.FREQ]
   dt[cb, on = setNames("ORGKODE", col), (col) := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, get(col))]
-  log <- rbindlist(list(log, newlog))
+  log <- data.table::rbindlist(list(log, newlog))
   return(log)
 }
 
@@ -72,7 +72,7 @@ do_recode_regex <- function(dt, cb, col, log){
     newlog[i, FREQ := dt[grepl(cb[i, ORGKODE], get(col)), .N]]
     dt[grepl(cb[i, ORGKODE], get(col)), (col) := sub(cb[i, ORGKODE], cb[i, NYKODE], get(col), perl = TRUE)]
   }
-  log <- rbindlist(list(log, newlog))
+  log <- data.table::rbindlist(list(log, newlog))
   return(log)
 }
 

@@ -204,6 +204,15 @@ initiate_read_log <- function(filedescription, parameters){
   return(invisible(NULL))
 }
 
+#' @title excelcols
+#' @return default excel headers
+excelcols <- function(){
+  single <- LETTERS
+  double <- sapply(single, paste0, single)
+  triple <- sapply(double, paste0, single)
+  c(single, double, triple)
+}
+
 
 # TO BE DELETED ----
 #' @noRd

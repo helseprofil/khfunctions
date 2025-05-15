@@ -112,13 +112,13 @@ calculate_period_sums <- function(dt, period, n_missing_year, globs = SettGlobs(
     colorder <- c(colorder, paste0(val, c("", ".f", ".a", ".fn1",".fn3", ".fn9", ".n")))
   }
   g <- collapse::GRP(dt, dims)
-  aggdt <- add_vars(g[["groups"]],
-                    collapse::fsum(collapse::get_vars(dt, values), g = g, fill = T),
-                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".a")), g = g, fill = T),
-                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn1")), g = g, fill = T),
-                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn3")), g = g, fill = T),
-                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn9")), g = g, fill = T),
-                    collapse::fsum(collapse::get_vars(dt, paste0(values, ".n")), g = g, fill = T))
+  aggdt <- collapse::add_vars(g[["groups"]],
+                              collapse::fsum(collapse::get_vars(dt, values), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".a")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn1")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn3")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn9")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".n")), g = g, fill = T))
   aggdt[, (paste0(values, ".f")) := 0]
   data.table::setcolorder(aggdt, colorder)
   
@@ -192,5 +192,5 @@ do_filter_periods_with_missing_original <- function(dt){
 organize_file_for_moving_average <- function(dt){
   tabcols_minus_aar <- grep("^AARl$|^AARh$", get_dimension_columns(names(dt)), value = T, invert = T)
   key <- c(tabcols_minus_aar, "AARl", "AARh")
-  if(!identical(key(dt), key)) data.table::setkeyv(dt, key)
+  if(!identical(data.table::key(dt), key)) data.table::setkeyv(dt, key)
 }

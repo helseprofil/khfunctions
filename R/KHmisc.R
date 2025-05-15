@@ -139,7 +139,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs(
   
   # Fyll evt hull i aldersintervaller
   if ("A" %in% names(Design$Part)) {
-    mangler <- intervals::interval_difference(Intervals(c(FGP$amin, FGP$amax), type = "Z"), Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
     if (nrow(mangler) > 0) {
       mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
       Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
@@ -412,7 +412,7 @@ setkeym <- function(DTo, keys) {
   # is_kh_debug()
   
   # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
-  if (!("data.table" %in% class(DTo) && identical(key(DTo), keys))) {
+  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
     data.table::setDT(DTo)
     data.table::setkeyv(DTo, keys)
   }

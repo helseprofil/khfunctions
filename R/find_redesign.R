@@ -1,11 +1,13 @@
 #' @title find_redesign
+#' 
+#' @description
+#' WIP: replacement for finnredesign()
 #'
-#' @param fradesign 
-#' @param tildesign 
+#' @param fradesign from
+#' @param tildesign to
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
 #' @param globs global parameters, defaults to SettGlobs
 find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
-  # is_kh_debug()
   KB = globs$KB
   IntervallHull = globs$DefDesign$IntervallHull
   AggPri = globs$DefDesign$AggPri
@@ -37,7 +39,7 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
       if (!delH %in% names(d)) {
         d[, (delH) := 1]
       }
-      KBD <- as.data.table(KB[[del]])
+      KBD <- data.table::as.data.table(KB[[del]])
       kol <- as.character(globs$DefDesign$DelKolN[del])
       kolomk <- paste0(kol, "_omk")
       kolomkpri <- c(kolomk, paste0(del, "_pri"))
@@ -48,7 +50,7 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
       # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
       if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
         tilTabs <- d[, ..kol]
-        KBD <- setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
+        KBD <- data.table::setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
         Parts[[del]] <- KBD
       }
       
@@ -56,7 +58,7 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         if (nrow(KBD) > 0) {
           # Filtrer bort TIL-koder i global-KB som ikke er i tildesign
           KBD <- KBD[get(kolomk) %in% d[[kol]]]
-          setkeyv(KBD, kolomkpri)
+          data.table::setkeyv(KBD, kolomkpri)
           KBD[, (delH) := as.integer(0L)]
           KBD[get(kol) %in% fradesign$Part[[del]][[kol]], (delH) := 1L]
           KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
@@ -99,14 +101,14 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         outnames <- names(KBInt)
         # Legg til spesialkoder igjen
         if (nrow(KBD) > 0) {
-          KBD <- rbindlist(list(KBInt, KBD[, ..outnames]))
+          KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
           KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
         } else {
           KBD <- KBInt
         }
         
         # Koble paa "del_HAR"
-        setkeyv(KBD, kols)
+        data.table::setkeyv(KBD, kols)
         KBD <- collapse::join(fradesign$Part[[del]], KBD, how = "r", verbose = 0)
         KBD[is.na(get(delH)), (delH) := 0]
         KBD <- SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)

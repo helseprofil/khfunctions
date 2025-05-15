@@ -22,7 +22,7 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
   if(!geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   
-  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs, year = year)
+  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
   load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters, globs = globs)

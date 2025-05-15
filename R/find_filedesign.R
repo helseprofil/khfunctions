@@ -58,7 +58,7 @@ get_parts_design <- function(designdata, fileparameters, args){
     columns <- args$part_columns[[part]]
     part_data <- unique(designdata[, ..columns])[, paste0(part, "_HAR") := 1]
     if(part == "A") part_data <- fill_age_interval_gaps(agedata = part_data, agecolumns = columns, fileparameters = fileparameters)
-    setkeyv(part_data, columns)
+    data.table::setkeyv(part_data, columns)
     out[[part]] <- part_data
   }
   return(out)
@@ -95,6 +95,6 @@ find_combination <- function(part, designs, args){
   combinations_observed <- unique(designs$observed[, ..columns])
   combinations_full <- unique(designs$full[, ..columns])[, let(HAR = 0)]
   combinations_full[combinations_observed, on = names(combinations_observed), let(HAR = 1)]
-  setkeyv(combinations_full, columns)
+  data.table::setkeyv(combinations_full, columns)
   return(combinations_full)
 }

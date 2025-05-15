@@ -40,7 +40,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
         }
         listDT <- data.table::setnames(data.table::as.data.table(delListA), globs$DefDesign$DelKols[[del]])
         if (minus == TRUE) {
-          data.table::setkeyv(listDT, key(ORGd$Part[[del]]))
+          data.table::setkeyv(listDT, data.table::key(ORGd$Part[[del]]))
           Deler[[del]] <- ORGd$Part[[del]][!listDT, ]
         } else {
           Deler[[del]] <- listDT
@@ -106,7 +106,7 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), bruk0 = TRUE, FGP = li
       } else if (globs$DefDesign$DelFormat[del] == "numeric") {
         delListA <- as.numeric(delListA)
       }
-      listDT <- data.table::setnames(as.data.table(delListA), globs$DefDesign$DelKols[[del]])
+      listDT <- data.table::setnames(data.table::as.data.table(delListA), globs$DefDesign$DelKols[[del]])
       if (minus == TRUE) {
         if (!is.null(OrgParts[[del]])) {
           data.table::setkeyv(listDT, names(listDT))
@@ -201,7 +201,7 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
       if (!delH %in% names(d)) {
         d[, (delH) := 1]
       }
-      KBD <- as.data.table(KB[[del]])
+      KBD <- data.table::as.data.table(KB[[del]])
       kol <- as.character(globs$DefDesign$DelKolN[del])
       kolomk <- paste0(kol, "_omk")
       kolomkpri <- c(kolomk, paste0(del, "_pri"))
@@ -212,7 +212,7 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
       # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
       if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
         tilTabs <- d[, ..kol]
-        KBD <- setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
+        KBD <- data.table::setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
         Parts[[del]] <- KBD
       }
       
@@ -220,7 +220,7 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
         if (nrow(KBD) > 0) {
           # Filtrer bort TIL-koder i global-KB som ikke er i tildesign
           KBD <- KBD[get(kolomk) %in% d[[kol]]]
-          setkeyv(KBD, kolomkpri)
+          data.table::setkeyv(KBD, kolomkpri)
           KBD[, (delH) := as.integer(0L)]
           KBD[get(kol) %in% fradesign$Part[[del]][[kol]], (delH) := 1L]
           KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
@@ -263,14 +263,14 @@ FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), 
         outnames <- names(KBInt)
         # Legg til spesialkoder igjen
         if (nrow(KBD) > 0) {
-          KBD <- rbindlist(list(KBInt, KBD[, ..outnames]))
+          KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
           KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
         } else {
           KBD <- KBInt
         }
         
         # Koble paa "del_HAR"
-        setkeyv(KBD, kols)
+        data.table::setkeyv(KBD, kols)
         KBD <- collapse::join(fradesign$Part[[del]], KBD, how = "r", verbose = 0)
         KBD[is.na(get(delH)), (delH) := 0]
         KBD <- SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)
@@ -457,7 +457,7 @@ FinnKodebokForEtIntervall <- function(Find, FRA, TILint, OVLP, letn, result, utc
   } else {
     # Sett diff/residual
     if (nrow(FRA[Find, ]) > 0) {
-      miss <- setNames(as.data.frame(intervals::interval_difference(Intervals(TILint, type = "Z"), Intervals(FRA[Find, ], type = "Z"))), names(FRA))
+      miss <- setNames(as.data.frame(intervals::interval_difference(intervals::Intervals(TILint, type = "Z"), intervals::Intervals(FRA[Find, ], type = "Z"))), names(FRA))
     } else {
       miss <- setNames(as.data.frame(TILint), names(FRA))
     }
@@ -1084,4 +1084,48 @@ melt_access_spec <- function(dscr, name = NULL){
   data.table::setcolorder(d, "Tabell")
 }
 
-
+#' KHaggreger (kb)
+#'
+#' @param FIL 
+#' @param vals 
+#' @param snitt 
+#' @param globs global parameters, defaults to SettGlobs
+KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
+  # is_kh_debug()
+  
+  orgclass <- class(FIL)
+  orgcols <- names(FIL)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.table::setDT(FIL)
+  }
+  orgkeys <- data.table::key(FIL)
+  tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
+  valkols <- get_value_columns(names(FIL))
+  if(!identical(data.table::key(FIL), tabnames)) data.table::setkeyv(FIL, tabnames)
+  
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+  colorder <- tabnames
+  for(val in valkols){
+    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+  data.table::setcolorder(FIL, colorder)
+  
+  vals <- vals[valkols]
+  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
+    x$sumbar == 0
+  }))]
+  for (val in valkols) {
+    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
+      eval(parse(text = paste(
+        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        sep = ""
+      )))
+    }
+  }
+  if(!identical(data.table::key(FIL), orgkeys)) data.table::setkeyv(FIL, tabnames)
+  
+  return(unique(FIL))
+}

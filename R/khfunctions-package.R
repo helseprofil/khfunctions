@@ -2,6 +2,8 @@
 "_PACKAGE"
 
 ## usethis namespace: start
+#' @importFrom data.table %chin%
+#' @importFrom data.table %notin%
 #' @importFrom data.table .BY
 #' @importFrom data.table .EACHI
 #' @importFrom data.table .GRP

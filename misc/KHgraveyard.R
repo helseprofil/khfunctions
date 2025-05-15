@@ -3064,15 +3064,6 @@ AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), 
   return(aar)
 }
 
-#' @title excelcols
-#' @return default excel headers
-excelcols <- function(){
-  single <- LETTERS
-  double <- sapply(single, paste0, single)
-  triple <- sapply(double, paste0, single)
-  c(single, double, triple)
-}
-
 #   # Diagnostisering og rapportering paa hele filgruppa under ett
 #   
 #   # L? opprinnelig f?r eksterne kolonnenavn ble satt. 
@@ -3130,48 +3121,3 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   }
 }
 
-#' KHaggreger (kb)
-#'
-#' @param FIL 
-#' @param vals 
-#' @param snitt 
-#' @param globs global parameters, defaults to SettGlobs
-KHaggreger <- function(FIL, vals = list(), globs = SettGlobs()) {
-  # is_kh_debug()
-  
-  orgclass <- class(FIL)
-  orgcols <- names(FIL)
-  if (identical(orgclass, "data.frame")) {
-    FIL <- data.table::setDT(FIL)
-  }
-  orgkeys <- data.table::key(FIL)
-  tabnames <- names(FIL)[names(FIL) %in% globs$DefDesign$DesignKolsFA]
-  valkols <- get_value_columns(names(FIL))
-  if(!identical(key(FIL), tabnames)) setkeyv(FIL, tabnames)
-  
-  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
-  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
-  colorder <- tabnames
-  for(val in valkols){
-    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
-    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
-  }
-  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
-  data.table::setcolorder(FIL, colorder)
-  
-  vals <- vals[valkols]
-  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
-    x$sumbar == 0
-  }))]
-  for (val in valkols) {
-    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
-      eval(parse(text = paste(
-        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
-        sep = ""
-      )))
-    }
-  }
-  if(!identical(key(FIL), orgkeys)) setkeyv(FIL, tabnames)
-  
-  return(unique(FIL))
-}

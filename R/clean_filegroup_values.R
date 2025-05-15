@@ -35,7 +35,7 @@ do_set_val_flag <- function(dt, val){
 do_scale_val <- function(dt, val, parameters){
   scalecol <- paste0("SKALA_", val)
   scales <- parameters$read_parameters[, .SD, .SDcols = c("KOBLID", scalecol)][, let(KOBLID = as.character(KOBLID))]
-  setnames(scales, 2, "scale")
+  data.table::setnames(scales, 2, "scale")
   is_scale <- sum(!is.na(scales$scale) & scales$scale != 1) > 0
   if(!is_scale) return(invisible(NULL))
   

@@ -162,7 +162,7 @@ do_convert_na_to_empty <- function(dt){
 #' @noRd
 initiate_codebooklog <- function(nrow = 0){
   columns <- c("KOBLID", "DELID",  "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ")
-  log <- setDT(as.list(setNames(rep(NA_character_, length(columns)), columns)))
+  log <- data.table::setDT(as.list(setNames(rep(NA_character_, length(columns)), columns)))
   if(nrow == 0) return(log[0])
   return(log[1:nrow])
 }
@@ -171,7 +171,7 @@ initiate_codebooklog <- function(nrow = 0){
 #' @description updates codebooklog by reference
 #' @noRd
 update_codebooklog <- function(codebooklog, recodelog){
-  updated_codebooklog <- rbindlist(list(codebooklog, recodelog))
+  updated_codebooklog <- data.table::rbindlist(list(codebooklog, recodelog))
   codebooklog[, names(codebooklog) := NULL][, names(updated_codebooklog) := updated_codebooklog]
 }
 
@@ -231,7 +231,7 @@ do_aggregate_if_grunnkrets <- function(dt, filedescription, parameters){
   tabcols <- names(aggregate)[!names(dt) %in% valcols]
   aggregate[, names(.SD) := lapply(.SD, as.numeric), .SDcols = valcols]
   g = collapse::GRP(dt, tabcols)
-  aggregate <- add_vars(g[["groups"]], collapse::fsum(collapse::get_vars(aggregate, valcols), g = g))
+  aggregate <- collapse::add_vars(g[["groups"]], collapse::fsum(collapse::get_vars(aggregate, valcols), g = g))
   dt[, names(dt):= NULL]
   dt[, names(aggregate) := aggregate]
   convert_all_columns_to_character()
