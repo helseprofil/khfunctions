@@ -33,13 +33,10 @@ uselocal <- function(test = FALSE, debug = FALSE){
 #' @param KUBEid name of kube to test on
 .SetKubeParameters <- function(KUBEid){
   KUBEid <<- KUBEid
-  versjonert <<- FALSE
-  csvcopy <<- FALSE
+  year <<- NULL
   dumps <<- list()
   assign("write", FALSE, envir = .GlobalEnv)
   geonaboprikk <<- TRUE
-  globs <<- SettGlobs()
-  batchdate <<- SettKHBatchDate()
 }
 
 .SetFilgruppeParameters <- function(filgruppenavn){
@@ -49,7 +46,7 @@ uselocal <- function(test = FALSE, debug = FALSE){
   dumps <<-  list()
 }
 
-fg_get_all_read_args <- function(globs = SettGlobs()){
+fg_get_all_read_args <- function(globs = get_global_parameters()){
   batchdate <- SettKHBatchDate()
   validdates <- paste0("VERSJONFRA <=", FormatSqlBatchdate(batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(batchdate))
   orginnleskobl <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORGINNLESkobl"), as.is = TRUE))

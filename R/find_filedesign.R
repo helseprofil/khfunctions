@@ -4,12 +4,12 @@
 #' 
 #' @param file filegroup
 #' @param fileparameters parameters from ACCESS 
-#' @param globs global parameters, defaults to SettGlobs
-find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
+#' @param parameters global parameters
+find_filedesign <- function(file, fileparameters = NULL, parameters){
   if(is.null(fileparameters)) fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
   if(!is(file, "data.table")) data.table::setDT(file)
   designs <- list()
-  args <- get_filedesign_args(globs = globs, columns_in_file = names(file))
+  args <- get_filedesign_args(parameters = parameters, columns_in_file = names(file))
   designs[["observed"]] <- unique(file[, mget(args$design_columns)])
   output <- get_filedesign_initial_list(observeddesign = designs$observed, fileparameters = fileparameters, args = args)
   args[["unconditional"]] <- output$UBeting
@@ -21,13 +21,13 @@ find_filedesign <- function(file, fileparameters = NULL, globs = SettGlobs()){
 }
 
 #' @noRd
-get_filedesign_args <- function(globs, columns_in_file){
+get_filedesign_args <- function(parameters, columns_in_file){
   args <- list()
-  args[["part_columns"]] <- globs$DefDesign$DelKols
-  args[["dims_unconditional"]] <- globs$DefDesign$UBeting
-  args[["dims_conditional"]] <- globs$DefDesign$BetingOmk
-  args[["dims_tab"]] <- globs$DefDesign$BetingF
-  args[["design_columns"]] <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% columns_in_file]
+  args[["part_columns"]] <- parameters$DefDesign$DelKols
+  args[["dims_unconditional"]] <- parameters$DefDesign$UBeting
+  args[["dims_conditional"]] <- parameters$DefDesign$BetingOmk
+  args[["dims_tab"]] <- parameters$DefDesign$BetingF
+  args[["design_columns"]] <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% columns_in_file]
   args[["parts_in_file"]] <- get_file_parts(partcolumns = args$part_columns, designcolumns = args$design_columns)
   return(args)
 }

@@ -6,11 +6,11 @@
 #' @param fradesign from
 #' @param tildesign to
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
-#' @param globs global parameters, defaults to SettGlobs
-find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), globs = SettGlobs()) {
-  KB = globs$KB
-  IntervallHull = globs$DefDesign$IntervallHull
-  AggPri = globs$DefDesign$AggPri
+#' @param parameters global parameters, defaults to SettGlobs
+find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), parameters) {
+  KB = parameters$KB
+  IntervallHull = parameters$DefDesign$IntervallHull
+  AggPri = parameters$DefDesign$AggPri
   
   FULL <- set_all_dimension_combinations_tildesign(tildesign = tildesign)
   
@@ -40,10 +40,10 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         d[, (delH) := 1]
       }
       KBD <- data.table::as.data.table(KB[[del]])
-      kol <- as.character(globs$DefDesign$DelKolN[del])
+      kol <- as.character(parameters$DefDesign$DelKolN[del])
       kolomk <- paste0(kol, "_omk")
       kolomkpri <- c(kolomk, paste0(del, "_pri"))
-      kols <- globs$DefDesign$DelKols[[del]]
+      kols <- parameters$DefDesign$DelKols[[del]]
       kolsomk <- paste0(kols, "_omk")
       kolsomkpri <- c(kolsomk, paste0(del, "_pri"))
       
@@ -54,7 +54,7 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         Parts[[del]] <- KBD
       }
       
-      if (globs$DefDesign$DelType[del] == "COL") {
+      if (parameters$DefDesign$DelType[del] == "COL") {
         if (nrow(KBD) > 0) {
           # Filtrer bort TIL-koder i global-KB som ikke er i tildesign
           KBD <- KBD[get(kolomk) %in% d[[kol]]]
@@ -66,11 +66,11 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
           # Setter keep her, kaster til slutt
           KBD[, keep := as.integer(any(get(delH) == 1)), by = kolsomkpri]
         }
-      } else if (globs$DefDesign$DelType[del] == "INT") {
+      } else if (parameters$DefDesign$DelType[del] == "INT") {
         # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
         # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
-        Imin <- min(fradesign$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "l")]])
-        Imax <- max(fradesign$Part[[del]][[paste0(globs$DefDesign$DelKolN[[del]], "h")]])
+        Imin <- min(fradesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "l")]])
+        Imax <- max(fradesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "h")]])
         alle <- paste0(Imin, "_", Imax)
         if (nrow(KBD) > 0) {
           KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
@@ -87,8 +87,8 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         IntFra <- fradesign$Part[[del]][, ..kols]
         IntTil <- d[, ..kols]
         # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
-        IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
-        IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% globs$LegKoder[[del]]$KODE]
+        IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
+        IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
         KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
         KBInt[, (delO) := 1]
         
@@ -111,7 +111,7 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
         data.table::setkeyv(KBD, kols)
         KBD <- collapse::join(fradesign$Part[[del]], KBD, how = "r", verbose = 0)
         KBD[is.na(get(delH)), (delH) := 0]
-        KBD <- SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = globs)
+        KBD <- SettPartDekk(KBD, del = del, har = delH, IntervallHull = IntervallHull, globs = parameters)
         
         # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
         # USIKKER paa om dette er optimalt. Det maa ikke kastes for mye for riktig bruk fra FinnFellesTab
@@ -132,11 +132,11 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
   DelStatus <- list()
   
   # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
-  beting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$BetingOmk, globs$DefDesign$BetingF))
-  ubeting <- intersect(globs$DefDesign$AggPri[length(globs$DefDesign$AggPri):1], c(globs$DefDesign$UBeting))
+  beting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
+  ubeting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$UBeting))
   
   for (del in intersect(c(beting, ubeting), names(Parts))) {
-    kols <- globs$DefDesign$DelKols[[del]]
+    kols <- parameters$DefDesign$DelKols[[del]]
     kolsomk <- paste0(kols, "_omk")
     delD <- paste0(del, "_Dekk")
     delP <- paste0(del, "_pri")
@@ -157,8 +157,8 @@ find_redesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(),
       betD <- subset(betD, eval(parse(text = paste0(del, "_Dekk==1"))))
       betD <- betD[get(delD) == 1]
       # Sett (betinget) dekning
-      betcols <- unlist(globs$DefDesign$DelKols[setdiff(fradesign[["UBeting"]], del)])
-      betD <- SettPartDekk(betD, del = del, har = "HAR", IntervallHull = IntervallHull, betcols = betcols, globs = globs)
+      betcols <- unlist(parameters$DefDesign$DelKols[setdiff(fradesign[["UBeting"]], del)])
+      betD <- SettPartDekk(betD, del = del, har = "HAR", IntervallHull = IntervallHull, betcols = betcols, globs = parameters)
     } else {
       betcols <- character()
       betD <- data.table::copy(Parts[[del]])

@@ -54,7 +54,7 @@ do_censor_statistical_tolerance <- function(dt, limit){
 #' @param FGP 
 #' @param ref_year_type 
 #' @param globs
-AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref_year_type = "Moving", globs = SettGlobs()) {
+AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref_year_type = "Moving", globs = get_global_parameters()) {
   # is_kh_debug()
   FG <- data.table::copy(FG)
   AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)

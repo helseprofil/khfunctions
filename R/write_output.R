@@ -6,7 +6,6 @@
 #' @param outputlist list of output to write
 #' @param name KUBEid
 #' @param batchdate batchdate
-#' @param versjonert versjonert
 #' @param csvcopy csvcopy
 #' @param geonaboprikk geonaboprikk
 write_cube_output <- function(outputlist, name, batchdate, versjonert, csvcopy, geonaboprikk){
@@ -18,13 +17,8 @@ write_cube_output <- function(outputlist, name, batchdate, versjonert, csvcopy, 
   qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", batchdate, ".csv"))
   
   cat("SAVING OUTPUT FILES:\n")
-  saveRDS(outputlist$KUBE, file = nyeste)
-  cat("\n", nyeste)
-  
-  if(versjonert){
-    file.copy(nyeste, datert_R)
-    cat("\n", datert_R)
-  }
+  saveRDS(outputlist$KUBE, file = datert_R)
+  cat("\n", datert_R)
   
   if(csvcopy) {
     data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")

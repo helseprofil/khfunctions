@@ -69,8 +69,9 @@ get_outvalues_allvis <- function(parameters){
 #' @param dt dataset
 #' @param globs global parameters
 #' @noRd
-filter_invalid_geo_alder_kjonn <- function(dt, globs = SettGlobs()){
-  dt <- dt[GEO %in% globs$UtGeoKoder]
+filter_invalid_geo_alder_kjonn <- function(dt, globs = get_global_parameters()){
+  valid_geo <- globs[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
+  dt <- dt[GEO %in% valid_geo]
   if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
   if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
   return(dt)

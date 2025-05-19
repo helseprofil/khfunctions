@@ -10,7 +10,6 @@
 #' @param dumps any file dumps requested
 #' @returns formatted original file, ready for further processing
 read_original_file <- function(filedescription, parameters, dumps = list()){
-  # initiate_read_log(filedescription = filedescription, parameters = parameters)
   cat("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   DF <- switch(filedescription$FORMAT,
@@ -25,7 +24,7 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   if ("RSYNT1pre" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT1pre", sep = "_"), format = dumps[["RSYNT1pre"]])
   if(is_not_empty(filedescription$RSYNT1)){
     DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-    DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, batchdate = parameters$batchdate, stata_exe = parameters$StataExe, DTout = TRUE)
+    DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, parameters = parameters)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
     if(length(extracols) > 0) DF[, (extracols) := NULL]
   }

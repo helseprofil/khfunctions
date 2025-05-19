@@ -3121,3 +3121,20 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   }
 }
 
+
+get_merge_teller_nevner_args <- function(standardfiles, parameters){
+  args <- list()
+  args[["files"]] <- parameters$files
+  args[["filedesigns"]] <- parameters$filedesign
+  args[["fileparameters"]] <- parameters$fileinformation
+  args[["TELLERFIL"]] <- ifelse(standardfiles, "STANDARDTELLER", "TELLER")
+  args[["NEVNERFIL"]] <- ifelse(standardfiles, "STANDARDNEVNER", "NEVNER")
+  if(standardfiles){
+    args[["TNPparameters"]] <- parameters$STNPinformation
+    args[["KUBEparameters"]] <- NULL
+  } else {
+    args[["TNPparameters"]] <- parameters$TNPinformation
+    args[["KUBEparameters"]] <- parameters$CUBEinformation
+  }
+  return(args)
+}

@@ -7,26 +7,24 @@
 #' @param globs global parameters, defaults to SettGlobs
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(name, versjonert, dumps){
-  cat("* Henter parametre")
-  globs <- SettGlobs()
-  parameters <- list()
+  cat("\n* Henter parametre")
+  parameters <- get_global_parameters()
   parameters[["filegroup_name"]] <- name
-  parameters[["batchdate"]] <- SettKHBatchDate()
   parameters[["versjonert"]] <- versjonert
   parameters[["dumps"]] <- dumps
-  parameters[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(parameters$batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(parameters$batchdate))
-  parameters[["filegroup_information"]] <- read_filgrupper_and_add_vals(filegroup_name = name, validdates = parameters$validdates, globs = globs)
-  parameters[["read_parameters"]] <- get_read_parameters(filegroup_name = name, validdates = parameters$validdates, globs = globs)
+  parameters[["filegroup_information"]] <- read_filgrupper_and_add_vals(filegroup_name = name, parameters = parameters)
+  parameters[["read_parameters"]] <- get_read_parameters(filegroup_name = name, validdates = parameters$validdates, globs = parameters)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
-  parameters[["codebook"]] <- get_codebook(filegroup_name = name, validdates = parameters$validdates, globs = globs)
-  parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
-  parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  return(c(parameters, globs))
+  parameters[["codebook"]] <- get_codebook(filegroup_name = name, validdates = parameters$validdates, globs = parameters)
+  parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
+  parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
+  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+  return(c(parameters))
 }
 
 #' @noRd
-read_filgrupper_and_add_vals <- function(filegroup_name, validdates, globs){
-  FILGRUPPER <- as.list(RODBC::sqlQuery(globs$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup_name, "' AND ", validdates), as.is = TRUE))
+read_filgrupper_and_add_vals <- function(filegroup_name, parameters){
+  FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup_name, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
   isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)

@@ -91,22 +91,20 @@ get_tab_columns <- function(columnnames){
 #' @param FIL 
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
-FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
-  # is_kh_debug()
-  
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   if (identical(class(FIL), "data.frame")) {
     FIL <- data.table::data.table(FIL)
   }
   keyorg <- data.table::key(FIL)
-  DelKols <- globs$DefDesign$DelKols
-  UBeting <- globs$DefDesign$UBeting
-  BetingOmk <- globs$DefDesign$BetingOmk
-  BetingF <- globs$DefDesign$BetingF
+  DelKols <- parameters$DefDesign$DelKols
+  UBeting <- parameters$DefDesign$UBeting
+  BetingOmk <- parameters$DefDesign$BetingOmk
+  BetingF <- parameters$DefDesign$BetingF
   
-  DesignKols <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% names(FIL)]
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
   
-  DesignKols <- globs$DefDesign$DesignKolsF[globs$DefDesign$DesignKolsF %in% names(FIL)]
-  OmkKols <- globs$DefDesign$DesignKols[globs$DefDesign$DesignKols %in% names(FIL)]
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
   
   Design <- list()
   Design[["KolNavn"]] <- names(FIL)
@@ -197,7 +195,7 @@ ht2 <- function(x, n = 3) {
 #'
 #' @param koblid 
 #' @param globs global parameters, defaults to SettGlobs
-FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
+FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
   # is_kh_debug()
   
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
@@ -211,7 +209,7 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = SettGlobs()) {
 #' @param gruppe 
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
-SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
   # is_kh_debug()
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
   sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
@@ -261,7 +259,7 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' @param verdi 
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
-TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
   # is_kh_debug()
   # Sjekk om finnes rad for filid, eller lag ny
   if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
@@ -290,9 +288,7 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
 #' @param TYP 
 #' @param IDKOLS 
 #' @param globs global parameters, defaults to SettGlobs
-FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = SettGlobs()) {
-  # is_kh_debug()
-  
+FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = get_global_parameters()) {
   FT <- data.frame()
   if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
     FT <- data.table::copy(BUFFER[[FILID]])
@@ -303,8 +299,7 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
     } else if (versjonert == TRUE) {
       orgwd <- getwd()
       path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"))
-      # setwd(path)
-      Filer <- unlist(list.files(path, include.dirs = FALSE))
+      Filer <- unlist(list.files(path, include.dirs = FALSE, pattern = paste0("^", FILID, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.rds$")))
       Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
       if (length(Filer) > 0) {
         filn <- file.path(path, Filer[order(Filer)][length(Filer)])
@@ -312,7 +307,6 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
       } else {
         filn <- file.path(path, paste0(FILID, ".rds"))
       }
-      setwd(orgwd)
     } else {
       filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(FILID, ".rds"))
       print(filn)
@@ -328,6 +322,8 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
   }
   return(list(FT = data.table::as.data.table(FT), batch = batch))
 }
+
+
 
 #' FinnFilT (kb)
 #'

@@ -28,4 +28,11 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
   # }
   packageStartupMessage("khfunctions version: ",
                         utils::packageDescription("khfunctions")[["Version"]])
+  check_connection_folders()
+}
+
+check_connection_folders <- function(){
+  if(!dir.exists(getOption("khfunctions.root"))) stop(paste0(getOption("khfunctions.root"), " ikke funnet, Har du tilgang til O:/?"))
+  if(!file.exists(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))) stop(getOption("khfunctions.db"), " ikke funnet i ", getOption("khfunctions.root"))
+  invisible(NULL)
 }

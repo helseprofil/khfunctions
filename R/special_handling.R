@@ -7,7 +7,7 @@
 #' @param code code to be performed, either R or STATA
 #' @param batchdate batchdate, used to create filepaths for stata processing
 #' @param globs global parameters
-do_special_handling <- function(dt, code, batchdate, stata_exe, DTout = TRUE){
+do_special_handling <- function(dt, code, parameters){
   is_code <- !is.null(code) && !is.na(code) && code != ""
   if(!is_code) return(dt)
   code <- gsub("\\\r", "\\\n", code)
@@ -15,7 +15,7 @@ do_special_handling <- function(dt, code, batchdate, stata_exe, DTout = TRUE){
   
   if(is_stata){
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
-    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = batchdate, stata_exe = stata_exe, DTout = DTout)
+    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = parameters$batchdate, stata_exe = parameters$stata_exe)
     return(dt)
   }
   
@@ -45,7 +45,7 @@ do_special_handling <- function(dt, code, batchdate, stata_exe, DTout = TRUE){
 #' @param script stata script
 #' @param batchdate used to generate file names
 #' @param stata_exe path to STATA program
-do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), stata_exe, DTout = TRUE) {
+do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), stata_exe){
   tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
   if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
   orgwd <- getwd()
@@ -59,7 +59,7 @@ do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), st
   check_stata_log_for_error(statafiles = statafiles)
   TABLE <- haven::read_dta(statafiles$dta)
   TABLE <- fix_column_names_post_stata(TABLE = TABLE)
-  if(DTout) data.table::setDT(TABLE)
+  if(!is(TABLE, "data.table")) data.table::setDT(TABLE)
   setwd(orgwd)
   return(TABLE)
 }

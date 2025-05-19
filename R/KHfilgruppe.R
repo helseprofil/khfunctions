@@ -7,6 +7,7 @@
 #' @param write save output files? default = TRUE
 #' @param dumps list of intermediate files to save, used for debugging and development. 
 LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()) {
+  check_connection_folders()
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
   parameters <- get_filegroup_parameters(name = gruppe, versjonert = versjonert, dumps = dumps)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres")
@@ -32,7 +33,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   remove_helper_columns(dt = Filgruppe)
   
   if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
-  Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, batchdate = parameters$batchdate, stata_exe = parameters$StataExe, DTout = T)
+  Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN

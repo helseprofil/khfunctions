@@ -2,24 +2,26 @@
 #' @description
 #' Helper function for `LagKUBE()`. 
 #' The function reads tables from ACCESS to get information on which files are used and how they need to be handled. 
-#' @param KUBEid name of cube
-#' @param batchdate date of current cube batch. Needed to filter out active parameters from ACCESS
-#' @param globs global parameters, defaults to SettGlobs
+#' @param args arguments passed to LagKUBE
 #' @return A list of relevant parameters
-get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
-  cat("* Henter parametre")
-  parameters <- list()
-  parameters[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(batchdate))
-  parameters[["CUBEinformation"]] <- get_cube_information(KUBEid = KUBEid, validdates = parameters$validdates, globs = globs)
-  parameters[["TNPinformation"]] <- get_tnp_information(TNPname = parameters$CUBEinformation$TNP, validdates = parameters$validdates, globs = globs)
-  isrefverdiP <- parameters$CUBEinformation$REFVERDI_VP == "P"
-  isSTNP <- is_not_empty(parameters$TNPinformation$STANDARDTNFIL)
-  parameters[["STNPinformation"]] <- get_stnp_information(TNP = parameters$TNPinformation, validdates = parameters$validdates, isrefverdiP = isrefverdiP, isSTNP = isSTNP, globs = globs)
-  parameters[["files"]] <- get_filenames(parameters = parameters, isrefverdiP = isrefverdiP, isSTNP = isSTNP)
-  parameters[["FILFILTRE"]] <- get_filfiltre(files = parameters$files, validdates = parameters$validdates, globs = globs)
-  parameters[["ref_year_type"]] <- parameters$PredFilter$ref_year_type
-  parameters[["fileinformation"]] <- get_filegroup_information(files = parameters$files, filefilters = parameters$FILFILTRE, validdates = parameters$validdates, globs = globs)
-  parameters[["friskvik"]] <- get_friskvik_information(KUBEid = KUBEid, globs = globs)
+get_cubeparameters <- function(cubeargs) {
+  cat("\n* Henter parametre")
+  parameters <- get_global_parameters()
+  parameters[["cube_name"]] <- cubeargs$KUBEid
+  parameters[["khyear"]] <- ifelse(is.null(cubeargs$year), getOption("khfunctions.year"), cubeargs$year)
+  parameters[["dumps"]] <- cubeargs$dumps
+  parameters[["write"]] <- cubeargs$write
+  parameters[["geonaboprikk"]] <- cubeargs$geonaboprikk
+  parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
+  parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
+  parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
+  parameters[["files"]] <- get_filenames(parameters = parameters)
+  parameters[["FILFILTRE"]] <- get_filfiltre(parameters = parameters)
+  parameters[["fileinformation"]] <- get_filegroup_information(parameters = parameters)
+  parameters[["friskvik"]] <- get_friskvik_information(parameters = parameters)
+  parameters[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  parameters[["KB"]] <- SettKodeBokGlob(parameters = parameters)
   return(parameters)
 }
 
@@ -27,16 +29,17 @@ get_cubeparameters <- function(KUBEid, batchdate = SettKHBatchDate(), globs = Se
 #' @description
 #' Helper function for `get_cubeparameters()`.
 #' Reads from table KUBER in the ACCESS database
+#' @keywords internal
 #' @noRd
-#' @param KUBEid cube name
+#' @param name cube name
 #' @param validdates valid dates to specify active rows in the ACCESS table
-#' @param globs global parameters, defaults to SettGlobs
-get_cube_information <- function(KUBEid, validdates, globs){
-  KUBER <- as.list(RODBC::sqlQuery(globs$dbh, 
-                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", KUBEid, "' AND ", validdates), 
+#' @param parameters global parameters
+get_cube_information <- function(parameters){
+  KUBER <- as.list(RODBC::sqlQuery(parameters$dbh, 
+                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", parameters$cube_name, "' AND ", parameters$validdates), 
                                    as.is = TRUE))
-  if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", KUBEid, "' i ACCESS::KUBER, har du skrevet riktig?")
-  if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", KUBEid)
+  if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", parameters$cube_name, "' i ACCESS::KUBER, har du skrevet riktig?")
+  if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", parameters$cube_name)
   return(KUBER)
 }
 
@@ -44,13 +47,14 @@ get_cube_information <- function(KUBEid, validdates, globs){
 #' @description
 #' Helper function for [get_cubeparameters()]
 #' Reads from table TNP_PROD in the ACCESS database
+#' @keywords internal
 #' @noRd
 #' @param TNPname Information from TNP column in KUBER table
 #' @param validdates valid dates to specify active rows in the ACCESS table
-#' @param globs global parameters, defaults to SettGlobs
-get_tnp_information <- function(TNPname, validdates, globs){
-  TNP_PROD <- as.list(RODBC::sqlQuery(globs$dbh, 
-                                      query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNPname, "' AND ", validdates), 
+#' @param parameters global parameters
+get_tnp_information <- function(parameters){
+  TNP_PROD <- as.list(RODBC::sqlQuery(parameters$dbh, 
+                                      query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", parameters$CUBEinformation$TNP, "' AND ", parameters$validdates), 
                                       as.is = TRUE))
   return(TNP_PROD)
 }
@@ -59,18 +63,19 @@ get_tnp_information <- function(TNPname, validdates, globs){
 #' @description
 #' Helper function for [get_cubeparameters()].
 #' Reads from table TNP_PROD in the ACCESS database, to get information needed for standardization
+#' @keywords internal
 #' @noRd
 #' @param TNP TNP table generated by [get_tnp_information()]
 #' @param validdates valid dates to specify active rows in the ACCESS table
 #' @param isrefverdiP TRUE/FALSE, is REFVERDI_VP column in KUBER table == "P", indicating if STNP is to be generated at all
 #' @param isSTNP TRUE/FALSE, indicating if STNP should be different from TNP. This is indicated in the STANDARDTNFIL in TNP_PROD table.
-#' @param globs global parameters, defaults to SettGlobs
-get_stnp_information <- function(TNP, validdates, isrefverdiP = F, isSTNP = F, globs){
-  if(!isrefverdiP) return(list())
-  if(!isSTNP) return(TNP)
+#' @param parameters global parameters
+get_stnp_information <- function(parameters){
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(list())
+  if(is_empty(parameters$TNPinformation$STANDARDTNFIL)) return(parameters$TNPinformation)
   
-  STNP <- as.list(RODBC::sqlQuery(globs$dbh, 
-                                  query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", TNP$STANDARDTNFIL, "' AND ", validdates), 
+  STNP <- as.list(RODBC::sqlQuery(parameters$dbh, 
+                                  query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", parameters$TNPinformation$STANDARDTNFIL, "' AND ", parameters$validdates), 
                                   as.is = TRUE))
   return(STNP)
 }
@@ -79,10 +84,10 @@ get_stnp_information <- function(TNP, validdates, isrefverdiP = F, isSTNP = F, g
 #' @description
 #' Helper function for [get_cubeparameters()]
 #' Gets a list of files specifies in the TNP_PROD table (TELLERFIL, NEVNERFIL etc.)
+#' @keywords internal
+#' @noRd
 #' @param parameters parameters list, to access TNP and STNP with information on which files are needed
-#' @param isrefverdiP TRUE/FALSE, is REFVERDI_VP column in KUBER table == "P", indicating if standard files should be included
-#' @param isSTNP TRUE/FALSE, indicating if standard files should be different from the main files. This is indicated in the STANDARDTNFIL in TNP_PROD table.
-get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
+get_filenames <- function(parameters){
   files <- list()
   isteller <- is_not_empty(parameters$TNPinformation$TELLERFIL)
   if(!isteller) stop("Feltet ACCESS::TNP_PROD::TELLERFIL er ikke satt!")
@@ -90,7 +95,7 @@ get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
   isnevnerfil <- is_not_empty(parameters$TNPinformation$NEVNERFIL)
   if(isnevnerfil) files[["NEVNER"]] <- parameters$TNPinformation$NEVNERFIL
   
-  if(isrefverdiP){
+  if(parameters$CUBEinformation$REFVERDI_VP == "P"){
     isprednevnerfil <- is_not_empty(parameters$TNPinformation$PREDNEVNERFIL)
     if(isprednevnerfil){
       files[["PREDNEVNER"]] <- gsub("^(.*):.*", "\\1", parameters$TNPinformation$PREDNEVNERFIL)
@@ -100,7 +105,7 @@ get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
       files[["PREDNEVNER"]] <- files$TELLER
     }
     
-    if(!isSTNP){
+    if(is_empty(parameters$TNPinformation$STANDARDTNFIL)){
       files[["STANDARDTELLER"]] <- files$TELLER
       if(isnevnerfil) files[["STANDARDNEVNER"]] <- files$NEVNER
     } else {
@@ -120,12 +125,11 @@ get_filenames <- function(parameters, isrefverdiP, isSTNP = F){
 #' @description
 #' Helper function for [get_cubeparameters()]
 #' Reads from table FILFILTRE in the ACCESS database, to get information on special treatment of files
-#' @param files list of files generated by [get_filenames()]
-#' @param validdates valid dates to specify active rows in the ACCESS table
-#' @param globs global parameters, defaults to SettGlobs
-get_filfiltre <- function(files = NULL, validdates, globs){
-  filfiltre <- data.table::setDT(RODBC::sqlQuery(globs$dbh, paste0("SELECT * FROM FILFILTRE WHERE ", validdates), as.is = TRUE))
-  filfiltre <- filfiltre[FILVERSJON %in% unique(files)]
+#' @keywords internal
+#' @noRd
+get_filfiltre <- function(parameters){
+  filfiltre <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILFILTRE WHERE ", parameters$validdates), as.is = TRUE))
+  filfiltre <- filfiltre[FILVERSJON %in% unique(parameters$files)]
   return(filfiltre)
 }
 
@@ -133,20 +137,23 @@ get_filfiltre <- function(files = NULL, validdates, globs){
 #' @description 
 #' Helper function for `get_cubeparameters()`
 #' Loops through filegroups used, and uses read_filgrupper_and_add_vals() to get filegroup information.
+#' @keywords internal
 #' @noRd
 #' @param files list of files to be used in the cube 
 #' @param validdates valid dates to specify active rows in the ACCESS table
-#' @param globs global parameters, defaults to SettGlobs
-get_filegroup_information <- function(files, filefilters = NULL, validdates, globs = SettGlobs()){
+#' @param parameters global parameters
+get_filegroup_information <- function(parameters){
   fileinfo <- list()
   
-  for(file in unique(files)){
-    filename <- replace_filename_if_filefilters(filename = file, filefilters = filefilters)
-    fileinfo[[file]] <- read_filgrupper_and_add_vals(filegroup_name = filename, validdates = validdates, globs = globs)
+  for(file in unique(parameters$files)){
+    filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$filefilters)
+    fileinfo[[file]] <- read_filgrupper_and_add_vals(filegroup_name = filename, parameters = parameters)
   }
   return(fileinfo)
 }
 
+#' @title replace_filename_if_filefilters
+#' @keywords internal
 #' @noRd
 replace_filename_if_filefilters <- function(filename, filefilters){
   if(is.null(filefilters)) return(filename)
@@ -159,30 +166,30 @@ replace_filename_if_filefilters <- function(filename, filefilters){
 #' @description
 #' Helper function for get_cubeparameters().
 #' Reads from table FRISKVIK in the ACCESS database
+#' @keywords internal
 #' @noRd
-#' @param KUBEid cube name
-#' @param globs global parameters, defaults to SettGlobs
-get_friskvik_information <- function(KUBEid, globs){
-  FRISKVIK <- data.table::setDT(RODBC::sqlQuery(globs$dbh, 
-                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", globs$khyear, "AND KUBE_NAVN='", KUBEid, "'")), 
+get_friskvik_information <- function(parameters){
+  FRISKVIK <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
+                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$khyear, "AND KUBE_NAVN='", parameters$cube_name, "'")), 
                                    as.is = TRUE))
   return(FRISKVIK)
 }
 
 #' @title get_filedesign
 #' @description
+#' @keywords internal
 #' @noRd
 #' @param files 
 #' @param parameters 
-#' @param globs global parameters, defaults to SettGlobs
-get_filedesign <- function(parameters, globs){
+#' @param parameters global parameters
+get_filedesign <- function(parameters){
   if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
   filedesign <- list()
   files <- unique(parameters$files)
   for(file in files){
     if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     fileinfo <- parameters$fileinformation[[file]]
-    filedesign[[file]] <- find_filedesign(file = .GlobalEnv$BUFFER[[file]], fileparameters = fileinfo, globs = globs)
+    filedesign[[file]] <- find_filedesign(file = .GlobalEnv$BUFFER[[file]], fileparameters = fileinfo, parameters = parameters)
   }
   return(filedesign)
 }
@@ -190,9 +197,11 @@ get_filedesign <- function(parameters, globs){
 #' @title set_predictionfilter (kb)
 #' @description 
 #' Helper function for `get_cubeparameters()`
+#' @keywords internal
+#' @noRd
 #' @param REFVERDI Corresponds to ACCESS::KUBER::REFVERDI
-#' @param globs global parameters, defaults to SettGlobs
-set_predictionfilter <- function(parameters, globs) {
+#' @param parameters global parameters
+set_predictionfilter <- function(parameters) {
   refverdi <- parameters$CUBEinformation$REFVERDI
   tellerfile <- parameters$files$TELLER
   maxaar <- max(BUFFER[[tellerfile]]$AARh)
@@ -200,9 +209,9 @@ set_predictionfilter <- function(parameters, globs) {
   if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
   
   out <- list(Design = list())
-  delkolN <- globs$DefDesign$DelKolN
+  delkolN <- parameters$DefDesign$DelKolN
   refverdicolumns <- delkolN[sapply(delkolN, grepl, refverdi)]
-  out[["Predfiltercolumns"]] <- as.character(unlist(globs$DefDesign$DelKolsF[names(refverdicolumns)]))
+  out[["Predfiltercolumns"]] <- as.character(unlist(parameters$DefDesign$DelKolsF[names(refverdicolumns)]))
   out[["ref_year_type"]] <- ifelse(grepl("AAR", refverdi), "Specific", "Moving")
   meisskalafilter <- character()
   
@@ -231,13 +240,57 @@ set_predictionfilter <- function(parameters, globs) {
 #' @description
 #' updates cubedesign after aggregating to moving average. Changes the year part, to reflect periods. 
 #' This is crucial when recoding predteller before merging onto cube. 
-#'
+#' @keywords internal
+#' @noRd
 #' @param dt cube
 #' @param origdesign Cubedesign after merging teller and nevner. 
-#' @noRd
 update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
   if(!parameters$MOVAVparameters$is_movav) return(origdesign)
   aar <- unique(dt[, mget(c("AARl", "AARh"))])
   origdesign$Y <- aar
   return(origdesign)
+}
+
+#' @title get_geo_recoding
+#' @description Fetches geo recoding table (KnrHarm) from ACCESS
+#' @keywords internal
+#' @noRd
+get_geo_recoding <- function(parameters){
+  KnrHarm <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
+  return(data.table::rbindlist(list(KnrHarm, KnrHarmS)))
+}
+
+#' @title SettKodeBokGlob
+#' @author Kåre Bævre
+#' @param parameters global parameters
+SettKodeBokGlob <- function(parameters) {
+  OmkodD <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM KH_OMKOD
+                                              UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE))
+  OmkodD <- OmkodD[DEL != "S"]
+  KB <- list()
+  
+  for (del in names(parameters$DefDesign$DelKolN)) {
+    KBD <- OmkodD[DEL == del]
+    if (parameters$DefDesign$DelType[del] == "INT") {
+      if (nrow(KBD) > 0) {
+        KBD[, c("ORGKODEl", "ORGKODEh", "NYKODEl", "NYKODEh") := NA_integer_]
+      } else {
+        KBD[, c("ORGKODEl", "ORGKODEh", "NYKODEl", "NYKODEh") := integer()]
+      }
+    } else if (parameters$DefDesign$DelFormat[del] == "integer") {
+      if(del == "L") KBD <- KBD[!grepl("[^0-9]", ORGKODE)]
+      KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = c("ORGKODE", "NYKODE")]
+    }
+    kbdnames <- names(KBD)
+    kbdnames <- gsub("ORGKODE", parameters$DefDesign$DelKolN[del], kbdnames)
+    kbdnames <- gsub("NYKODE(h|l|)", paste0(parameters$DefDesign$DelKolN[del], "\\1_omk"), kbdnames)
+    kbdnames <- gsub("NYKODE(h|l|)", paste0(parameters$DefDesign$DelKolN[del], "\\1_omk"), kbdnames)
+    kbdnames <- gsub("PRI_OMKOD", paste0(del, "_pri"), kbdnames)
+    kbdnames <- gsub("OBLIG", paste0(del, "_obl"), kbdnames)
+    data.table::setnames(KBD, names(KBD), kbdnames)
+    KBD[, c("ID", "DEL") := NULL]
+    KB[[del]] <- KBD
+  }
+  return(KB)
 }

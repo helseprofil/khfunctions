@@ -105,9 +105,9 @@ estimate_predteller <- function(predrate, prednevner, parameters, globs){
   cat("** Etter merge dim:", dim(STNP), "\n")
   
   prednevnerparameters <- parameters$fileinformation[[parameters$files$PREDNEVNER]]
-  prednevnerdesign <- find_filedesign(file = prednevner, fileparameters = prednevnerparameters, globs = globs)
+  prednevnerdesign <- find_filedesign(file = prednevner, fileparameters = prednevnerparameters, parameters = parameters)
   cubedesign <- list(Part = parameters$CUBEdesign)
-  redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = globs$DefDesign$AggVedStand, globs = globs)
+  redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = globs$DefDesign$AggVedStand, parameters = parameters)
   predteller <- OmkodFil(FIL = STNP, RD = redesign, globs = globs)
   
   cat("** PREDTELLER ferdig med dim:", dim(STNP), "\n")

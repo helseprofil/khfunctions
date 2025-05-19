@@ -13,27 +13,27 @@
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files. If NuLL, getOption("khfunctions.year") is used
 #' @param ... 
 #' @return complete data file, publication ready file, and quality control file.
-LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = NULL, ...) {
+LagKUBE <- function(KUBEid, dumps = list(), write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = NULL, ...) {
+  all.args <- as.list(environment())
+  check_connection_folders()
   check_if_lagkube_available()
   on.exit(lagkube_cleanup(), add = TRUE)
-  batchdate <- SettKHBatchDate()
-  globs <- SettGlobs()
-  globs[["khyear"]] <- ifelse(is.null(year), getOption("khfunctions.year"), year)
-  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", batchdate, "_LOGG.txt")), split = TRUE)
+  parameters <- get_cubeparameters(cubeargs = all.args)
+  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   
-  parameters <- get_cubeparameters(KUBEid = KUBEid, batchdate = batchdate, globs = globs)
-  load_and_format_files(parameters, batchdate = batchdate, versjonert = versjonert, globs = globs)
-  parameters[["filedesign"]] <- get_filedesign(parameters = parameters, globs = globs)
-  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters, globs = globs)
+  load_and_format_files(parameters = parameters)
+  parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
+  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
-  if(write) save_access_specs(KUBEid = KUBEid, parameterlist = parameters, batchdate = batchdate, globs = globs)
+  if(write) save_access_specs(parameters = parameters)
   
-  TNF <- merge_teller_nevner(parameters = parameters, globs = globs)
+  TNF <- merge_teller_nevner(parameters = parameters)
   KUBE <- TNF$TNF
   if(parameters$TNPinformation$NEVNERKOL != "-") KUBE <- LeggTilNyeVerdiKolonner(KUBE, NYEdscr = "RATE={TELLER/NEVNER}", postMA = FALSE)
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
+  # Globs fjernet HERTIL
   KUBE <- aggregate_to_periods(dt = KUBE, setrate = TRUE, parameters = parameters, globs = globs)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
@@ -48,7 +48,7 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
 
   KUBE <- do_censor_kube_r(dt = KUBE, parameters = parameters, globs = globs)
   if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), format = dumps[["KUBE_SLUTTREDIGERpre"]])
-  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, batchdate = batchdate, stata_exe = globs$StataExe)
+  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), format = dumps[["KUBE_SLUTTREDIGERpost"]])
   
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
@@ -66,7 +66,7 @@ LagKUBE <- function(KUBEid, versjonert = FALSE, csvcopy = FALSE, dumps = list(),
   save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
   KUBE <- do_stata_censoring(dt = KUBE, spc = parameters$CUBEinformation, batchdate = batchdate, stata_exe = globs$StataExe)
   if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), format = dumps[["STATAPRIKKpost"]])
-  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, batchdate = batchdate, stata_exe = globs$StataExe)
+  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), format = dumps[["RSYNT_POSTPROSESSpost"]])
   
   ALLVIS <- data.table::copy(KUBE)
