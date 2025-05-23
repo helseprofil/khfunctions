@@ -4,14 +4,14 @@
 \alias{set_rectangularized_cube_design}
 \title{do_rectangularize_cube}
 \usage{
-set_rectangularized_cube_design(colnames, design, globs = SettGlobs())
+set_rectangularized_cube_design(colnames, design, parameters)
 }
 \arguments{
 \item{colnames}{}
 
 \item{design}{}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 rectangularizes cube based on the given design

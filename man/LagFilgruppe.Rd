@@ -4,16 +4,14 @@
 \alias{LagFilgruppe}
 \title{LagFilgruppe}
 \usage{
-LagFilgruppe(gruppe, versjonert = TRUE, write = TRUE, dumps = list())
+LagFilgruppe(filegroup_name, write = TRUE, dumps = list())
 }
 \arguments{
-\item{gruppe}{name of filegroup}
-
-\item{versjonert}{save file with date tag? default = TRUE}
-
 \item{write}{save output files? default = TRUE}
 
 \item{dumps}{list of intermediate files to save, used for debugging and development.}
+
+\item{gruppe}{name of filegroup}
 }
 \description{
 Loops over all original files, creates a table and append to the complete file group

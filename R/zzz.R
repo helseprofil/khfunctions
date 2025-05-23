@@ -36,3 +36,7 @@ check_connection_folders <- function(){
   if(!file.exists(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))) stop(getOption("khfunctions.db"), " ikke funnet i ", getOption("khfunctions.root"))
   invisible(NULL)
 }
+
+utils::globalVariables(c("HAR", "..betKols", "..kol", "keep", "..kols", "..outnames", "Bruk",
+                         ".", "NOPri", "..brukcols", "..common", "..kolsomk", "..omkkols",
+                         "filbesk"))

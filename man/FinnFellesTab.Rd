@@ -4,14 +4,14 @@
 \alias{FinnFellesTab}
 \title{FinnFellesTab (kb)}
 \usage{
-FinnFellesTab(DF1, DF2, globs = SettGlobs())
+FinnFellesTab(DF1, DF2, parameters)
 }
 \arguments{
 \item{DF1}{}
 
 \item{DF2}{}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 FinnFellesTab (kb)

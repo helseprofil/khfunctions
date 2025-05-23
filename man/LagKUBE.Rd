@@ -5,24 +5,16 @@
 \title{LagKUBE}
 \usage{
 LagKUBE(
-  KUBEid,
-  versjonert = FALSE,
-  csvcopy = FALSE,
-  dumps = list(),
+  cube_name,
   write = FALSE,
   alarm = FALSE,
   geonaboprikk = TRUE,
-  ...
+  year = getOption("khfunctions.year"),
+  dumps = list()
 )
 }
 \arguments{
-\item{KUBEid}{Name of kube, corresponding to KUBE_NAVN in ACCESS}
-
-\item{versjonert}{}
-
-\item{csvcopy}{Save a CSV-copy?}
-
-\item{dumps}{list of required dumps}
+\item{cube_name}{Name of kube, corresponding to KUBE_NAVN in ACCESS}
 
 \item{write}{should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)}
 
@@ -30,9 +22,9 @@ LagKUBE(
 
 \item{geonaboprikk}{should the file be secondary censored on geographical codes? default = TRUE}
 
-\item{...}{}
+\item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{dumps}{list of required dumps}
 }
 \value{
 complete data file, publication ready file, and quality control file.

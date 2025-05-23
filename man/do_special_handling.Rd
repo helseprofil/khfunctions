@@ -4,16 +4,16 @@
 \alias{do_special_handling}
 \title{do_special_handling}
 \usage{
-do_special_handling(dt, code, batchdate, stata_exe, DTout = TRUE)
+do_special_handling(dt, code, parameters)
 }
 \arguments{
 \item{dt}{data to be processed}
 
 \item{code}{code to be performed, either R or STATA}
 
-\item{batchdate}{batchdate, used to create filepaths for stata processing}
+\item{parameters}{global parameters}
 
-\item{globs}{global parameters}
+\item{batchdate}{batchdate, used to create filepaths for stata processing}
 }
 \description{
 Do special handling of data files, either in R or STATA.

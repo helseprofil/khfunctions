@@ -9,7 +9,7 @@ TilFilLogg(
   felt,
   verdi,
   batchdate = SettKHBatchDate(),
-  globs = SettGlobs()
+  globs = get_global_parameters()
 )
 }
 \arguments{

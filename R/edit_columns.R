@@ -23,7 +23,7 @@ do_format_cube_columns <- function(dt, parameters){
   dt <- add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
   dt <- set_nonsumvalues(dt = dt)
   dt <- set_alder_aar(dt = dt)
-  if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) dt <- LeggTilNyeVerdiKolonner(dt, parameters$TNPinformation$NYEKOL_RAD_postMA, slettInf = TRUE, postMA = TRUE)
+  if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) dt <- LeggTilNyeVerdiKolonner(dt, parameters$TNPinformation$NYEKOL_RAD_postMA, postMA = TRUE)
   dt <- add_maltall(dt = dt, maltallcolumn = parameters$MALTALL)
   return(dt)
 }
@@ -65,12 +65,13 @@ get_outvalues_allvis <- function(parameters){
 }
 
 #' @title filter_invalid_outcodes
-#' @description
+#' @description remove GEO codes not listed in ACCESS:GEOkoder
 #' @param dt dataset
-#' @param globs global parameters
+#' @param parameters global parameters
+#' @keywords internal
 #' @noRd
-filter_invalid_geo_alder_kjonn <- function(dt, globs = get_global_parameters()){
-  valid_geo <- globs[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
+filter_invalid_geo_alder_kjonn <- function(dt, parameters){
+  valid_geo <- parameters[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
   dt <- dt[GEO %in% valid_geo]
   if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
   if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
@@ -81,6 +82,7 @@ filter_invalid_geo_alder_kjonn <- function(dt, globs = get_global_parameters()){
 #' @description adds sumTELLER, sumNEVNER, sumPREDTELLER to data
 #' @param dt dataset
 #' @param factor factor to multiply orignial variables by, generated as part of MOVAV-parameters
+#' @keywords internal
 #' @noRd
 add_sumvalues <- function(dt, factor){
   dt[, let(sumTELLER = factor * TELLER,
@@ -92,6 +94,7 @@ add_sumvalues <- function(dt, factor){
 #' @title set_nonsumvalues
 #' @description sets original values (exept RATE/SMR) by dividing by the corresponding .n column. 
 #' @param dt dataset
+#' @keywords internal
 #' @noRd
 set_nonsumvalues <- function(dt){
   values <- setdiff(get_value_columns(names(dt)), c("RATE", "SMR"))
@@ -112,6 +115,7 @@ set_alder_aar <- function(dt){
 #' @title get_maltall_column
 #' @description gets the column containing maltall
 #' @param parameters cube parameters
+#' @keywords internal
 #' @noRd
 get_maltall_column <- function(parameters){
   if(is_not_empty(parameters$CUBEinformation$MTKOL)) return(parameters$CUBEinformation$MTKOL)
@@ -123,12 +127,15 @@ get_maltall_column <- function(parameters){
 #' @description sets maltall column
 #' @param dt dataset
 #' @param maltallcolumn the column containing maltall, identified with get_maltall_column()
+#' @keywords internal
 #' @noRd
 add_maltall <- function(dt, maltallcolumn){
   dt[, MALTALL := get(maltallcolumn)]
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 get_etabs <- function(columnnames, parameters){
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
   tabcols <- get_tab_columns(columnnames)
@@ -139,11 +146,15 @@ get_etabs <- function(columnnames, parameters){
   return(list(tabcols = tabcols, tabnames = tabnames))
 }
   
+#' @keywords internal
+#' @noRd
 set_etab_names <- function(dt, etablist){
   data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 get_outdimensions <- function(dt, etabs, parameters){
   dims <- c(getOption("khfunctions.khtabs"), etabs)
   if(is_not_empty(parameters$CUBEinformation$DIMDROPP)){
@@ -157,40 +168,39 @@ get_outdimensions <- function(dt, etabs, parameters){
 
 #' @title fix_geo_special
 #' @description Manually handle bydel startaar, DK2020 and AALESUND/HARAM
+#' @keywords internal
 #' @noRd
-fix_geo_special <- function(d, specs, id = KUBEid){
-  
-  valK <- get_value_columns(names(d))
+fix_geo_special <- function(dt, parameters){
+  specs = parameters$fileinformation[[parameters$files$TELLER]] 
+  valK <- get_value_columns(names(dt))
   bydelstart <- specs[["B_STARTAAR"]]
   dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
   dk2020start <- specs[["DK2020_STARTAAR"]]
   isbydelstart <- !is.na(bydelstart) && bydelstart > 0
   isdk2020 <- !is.na(dk2020start) && dk2020start > 0
   
-  if(!isbydelstart && !isdk2020) return(invisible(d))
+  if(!isbydelstart && !isdk2020) return(invisible(dt))
   
   cat("* Håndterer bydelsstartår og delingskommuner\n")
   
   if (isbydelstart) {
     cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    d[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
+    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
+    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
   }
   
   if (isdk2020) {
     cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    d[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
+    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
+    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
-    .years <- 2020:2023
-    if(id == "VALGDELTAKELSE"){
-      .years <- 2019:2022
-    } 
+    ystart <- ifelse(parameters$cube_name == "VALGDELTAKELSE", 2019, 2020)
+    .years <- seq(ystart, ystart+3)
     .geos <- c("1508", "1580")
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    d[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
+    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
+    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
   }
-  return(invisible(d))
+  return(invisible(dt))
 }

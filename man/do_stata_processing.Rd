@@ -4,13 +4,7 @@
 \alias{do_stata_processing}
 \title{do_stata_processing}
 \usage{
-do_stata_processing(
-  TABLE,
-  script,
-  batchdate = SettKHBatchDate(),
-  stata_exe,
-  DTout = TRUE
-)
+do_stata_processing(TABLE, script, batchdate = SettKHBatchDate(), stata_exe)
 }
 \arguments{
 \item{TABLE}{data to be processed}

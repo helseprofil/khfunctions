@@ -23,16 +23,15 @@ get_movav_information <- function(dt, parameters){
 #' og satt til antall år dersom originale summer. 
 #'
 #' @param dt KUBE to be aggregated 
-#' @param setrate Reset RATE after aggregating to periods?
+#' @param reset_rate Reset RATE after aggregating to periods?
 #' @param parameters cube parameters
-#' @param globs global parameters
-aggregate_to_periods <- function(dt, setrate = TRUE, parameters, globs){
+aggregate_to_periods <- function(dt, reset_rate = TRUE, parameters){
   dt <- do_balance_missing_teller_nevner(dt = dt)
   
   if(parameters$MOVAVparameters$is_movav){
-    dt <- do_aggregate_periods(dt = dt, parameters = parameters, globs = globs)
+    dt <- do_aggregate_periods(dt = dt, parameters = parameters)
     dt <- do_filter_periods_with_missing_original(dt)
-    if(setrate && parameters$TNPinformation$NEVNERKOL != "-") dt <- LeggTilNyeVerdiKolonner(dt, NYEdscr = "RATE={TELLER/NEVNER}", postMA = TRUE)
+    if(reset_rate && parameters$TNPinformation$NEVNERKOL != "-") dt <- LeggTilNyeVerdiKolonner(TNF = dt, NYEdscr = "RATE={TELLER/NEVNER}", postMA = TRUE)
   } else {
     dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }
@@ -73,12 +72,11 @@ do_balance_missing_teller_nevner <- function(dt){
 #' 
 #' @param dt data
 #' @param parameters cube parameters
-#' @param globs global parameters
-do_aggregate_periods <- function(dt, parameters, globs){
+do_aggregate_periods <- function(dt, parameters){
   period = parameters$MOVAVparameters$movav
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
   n_missing_year <- find_missing_year(aarl = parameters$MOVAVparameters$aar$AARl)
-  aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year, globs = globs)
+  aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year)
   return(aggregated_dt)
 }
 
@@ -95,7 +93,7 @@ find_missing_year <- function(aarl){
 #' @description
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
 #' @noRd
-calculate_period_sums <- function(dt, period, n_missing_year, globs = SettGlobs()){
+calculate_period_sums <- function(dt, period, n_missing_year){
   cat("* Aggregerer til ", period, "-årige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
   dt <- extend_to_periods(dt = dt, periods = allperiods)
@@ -152,11 +150,8 @@ extend_to_periods <- function(dt, periods){
 #' @title handle_indata_periods
 #' @description
 #' If indata contains periods, val.n must be adjusted accordingly
-#' 
-#' @returns
-#' @export
-#'
-#' @examples
+#' @keywords internal
+#' @noRd
 do_handle_indata_periods <- function(dt, parameters){
   # USIKKER PÅ OM DETTE HÅNDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
   # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
@@ -172,8 +167,8 @@ do_handle_indata_periods <- function(dt, parameters){
 #' for rows where the proportion of original val.f == 3 (as indicated 
 #' by the helper column val.fn3) > the tolerance, the average is set to 
 #' NA and val.f = 3
-#' 
-#' @param dt data
+#' @keywords internal
+#' @noRd
 do_filter_periods_with_missing_original <- function(dt){
   values <- get_value_columns(names(dt))
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol") 

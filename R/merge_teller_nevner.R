@@ -64,7 +64,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   isNYEKOL_RAD <- !is.na(parameters$TNPinformation$NYEKOL_RAD) && parameters$TNPinformation$NYEKOL_RAD != ""
   if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- !is.na(parameters$TNPinformation$NYEKOL_KOL) && parameters$TNPinformation$NYEKOL_KOL != ""
-  if(isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, parameters$TNPinformation$NYEKOL_KOL, slettInf = TRUE)
+  if(isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, parameters$TNPinformation$NYEKOL_KOL)
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
@@ -82,9 +82,9 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
 get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, parameters){
   
   if(!is.null(design)) return(design)
-  if (is.null(nevnerfildesign)) return(tellerfildesign)
+  if(is.null(nevnerfildesign)) return(tellerfildesign)
   
-  fellesdesign <- FinnFellesTab(tellerfildesign, nevnerfildesign, parameters = parameters)$FDes
+  fellesdesign <- FinnFellesTab(DF1 = tellerfildesign, DF2 = nevnerfildesign, parameters = parameters)$FDes
   for(del in setdiff(names(tellerfildesign$Part), names(nevnerfildesign$Part))) {
     fellesdesign$Part[[del]] <- tellerfildesign$Part[[del]]
   }
@@ -115,7 +115,8 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
   Dekk12 <- Dekk1[Dekk2, nomatch = 0]
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  FDes <- FinnDesign(Dekk12, parameters = parameters)
+  # FDes <- FinnDesign(Dekk12, parameters = parameters)
+  FDes <- find_filedesign(Dekk12, parameters = parameters)
   cat(" Ferdig i FinnFellesTab\n")
   gc()
   return(list(Dekk = Dekk12, FDes = FDes))
@@ -142,7 +143,7 @@ FinnKubeDesignB <- function(InitDesign, filename, parameters) {
 #'
 #' @param KUBEdscr 
 #' @param ORGd 
-#' @param bruk0 
+#' @param bruk0 finn design med _0-kolonnene, brukes  
 #' @param FGP 
 #' @param parameters global parameters
 #' @keywords internal
@@ -215,8 +216,9 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @noRd
 do_redesign_recode_file <- function(filename, filedesign, tndesign, parameters){
   redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
-  if (nrow(redesign$Udekk) > 0) KHerr(paste0("UDEKKA i redesign av", filename))
-  file <- OmkodFil(FinnFilT(filename), redesign, parameters = parameters)
+  if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  file <- fetch_filegroup_from_buffer(filegroup_name = filename, parameters = parameters)
+  file <- OmkodFil(file, RD = redesign, parameters = parameters)
   return(file)
 }
 
@@ -240,7 +242,7 @@ set_rectangularized_cube_design <- function(colnames, design, parameters) {
   
   rektangularisert <- data.table::data.table()    
   for (Gn in design[["Gn"]][["GEOniv"]]) {
-    GEOK <- parameters$GeoKoder[GEOniv == Gn & FRA <= parameters$khyear & TIL > parameters$khyear]
+    GEOK <- parameters$GeoKoder[GEOniv == Gn & FRA <= parameters$year & TIL > parameters$year]
     subfylke <- which(GEOK$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
     GEOK$FYLKE <- NA_character_
     GEOK$FYLKE[subfylke] <- substr(GEOK$GEO[subfylke], 1, 2)

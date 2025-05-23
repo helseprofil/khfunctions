@@ -4,14 +4,10 @@
 \alias{get_filegroup_parameters}
 \title{get_filegroup_parameters}
 \usage{
-get_filegroup_parameters(name, versjonert, dumps)
+get_filegroup_parameters(user_args)
 }
 \arguments{
-\item{filegroup_name}{name of filgruppe}
-
-\item{batchdate}{date of current batch. Needed to filter out active parameters from ACCESS}
-
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{user_args}{user defined arguments to LagFilgruppe}
 }
 \value{
 A list of relevant parameters

@@ -1,4 +1,4 @@
-# Functions that apparently are no longer in use, with comment
+# Functions that apparently are no longer in use
 
 # Not used 
 SySammenFiler <- function(FILID1, FILID2, batch1 = NA, batch2 = NA, ROLLE1 = "", ROLLE2 = "", globs = FinnGlobs()) {
@@ -3121,6 +3121,170 @@ LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatc
   }
 }
 
+#' AggregerRader (kb)
+#'
+#' @param FG 
+#' @param nyeexpr 
+#' @param FGP 
+AggregerRader <- function(FG, nyeexpr, FGP) {
+  # is_kh_debug()
+  
+  if (!(is.na(nyeexpr) || nyeexpr == "")) {
+    nytabs <- unlist(stringr::str_split(nyeexpr, ";"))
+    for (nytab in nytabs) {
+      # PARSING av syntaks
+      nylab <- gsub("^\\[(.*?)\\]=.*", "\\1", nytab)
+      subexp <- gsub(".*\\]=\\{(.*)\\}", "\\1", nytab)
+      if (grepl("%in%|==", subexp)) {
+        tab <- gsub("^ *(.*) *(%in%|==).*", "\\1", subexp)
+      } else {
+        tab <- gsub("^ *(.*) *$", "\\1", subexp)
+        subexp <- TRUE
+      }
+      if (!tab %in% names(FG)) {
+        tabE <- names(FGP)[which(FGP == tab)]
+        subexp <- gsub("^ *tab(.*)", paste0(tabE, "\\1"), subexp)
+        tab <- tabE
+      }
+      FG2 <- eval(parse(text = paste0("subset(FG,", subexp, ")")))
+      FG2 <- KHaggreger(FG2[, setdiff(names(FG), tab), with = FALSE], globs = globs)
+      FG2[, eval(parse(text = paste0(tab, ":='", nylab, "'")))]
+      FG <- rbind(FG, FG2[, names(FG), with = FALSE])
+    }
+  }
+  return(FG)
+}
+
+#' OmkodFilFraPart (kb)
+#'
+#' @param Fil 
+#' @param Part 
+#' @param FGP 
+#' @param globs global parameters, defaults to SettGlobs
+OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), parameters) {
+  Dorg <- FinnDesign(Fil, FGP = FGP, parameters = parameters)
+  Dmod <- ModifiserDesign(Part, Dorg, parameters = parameters)
+  RD <- FinnRedesign(Dorg, Dmod, parameters = parameters)
+  return(OmkodFil(Fil, RD, parameters = parameters))
+}
+
+#' ModifiserDesign (kb)
+#'
+#' @param Nytt 
+#' @param Org 
+#' @param globs global parameters, defaults to SettGlobs
+ModifiserDesign <- function(Nytt, Org = list(), parameters) {
+  # is_kh_debug()
+  
+  Nkombs <- 1
+  for (del in names(Org$Part)) {
+    Nkombs <- Nkombs * nrow(Org$Part[[del]])
+  }
+  
+  
+  for (del in names(Nytt)) {
+    delT <- data.table::as.data.table(Nytt[[del]])
+    delT[, paste0(del, "_HAR")] <- 1
+    Org$Part[[del]] <- delT
+    Nkombs <- Nkombs * nrow(delT)
+  }
+  
+  if (any(grepl("_HAR", names(Org$OmkDesign)))) {
+    cat("************************************************************\n*\n*  OBSN NOE RART MED ModifiserDesign HAR\n*\n*********************************\n")
+  }
+  
+  omkDeler <- intersect(names(Nytt), c(parameters$DefDesign$UBeting, parameters$DefDesign$BetingOmk))
+  if (length(omkDeler) > 0) {
+    NyKols <- unlist(parameters$DefDesign$DelKols[omkDeler])
+    NyKols <- intersect(names(Org$OmkDesign), NyKols)
+    OmkDesignGmlKols <- setdiff(names(Org$OmkDesign), c(NyKols, "HAR"))
+    delerlist <- paste0("as.data.frame(Nytt[[\"", names(Nytt), "\"]])", collapse = ",")
+    # Skal beholdes
+    if (length(OmkDesignGmlKols) > 0) {
+      OmkDesGml <- Org$OmkDesign[, c(OmkDesignGmlKols, "HAR"), with = FALSE]
+      data.table::setkeyv(OmkDesGml, OmkDesignGmlKols)
+      OmkDesGml <- OmkDesGml[, list(HAR = max(HAR)), by = OmkDesignGmlKols]
+      delerlist <- paste0(delerlist, ",as.data.frame(OmkDesGml)")
+    }
+    OmkDesNy <- data.table::data.table(eval(parse(text = paste0("expand.grid.df(", delerlist, ")"))))
+    if (length(OmkDesignGmlKols) == 0) {
+      OmkDesNy[, HAR := 1]
+    }
+    OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(OmkDesNy)]
+    setkeym(OmkDesNy, OmkKols)
+    Org[["OmkDesign"]] <- OmkDesNy
+  }
+  # Merk, det gir bare mening aa bruke denne for aa lage et TIL-design, da trengs ikke de foelgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design maa ogsaa disse endres. Det er en kloenete operasjon (og som vel knapt er veldefinert)
+  # Kan altsaa IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  
+  Org[["Design"]] <- NULL
+  Org[["SKombs"]] <- NULL
+  Org[["FKombs"]] <- NULL
+  
+  return(Org)
+}
+
+#' DFHeadToString (kb)
+#'
+#' @param innDF 
+#' @param topn 
+DFHeadToString <- function(innDF, topn = 10) {
+  # is_kh_debug()
+  
+  # Bruker data.table print for summary
+  DT <- data.table::data.table(innDF)
+  optdef <- getOption("width") # Sett bred output
+  options(width = 250)
+  head <- paste(capture.output(print(print(DT, topn = topn))), collapse = "\n")
+  head <- sub("NULL$", "", head)
+  options(width = optdef)
+  return(head)
+}
+
+#' KHaggreger (kb)
+#'
+#' @param FIL 
+#' @param vals 
+#' @param snitt 
+#' @param globs global parameters, defaults to SettGlobs
+KHaggreger <- function(FIL, vals = list(), parameters) {
+  orgclass <- class(FIL)
+  orgcols <- names(FIL)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.table::setDT(FIL)
+  }
+  orgkeys <- data.table::key(FIL)
+  tabnames <- names(FIL)[names(FIL) %in% parameters$DefDesign$DesignKolsFA]
+  valkols <- get_value_columns(names(FIL))
+  if(!identical(data.table::key(FIL), tabnames)) data.table::setkeyv(FIL, tabnames)
+  
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+  colorder <- tabnames
+  for(val in valkols){
+    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+  data.table::setcolorder(FIL, colorder)
+  
+  vals <- vals[valkols]
+  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
+    x$sumbar == 0
+  }))]
+  for (val in valkols) {
+    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
+      eval(parse(text = paste(
+        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        sep = ""
+      )))
+    }
+  }
+  if(!identical(data.table::key(FIL), orgkeys)) data.table::setkeyv(FIL, tabnames)
+  
+  return(unique(FIL))
+}
 
 get_merge_teller_nevner_args <- function(standardfiles, parameters){
   args <- list()
@@ -3137,4 +3301,325 @@ get_merge_teller_nevner_args <- function(standardfiles, parameters){
     args[["KUBEparameters"]] <- parameters$CUBEinformation
   }
   return(args)
+}
+
+#' is_kh_debug (ybk)
+#' 
+#' Debugging all other functions in the project
+#' To use, set show_functions or show_arguments = TRUE
+# is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
+#   
+#   # If both are TRUE then show_arguments will be deactivated automatically.
+#   if (fun & arg)
+#     arg <- FALSE
+#   
+#   if (arg) {
+#     show = show_arguments
+#     out = sys.calls()[[1]]
+#   }
+#   
+#   if (fun) {
+#     show = show_functions
+#     out = sys.calls()[[1]][1]
+#   }
+#   
+#   if (show) {
+#     message("Execute: ", deparse(out))
+#   }
+#   
+#   invisible()
+# }
+
+#' FinnFil (kb)
+#'
+#' @param FILID 
+#' @param versjonert 
+#' @param batch 
+#' @param ROLLE 
+#' @param TYP 
+#' @param IDKOLS 
+#' @param globs global parameters, defaults to SettGlobs
+FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = get_global_parameters()) {
+  FT <- data.frame()
+  if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
+    FT <- data.table::copy(BUFFER[[FILID]])
+    cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
+  } else {
+    if (!is.na(batch)) {
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"), paste0(FILID, "_", batch, ".rds"))
+    } else if (versjonert == TRUE) {
+      orgwd <- getwd()
+      path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"))
+      Filer <- unlist(list.files(path, include.dirs = FALSE, pattern = paste0("^", FILID, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.rds$")))
+      Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
+      if (length(Filer) > 0) {
+        filn <- file.path(path, Filer[order(Filer)][length(Filer)])
+        batch <- gsub(".*_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", "\\1", Filer[order(Filer)][length(Filer)])
+      } else {
+        filn <- file.path(path, paste0(FILID, ".rds"))
+      }
+    } else {
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(FILID, ".rds"))
+      print(filn)
+    }
+    if (file.access(filn, mode = 0) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes ikke\n")
+    } else if (file.access(filn, mode = 4) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes, men lar seg ikke lese\n")
+    } else {
+      FT <- readRDS_KH(filn, IDKOLS = IDKOLS)
+      cat("Lest inn ", ROLLE, "FIL ", FILID, " (", dim(FT)[1], " x ", dim(FT)[2], "), batch=", batch, "\n", sep = "")
+    }
+  }
+  return(list(FT = data.table::as.data.table(FT), batch = batch))
+}
+
+#' FinnFilT (kb)
+#'
+#' @param ... 
+FinnFilT <- function(filid) {
+  return(FinnFil(filid, globs = globs)$FT)
+}
+
+
+ht2 <- function(x, n = 3) {
+  rbind(head(x, n), tail(x, n))
+}
+
+#' @title usebranch
+#' @description
+#' use to test other branches, loads all functions from a specified branch
+usebranch <- function(branch){
+  rm(list = lsf.str(all.names = T))
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHpaths.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppe.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkubefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
+  # source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
+  cat("\nLoaded functions from branch: ", branch)
+}
+
+#' @title KH_options
+#' @description
+#' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
+#' option is different from the config-file, and give the option to update. 
+KH_options <- function(){
+  # Set global options
+  op <- options()
+  optOrg <- orgdata:::is_globs("khfunctions")
+  orgDT <- !(names(optOrg) %in% names(op))
+  if(any(orgDT)) options(optOrg[orgDT])
+  corrglobs <- orgdata:::is_correct_globs(optOrg)
+  if(!isTRUE(corrglobs)){
+    x <- utils::askYesNo("Options are not the same as in the config file, update options now?")
+    if(isTRUE(x)){
+      orgdata::update_globs("khfunctions")
+    }
+  }
+}
+
+#' @title usebranch
+#' @description
+#' use to test other branches, loads all functions from a specified branch
+use_branch <- function(branch, debug = FALSE){
+  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
+  # show_functions <<- debug
+  # show_arguments <<- debug
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  
+  rfiles <- list_files_github(branch = branch)
+  rfiles <- grep("KHmisc.R|KHglobs.R|KHsetup.R", rfiles, value = T, invert = T)
+  for(file in rfiles){
+    source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/", file), encoding = "latin1")
+  }
+  cat("\nLoaded functions from branch: ", branch)
+}
+
+list_files_github <- function(branch){
+  req <- httr2::request(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
+  response <- httr2::req_perform(req)
+  files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
+  files <- basename(grep("^R/", files, value = T))
+  return(files)
+}
+
+#' FinnDesign (kb)
+#' 
+#' Brukes i lagkube og lagfilgruppe
+#'
+#' @param FIL 
+#' @param FGP 
+#' @param globs global parameters, defaults to SettGlobs
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
+  if (identical(class(FIL), "data.frame")) {
+    FIL <- data.table::data.table(FIL)
+  }
+  keyorg <- data.table::key(FIL)
+  DelKols <- parameters$DefDesign$DelKols
+  UBeting <- parameters$DefDesign$UBeting
+  BetingOmk <- parameters$DefDesign$BetingOmk
+  BetingF <- parameters$DefDesign$BetingF
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
+  
+  Design <- list()
+  Design[["KolNavn"]] <- names(FIL)
+  # Finn faktisk design
+  setkeym(FIL, c(DesignKols))
+  ObsDesign <- unique(FIL[, ..DesignKols])
+  
+  # Finn deler inneholdt i tabell
+  Deler <- character()
+  for (del in names(DelKols)) {
+    if (all(DelKols[[del]] %in% DesignKols)) {
+      Deler <- c(Deler, del)
+    }
+  }
+  
+  # Sett omkodingskombinasjoner
+  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
+  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
+  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
+  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
+  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
+  
+  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
+  for (del in Deler) {
+    kols <- DelKols[[del]]
+    data.table::setkeyv(ObsDesign, kols)
+    # SETT HAR
+    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+  }
+  
+  # Fyll evt hull i aldersintervaller
+  if ("A" %in% names(Design$Part)) {
+    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    if (nrow(mangler) > 0) {
+      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
+      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
+    }
+  }
+  
+  # Finn fullt design, dvs kryssing av alle partielle.
+  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
+  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FullDesign, names(ObsDesign))
+  # Sett HAR=1 om denne finnes i fakttisk design
+  FullDesign[, HAR := 0]
+  FullDesign[ObsDesign, HAR := 1]
+  Design[["Design"]] <- FullDesign
+  
+  # Sett omkodingskombinasjone
+  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
+  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
+  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
+  komb <- Design[["UBeting"]]
+  for (del in Beting) {
+    if (del != "") {
+      komb <- c(Design[["UBeting"]], del)
+    }
+    if (length(komb) > 0) {
+      kols <- character(0)
+      for (k in komb) {
+        kols <- c(kols, DelKols[[k]])
+      }
+      data.table::setkeyv(ObsDesign, kols)
+      data.table::setkeyv(FullDesign, kols)
+      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
+      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
+      kombFull[, HAR := 0]
+      kombFull[kombObs, HAR := 1]
+      kombn <- paste("bet", del, sep = "")
+      Design[["SKombs"]][[kombn]] <- kombFull
+    }
+  }
+  
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FIL, keyorg)
+  gc()
+  return(Design)
+}
+
+#' @title SettFilterDesign (kb)
+#' @description
+#' WIP:
+#' - bruk0 var aldri satt til noe annet enn FALSE, tatt bort
+#' 
+#' @keywords internal
+#' @noRd
+SettFilterDesign <- function(KUBEdscr, OrgParts = list(), FGP = list(amin = 0, amax = 120), parameters) {
+  Deler <- list()
+  for (del in names(parameters$DefDesign$DelKolN)) {
+    # for (del in names(unlist(globs$DefDesign$DelKolN[ORGd$OmkDeler]))){
+    # if (del %in% names(ORGd$Part) | grepl("^T\\d$",del)){
+    # Les liste
+    koldel <- parameters$DefDesign$DelKolN[del]
+    koldel0 <- paste0(koldel, "_0")
+    # 
+    # if (bruk0 == TRUE && !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != "") {
+    #   delListStr <- KUBEdscr[[koldel0]]
+    # } else {
+    delListStr <- KUBEdscr[[koldel]]
+    # }
+    if (!(is.null(delListStr) || is.na(delListStr) || delListStr == "")) {
+      delListStr <- gsub("^ *| *$", "", delListStr)
+      minus <- grepl("^-\\[", delListStr)
+      delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
+      delListA <- unlist(stringr::str_split(delListStr, ","))
+      if (parameters$DefDesign$DelType[del] == "INT") {
+        if (del == "A") {
+          delListA <- gsub("ALLE", paste0(FGP$amin, "_", FGP$amax), delListA)
+          delListA <- gsub("^_(\\d+)", paste0(FGP$amin, "_\\1"), delListA)
+          delListA <- gsub("(\\d+)_$", paste0("\\1_", FGP$amax), delListA)
+        }
+        delListA <- gsub("^(\\d+)$", "\\1_\\1", delListA)
+        delListA <- data.table::as.data.table(matrix(as.integer(stringr::str_split_fixed(delListA, "_", 2)), ncol = 2))
+      } else if (parameters$DefDesign$DelFormat[del] == "integer") {
+        delListA <- as.integer(delListA)
+      } else if (parameters$DefDesign$DelFormat[del] == "numeric") {
+        delListA <- as.numeric(delListA)
+      }
+      listDT <- data.table::setnames(data.table::as.data.table(delListA), parameters$DefDesign$DelKols[[del]])
+      if (minus == TRUE) {
+        if (!is.null(OrgParts[[del]])) {
+          data.table::setkeyv(listDT, names(listDT))
+          data.table::setkeyv(OrgParts[[del]], names(listDT))
+          Deler[[del]] <- OrgParts[[del]][!listDT, ]
+        } else {
+          print("**********************KAN IKKE BRUKE -[liste] i SettFilterDesign naar ikke OrgParts")
+        }
+      } else {
+        Deler[[del]] <- listDT
+      }
+    } else if (parameters$DefDesign$DelType[del] == "INT") {
+      start <- KUBEdscr[[paste0(koldel, "_START")]]
+      stopp <- KUBEdscr[[paste0(koldel, "_STOP")]]
+      if (!(is.null(start) | is.null(stopp))) {
+        if (!(is.na(start) | is.na(stopp))) {
+          if (!(start == "" | stopp == "")) {
+            if (stopp >= start) {
+              if (!is.null(OrgParts[[del]])) {
+                Deler[[del]] <- subset(OrgParts[[del]], eval(parse(text = paste0(koldel, "l>=", start, " & ", koldel, "h<=", stopp))))
+              } else {
+                # Deler[[del]]<-setNames(as.data.frame(cbind(start:stopp,start:stopp)),paste(koldel,c("l","h"),sep=""))
+              }
+            } else {
+              cat("FEIL!!!!!!!! kan ikke ha start ", start, "> stopp ", stopp, "\n")
+            }
+          }
+        }
+      }
+    }
+  }
+  return(Deler)
 }

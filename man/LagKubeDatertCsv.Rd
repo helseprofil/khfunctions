@@ -6,12 +6,11 @@
 Wrapper around LagKUBE, with default options to save output files}
 \usage{
 LagKubeDatertCsv(
-  KUBEID,
-  dumps = list(),
-  versjonert = TRUE,
-  csvcopy = TRUE,
+  cube_name,
   write = TRUE,
-  alarm = FALSE
+  alarm = FALSE,
+  geonaboprikk = TRUE,
+  dumps = list()
 )
 }
 \description{

@@ -4,14 +4,10 @@
 #' The function reads tables from ACCESS to get information on which files are used and how they need to be handled. 
 #' @param args arguments passed to LagKUBE
 #' @return A list of relevant parameters
-get_cubeparameters <- function(cubeargs) {
+get_cubeparameters <- function(user_args = list()) {
   cat("\n* Henter parametre")
   parameters <- get_global_parameters()
-  parameters[["cube_name"]] <- cubeargs$KUBEid
-  parameters[["khyear"]] <- ifelse(is.null(cubeargs$year), getOption("khfunctions.year"), cubeargs$year)
-  parameters[["dumps"]] <- cubeargs$dumps
-  parameters[["write"]] <- cubeargs$write
-  parameters[["geonaboprikk"]] <- cubeargs$geonaboprikk
+  parameters <- c(parameters, user_args)
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
@@ -136,7 +132,7 @@ get_filfiltre <- function(parameters){
 #' @title get_filegroup_information
 #' @description 
 #' Helper function for `get_cubeparameters()`
-#' Loops through filegroups used, and uses read_filgrupper_and_add_vals() to get filegroup information.
+#' Loops through filegroups used, and uses read_filegroups_and_add_values() to get filegroup information.
 #' @keywords internal
 #' @noRd
 #' @param files list of files to be used in the cube 
@@ -145,9 +141,9 @@ get_filfiltre <- function(parameters){
 get_filegroup_information <- function(parameters){
   fileinfo <- list()
   
-  for(file in unique(parameters$files)){
-    filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$filefilters)
-    fileinfo[[file]] <- read_filgrupper_and_add_vals(filegroup_name = filename, parameters = parameters)
+  for(file in unique(unlist(parameters$files))){
+    filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$FILFILTRE)
+    fileinfo[[file]] <- read_filegroups_and_add_values(filegroup_name = filename, parameters = parameters)
   }
   return(fileinfo)
 }
@@ -170,17 +166,14 @@ replace_filename_if_filefilters <- function(filename, filefilters){
 #' @noRd
 get_friskvik_information <- function(parameters){
   FRISKVIK <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
-                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$khyear, "AND KUBE_NAVN='", parameters$cube_name, "'")), 
+                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$year, "AND KUBE_NAVN='", parameters$cube_name, "'")), 
                                    as.is = TRUE))
   return(FRISKVIK)
 }
 
 #' @title get_filedesign
-#' @description
 #' @keywords internal
 #' @noRd
-#' @param files 
-#' @param parameters 
 #' @param parameters global parameters
 get_filedesign <- function(parameters){
   if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
@@ -188,8 +181,7 @@ get_filedesign <- function(parameters){
   files <- unique(parameters$files)
   for(file in files){
     if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
-    fileinfo <- parameters$fileinformation[[file]]
-    filedesign[[file]] <- find_filedesign(file = .GlobalEnv$BUFFER[[file]], fileparameters = fileinfo, parameters = parameters)
+    filedesign[[file]] <- find_filedesign(filename = file, parameters = parameters)
   }
   return(filedesign)
 }

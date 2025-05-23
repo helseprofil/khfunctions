@@ -4,14 +4,12 @@
 \alias{do_aggregate_periods}
 \title{do_aggregate_periods}
 \usage{
-do_aggregate_periods(dt, parameters, globs)
+do_aggregate_periods(dt, parameters)
 }
 \arguments{
 \item{dt}{data}
 
 \item{parameters}{cube parameters}
-
-\item{globs}{global parameters}
 }
 \description{
 Aggregate from original data to moving averages

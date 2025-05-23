@@ -4,12 +4,7 @@
 \alias{FinnRedesign}
 \title{FinnRedesign (kb)}
 \usage{
-FinnRedesign(
-  fradesign,
-  tildesign,
-  SkalAggregeresOpp = character(),
-  globs = SettGlobs()
-)
+FinnRedesign(fradesign, tildesign, SkalAggregeresOpp = character(), parameters)
 }
 \arguments{
 \item{fradesign}{}
@@ -18,7 +13,7 @@ FinnRedesign(
 
 \item{SkalAggregeresOpp}{skal noen deler evt aggregeres opp?}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 FinnRedesign (kb)

@@ -3,13 +3,13 @@
 #' Loops over all original files, creates a table and append to the complete file group 
 #'
 #' @param gruppe name of filegroup
-#' @param versjonert save file with date tag? default = TRUE
 #' @param write save output files? default = TRUE
 #' @param dumps list of intermediate files to save, used for debugging and development. 
-LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()) {
-  check_connection_folders()
+LagFilgruppe <- function(filegroup_name, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
-  parameters <- get_filegroup_parameters(name = gruppe, versjonert = versjonert, dumps = dumps)
+  check_connection_folders()
+  user_args = as.list(environment())
+  parameters <- get_filegroup_parameters(user_args = user_args)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
@@ -22,7 +22,7 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
-  write_codebooklog(log = codebooklog, parameters = parameters, write = write)
+  write_codebooklog(log = codebooklog, parameters = parameters)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
@@ -32,13 +32,13 @@ LagFilgruppe <- function(gruppe, versjonert = TRUE, write = TRUE, dumps = list()
   cat("-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   remove_helper_columns(dt = Filgruppe)
   
-  if ("RSYNT_PRE_FGLAGRINGpre" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
+  if ("RSYNT_PRE_FGLAGRINGpre" %in% names(parameters$dumps)) DumpTabell(Filgruppe, paste(parameters$filegroup_name, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
   Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
-  if ("RSYNT_PRE_FGLAGRINGpost" %in% names(dumps)) DumpTabell(Filgruppe, paste(filbesk$FILGRUPPE, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
+  if ("RSYNT_PRE_FGLAGRINGpost" %in% names(parameters$dumps)) DumpTabell(Filgruppe, paste(parameters$filegroup_name, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   
-  if(write) write_filegroup_output(outfile = Filgruppe, name = gruppe, versjonert = versjonert, batchdate = parameters$batchdate)
+  write_filegroup_output(outfile = Filgruppe, parameters)
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
 }
 
@@ -89,11 +89,11 @@ analyze_cleanlog <- function(log){
 
 #' @title write_codebooklog
 #' @noRd
-write_codebooklog <- function(log, parameters, write){
+write_codebooklog <- function(log, parameters){
   log[, let(FILGRUPPE = parameters$filegroup_name, BATCHDATE = parameters$batchdate, SV = "S", OK = 1)]
   data.table::setcolorder(log, c("KOBLID", "FILGRUPPE", "DELID", "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ", "SV", "BATCHDATE", "OK")) # sett som options
   
-  if(!write) return(invisible(NULL))
+  if(!parameters$write) return(invisible(NULL))
   cat("\n* Skriver kodebok-logg")
   # KODE FOR Å TØME GAMMEL LOGG
   # KODE FOR Å SKRIVE NY LOGG

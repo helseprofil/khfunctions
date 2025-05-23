@@ -4,7 +4,7 @@
 \alias{get_initialdesign}
 \title{get_initialdesign}
 \usage{
-get_initialdesign(design, tellerfildesign, nevnerfildesign, globs)
+get_initialdesign(design, tellerfildesign, nevnerfildesign, parameters)
 }
 \arguments{
 \item{design}{}
@@ -13,7 +13,7 @@ get_initialdesign(design, tellerfildesign, nevnerfildesign, globs)
 
 \item{nevnerfildesign}{}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 get_initialdesign

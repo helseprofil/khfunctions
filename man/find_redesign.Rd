@@ -4,22 +4,20 @@
 \alias{find_redesign}
 \title{find_redesign}
 \usage{
-find_redesign(
-  fradesign,
-  tildesign,
-  SkalAggregeresOpp = character(),
-  globs = SettGlobs()
-)
+find_redesign(orgdesign, targetdesign, aggregate = character(), parameters)
 }
 \arguments{
-\item{fradesign}{}
+\item{orgdesign}{design of file, must be set with FinnDesign()}
 
-\item{tildesign}{}
+\item{targetdesign}{target design, can be simpler than orgdesign as only uses $Part}
 
-\item{SkalAggregeresOpp}{skal noen deler evt aggregeres opp?}
+\item{aggregate}{aggregate parts? Used in standardization, default = character()}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
+}
+\value{
+A list with information to redesign a file into a target design.
 }
 \description{
-find_redesign
+WIP: replacement for finnredesign()
 }

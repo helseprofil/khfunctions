@@ -4,12 +4,7 @@
 \alias{merge_teller_nevner}
 \title{merge_teller_nevner}
 \usage{
-merge_teller_nevner(
-  parameters,
-  standardfiles = FALSE,
-  design = NULL,
-  globs = SettGlobs()
-)
+merge_teller_nevner(parameters, standardfiles = FALSE, design = NULL)
 }
 \arguments{
 \item{parameters}{parameters generated with get_cubeparameters()}
@@ -17,8 +12,6 @@ merge_teller_nevner(
 \item{standardfiles}{Should standard teller and nevner files be used? default = FALSE}
 
 \item{design}{Design list}
-
-\item{globs}{global parameters, defaults to SettGlobs}
 }
 \description{
 merge_teller_nevner

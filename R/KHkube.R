@@ -2,81 +2,79 @@
 #' @description 
 #' The main function of the production line, producing the files going to FHI Statistikk and public health profiles
 #'
-#' @param KUBEid Name of kube, corresponding to KUBE_NAVN in ACCESS
-#' @param versjonert 
-#' @param csvcopy Save a CSV-copy?
-#' @param globs global parameters, defaults to SettGlobs
-#' @param dumps list of required dumps
+#' @param cube_name Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param alarm if TRUE, plays a sound when done
 #' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
-#' @param year year to get valid GEO codes and to produce correct FRISKVIK files. If NuLL, getOption("khfunctions.year") is used
-#' @param ... 
+#' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
+#' @param dumps list of required dumps
 #' @return complete data file, publication ready file, and quality control file.
-LagKUBE <- function(KUBEid, dumps = list(), write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = NULL, ...) {
-  all.args <- as.list(environment())
+LagKUBE <- function(cube_name, write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list()) {
+  on.exit(lagkube_cleanup(), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
-  on.exit(lagkube_cleanup(), add = TRUE)
-  parameters <- get_cubeparameters(cubeargs = all.args)
-  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", KUBEid, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
-  if(!geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
+  user_args = as.list(environment())
+  parameters <- get_cubeparameters(user_args = user_args)
+  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$cube_name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
+  if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   load_and_format_files(parameters = parameters)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
-  if(write) save_access_specs(parameters = parameters)
+  write_access_specs(parameters = parameters)
   
   TNF <- merge_teller_nevner(parameters = parameters)
   KUBE <- TNF$TNF
   if(parameters$TNPinformation$NEVNERKOL != "-") KUBE <- LeggTilNyeVerdiKolonner(KUBE, NYEdscr = "RATE={TELLER/NEVNER}", postMA = FALSE)
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  # Globs fjernet HERTIL
-  KUBE <- aggregate_to_periods(dt = KUBE, setrate = TRUE, parameters = parameters, globs = globs)
+  KUBE <- aggregate_to_periods(dt = KUBE, reset_rate = TRUE, parameters = parameters)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
-  KUBE <- add_predteller(dt = KUBE, parameters = parameters, globs = globs)
-  KUBE <- add_meisskala(dt = KUBE, parameters = parameters, globs = globs)
-  if("raaKUBE1" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_raaKUBE1"), format = dumps[["raaKUBE1"]])
+  KUBE <- add_predteller(dt = KUBE, parameters = parameters)
+  KUBE <- add_meisskala(dt = KUBE, parameters = parameters)
+  if("raaKUBE1" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_raaKUBE1"), format = parameters$dumps[["raaKUBE1"]])
   remove_original_files_from_buffer()
   
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
-  KUBE <- fix_geo_special(d = KUBE, specs = parameters$fileinformation[[parameters$files$TELLER]], id = KUBEid)
-  if ("maKUBE0" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_maKUBE0"), format = dumps[["maKUBE0"]])
+  KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
+  if ("maKUBE0" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_maKUBE0"), format = parameters$dumps[["maKUBE0"]])
 
-  KUBE <- do_censor_kube_r(dt = KUBE, parameters = parameters, globs = globs)
-  if ("KUBE_SLUTTREDIGERpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpre"), format = dumps[["KUBE_SLUTTREDIGERpre"]])
+  if ("KUBE_SLUTTREDIGERpre" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_KUBE_SLUTTREDIGERpre"), format = parameters$dumps[["KUBE_SLUTTREDIGERpre"]])
   KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
-  if ("KUBE_SLUTTREDIGERpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_KUBE_SLUTTREDIGERpost"), format = dumps[["KUBE_SLUTTREDIGERpost"]])
+  if ("KUBE_SLUTTREDIGERpost" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_KUBE_SLUTTREDIGERpost"), format = parameters$dumps[["KUBE_SLUTTREDIGERpost"]])
   
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
   KUBE <- add_smr_and_meis(dt = KUBE, parameters = parameters)
-  KUBE <- adjust_smr_and_meis_to_country_normal(dt = KUBE, parameters = parameters, globs = globs)
-  KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, globs = globs)
+  KUBE <- adjust_smr_and_meis_to_country_normal(dt = KUBE, parameters = parameters)
+  KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
   etabs <- get_etabs(columnnames = names(KUBE), parameters = parameters)
   KUBE <- set_etab_names(dt = KUBE, etablist = etabs)
   outvalues <- get_outvalues_allvis(parameters = parameters)
   outdimensions <- get_outdimensions(dt = KUBE, etabs = etabs$tabnames, parameters = parameters)
   
-  if ("STATAPRIKKpre" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpre"), format = dumps[["STATAPRIKKpre"]])
+  if ("STATAPRIKKpre" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_STATAPRIKKpre"), format = parameters$dumps[["STATAPRIKKpre"]])
+  KUBE <- do_censor_kube_r(dt = KUBE, parameters = parameters)
   dims <- find_dims_for_stataprikk(dt = KUBE, etabs = etabs)
-  save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
-  KUBE <- do_stata_censoring(dt = KUBE, spc = parameters$CUBEinformation, batchdate = batchdate, stata_exe = globs$StataExe)
-  if ("STATAPRIKKpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_STATAPRIKKpost"), format = dumps[["STATAPRIKKpost"]])
+  save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+  KUBE <- do_stata_censoring(dt = KUBE, parameters = parameters)
+  if ("STATAPRIKKpost" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_STATAPRIKKpost"), format = parameters$dumps[["STATAPRIKKpost"]])
   KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
-  if ("RSYNT_POSTPROSESSpost" %in% names(dumps)) DumpTabell(KUBE, paste0(KUBEid, "_RSYNT_POSTPROSESSpost"), format = dumps[["RSYNT_POSTPROSESSpost"]])
+  if ("RSYNT_POSTPROSESSpost" %in% names(parameters$dumps)) DumpTabell(KUBE, paste0(parameters$cube_name, "_RSYNT_POSTPROSESSpost"), format = parameters$dumps[["RSYNT_POSTPROSESSpost"]])
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = outvalues)
-  if(isTRUE(write)) LagAlleFriskvikIndikatorerForKube(KUBEid = KUBEid, KUBE = ALLVIS, aargang = year, FGP = parameters$fileinformation[[parameters$files$TELLER]], modus = parameters$CUBEinformation$MODUS, batchdate = batchdate, globs = globs)
+  
+  generate_and_export_all_friskvik_indicators(dt = dt, parameters = parameters)
+  
   ALLVIS <- ALLVIS[, c(..outdimensions, ..outvalues, "SPVFLAGG")]
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = outdimensions, kube = KUBE)
+  
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
-  if(isTRUE(write)) save_cube_output(outputlist = RESULTAT, name = KUBEid, batchdate = batchdate, versjonert = versjonert, geonaboprikk = geonaboprikk)
-  cat("-------------------------KUBE", KUBEid, "FERDIG--------------------------------------\n")
+  write_cube_output(outputlist = RESULTAT, parameters = parameters)
+  cat("-------------------------KUBE", parameters$cube_name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
@@ -92,6 +90,8 @@ LagKUBE <- function(KUBEid, dumps = list(), write = FALSE, alarm = FALSE, geonab
 #' An on.exit call must be included in the main function to delete
 #' the file when the function finish or crash. This function checks if the file already exists, 
 #' and generate the file if not (or overridden by user). 
+#' @keywords internal
+#' @noRd
 check_if_lagkube_available <- function(){
   file <- get_lagkube_guardfile_path()
   continue <- TRUE
@@ -106,11 +106,13 @@ check_if_lagkube_available <- function(){
   if(continue) fs::file_create(file)
 }
 
+#' @keywords internal
 #' @noRd
 get_lagkube_guardfile_path <- function(){
   file.path(fs::path_home(), getOption("khfunctions.lagkube_guardfile"))
 }
 
+#' @keywords internal
 #' @noRd
 lagkube_cleanup <- function(){
   fs::file_delete(get_lagkube_guardfile_path())
@@ -118,6 +120,7 @@ lagkube_cleanup <- function(){
   sink()
 }
 
+#' @keywords internal
 #' @noRd
 remove_original_files_from_buffer <- function(){
   .GlobalEnv$BUFFER <- NULL
@@ -126,25 +129,6 @@ remove_original_files_from_buffer <- function(){
 
 #' LagKubeDatertCsv
 #' Wrapper around LagKUBE, with default options to save output files
-LagKubeDatertCsv <- function(KUBEID, 
-                             dumps = list(), 
-                             versjonert = TRUE,
-                             csvcopy = TRUE,
-                             write = TRUE,
-                             alarm = FALSE) {
-  invisible(LagKUBE(KUBEid = KUBEID, versjonert = versjonert, csvcopy = csvcopy, dumps = dumps, write = write, alarm = alarm))
-}
-
-#' LagFlereKuber
-#' Wrapper aroung LagKUBE, allowing for more than one KUBE to be made simultaneously
-#' @param KUBEid_ALLE
-#' @param ... Optional, can set versjonert, csvcopy, write arguments if TRUE not wanted
-LagFlereKuber <- function(KUBEid_ALLE, 
-                          dumps = list(), 
-                          alarm = FALSE,
-                          ...) {
-  for (KUBEid in KUBEid_ALLE) {
-    LagKubeDatertCsv(KUBEid, dumps = dumps, alarm = alarm, ...)
-  }
-  sink()
+LagKubeDatertCsv <- function(cube_name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, dumps = list()){ 
+  invisible(LagKUBE(cube_name = cube_name, write = write, alarm = alarm, geonaboprikk = geonaboprikk, dumps = dumps))
 }

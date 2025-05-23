@@ -1,7 +1,6 @@
 #' @title godkjent
-#' @param profil 
-#' @param geoniv 
-#' @param year
+#' @keywords internal
+#' @noRd
 godkjent <- function(profil = c("FHP", "OVP"),
                      geoniv = c("K", "F", "B"),
                      year = getOption("khfunctions.year")) {

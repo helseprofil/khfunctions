@@ -66,6 +66,8 @@ add_delkols <- function(out, deler){
 #' @title SettLegitimeKoder
 #' @author Kåre Bævre
 #' @param globs global parameters, defaults to SettGlobs
+#' @keywords internal
+#' @noRd
 SettLegitimeKoder <- function(globs) {
   Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT DEL, KODE FROM KH_KODER WHERE DEL <> 'S'", as.is = TRUE))
   return(split(Koder, by = "DEL"))
@@ -74,6 +76,7 @@ SettLegitimeKoder <- function(globs) {
 #' @title FinnStataExe 
 #' @author Yusman Kamaleri
 #' @description Find the most recent version of locally installed Stata
+#' @keywords internal
 #' @noRd
 FinnStataExe <- function() {
   stata_bin <- "StataSE-64.exe"
@@ -87,9 +90,10 @@ FinnStataExe <- function() {
   return(list(Exe = Exe, Vers = Vers))
 }
 
-
 #' @title connect_khelsa
 #' @description connects to khelsa.mdb
+#' @keywords internal
+#' @noRd
 connect_khelsa <- function(){
   RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
                                          getOption("khfunctions.db")))
@@ -97,7 +101,21 @@ connect_khelsa <- function(){
 
 #' @title connect_khlogg
 #' @description connects to khlogg.mdb
+#' @keywords internal
+#' @noRd
 connect_khlogg <- function(){
   RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
                                          getOption("khfunctions.logg")))
+}
+
+#' @keywords internal
+#' @noRd
+SettKHBatchDate <- function() {
+  format(Sys.time(), "%Y-%m-%d-%H-%M")
+}
+
+#' @keywords internal
+#' @noRd
+FormatSqlBatchdate <- function(batchdate){
+  format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
 }

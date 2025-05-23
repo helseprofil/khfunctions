@@ -1,38 +1,5 @@
 # Helper functions used in the data processing, both in LagKUBE and LagFilgruppe
 
-#' is_kh_debug (ybk)
-#' 
-#' Debugging all other functions in the project
-#' To use, set show_functions or show_arguments = TRUE
-# is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
-#   
-#   # If both are TRUE then show_arguments will be deactivated automatically.
-#   if (fun & arg)
-#     arg <- FALSE
-#   
-#   if (arg) {
-#     show = show_arguments
-#     out = sys.calls()[[1]]
-#   }
-#   
-#   if (fun) {
-#     show = show_functions
-#     out = sys.calls()[[1]][1]
-#   }
-#   
-#   if (show) {
-#     message("Execute: ", deparse(out))
-#   }
-#   
-#   invisible()
-# }
-
-#' SettKHBatchDate
-#' 
-#' Used to set date tag in file names
-SettKHBatchDate <- function() {
-  format(Sys.time(), "%Y-%m-%d-%H-%M")
-}
 
 #' KHerr (kb)
 KHerr <- function(error) {
@@ -42,13 +9,10 @@ KHerr <- function(error) {
   )
 }
 
-#' DumpTabell (kb)
-#' 
+#' @title DumpTabell
 #' To save file dumps
-#'
-#' @param TABELL 
-#' @param TABELLnavn 
-#' @param format
+#' @keywords internal
+#' @noRd
 DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
   for(fmt in format){
@@ -84,13 +48,192 @@ get_tab_columns <- function(columnnames){
   grep("^TAB\\d+$", columnnames, value = T)
 }
 
+
+#' FinnFilGruppeFraKoblid (kb)
+#'
+#' @param koblid 
+#' @param globs global parameters, defaults to SettGlobs
+FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
+  return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
+}
+
+#' SkrivKBLogg (kb)
+#'
+#' @param KB 
+#' @param type 
+#' @param filbesk 
+#' @param gruppe 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
+  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
+  sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
+}
+
+#' SVcloneRecord (kb)
+#'
+#' @param dbh 
+#' @param table 
+#' @param koblid 
+SVcloneRecord <- function(dbh, table, koblid) {
+  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
+  felt <- paste(design, collapse = ",")
+  feltm <- sub("SV", "'V' AS SV", felt)
+  sql <- paste(
+    "INSERT INTO ", table, "(", felt, ")",
+    "SELECT ", feltm, "FROM ", table,
+    "WHERE KOBLID=", koblid, "AND SV='S'"
+  )
+  sqlQuery(dbh, sql)
+}
+
+#' readRDS_KH (kb)
+#'
+#' @param file 
+#' @param IDKOLS 
+#' @param ... 
+readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
+  FIL <- readRDS(file, ...)
+  if (IDKOLS == FALSE) {
+    if ("KOBLID" %in% names(FIL)) {
+      FIL$KOBLID <- NULL
+    }
+    if ("ROW" %in% names(FIL)) {
+      FIL$ROW <- NULL
+    }
+  }
+  return(FIL)
+}
+
+#' TilFilLogg (kb)
+#'
+#' @param koblid 
+#' @param felt 
+#' @param verdi 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
+  # Sjekk om finnes rad for filid, eller lag ny
+  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
+    print("**************Hvorfor er jeg egentlig her?*********************'")
+    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
+    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
+    sqlQuery(globs$log, upd)
+  }
+  if (is.character(verdi)) {
+    verdi <- paste("'", verdi, "'", sep = "")
+    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
+  }
+  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
+  tmp <- sqlQuery(globs$log, upd)
+  # cat("********\n",tmp,"__________\n")
+}
+
+## Try to handle problem with "memory exhausted (limit reached?)" the solution above
+#' expand.grid.df (ybk)
+#'
+#' @param ... 
+expand.grid.df <- function(...) {
+  DFs <- list(...)
+  
+  ddt <- lapply(DFs, function(x) is(x, "data.table"))
+  dx <- which(ddt == 0)
+  
+  if (length(dx) > 0){
+    for (i in dx){
+      DFs[[i]] <- data.table::as.data.table(DFs[[i]])
+    }
+  }
+  
+  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
+  
+  for (i in seq_along(DFs))
+    names(DFs)[i] <- paste0("data", i)
+  
+  DFlength <- length(DFs)
+  DFnames <- names(DFs)
+  
+  res <- DFs[[1L]][rows[[1L]]]
+  DFs[[1L]] <- NULL
+  for (i in seq_len(DFlength)[-1L]){
+    x <- DFnames[i]
+    res <- res[, c(.SD, DFs[[x]][rows[[i]]])]
+    DFs[[x]] <- NULL
+  }
+  
+  rm(DFs, rows)
+  gc()
+  data.table::setDT(res)
+}
+
+expand.grid.dt <- function(...){
+  DTs <- list(...)
+  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
+  for(i in seq_along(DTs)){
+    if(!is(DTs[[i]], "data.table")){
+      DTs[[i]] <- data.table::setDT(DTs[[i]])
+    }
+  }
+  
+  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
+  
+  for (i in seq_along(DTs)){
+    DTs[[i]] <- DTs[[i]][rows[[i]]]
+  }
+    
+  res <- DTs[[1L]]
+  if(length(DTs) > 1){
+    for(i in 2:length(DTs)){
+      res[, names(DTs[[i]]) := DTs[[i]]]
+    }
+  }
+  
+  rm(DTs, rows)
+  gc()
+  return(res)
+}
+
+#' setkeym (kb)
+#'
+#' @param DTo 
+#' @param keys 
+setkeym <- function(DTo, keys) {
+  
+  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
+  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
+    data.table::setDT(DTo)
+    data.table::setkeyv(DTo, keys)
+  }
+}
+
+
+
+#' @title is_not_empty
+#' @description Checks if a parameter value is not empty
+#' @param value The value to check
+#' @returns TRUE/FALSE
+#' @noRd
+is_not_empty <- function(value){
+  !is.null(value) && !is.na(value) && value != ""
+}
+
+#' @title is_empty
+#' @description Checks if a parameter value is empty
+#' @param value The value to check
+#' @returns TRUE/FALSE
+#' @noRd
+is_empty <- function(value){
+  is.null(value) || is.na(value) || value == "" 
+}
+
+
 #' FinnDesign (kb)
 #' 
 #' Brukes i lagkube og lagfilgruppe
 #'
 #' @param FIL 
 #' @param FGP 
-#' @param globs global parameters, defaults to SettGlobs
+#' @param parameters global parameters
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   if (identical(class(FIL), "data.frame")) {
     FIL <- data.table::data.table(FIL)
@@ -183,318 +326,4 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   setkeym(FIL, keyorg)
   gc()
   return(Design)
-}
-
-ht2 <- function(x, n = 3) {
-  # is_kh_debug()
-  
-  rbind(head(x, n), tail(x, n))
-}
-
-#' FinnFilGruppeFraKoblid (kb)
-#'
-#' @param koblid 
-#' @param globs global parameters, defaults to SettGlobs
-FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
-  # is_kh_debug()
-  
-  return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
-}
-
-#' SkrivKBLogg (kb)
-#'
-#' @param KB 
-#' @param type 
-#' @param filbesk 
-#' @param gruppe 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
-  # is_kh_debug()
-  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
-  sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
-}
-
-#' SVcloneRecord (kb)
-#'
-#' @param dbh 
-#' @param table 
-#' @param koblid 
-SVcloneRecord <- function(dbh, table, koblid) {
-  # is_kh_debug()
-  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
-  felt <- paste(design, collapse = ",")
-  feltm <- sub("SV", "'V' AS SV", felt)
-  sql <- paste(
-    "INSERT INTO ", table, "(", felt, ")",
-    "SELECT ", feltm, "FROM ", table,
-    "WHERE KOBLID=", koblid, "AND SV='S'"
-  )
-  sqlQuery(dbh, sql)
-}
-
-#' readRDS_KH (kb)
-#'
-#' @param file 
-#' @param IDKOLS 
-#' @param ... 
-readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
-  # is_kh_debug()
-  FIL <- readRDS(file, ...)
-  if (IDKOLS == FALSE) {
-    if ("KOBLID" %in% names(FIL)) {
-      FIL$KOBLID <- NULL
-    }
-    if ("ROW" %in% names(FIL)) {
-      FIL$ROW <- NULL
-    }
-  }
-  return(FIL)
-}
-
-#' TilFilLogg (kb)
-#'
-#' @param koblid 
-#' @param felt 
-#' @param verdi 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
-  # is_kh_debug()
-  # Sjekk om finnes rad for filid, eller lag ny
-  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
-    print("**************Hvorfor er jeg egentlig her?*********************'")
-    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
-    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
-    sqlQuery(globs$log, upd)
-  }
-  if (is.character(verdi)) {
-    verdi <- paste("'", verdi, "'", sep = "")
-    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
-  }
-  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
-  tmp <- sqlQuery(globs$log, upd)
-  # cat("********\n",tmp,"__________\n")
-}
-
-
-
-#' FinnFil (kb)
-#'
-#' @param FILID 
-#' @param versjonert 
-#' @param batch 
-#' @param ROLLE 
-#' @param TYP 
-#' @param IDKOLS 
-#' @param globs global parameters, defaults to SettGlobs
-FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = get_global_parameters()) {
-  FT <- data.frame()
-  if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
-    FT <- data.table::copy(BUFFER[[FILID]])
-    cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
-  } else {
-    if (!is.na(batch)) {
-      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"), paste0(FILID, "_", batch, ".rds"))
-    } else if (versjonert == TRUE) {
-      orgwd <- getwd()
-      path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"))
-      Filer <- unlist(list.files(path, include.dirs = FALSE, pattern = paste0("^", FILID, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.rds$")))
-      Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
-      if (length(Filer) > 0) {
-        filn <- file.path(path, Filer[order(Filer)][length(Filer)])
-        batch <- gsub(".*_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", "\\1", Filer[order(Filer)][length(Filer)])
-      } else {
-        filn <- file.path(path, paste0(FILID, ".rds"))
-      }
-    } else {
-      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(FILID, ".rds"))
-      print(filn)
-    }
-    if (file.access(filn, mode = 0) == -1) {
-      cat("KRITISK FEIL: ", filn, " finnes ikke\n")
-    } else if (file.access(filn, mode = 4) == -1) {
-      cat("KRITISK FEIL: ", filn, " finnes, men lar seg ikke lese\n")
-    } else {
-      FT <- readRDS_KH(filn, IDKOLS = IDKOLS)
-      cat("Lest inn ", ROLLE, "FIL ", FILID, " (", dim(FT)[1], " x ", dim(FT)[2], "), batch=", batch, "\n", sep = "")
-    }
-  }
-  return(list(FT = data.table::as.data.table(FT), batch = batch))
-}
-
-
-
-#' FinnFilT (kb)
-#'
-#' @param ... 
-FinnFilT <- function(filid) {
-  # is_kh_debug()
-  
-  return(FinnFil(filid, globs = globs)$FT)
-}
-
-## Try to handle problem with "memory exhausted (limit reached?)" the solution above
-#' expand.grid.df (ybk)
-#'
-#' @param ... 
-expand.grid.df <- function(...) {
-  # is_kh_debug()
-  
-  DFs <- list(...)
-  
-  ddt <- lapply(DFs, function(x) is(x, "data.table"))
-  dx <- which(ddt == 0)
-  
-  if (length(dx) > 0){
-    for (i in dx){
-      DFs[[i]] <- data.table::as.data.table(DFs[[i]])
-    }
-  }
-  
-  rows <- do.call(data.table::CJ, lapply(DFs, function(x) seq(nrow(x))))
-  
-  for (i in seq_along(DFs))
-    names(DFs)[i] <- paste0("data", i)
-  
-  DFlength <- length(DFs)
-  DFnames <- names(DFs)
-  
-  res <- DFs[[1L]][rows[[1L]]]
-  DFs[[1L]] <- NULL
-  for (i in seq_len(DFlength)[-1L]){
-    x <- DFnames[i]
-    res <- res[, c(.SD, DFs[[x]][rows[[i]]])]
-    DFs[[x]] <- NULL
-  }
-  
-  rm(DFs, rows)
-  gc()
-  data.table::setDT(res)
-}
-
-expand.grid.dt <- function(...){
-  DTs <- list(...)
-  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
-  for(i in seq_along(DTs)){
-    if(!is(DTs[[i]], "data.table")){
-      DTs[[i]] <- data.table::setDT(DTs[[i]])
-    }
-  }
-  
-  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
-  
-  for (i in seq_along(DTs)){
-    DTs[[i]] <- DTs[[i]][rows[[i]]]
-  }
-    
-  res <- DTs[[1L]]
-  if(length(DTs) > 1){
-    for(i in 2:length(DTs)){
-      res[, names(DTs[[i]]) := DTs[[i]]]
-    }
-  }
-  
-  rm(DTs, rows)
-  gc()
-  return(res)
-}
-
-#' setkeym (kb)
-#'
-#' @param DTo 
-#' @param keys 
-setkeym <- function(DTo, keys) {
-  # is_kh_debug()
-  
-  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
-  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
-    data.table::setDT(DTo)
-    data.table::setkeyv(DTo, keys)
-  }
-}
-
-#' @title usebranch
-#' @description
-#' use to test other branches, loads all functions from a specified branch
-usebranch <- function(branch){
-  rm(list = lsf.str(all.names = T))
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
-  KH_options()
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHpaths.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppefunctions.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppe.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkubefunctions.R"), encoding = "latin1")
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
-  # source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
-  cat("\nLoaded functions from branch: ", branch)
-}
-
-#' @title KH_options
-#' @description
-#' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
-#' option is different from the config-file, and give the option to update. 
-KH_options <- function(){
-  # Set global options
-  op <- options()
-  optOrg <- orgdata:::is_globs("khfunctions")
-  orgDT <- !(names(optOrg) %in% names(op))
-  if(any(orgDT)) options(optOrg[orgDT])
-  corrglobs <- orgdata:::is_correct_globs(optOrg)
-  if(!isTRUE(corrglobs)){
-    x <- utils::askYesNo("Options are not the same as in the config file, update options now?")
-    if(isTRUE(x)){
-      orgdata::update_globs("khfunctions")
-    }
-  }
-}
-
-FormatSqlBatchdate <- function(batchdate){
-  format(strptime(batchdate, "%Y-%m-%d-%H-%M"), "#%Y-%m-%d#")
-}
-
-#' @title usebranch
-#' @description
-#' use to test other branches, loads all functions from a specified branch
-use_branch <- function(branch, debug = FALSE){
-  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
-  # show_functions <<- debug
-  # show_arguments <<- debug
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
-  KH_options()
-  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
-  
-  rfiles <- list_files_github(branch = branch)
-  rfiles <- grep("KHmisc.R|KHglobs.R|KHsetup.R", rfiles, value = T, invert = T)
-  for(file in rfiles){
-    source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/", file), encoding = "latin1")
-  }
-  cat("\nLoaded functions from branch: ", branch)
-}
-
-list_files_github <- function(branch){
-  req <- httr2::request(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
-  response <- httr2::req_perform(req)
-  files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
-  files <- basename(grep("^R/", files, value = T))
-  return(files)
-}
-
-#' @title is_not_empty
-#' @description Checks if a parameter value is not empty
-#' @param value The value to check
-#' @returns TRUE/FALSE
-#' @noRd
-is_not_empty <- function(value){
-  !is.null(value) && !is.na(value) && value != ""
-}
-
-#' @title is_empty
-#' @description Checks if a parameter value is empty
-#' @param value The value to check
-#' @returns TRUE/FALSE
-#' @noRd
-is_empty <- function(value){
-  is.null(value) || is.na(value) || value == "" 
 }

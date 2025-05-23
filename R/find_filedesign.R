@@ -2,12 +2,19 @@
 #' @description
 #' Finds design parameters for a file
 #' 
-#' @param file filegroup
-#' @param fileparameters parameters from ACCESS 
+#' @param file file. If NULL, gets the file from BUFFER[[filename]]. 
+#' @param filename filegroup name
 #' @param parameters global parameters
-find_filedesign <- function(file, fileparameters = NULL, parameters){
-  if(is.null(fileparameters)) fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
-  if(!is(file, "data.table")) data.table::setDT(file)
+#'
+#' @keywords internal
+#' @noRd
+find_filedesign <- function(file = NULL, filename = NULL, parameters){
+  if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
+  fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
+  if(!is.null(filename)){
+    fileparameters <- parameters$fileinformation[[filename]]
+    if(is.null(file)) file <- .GlobalEnv$BUFFER[[filename]]
+  }
   designs <- list()
   args <- get_filedesign_args(parameters = parameters, columns_in_file = names(file))
   designs[["observed"]] <- unique(file[, mget(args$design_columns)])

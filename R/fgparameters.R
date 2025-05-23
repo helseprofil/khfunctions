@@ -2,32 +2,29 @@
 #' @description
 #' Helper function for `LagFilgruppe()`. 
 #' The function reads tables from ACCESS to get information on which files are used and how they need to be handled. 
-#' @param filegroup_name name of filgruppe
-#' @param batchdate date of current batch. Needed to filter out active parameters from ACCESS
-#' @param globs global parameters, defaults to SettGlobs
+#' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
-get_filegroup_parameters <- function(name, versjonert, dumps){
+get_filegroup_parameters <- function(user_args){
   cat("\n* Henter parametre")
   parameters <- get_global_parameters()
-  parameters[["filegroup_name"]] <- name
-  parameters[["versjonert"]] <- versjonert
-  parameters[["dumps"]] <- dumps
-  parameters[["filegroup_information"]] <- read_filgrupper_and_add_vals(filegroup_name = name, parameters = parameters)
-  parameters[["read_parameters"]] <- get_read_parameters(filegroup_name = name, validdates = parameters$validdates, globs = parameters)
+  parameters <- c(parameters, user_args)
+  parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
+  parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
-  parameters[["codebook"]] <- get_codebook(filegroup_name = name, validdates = parameters$validdates, globs = parameters)
+  parameters[["codebook"]] <- get_codebook(parameters = parameters)
   parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  globs[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+  parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
   return(c(parameters))
 }
 
 #' @noRd
-read_filgrupper_and_add_vals <- function(filegroup_name, parameters){
+read_filegroups_and_add_values <- function(filegroup_name = NULL, parameters){
+  if(is.null(filegroup_name)) filegroup_name <- parameters$filegroup_name
   FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup_name, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
-  isalderalle <- !is.na(FILGRUPPER$ALDER_ALLE)
+  isalderalle <- is_not_empty(FILGRUPPER$ALDER_ALLE)
   if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filegroup_name)
   if(isalderalle){
     alle_aldre <- as.integer(data.table::tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
@@ -58,10 +55,10 @@ read_filgrupper_and_add_vals <- function(filegroup_name, parameters){
 #' @description
 #' Reads and combine orginnleskobl, originalfiler, and filgrupper from ACCESS.
 #' @noRd
-get_read_parameters <- function(filegroup_name, validdates, globs){
-  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", filegroup_name, "'"), as.is = TRUE))
-  originalfiler <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", validdates)), as.is = TRUE))
-  innlesing <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", filegroup_name, "' AND ", validdates), as.is = TRUE))
+get_read_parameters <- function(parameters){
+  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", parameters$filegroup_name, "'"), as.is = TRUE))
+  originalfiler <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", parameters$validdates)), as.is = TRUE))
+  innlesing <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", parameters$filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
   out <- collapse::join(orginnleskobl, originalfiler, how = "i", on = "FILID", overid = 2, verbose = 0)
@@ -73,10 +70,10 @@ get_read_parameters <- function(filegroup_name, validdates, globs){
   return(out)
 }
 
-get_codebook <- function(filegroup_name, validdates, globs){
-  codebook <- data.table::setDT(RODBC::sqlQuery(globs$dbh, 
+get_codebook <- function(parameters){
+  codebook <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
                                                 paste0("SELECT FELTTYPE, DELID, TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE FILGRUPPE='", 
-                                                       filegroup_name, "' AND ", validdates), as.is = TRUE))
+                                                       parameters$filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
   codebook[is.na(ORGKODE), ORGKODE := ""]
   return(codebook)
 }

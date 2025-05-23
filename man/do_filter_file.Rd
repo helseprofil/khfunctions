@@ -4,14 +4,14 @@
 \alias{do_filter_file}
 \title{do_filter_file}
 \usage{
-do_filter_file(file, design, globs = SettGlobs())
+do_filter_file(file, design, parameters)
 }
 \arguments{
 \item{file}{}
 
 \item{design}{}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 do_filter_file

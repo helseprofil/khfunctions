@@ -245,7 +245,6 @@ LesMultiHead <- function(mhstr) {
   # Leser parameterstreng for multihead og gjoer om til relevante variable
   # Velger aa kalle paa denne funksjonen ved behov for samme inputstreng heller enn aa porssessere strengen en gang og sende bitene rundt
   # Finn evt angitt separator (trengs bare settes dersom det er snakk om en originalt pastet rad med annen seaprator enn "|"
-  # is_kh_debug()
   
   if (grepl("sep=\".\"", mhstr)) {
     sep <- sub(".*,sep=\"(.)\"", "\\1", mhstr)

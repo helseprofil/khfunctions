@@ -10,7 +10,7 @@ SkrivKBLogg(
   filbesk,
   gruppe,
   batchdate = SettKHBatchDate(),
-  globs = SettGlobs()
+  globs = get_global_parameters()
 )
 }
 \arguments{

@@ -6,7 +6,7 @@
 #' @param dt data to be processed 
 #' @param code code to be performed, either R or STATA
 #' @param batchdate batchdate, used to create filepaths for stata processing
-#' @param globs global parameters
+#' @param parameters global parameters
 do_special_handling <- function(dt, code, parameters){
   is_code <- !is.null(code) && !is.na(code) && code != ""
   if(!is_code) return(dt)
@@ -15,7 +15,7 @@ do_special_handling <- function(dt, code, parameters){
   
   if(is_stata){
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
-    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = parameters$batchdate, stata_exe = parameters$stata_exe)
+    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = parameters$batchdate, stata_exe = parameters$StataExe)
     return(dt)
   }
   

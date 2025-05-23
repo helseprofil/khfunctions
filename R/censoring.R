@@ -1,35 +1,48 @@
-do_censor_kube_r <- function(dt, parameters, globs){
+#' @title do_censor_kube_r
+#' @description
+#' old censoring routine, most censoring is now done in STATA
+#' @keywords internal
+#' @noRd
+do_censor_kube_r <- function(dt, parameters){
   if(is_not_empty(parameters$CUBEinformation$PRIKK_T)) dt <- do_censor_teller(dt = dt, limit = parameters$CUBEinformation$PRIKK_T)
   if(is_not_empty(parameters$CUBEinformation$PRIKK_N)) dt <- do_censor_nevner(dt = dt, limit = parameters$CUBEinformation$PRIKK_N)
-  if(is_not_empty(parameters$CUBEinformation$OVERKAT_ANO)) dt <- do_censor_secondary(dt = dt, parameters = parameters, globs = globs)
+  if(is_not_empty(parameters$CUBEinformation$OVERKAT_ANO)) dt <- do_censor_secondary(dt = dt, parameters = parameters)
   if(is_not_empty(parameters$CUBEinformation$STATTOL_T)) dt <- do_censor_statistical_tolerance(dt = dt, limit = parameters$CUBEinformation$STATTOL_T)
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 do_censor_teller <- function(dt, limit){
   cat("T-PRIKKER", dt[TELLER <= limit, .N], "rader\n")
   cat("N-T-PRIKKER", dt[TELLER > limit & NEVNER - TELLER <= limit, .N], "rader\n")
   dt[(TELLER <= limit & TELLER.f >= 0) | (NEVNER - TELLER <= limit & TELLER.f >= 0 & NEVNER.f >= 0), 
-     let(TELLER = NA, TELLER.f = 3, RATE = NA, RATE.f = 3)]
+     let(TELLER.f = 3, RATE.f = 3)]
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 do_censor_nevner <- function(dt, limit){
   cat("N-PRIKKER", dt[NEVNER <= limit, .N], "rader\n")
-  dt[NEVNER <=limit & NEVNER.f >= 0, let(TELLER = NA, TELLER.f = 3, RATE = NA, RATE.f = 3)]
+  dt[NEVNER <= limit & NEVNER.f >= 0, let(TELLER.f = 3, RATE.f = 3)]
   return(dt)
 }
 
-do_censor_secondary <- function(dt, parameters, globs){
-  # Naboprikking gir .f=4  slik at ikke slaar ut i HULL under
-  dt <- AnonymiserNaboer(FG = dt, 
-                         ovkatstr = parameters$CUBEinformation$OVERKAT_ANO, 
-                         FGP = parameters$fileinformation[[parameters$files$TELLER]], 
-                         ref_year_type = parameters$PredFilter$ref_year_type, 
-                         globs = globs)  
-  return(dt)
-}
+#' @keywords internal
+#' @noRd
+# do_censor_secondary <- function(dt, parameters){
+#   # Naboprikking gir .f=4  slik at ikke slaar ut i HULL under
+#   dt <- AnonymiserNaboer(FG = dt, 
+#                          ovkatstr = parameters$CUBEinformation$OVERKAT_ANO, 
+#                          FGP = parameters$fileinformation[[parameters$files$TELLER]], 
+#                          ref_year_type = parameters$PredFilter$ref_year_type, 
+#                          parameters = parameters)  
+#   return(dt)
+# }
 
+#' @keywords internal
+#' @noRd
 do_censor_statistical_tolerance <- function(dt, limit){
   dims <- setdiff(get_dimension_columns(names(dt)), c("AARl", "AARh")) 
   weak_limit <- getOption("khfunctions.anon_svakandel")
@@ -41,28 +54,25 @@ do_censor_statistical_tolerance <- function(dt, limit){
   dt[TELLER.f < 9, censor := ifelse(n_weak / n_year > weak_limit | n_missing / n_year > missing_limit, 1, 0)]
   
   cat("Skjuler", dt[censor == 1, .N], "rader (serieprikking og svake tidsserier)\n")
-  dt[censor == 1, let(TELLER = NA, TELLER.f = 3, RATE = NA, RATE.f = 3)]
+  dt[censor == 1, let(TELLER.f = 3, RATE.f = 3)]
   dt[, (helper_columns) := NULL]
   return(dt)
 }
 
-#' AnonymiserNaboer (kb)
-#' 
-#'
-#' @param FG 
-#' @param ovkatstr 
-#' @param FGP 
-#' @param ref_year_type 
-#' @param globs
-AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref_year_type = "Moving", globs = get_global_parameters()) {
-  # is_kh_debug()
-  FG <- data.table::copy(FG)
-  AoverkSpecs <- SettNaboAnoSpec(ovkatstr, FGP = FGP, globs = globs)
+#' @title do_censor_secondary
+#' @description Naboprikking gir .f=4  slik at ikke slaar ut i HULL under
+#' @param dt data
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+do_censor_secondary <- function(dt, parameters) {
+  FG <- data.table::copy(dt)
+  AoverkSpecs <- SettNaboAnoSpec(parameters = parameters)
   
   vals <- get_value_columns(names(FG))
   # FinnValKolsF funker ikke riktig!!!! Baade pga nye flag slik som fn9 og pga verdikolonner uten .f (MEISskala) etc
   # Maa utbedres gjennomgripende, men kan ikke gjoere dette naa derfor bare denne ad hoc loesninga
-  if (ref_year_type == "Moving") {
+  if (parameters$PredFilter$ref_year_type == "Moving") {
     alletabs <- setdiff(names(FG), get_value_columns(names(FG), full = TRUE))
   } else {
     alletabs <- intersect(c("GEO", "GEOniv", "FYLKE", "AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "TAB1", "TAB2", "UTDANN", "INNVKAT", "LANDBAK"), names(FG))
@@ -112,6 +122,62 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref
   return(FG)
 }
 
+#' SettNaboAnoSpec (kb)
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+SettNaboAnoSpec <- function(parameters) {
+  
+  ovkatspec <- parameters$CUBEinformation$OVERKAT_ANO 
+  FGP <- parameters$fileinformation[[parameters$files$TELLER]]
+  
+  Foverkat <- list()
+  if (is_not_empty(ovkatspec)) {
+    specs <- unlist(stringr::str_split(ovkatspec, ";"))
+    i <- 1
+    for (spec in specs) {
+      if (grepl("\\[(.*?)\\]=\\[.*\\]", spec)) {
+        subcond <- gsub("^\\[(.*?)\\]=\\[.*\\]", "\\1", spec)
+        subcond <- paste0("(", subcond, ")")
+        ovkatstr <- gsub("^\\[(.*?)\\]=\\[(.*)\\]", "\\2", spec)
+      } else {
+        subcond <- "TRUE"
+        ovkatstr <- spec
+      }
+      
+      overkat <- list()
+      ovkatstr <- gsub("([^=]+)=([^=]+)", "\\1==\\2", ovkatstr)
+      ovkatstr <- gsub("(.*)ALDER=='*ALLE'*(.*)", paste0("\\1", "ALDER==", FGP$amin, "_", FGP$amax, "\\2"), ovkatstr)
+      ovkatstr <- gsub("(.*)ALDER=='*(\\d+)_('| )(.*)", paste0("\\1", "ALDER==\\2_", FGP$amax, "\\3\\4"), ovkatstr)
+      for (del in names(parameters$DefDesign$DelKolN)) {
+        delN <- parameters$DefDesign$DelKolN[del]
+        if (parameters$DefDesign$DelType[del] == "COL") {
+          if (grepl(paste0("(^|\\&) *", delN, " *== *'*(.*?)'* *(\\&|$)"), ovkatstr)) {
+            over <- gsub(paste0(".*(^|\\&) *(", delN, " *== *'*.*?'*) *(\\&|$).*"), "\\2", ovkatstr)
+            overkat[[del]] <- list(over = over, kols = delN)
+          }
+        } else if (parameters$DefDesign$DelType[del] == "INT") {
+          if (grepl(paste0("(^|\\&) *", delN, "l *== *'*(.*?)'* *($|\\&)"), ovkatstr) &&
+              grepl(paste0("(^|\\&) *", delN, "h *== *'*(.*?)'* *($|\\&)"), ovkatstr)) {
+            overl <- gsub(paste0(".*(^|\\&) *(", delN, "l *== *'*.*?)'* *($|\\&).*"), "\\2", ovkatstr)
+            overh <- gsub(paste0(".*(^|\\&) *(", delN, "h *== *'*.*?)'* *($|\\&).*"), "\\2", ovkatstr)
+            overkat[[del]] <- list(over = paste(overl, overh, sep = " & "), kols = paste0(delN, c("l", "h")))
+          } else if (grepl(paste0("(^|\\&) *", delN, " *== *'*(.*?)'* *($|\\&)"), ovkatstr)) {
+            intval <- unlist(stringr::str_split(gsub(paste0("(^|.*\\&) *", delN, " *== *'*(.*?)'* *($|\\&.*)"), "\\2", ovkatstr), "_"))
+            if (length(intval) == 1) {
+              intval <- c(intval, intval)
+            }
+            over <- paste0(paste0(delN, "l"), "==", intval[1], " & ", paste0(delN, "h"), "==", intval[2])
+            overkat[[del]] <- list(over = over, kols = paste0(delN, c("l", "h")))
+          }
+        }
+      }
+      Foverkat[[i]] <- list(subcond = subcond, overkat = overkat)
+      i <- i + 1
+    }
+  }
+  return(Foverkat)
+}
 
 #' @title do_stata_censoring
 #' @description
@@ -119,13 +185,13 @@ AnonymiserNaboer <- function(FG, ovkatstr, FGP = list(amin = 0, amax = 120), ref
 #' If Stata_PRIKK parameters are set, the STATA censoring script (by Jørgen Meisfjord) 
 #' is run using the do_stata_processing function
 #' @param dt data file to be censored
-#' @param spc KUBE spec
-#' @param batchdate batchdate, to be used for temporary files
-#' @param stata_exe path to STATA program
-do_stata_censoring <- function(dt, spc, batchdate, stata_exe){
+#' @param parameters cube parameters
+#' @keywords internal
+#' @noRd
+do_stata_censoring <- function(dt, parameters){
   stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
   RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  spc <- data.table::as.data.table(spc)[, mget(c(stataVar, RprikkVar))]
+  spc <- data.table::as.data.table(parameters$CUBEinformation)[, .SD, .SDcols = c(stataVar, RprikkVar)]
   s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
   r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
   check_if_only_r_or_stata_prikk(r = r_prikk, s = s_prikk)
@@ -133,15 +199,19 @@ do_stata_censoring <- function(dt, spc, batchdate, stata_exe){
   
   sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
   synt <- paste0('include "', sfile, '"')
-  dt <- do_stata_processing(TABLE = dt, script = synt, batchdate = batchdate, stata_exe = stata_exe)
+  dt <- do_stata_processing(TABLE = dt, script = synt, batchdate = parameters$batchdate, stata_exe = parameters$StataExe)
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 check_if_only_r_or_stata_prikk <- function(r, s){
   if (r > 0 & s > 0) stop("You can't prikk for both R and Stata way. Choose either one!")
   invisible()
 }
 
+#' @keywords internal
+#' @noRd
 get_col <- function(var, num = TRUE){
   if(is.na(var) || var == "") var <- NA
   if(num) var <- var_num(var)
@@ -149,9 +219,50 @@ get_col <- function(var, num = TRUE){
   return(var)
 }
 
+#' @keywords internal
+#' @noRd
 var_num <- function(x){
   if(!is.numeric(x)) x <- NA
   return(x)
+}
+
+#' @keywords internal
+#' @noRd
+get_geonaboprikk_triangles <- function(){
+  data.table::data.table("Stata_naboprGeo_LF" = paste0("niva1", getOption("khfunctions.geoprikk")$LF),
+                         "Stata_naboprGeo_FK" = paste0("niva2", getOption("khfunctions.geoprikk")$FK),
+                         "Stata_naboprGeo_KB" = paste0("niva3", getOption("khfunctions.geoprikk")$KB))
+}
+
+#' @title save_kubespec_csv (ybk)
+#' @description Saves ACCESS specs + list of dimensions to be used in STATA censoring
+#' @keywords internal
+#' @noRd
+save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
+  rootDir <- file.path(fs::path_home(), "helseprofil")
+  if (!fs::dir_exists(rootDir))
+    fs::dir_create(rootDir)
+  
+  specDF <- data.table::as.data.table(spec)
+  varStata <- grep("^Stata", names(specDF), value = TRUE)
+  varSpec <- c("KUBE_NAVN", varStata)
+  varDF <- specDF[, .SD, .SDcols = varSpec]
+  if(!is.null(dims)) varDF[, DIMS := list(dims)]
+  if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
+  if(!is.null(geoprikktriangel)) varDF[, names(geoprikktriangel) := geoprikktriangel]
+  fileSpec <- file.path(rootDir, "kubespec.csv")
+  data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
+  return(invisible(specDF))
+}
+
+#' find_dims (vl)
+#' 
+#' Helper function for kube_spec, finding dimensions in KUBE
+#' @keywords internal
+#' @noRd
+find_dims_for_stataprikk <- function(dt, etabs){
+  alldims <- c(getOption("khfunctions.khtabs"), etabs$tabnames)
+  alldims[alldims %in% names(dt)]
 }
 
 #' @title do_remove_censored_observations
@@ -161,6 +272,7 @@ var_num <- function(x){
 #' Først beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
 #' Dette er unoedvendig kronglete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1. 
 #' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
+#' @keywords internal
 #' @noRd
 do_remove_censored_observations <- function(dt, outvalues){
   valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")

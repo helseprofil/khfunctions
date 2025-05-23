@@ -4,14 +4,10 @@
 \alias{get_cubeparameters}
 \title{get_cubeparameters}
 \usage{
-get_cubeparameters(KUBEid, batchdate = SettKHBatchDate(), globs = SettGlobs())
+get_cubeparameters(user_args = list())
 }
 \arguments{
-\item{KUBEid}{name of cube}
-
-\item{batchdate}{date of current cube batch. Needed to filter out active parameters from ACCESS}
-
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{args}{arguments passed to LagKUBE}
 }
 \value{
 A list of relevant parameters

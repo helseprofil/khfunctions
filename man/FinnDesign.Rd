@@ -4,14 +4,14 @@
 \alias{FinnDesign}
 \title{FinnDesign (kb)}
 \usage{
-FinnDesign(FIL, FGP = list(amin = 0, amax = 120), globs = SettGlobs())
+FinnDesign(FIL, FGP = list(amin = 0, amax = 120), parameters)
 }
 \arguments{
 \item{FIL}{}
 
 \item{FGP}{}
 
-\item{globs}{global parameters, defaults to SettGlobs}
+\item{parameters}{global parameters}
 }
 \description{
 Brukes i lagkube og lagfilgruppe

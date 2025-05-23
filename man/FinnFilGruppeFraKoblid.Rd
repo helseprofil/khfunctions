@@ -4,7 +4,7 @@
 \alias{FinnFilGruppeFraKoblid}
 \title{FinnFilGruppeFraKoblid (kb)}
 \usage{
-FinnFilGruppeFraKoblid(koblid, globs = SettGlobs())
+FinnFilGruppeFraKoblid(koblid, globs = get_global_parameters())
 }
 \arguments{
 \item{koblid}{}
