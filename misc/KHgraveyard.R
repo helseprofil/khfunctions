@@ -3623,3 +3623,40 @@ SettFilterDesign <- function(KUBEdscr, OrgParts = list(), FGP = list(amin = 0, a
   }
   return(Deler)
 }
+
+#' @title LeggTilNyeVerdiKolonner (kb)
+#' FIKS DENNE
+#' @noRd
+LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, postMA = FALSE) {
+  TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
+  data.table::setDT(TNF)
+  valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
+  # get_value_columns(names(TNF))
+  if (!(is.na(NYEdscr) | NYEdscr == "")) {
+    for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
+      nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
+      expr <- gsub("^(.*?)=(.*)$", "\\2", nycolexpr)
+      invKols <- valKols[sapply(valKols, FUN = function(x) {
+        grepl(x, expr)
+      })]
+      eval(parse(text = paste(
+        "TNF[,c(\"", paste(nycol, c("", ".f", ".a"), collapse = "\",\"", sep = ""), "\")
+      :=list(", expr, ",pmax(", paste(invKols, ".f", collapse = ",", sep = ""), "),
+                      pmax(", paste(invKols, ".a", collapse = ",", sep = ""), "))]",
+        sep = ""
+      )))
+      if (postMA == TRUE) {
+        eval(parse(text = paste(
+          "TNF[,c(\"", paste(nycol, c(".n", ".fn1", ".fn3", ".fn9"), collapse = "\",\"", sep = ""), "\")
+        :=list(1,0,0,0)]",
+          sep = ""
+        )))
+      }
+      eval(parse(text = paste("suppressWarnings(",
+                              "TNF[", nycol, "%in% c(Inf,NaN,NA),c(\"", paste(nycol, c("", ".f"), collapse = "\",\"", sep = ""), "\"):=list(NA,2)])",
+                              sep = ""
+      )))
+    }
+  }
+  return(TNF)
+}

@@ -71,7 +71,6 @@ do_filter_columns <- function(file, filter){
 #' If filefilter is defined, the file is formatted accordingly
 #' @noRd
 load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
-  
   filefilter <- parameters$FILFILTRE[FILVERSJON == filegroup]
   isfilefilter <- nrow(filefilter) > 0
   alderfilter <- set_filter_age(parameters = parameters)
@@ -96,7 +95,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     
     isnyekolkolprerad <- grepl("\\S", filefilter$NYEKOL_KOL_preRAD)
     # TODO: optimalisere leggtilnyeverdikolonner
-    if(isnyekolkolprerad) FIL <- LeggTilNyeVerdiKolonner(FIL, filefilter$NYEKOL_KOL_preRAD)
+    if(isnyekolkolprerad) add_new_value_columns(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
     
     # TODO: optimalisere finnredesign (find_redesign) og OmkodFil (recode_file)
     Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, parameters = parameters)
@@ -297,41 +296,31 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
   return(file)
 }  
 
-#' @title LeggTilNyeVerdiKolonner (kb)
-#' FIKS DENNE
+#' @title add_new_value_columns
+#' @description adds new value columns from a set of formulas by reference
+#' @param post_moving_average if used after aggregating to moving average, additional columns should be generated.
+#' @keywords internal
 #' @noRd
-LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, postMA = FALSE) {
-  TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
-  data.table::setDT(TNF)
-  valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
-  # get_value_columns(names(TNF))
-  if (!(is.na(NYEdscr) | NYEdscr == "")) {
-    for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
-      nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
-      expr <- gsub("^(.*?)=(.*)$", "\\2", nycolexpr)
-      invKols <- valKols[sapply(valKols, FUN = function(x) {
-        grepl(x, expr)
-      })]
-      eval(parse(text = paste(
-        "TNF[,c(\"", paste(nycol, c("", ".f", ".a"), collapse = "\",\"", sep = ""), "\")
-      :=list(", expr, ",pmax(", paste(invKols, ".f", collapse = ",", sep = ""), "),
-                      pmax(", paste(invKols, ".a", collapse = ",", sep = ""), "))]",
-        sep = ""
-      )))
-      if (postMA == TRUE) {
-        eval(parse(text = paste(
-          "TNF[,c(\"", paste(nycol, c(".n", ".fn1", ".fn3", ".fn9"), collapse = "\",\"", sep = ""), "\")
-        :=list(1,0,0,0)]",
-          sep = ""
-        )))
-      }
-      eval(parse(text = paste("suppressWarnings(",
-                              "TNF[", nycol, "%in% c(Inf,NaN,NA),c(\"", paste(nycol, c("", ".f"), collapse = "\",\"", sep = ""), "\"):=list(NA,2)])",
-                              sep = ""
-      )))
+add_new_value_columns <- function(dt, formulas, post_moving_average = FALSE){
+  if(is_empty(formula)) return(dt)
+  values <- get_value_columns(names(dt))
+  formulas <- trimws(unlist(strsplit(formulas, ";")))
+  for(f in formulas){
+    name <-  gsub("^(.*?)=(.*)$", "\\1", f)
+    formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
+    included_columns <- character()
+    for(col in values){
+      if(grepl(col, formula)) included_columns <- c(included_columns, col)
     }
+    dt[, (name) := eval(rlang::parse_expr(formula))]
+    dt[, paste0(name, ".f") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".f")]
+    dt[, paste0(name, ".a") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".a")]
+
+    if(post_moving_average){
+      dt[, (paste0(name, c(".n", ".fn1", ".fn3", ".fn9"))) := list(1,0,0,0)]
+    }  
+    dt[is.na(get(name)) | is.infinite(get(name)) | is.nan(get(name)), (paste0(name, c("", ".f"))) := list(NA, 2)]
   }
-  return(TNF)
 }
 
 #' @title set_recode_filter_filfiltre

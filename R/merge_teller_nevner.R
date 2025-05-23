@@ -64,7 +64,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   isNYEKOL_RAD <- !is.na(parameters$TNPinformation$NYEKOL_RAD) && parameters$TNPinformation$NYEKOL_RAD != ""
   if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- !is.na(parameters$TNPinformation$NYEKOL_KOL) && parameters$TNPinformation$NYEKOL_KOL != ""
-  if(isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, parameters$TNPinformation$NYEKOL_KOL)
+  if(isNYEKOL_KOL) add_new_value_columns(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
