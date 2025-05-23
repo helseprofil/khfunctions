@@ -1,3 +1,21 @@
+#' @title write_filegroup_output
+#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
+#' @param outfile filgruppe
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+write_filegroup_output <- function(outfile, parameters){
+  if(!parameters$write) return(invisible(NULL))
+  cat("SAVING OUTPUT FILES:\n")
+  root <- getOption("khfunctions.root")
+  nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$filegroup_name, ".rds"))
+  datert <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(parameters$filegroup_name, "_", parameters$batchdate, ".rds"))
+  saveRDS(outfile, file = nyeste)
+  cat("\n", nyeste)
+  file.copy(from = nyeste, to = datert)
+  cat("\n", datert)
+}
+
 #' @title write_cube_output
 #' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
 #' @param outputlist list of output to write
@@ -91,22 +109,24 @@ melt_access_spec <- function(dscr, name = NULL){
   data.table::setcolorder(d, "Tabell")
 }
 
-#' @title write_filegroup_output
-#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
-#' @param outfile filgruppe
-#' @param parameters global parameters
+#' @title DumpTabell
+#' To save file dumps
 #' @keywords internal
 #' @noRd
-write_filegroup_output <- function(outfile, parameters){
-  if(!parameters$write) return(invisible(NULL))
-  cat("SAVING OUTPUT FILES:\n")
-  root <- getOption("khfunctions.root")
-  nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$filegroup_name, ".rds"))
-  datert <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(parameters$filegroup_name, "_", parameters$batchdate, ".rds"))
-  saveRDS(outfile, file = nyeste)
-  cat("\n", nyeste)
-  file.copy(from = nyeste, to = datert)
-  cat("\n", datert)
+DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
+  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
+  for(fmt in format){
+    if (fmt == "CSV") {
+      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
+    } else if (fmt == "R") {
+      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
+      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
+    } else if (fmt == "STATA") {
+      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
+      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+    }
+  }
 }
-
   

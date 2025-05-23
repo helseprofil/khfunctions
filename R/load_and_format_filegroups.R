@@ -249,38 +249,6 @@ do_aggregate_file <- function(file, valsumbardef = list()){
   return(aggfile)
 }
 
-#' @title set_implicit_null_after_merge (kb)
-#' @description
-#' Fixing implicit 0 occurring after merging, using information from VALXmiss in access. 
-#' Previous name SettMergeNAs
-#' @noRd
-set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
-  cat("\n*** Håndterer implisitte nuller\n")
-  vals <- get_value_columns(names(file))
-  
-  for (val in vals) {
-    if (val %in% names(implicitnull_defs)) {
-      VALmiss <- implicitnull_defs[[val]]$miss
-      replacemissing <- list()
-      if(VALmiss == "..") replacemissing <- list(0, 1, 1)
-      if(VALmiss == ".") replacemissing <- list(0, 2, 1)
-      if(VALmiss == ":") replacemissing <- list(0, 3, 1)
-      if(!grepl("\\D", VALmiss)) replacemissing <- list(as.numeric(VALmiss), 0, 1)
-      if(length(replacemissing) == 0) stop(val, " listed in VALXnavn, but VALXmiss is not '..', '.', ':', or numeric")
-    } else {
-      replacemissing <- list(0, 0, 1)
-    }
-    
-    valF <- paste0(val, ".f")
-    valA <- paste0(val, ".a")
-    missingrows <- which((is.na(file[[val]]) & file[[valF]] == 0) | is.na(file[[valF]]))
-    n_missing <- length(missingrows)
-    if(n_missing > 0) cat(" - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader\n")
-    file[missingrows, names(.SD) := replacemissing, .SDcols = c(val, valF, valA)]
-  }
-  return(file)
-}
-
 #' @title do_filfiltre_kollapsdeler
 #' @description 
 #' collapses file according to the KOLLAPSdeler column in table FILFILTRE
@@ -302,7 +270,7 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
 #' @keywords internal
 #' @noRd
 add_new_value_columns <- function(dt, formulas, post_moving_average = FALSE){
-  if(is_empty(formula)) return(dt)
+  if(is_empty(formula)) return(invisible(NULL))
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){

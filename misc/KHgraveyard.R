@@ -3660,3 +3660,135 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, postMA = FALSE) {
   }
   return(TNF)
 }
+
+#' FinnDesign (kb)
+#' 
+#' Brukes i lagkube og lagfilgruppe
+#'
+#' @param FIL 
+#' @param FGP 
+#' @param parameters global parameters
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
+  if (identical(class(FIL), "data.frame")) {
+    FIL <- data.table::data.table(FIL)
+  }
+  keyorg <- data.table::key(FIL)
+  DelKols <- parameters$DefDesign$DelKols
+  UBeting <- parameters$DefDesign$UBeting
+  BetingOmk <- parameters$DefDesign$BetingOmk
+  BetingF <- parameters$DefDesign$BetingF
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
+  
+  Design <- list()
+  Design[["KolNavn"]] <- names(FIL)
+  # Finn faktisk design
+  setkeym(FIL, c(DesignKols))
+  ObsDesign <- unique(FIL[, ..DesignKols])
+  
+  # Finn deler inneholdt i tabell
+  Deler <- character()
+  for (del in names(DelKols)) {
+    if (all(DelKols[[del]] %in% DesignKols)) {
+      Deler <- c(Deler, del)
+    }
+  }
+  
+  # Sett omkodingskombinasjoner
+  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
+  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
+  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
+  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
+  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
+  
+  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
+  for (del in Deler) {
+    kols <- DelKols[[del]]
+    data.table::setkeyv(ObsDesign, kols)
+    # SETT HAR
+    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+  }
+  
+  # Fyll evt hull i aldersintervaller
+  if ("A" %in% names(Design$Part)) {
+    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    if (nrow(mangler) > 0) {
+      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
+      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
+    }
+  }
+  
+  # Finn fullt design, dvs kryssing av alle partielle.
+  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
+  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FullDesign, names(ObsDesign))
+  # Sett HAR=1 om denne finnes i fakttisk design
+  FullDesign[, HAR := 0]
+  FullDesign[ObsDesign, HAR := 1]
+  Design[["Design"]] <- FullDesign
+  
+  # Sett omkodingskombinasjone
+  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
+  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
+  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
+  komb <- Design[["UBeting"]]
+  for (del in Beting) {
+    if (del != "") {
+      komb <- c(Design[["UBeting"]], del)
+    }
+    if (length(komb) > 0) {
+      kols <- character(0)
+      for (k in komb) {
+        kols <- c(kols, DelKols[[k]])
+      }
+      data.table::setkeyv(ObsDesign, kols)
+      data.table::setkeyv(FullDesign, kols)
+      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
+      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
+      kombFull[, HAR := 0]
+      kombFull[kombObs, HAR := 1]
+      kombn <- paste("bet", del, sep = "")
+      Design[["SKombs"]][[kombn]] <- kombFull
+    }
+  }
+  
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FIL, keyorg)
+  gc()
+  return(Design)
+}
+
+#' readRDS_KH (kb)
+#'
+#' @param file 
+#' @param IDKOLS 
+#' @param ... 
+readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
+  FIL <- readRDS(file, ...)
+  if (IDKOLS == FALSE) {
+    if ("KOBLID" %in% names(FIL)) {
+      FIL$KOBLID <- NULL
+    }
+    if ("ROW" %in% names(FIL)) {
+      FIL$ROW <- NULL
+    }
+  }
+  return(FIL)
+}
+
+#' setkeym (kb)
+#'
+#' @param DTo 
+#' @param keys 
+setkeym <- function(DTo, keys) {
+  
+  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
+  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
+    data.table::setDT(DTo)
+    data.table::setkeyv(DTo, keys)
+  }
+}

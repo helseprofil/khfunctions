@@ -1,5 +1,67 @@
 # Helper functions used in the data processing, both in LagKUBE and LagFilgruppe
 
+#' @title expand.grid.dt
+#' @description Takes a list of data.tables and generate a data.table with all combinations
+#' @keywords internal
+#' @noRd
+expand.grid.dt <- function(...){
+  DTs <- list(...)
+  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
+  for(i in seq_along(DTs)){
+    if(!is(DTs[[i]], "data.table")) DTs[[i]] <- data.table::setDT(DTs[[i]])
+  }
+  
+  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
+  
+  for(i in seq_along(DTs)) DTs[[i]] <- DTs[[i]][rows[[i]]]
+  
+  res <- DTs[[1L]]
+  if(length(DTs) > 1){
+    for(i in 2:length(DTs)){
+      res[, names(DTs[[i]]) := DTs[[i]]]
+    }
+  }
+  
+  rm(DTs, rows)
+  invisible(gc())
+  return(res)
+}
+
+#' @title set_implicit_null_after_merge (kb)
+#' @description
+#' Fixing implicit 0 occurring after merging, using information from VALXmiss in access. 
+#' Previous name SettMergeNAs
+#' @keywords internal
+#' @noRd
+set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
+  cat("\n*** Håndterer implisitte nuller\n")
+  vals <- get_value_columns(names(file))
+  
+  for (val in vals) {
+    if (val %in% names(implicitnull_defs)) {
+      VALmiss <- implicitnull_defs[[val]]$miss
+      replacemissing <- list()
+      if(VALmiss == "..") replacemissing <- list(0, 1, 1)
+      if(VALmiss == ".") replacemissing <- list(0, 2, 1)
+      if(VALmiss == ":") replacemissing <- list(0, 3, 1)
+      if(!grepl("\\D", VALmiss)) replacemissing <- list(as.numeric(VALmiss), 0, 1)
+      if(length(replacemissing) == 0) stop(val, " listed in VALXnavn, but VALXmiss is not '..', '.', ':', or numeric")
+    } else {
+      replacemissing <- list(0, 0, 1)
+    }
+    
+    valF <- paste0(val, ".f")
+    valA <- paste0(val, ".a")
+    missingrows <- which((is.na(file[[val]]) & file[[valF]] == 0) | is.na(file[[valF]]))
+    n_missing <- length(missingrows)
+    if(n_missing > 0) cat(" - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader\n")
+    file[missingrows, names(.SD) := replacemissing, .SDcols = c(val, valF, valA)]
+  }
+  return(file)
+}
+
+
+## OLD, to be replaced or killed ----
 
 #' KHerr (kb)
 KHerr <- function(error) {
@@ -8,46 +70,6 @@ KHerr <- function(error) {
     "*KHFEIL!! ", error, "\n***************************************************************************\n"
   )
 }
-
-#' @title DumpTabell
-#' To save file dumps
-#' @keywords internal
-#' @noRd
-DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
-  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
-  for(fmt in format){
-    if (fmt == "CSV") {
-      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
-    } else if (fmt == "R") {
-      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
-      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
-    } else if (fmt == "STATA") {
-      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
-      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
-      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
-    }
-  }
-}
-
-#' @title get_value_columns
-get_value_columns <- function(columnnames, full = FALSE) {
-  valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
-  valcols <- gsub("\\.f$", "", valcols)
-  if(full) valcols <- paste0(rep(valcols, each = 7), c("", ".f", ".a", ".n", ".fn1", ".fn3", ".fn9"))
-  return(intersect(columnnames, valcols))
-}
-
-#' @title get_dimension_columns
-get_dimension_columns <- function(columnnames) {
-  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
-  return(setdiff(columnnames, nodim))
-}
-
-get_tab_columns <- function(columnnames){
-  grep("^TAB\\d+$", columnnames, value = T)
-}
-
 
 #' FinnFilGruppeFraKoblid (kb)
 #'
@@ -85,24 +107,6 @@ SVcloneRecord <- function(dbh, table, koblid) {
     "WHERE KOBLID=", koblid, "AND SV='S'"
   )
   sqlQuery(dbh, sql)
-}
-
-#' readRDS_KH (kb)
-#'
-#' @param file 
-#' @param IDKOLS 
-#' @param ... 
-readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
-  FIL <- readRDS(file, ...)
-  if (IDKOLS == FALSE) {
-    if ("KOBLID" %in% names(FIL)) {
-      FIL$KOBLID <- NULL
-    }
-    if ("ROW" %in% names(FIL)) {
-      FIL$ROW <- NULL
-    }
-  }
-  return(FIL)
 }
 
 #' TilFilLogg (kb)
@@ -164,166 +168,4 @@ expand.grid.df <- function(...) {
   rm(DFs, rows)
   gc()
   data.table::setDT(res)
-}
-
-expand.grid.dt <- function(...){
-  DTs <- list(...)
-  if(length(DTs) == 0) stop("No tables (empty list) passed to expand.grid.dt")
-  for(i in seq_along(DTs)){
-    if(!is(DTs[[i]], "data.table")){
-      DTs[[i]] <- data.table::setDT(DTs[[i]])
-    }
-  }
-  
-  rows <- do.call(data.table::CJ, lapply(DTs, function(x) seq(nrow(x))))
-  
-  for (i in seq_along(DTs)){
-    DTs[[i]] <- DTs[[i]][rows[[i]]]
-  }
-    
-  res <- DTs[[1L]]
-  if(length(DTs) > 1){
-    for(i in 2:length(DTs)){
-      res[, names(DTs[[i]]) := DTs[[i]]]
-    }
-  }
-  
-  rm(DTs, rows)
-  gc()
-  return(res)
-}
-
-#' setkeym (kb)
-#'
-#' @param DTo 
-#' @param keys 
-setkeym <- function(DTo, keys) {
-  
-  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
-  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
-    data.table::setDT(DTo)
-    data.table::setkeyv(DTo, keys)
-  }
-}
-
-
-
-#' @title is_not_empty
-#' @description Checks if a parameter value is not empty
-#' @param value The value to check
-#' @returns TRUE/FALSE
-#' @noRd
-is_not_empty <- function(value){
-  !is.null(value) && !is.na(value) && value != ""
-}
-
-#' @title is_empty
-#' @description Checks if a parameter value is empty
-#' @param value The value to check
-#' @returns TRUE/FALSE
-#' @noRd
-is_empty <- function(value){
-  is.null(value) || is.na(value) || value == "" 
-}
-
-
-#' FinnDesign (kb)
-#' 
-#' Brukes i lagkube og lagfilgruppe
-#'
-#' @param FIL 
-#' @param FGP 
-#' @param parameters global parameters
-FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
-  if (identical(class(FIL), "data.frame")) {
-    FIL <- data.table::data.table(FIL)
-  }
-  keyorg <- data.table::key(FIL)
-  DelKols <- parameters$DefDesign$DelKols
-  UBeting <- parameters$DefDesign$UBeting
-  BetingOmk <- parameters$DefDesign$BetingOmk
-  BetingF <- parameters$DefDesign$BetingF
-  
-  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
-  
-  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
-  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
-  
-  Design <- list()
-  Design[["KolNavn"]] <- names(FIL)
-  # Finn faktisk design
-  setkeym(FIL, c(DesignKols))
-  ObsDesign <- unique(FIL[, ..DesignKols])
-  
-  # Finn deler inneholdt i tabell
-  Deler <- character()
-  for (del in names(DelKols)) {
-    if (all(DelKols[[del]] %in% DesignKols)) {
-      Deler <- c(Deler, del)
-    }
-  }
-  
-  # Sett omkodingskombinasjoner
-  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
-  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
-  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
-  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
-  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
-  
-  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
-  for (del in Deler) {
-    kols <- DelKols[[del]]
-    data.table::setkeyv(ObsDesign, kols)
-    # SETT HAR
-    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
-  }
-  
-  # Fyll evt hull i aldersintervaller
-  if ("A" %in% names(Design$Part)) {
-    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
-    if (nrow(mangler) > 0) {
-      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
-      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
-    }
-  }
-  
-  # Finn fullt design, dvs kryssing av alle partielle.
-  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
-  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
-  setkeym(ObsDesign, names(ObsDesign))
-  setkeym(FullDesign, names(ObsDesign))
-  # Sett HAR=1 om denne finnes i fakttisk design
-  FullDesign[, HAR := 0]
-  FullDesign[ObsDesign, HAR := 1]
-  Design[["Design"]] <- FullDesign
-  
-  # Sett omkodingskombinasjone
-  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
-  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
-  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
-  komb <- Design[["UBeting"]]
-  for (del in Beting) {
-    if (del != "") {
-      komb <- c(Design[["UBeting"]], del)
-    }
-    if (length(komb) > 0) {
-      kols <- character(0)
-      for (k in komb) {
-        kols <- c(kols, DelKols[[k]])
-      }
-      data.table::setkeyv(ObsDesign, kols)
-      data.table::setkeyv(FullDesign, kols)
-      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
-      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
-      kombFull[, HAR := 0]
-      kombFull[kombObs, HAR := 1]
-      kombn <- paste("bet", del, sep = "")
-      Design[["SKombs"]][[kombn]] <- kombFull
-    }
-  }
-  
-  setkeym(ObsDesign, names(ObsDesign))
-  setkeym(FIL, keyorg)
-  gc()
-  return(Design)
 }
