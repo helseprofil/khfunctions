@@ -1,3 +1,27 @@
+do_censor_cube <- function(dt, parameters){
+  save_filedump_if_requested(dumpname = "PRIKKpre", dt = KUBE, parameters = parameters)
+  on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = KUBE, parameters = parameters)}, add = TRUE)
+  
+  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
+  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
+  spc <- data.table::as.data.table(parameters$CUBEinformation)[, .SD, .SDcols = c(stataVar, RprikkVar)]
+  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
+  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
+  check_if_only_r_or_stata_prikk(r = r_prikk, s = s_prikk)
+  
+  if(r_prikk > 0){
+    cat("\n* Prikker data (R-prikking)")
+    dt <- do_censor_kube_r(dt = dt, parameters = parameters)
+  }
+  if(s_prikk > 0){
+    cat("\n* Prikker data (STATA-prikking)")
+    dims <- find_dims_for_stataprikk(dt = dt, etabs = etabs)
+    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+    dt <- do_stata_censoring(dt = dt, parameters = parameters)
+  }
+  return(dt)
+}
+
 #' @title do_censor_kube_r
 #' @description
 #' old censoring routine, most censoring is now done in STATA
@@ -28,18 +52,6 @@ do_censor_nevner <- function(dt, limit){
   dt[NEVNER <= limit & NEVNER.f >= 0, let(TELLER.f = 3, RATE.f = 3)]
   return(dt)
 }
-
-#' @keywords internal
-#' @noRd
-# do_censor_secondary <- function(dt, parameters){
-#   # Naboprikking gir .f=4  slik at ikke slaar ut i HULL under
-#   dt <- AnonymiserNaboer(FG = dt, 
-#                          ovkatstr = parameters$CUBEinformation$OVERKAT_ANO, 
-#                          FGP = parameters$fileinformation[[parameters$files$TELLER]], 
-#                          ref_year_type = parameters$PredFilter$ref_year_type, 
-#                          parameters = parameters)  
-#   return(dt)
-# }
 
 #' @keywords internal
 #' @noRd
@@ -189,14 +201,6 @@ SettNaboAnoSpec <- function(parameters) {
 #' @keywords internal
 #' @noRd
 do_stata_censoring <- function(dt, parameters){
-  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  spc <- data.table::as.data.table(parameters$CUBEinformation)[, .SD, .SDcols = c(stataVar, RprikkVar)]
-  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
-  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
-  check_if_only_r_or_stata_prikk(r = r_prikk, s = s_prikk)
-  if(s_prikk == 0) return(dt)
-  
   sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
   synt <- paste0('include "', sfile, '"')
   dt <- do_stata_processing(TABLE = dt, script = synt, batchdate = parameters$batchdate, stata_exe = parameters$StataExe)
