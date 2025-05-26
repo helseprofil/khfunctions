@@ -97,6 +97,7 @@ set_column_combinations <- function(designs, args){
 find_combination <- function(part, designs, args){
   part_combinations <- c(args$unconditional, part)
   columns <- character()
+  if(length(part_combinations) == 0) return(invisible(NULL))
   for(column_part in part_combinations) columns <- c(columns, args$part_columns[[column_part]])
   
   combinations_observed <- unique(designs$observed[, ..columns])

@@ -47,7 +47,7 @@ generate_friskvik_indicator <- function(dt, id, parameters) {
   d <- do_filter_friskvik_age(dt = d, age_filter = FVdscr$ALDER, parameters = parameters)
   d <- do_filter_friskvik_tabs(dt = d, dscr = FVdscr)
   exprows <- parameters$GeoKoder[TYP == "O" & GEOniv %in% GEOfilter & FRA <= parameters$year & TIL > parameters$year, .N]
-  if(nrow(d) != exprows && !grepl("UNGDATA", parameters$cube_name)){
+  if(nrow(d) != exprows && !grepl("UNGDATA", parameters$name)){
     stop("FEIL I FRISKVIKFILTER som gir ", nrow(d), " / ", exprows, " forventede rader!")
   }
   

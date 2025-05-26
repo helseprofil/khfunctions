@@ -4,7 +4,7 @@
 \alias{LagFilgruppe}
 \title{LagFilgruppe}
 \usage{
-LagFilgruppe(filegroup_name, write = TRUE, dumps = list())
+LagFilgruppe(name, write = TRUE, dumps = list())
 }
 \arguments{
 \item{write}{save output files? default = TRUE}

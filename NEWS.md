@@ -3,15 +3,16 @@
 ## Summary of changes overall
 
 * Structured code as an R package
-* Adding documentation to functions
+* Adding documentation
 * Rewritten code to consistently use data.table instead of data.frame
-* To reduce memory usage, several functions now alter the data by reference instead of overwriting.
+* To reduce memory usage, several functions now alter the data by reference instead of overwriting or copying objects.
 * Cleaned up code
 ** removed inactive parts
 ** refactored into functions with more descriptive names
 ** moved relevant comments into roxygen where possible. 
 * Collecting all parameters used in `LagFilgruppe()` and `LagKUBE()` into one list `parameters`, reducing the number of arguments passed to internal functions.`
 * Adding `stop()` where the previous code just printed a message that something was wrong and continued. 
+* Implementing saving of filedumps (pre/post) in `do_special_handling`, as well as in `aggregate_to_periods`, `do_censor_cube`, `do_reshape_var`, and `recode_columns_with_codebook`
 
 ## Changes in LagFilgruppe
 
@@ -28,4 +29,5 @@
 * Implemented standardization to multiyear-periods
 * Filegroups are always read from NYESTE, simplifying the code. 
 * When initially loading filegroups, the files will always be read from disk and never from BUFFER. 
-* Moved R censoring to the same place as STATA censoring. Now, only flags are generated, no values are removed (kept for quality control purposes). 
+* Moved R and STATA censoring into the same function `do_censor_cube`
+** R censoring is no longer removing values, only setting flags

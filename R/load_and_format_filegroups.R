@@ -162,8 +162,8 @@ set_filter_year <- function(parameters){
 #' @keywords internal
 #' @noRd
 #' @returns data.table
-read_filegroup <- function(filegroup_name){
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup_name, ".rds"))
+read_filegroup <- function(filegroup){
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup, ".rds"))
   if(!file.exists(file)) stop("Finner ikke filgruppe: ", file, "! Filgruppen må kjøres først.")
   DT <- data.table::setDT(readRDS(file))
   DT[, (names(.SD)) := NULL, .SDcols = names(DT)[names(DT) %in% c("KOBLID", "ROW")]]
@@ -176,12 +176,12 @@ read_filegroup <- function(filegroup_name){
 #' fetches filegroup already loaded into buffer. 
 #' @keywords internal
 #' @noRd
-fetch_filegroup_from_buffer <- function(filegroup_name, parameters){
-  if(exists("BUFFER", envir = .GlobalEnv) && filegroup_name %in% names(.GlobalEnv$BUFFER)){
-    cat("\n** Henter FIL", filegroup_name, "fra BUFFER")
-    return(data.table::copy(.GlobalEnv$BUFFER[[filegroup_name]]))
+fetch_filegroup_from_buffer <- function(filegroup, parameters){
+  if(exists("BUFFER", envir = .GlobalEnv) && filegroup %in% names(.GlobalEnv$BUFFER)){
+    cat("\n** Henter FIL", filegroup, "fra BUFFER")
+    return(data.table::copy(.GlobalEnv$BUFFER[[filegroup]]))
   }
-  stop("Filgruppe ", filegroup_name, " ikke funnet i BUFFER")
+  stop("Filgruppe ", filegroup, " ikke funnet i BUFFER")
 }
 
 #' @title do_harmonize_geo
@@ -266,11 +266,12 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
 
 #' @title add_new_value_columns
 #' @description adds new value columns from a set of formulas by reference
+#' @param formulas Formula(s) to make new column(s), usually provided in ACCESS
 #' @param post_moving_average if used after aggregating to moving average, additional columns should be generated.
 #' @keywords internal
 #' @noRd
 add_new_value_columns <- function(dt, formulas, post_moving_average = FALSE){
-  if(is_empty(formula)) return(invisible(NULL))
+  if(is_empty(formulas)) return(invisible(NULL))
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
