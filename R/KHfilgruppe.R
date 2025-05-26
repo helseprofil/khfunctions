@@ -5,7 +5,7 @@
 #' @param gruppe name of filegroup
 #' @param write save output files? default = TRUE
 #' @param dumps list of intermediate files to save, used for debugging and development. 
-LagFilgruppe <- function(filegroup_name, write = TRUE, dumps = list()) {
+LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
@@ -29,17 +29,17 @@ LagFilgruppe <- function(filegroup_name, write = TRUE, dumps = list()) {
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   analyze_cleanlog(log = cleanlog)
   do_set_value_names(dt = Filgruppe, parameters = parameters)
-  cat("-----\n* Alle dimensjoner og verdikolonner vasket og ok")
+  cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   remove_helper_columns(dt = Filgruppe)
   
-  if ("RSYNT_PRE_FGLAGRINGpre" %in% names(parameters$dumps)) DumpTabell(Filgruppe, paste(parameters$filegroup_name, "RSYNT_PRE_FGLAGRINGpre", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpre"]])
-  Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
-  if ("RSYNT_PRE_FGLAGRINGpost" %in% names(parameters$dumps)) DumpTabell(Filgruppe, paste(parameters$filegroup_name, "RSYNT_PRE_FGLAGRINGpost", sep = "_"), format = dumps[["RSYNT_PRE_FGLAGRINGpost"]])
+  Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters, dumpname = "RSYNT_PRE_FGLAGRING")
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   
   write_filegroup_output(outfile = Filgruppe, parameters)
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
+  cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(){
@@ -90,7 +90,7 @@ analyze_cleanlog <- function(log){
 #' @title write_codebooklog
 #' @noRd
 write_codebooklog <- function(log, parameters){
-  log[, let(FILGRUPPE = parameters$filegroup_name, BATCHDATE = parameters$batchdate, SV = "S", OK = 1)]
+  log[, let(FILGRUPPE = parameters$name, BATCHDATE = parameters$batchdate, SV = "S", OK = 1)]
   data.table::setcolorder(log, c("KOBLID", "FILGRUPPE", "DELID", "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ", "SV", "BATCHDATE", "OK")) # sett som options
   
   if(!parameters$write) return(invisible(NULL))

@@ -5,9 +5,11 @@
 #' 
 #' @param dt data to be processed 
 #' @param code code to be performed, either R or STATA
-#' @param batchdate batchdate, used to create filepaths for stata processing
 #' @param parameters global parameters
-do_special_handling <- function(dt, code, parameters){
+do_special_handling <- function(dt, code, parameters, dumpname = NULL, koblid = NULL){
+  save_filedump_if_requested(dumpname = paste0(dumpname, "pre"), dt = dt, parameters = parameters, koblid = koblid)
+  on.exit({save_filedump_if_requested(dumpname = paste0(dumpname, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
+  
   is_code <- !is.null(code) && !is.na(code) && code != ""
   if(!is_code) return(dt)
   code <- gsub("\\\r", "\\\n", code)

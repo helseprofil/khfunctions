@@ -11,11 +11,9 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   give_columns_default_names(dt = DF, filedescription = filedescription, defcolumns = filecolumns$have)
   do_handle_fylltab(dt = DF, filedescription = filedescription)
   do_handle_kastkols(dt = DF, filedescription = filedescription)  
-  do_reshape_var(dt = DF, filedescription = filedescription, dumps = dumps)
+  do_reshape_var(dt = DF, filedescription = filedescription, parameters = parameters)
   do_split_multihead(dt = DF, filedescription = filedescription)
-  if ("RSYNT2pre" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT2pre", sep = "_"), format = dumps[["RSYNT2pre"]])
-  DF <- do_special_handling(dt = DF, code = filedescription$RSYNT2, parameters = parameters)
-  if ("RSYNT2post" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT2post", sep = "_"), format = dumps[["RSYNT2post"]])
+  DF <- do_special_handling(dt = DF, code = filedescription$RSYNT2, parameters = parameters, dumpname = "RSYNT2", koblid = filedescription$KOBLID)
   give_columns_default_names(dt = DF, filedescription = filedescription, defcolumns = filecolumns$have)
   do_set_default_values(dt = DF, filedescription = filedescription, defaultcolumns = filecolumns$default)
   check_if_all_columns_exist(dt = DF, filecolumns = filecolumns)
@@ -83,11 +81,9 @@ do_handle_kastkols <- function(dt, filedescription){
 #' @description
 #' Reshapes the data to collect columns representing the same variable into long format
 #' @noRd
-do_reshape_var <- function(dt, filedescription, dumps){
-  if("RESHAPEpre" %in% names(dumps)) DumpTabell(dt, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpre", sep = "_"), format = dumps[["RESHAPEpre"]])
-  on.exit({
-    if("RESHAPEpost" %in% names(dumps)) DumpTabell(dt, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpost", sep = "_"), format = dumps[["RESHAPEpost"]])
-  })
+do_reshape_var <- function(dt, filedescription, parameters){
+  save_filedump_if_requested(dumpname = "RESHAPEpre", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)
+  on.exit({save_filedump_if_requested(dumpname = "RESHAPEpost", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)}, add = TRUE)
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
   cols <- get_reshape_parameters(filedescription = filedescription)

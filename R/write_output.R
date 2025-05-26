@@ -8,8 +8,8 @@ write_filegroup_output <- function(outfile, parameters){
   if(!parameters$write) return(invisible(NULL))
   cat("SAVING OUTPUT FILES:\n")
   root <- getOption("khfunctions.root")
-  nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$filegroup_name, ".rds"))
-  datert <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(parameters$filegroup_name, "_", parameters$batchdate, ".rds"))
+  nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$name, ".rds"))
+  datert <- file.path(path, getOption("khfunctions.filegroups.dat"), paste0(parameters$name, "_", parameters$batchdate, ".rds"))
   saveRDS(outfile, file = nyeste)
   cat("\n", nyeste)
   file.copy(from = nyeste, to = datert)
@@ -25,7 +25,7 @@ write_filegroup_output <- function(outfile, parameters){
 write_cube_output <- function(outputlist, parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
-  name <- ifelse(parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$cube_name), parameters$cube_name)
+  name <- ifelse(parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
   datert_R <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".rds"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
   qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
@@ -67,7 +67,7 @@ write_access_specs <- function(parameters){
     }
   }
   
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$cube_name, "_", parameters$batchdate, ".csv"))
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
   data.table::fwrite(specs, file = file, sep = ";")
 }
 
@@ -109,24 +109,50 @@ melt_access_spec <- function(dscr, name = NULL){
   data.table::setcolorder(d, "Tabell")
 }
 
-#' @title DumpTabell
-#' To save file dumps
-#' @keywords internal
-#' @noRd
-DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
-  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
-  for(fmt in format){
-    if (fmt == "CSV") {
-      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
-    } else if (fmt == "R") {
-      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
-      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
-    } else if (fmt == "STATA") {
-      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
-      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
-      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
-      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
-    }
+#' @title save_filedump_if_requested
+#' @description
+#' Saves a .csv, .rds, or .dta file at specific points during data processing
+#' All RSYNT points have the possibility to save a filedump with the name rsyntname + pre/post, e.g. "RSYNT_POSTPROSESSpre" 
+#' 
+#' Filegroup processing: 
+#' * RSYNT1pre/post (Rsynt when reading original file)
+#' * RESHAPEpre/post (Before and after reshaping original file)
+#' * RSYNT2pre/post (Rsynt during formatting of original file to table)
+#' * KODEBOKpre/post (before and after recoding with codebook)
+#' * RSYNT_PRE_FGLAGRINGpre/post (Before and after rsynt point prior to saving output)
+#' 
+#' Cube processing: 
+#' * MOVAVpre/MOVAVpost (before and after aggregating to periods)
+#' * SLUTTREDIGERpre/post (before and after RSYNT point SLUTTREDIGER, after aggregation and standardization)
+#' * PRIKKpre/post (before and after censoring)
+#' * RSYNT_POSTPROSESSpre/post (Before and after RSYNT_POSTPROSESS)
+#' @param dumpname name of requested filedump
+#' @param dt data to be stored
+#' @param parameters global parameters
+#' @param koblid used when requesting file dumps during processing of original files, default = NULL
+#' @examples
+#' # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
+#' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
+save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "RESHAPEpre", "RESHAPEpost", "RSYNT2pre", "RSYNT2post",
+                                                    "KODEBOKpre", "KODEBOKpost", "RSYNT_PRE_FGLAGRINGpre", "RSYNT_PRE_FGLAGRINGpost",
+                                                    "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre", "SLUTTREDIGERpost", 
+                                                    "PRIKKpre", "PRIKKpost", "RSYNT_POSTPROSESSpre", "RSYNT_POSTPROSESSpost"), 
+                                       dt, parameters, koblid = NULL){
+  if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
+  format <- parameters$dumps[[dumpname]]
+  dumpdir <- file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"))
+  filename <- paste0(parameters$name, "_", dumpname)
+  if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
+    
+  if("CSV" %in% format) data.table::fwrite(dt, file = file.path(dumpdir, paste0(filename, ".csv"), sep = ";"))
+  if("R" %in% format){
+    if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
+    .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
+    # saveRDS(dt, file = file.path(dumpdir, paste0(filename, ".rds")))
+  } 
+  if("STATA" %in% format){
+    dtout <- fix_column_names_pre_stata(dt)
+    haven::write_dta(dtout, path = file.path(dumpdir, paste0(filename, ".dta")))
   }
 }
   

@@ -21,14 +21,12 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   names(DF) <- trimws(names(DF))
   names(DF)[names(DF) == ""] <- paste("C", which(names(DF) == ""), sep = "")
   
-  if ("RSYNT1pre" %in% names(dumps)) DumpTabell(DF, paste(filedescription$FILGRUPPE, filedescription$KOBLID, "RSYNT1pre", sep = "_"), format = dumps[["RSYNT1pre"]])
   if(is_not_empty(filedescription$RSYNT1)){
     DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-    DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, parameters = parameters)
+    DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, parameters = parameters, dumpname = "RSYNT1", koblid = filedescription$KOBLID)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
     if(length(extracols) > 0) DF[, (extracols) := NULL]
   }
-  if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), format = dumps[["RSYNT1post"]])
   return(DF)
 }
 

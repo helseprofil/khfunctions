@@ -15,8 +15,8 @@
 #' @returns recoded data file (updated by reference)
 recode_columns_with_codebook <- function(dt, filedescription, parameters, codebooklog, dumps){
   dt <- data.table::copy(dt)
-  if("KODEBOKpre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), format = dumps[["KODEBOKpre"]])
-  on.exit({if("KODEBOKpost" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpost", sep = "_"), format = dumps[["KODEBOKpost"]])}, add = TRUE)
+  save_filedump_if_requested(dumpname = "KODEBOKpre", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)
+  on.exit({save_filedump_if_requested(dumpname = "KODEBOKpost", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)}, add = TRUE)
   
   codebook <- parameters$codebook[DELID %in% c(filedescription$DELID, "FELLES")]
   recodecols <- unique(codebook$FELTTYPE)[unique(codebook$FELTTYPE) %in% names(dt)]

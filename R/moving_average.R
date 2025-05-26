@@ -26,6 +26,8 @@ get_movav_information <- function(dt, parameters){
 #' @param reset_rate Reset RATE after aggregating to periods?
 #' @param parameters cube parameters
 aggregate_to_periods <- function(dt, reset_rate = TRUE, parameters){
+  save_filedump_if_requested(dumpname = "MOVAVpre", dt = dt, parameters = parameters)
+  on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = dt, parameters = parameters)}, add = TRUE)
   dt <- do_balance_missing_teller_nevner(dt = dt)
   
   if(parameters$MOVAVparameters$is_movav){
