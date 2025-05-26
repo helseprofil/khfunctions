@@ -15,7 +15,7 @@ do_censor_cube <- function(dt, parameters){
   }
   if(s_prikk > 0){
     cat("\n* Prikker data (STATA-prikking)")
-    dims <- find_dims_for_stataprikk(dt = dt, etabs = etabs)
+    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
     dt <- do_stata_censoring(dt = dt, parameters = parameters)
   }

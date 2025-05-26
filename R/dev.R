@@ -1,5 +1,5 @@
 .SetKubeParameters <- function(cube){
-  user_args <<- list(cube_name = cube,
+  user_args <<- list(name = cube,
                      year = getOption("khfunctions.year"),
                      dumps = list(),
                      write = FALSE,
@@ -7,7 +7,7 @@
 }
 
 .SetFilgruppeParameters <- function(filgruppenavn){
-  user_args <<- list(filegroup_name = filgruppenavn,
+  user_args <<- list(name = filgruppenavn,
                      write = FALSE,
                      dumps = list())
 }
@@ -25,4 +25,22 @@ fg_get_all_read_args <- function(globs = get_global_parameters()){
   out[, let(filepath = file.path(getOption("khfunctions.root"), FILNAVN), FORMAT = toupper(FORMAT))]
   out[AAR == "<$y>", let(AAR = paste0("<", DEFAAR, ">"))]
   return(out)
+}
+
+# Teste dumppunkter
+get_all_fg_dumps <- function(fg){
+  LagFilgruppe(fg, write = F, 
+               dumps = list(RSYNT1pre = "R", RSYNT1post = "R", 
+                            RESHAPEpre = "R", RESHAPEpost = "R", 
+                            RSYNT2pre = "R", RSYNT2post = "R", 
+                            KODEBOKpre = "R", KODEBOKpost = "R", 
+                            RSYNT_PRE_FGLAGRINGpre = "R", RSYNT_PRE_FGLAGRINGpost = "R"))
+}
+
+get_all_cube_dumps <- function(cube){
+  LagKUBE(cube, write = F,
+          dumps = list(MOVAVpre = "R", MOVAVpost = "R",
+                       SLUTTREDIGERpre = "R", SLUTTREDIGERpost = "R",
+                       PRIKKpre = "R", PRIKKpost = "R",
+                       RSYNT_POSTPROSESSpre = "R", RSYNT_POSTPROSESSpost = "R"))
 }

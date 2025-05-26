@@ -45,10 +45,10 @@ LagKUBE <- function(name, write = FALSE, alarm = FALSE, geonaboprikk = TRUE, yea
   KUBE <- add_smr_and_meis(dt = KUBE, parameters = parameters)
   KUBE <- adjust_smr_and_meis_to_country_normal(dt = KUBE, parameters = parameters)
   KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
-  etabs <- get_etabs(columnnames = names(KUBE), parameters = parameters)
-  KUBE <- set_etab_names(dt = KUBE, etablist = etabs)
+  parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
+  KUBE <- set_etab_names(dt = KUBE, etablist = parameters$etabs)
   outvalues <- get_outvalues_allvis(parameters = parameters)
-  outdimensions <- get_outdimensions(dt = KUBE, etabs = etabs$tabnames, parameters = parameters)
+  outdimensions <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
   
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
   KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters, dumpname = "RSYNT_POSTPROSESS")

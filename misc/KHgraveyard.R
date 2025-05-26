@@ -3527,7 +3527,7 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   for (del in Beting) {
     if (del != "") {
       komb <- c(Design[["UBeting"]], del)
-    }
+    }}
     if (length(komb) > 0) {
       kols <- character(0)
       for (k in komb) {
@@ -3790,5 +3790,24 @@ setkeym <- function(DTo, keys) {
   if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
     data.table::setDT(DTo)
     data.table::setkeyv(DTo, keys)
+  }
+}
+
+#' @title DumpTabell
+#' @description 
+DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
+  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
+  for(fmt in format){
+    if (fmt == "CSV") {
+      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
+    } else if (fmt == "R") {
+      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
+      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
+    } else if (fmt == "STATA") {
+      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
+      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+    }
   }
 }

@@ -196,7 +196,7 @@ fix_geo_special <- function(dt, parameters){
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
-    ystart <- ifelse(parameters$cube_name == "VALGDELTAKELSE", 2019, 2020)
+    ystart <- ifelse(parameters$name == "VALGDELTAKELSE", 2019, 2020)
     .years <- seq(ystart, ystart+3)
     .geos <- c("1508", "1580")
     dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]

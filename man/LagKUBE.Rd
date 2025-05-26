@@ -5,7 +5,7 @@
 \title{LagKUBE}
 \usage{
 LagKUBE(
-  cube_name,
+  name,
   write = FALSE,
   alarm = FALSE,
   geonaboprikk = TRUE,
@@ -14,7 +14,7 @@ LagKUBE(
 )
 }
 \arguments{
-\item{cube_name}{Name of kube, corresponding to KUBE_NAVN in ACCESS}
+\item{name}{Name of kube, corresponding to KUBE_NAVN in ACCESS}
 
 \item{write}{should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)}
 
@@ -24,7 +24,7 @@ LagKUBE(
 
 \item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")}
 
-\item{dumps}{list of required dumps}
+\item{dumps}{list of required dumps, in the format list(dumpname = "format")}
 }
 \value{
 complete data file, publication ready file, and quality control file.

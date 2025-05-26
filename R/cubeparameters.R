@@ -32,10 +32,10 @@ get_cubeparameters <- function(user_args = list()) {
 #' @param parameters global parameters
 get_cube_information <- function(parameters){
   KUBER <- as.list(RODBC::sqlQuery(parameters$dbh, 
-                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", parameters$cube_name, "' AND ", parameters$validdates), 
+                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", parameters$name, "' AND ", parameters$validdates), 
                                    as.is = TRUE))
-  if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", parameters$cube_name, "' i ACCESS::KUBER, har du skrevet riktig?")
-  if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", parameters$cube_name)
+  if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", parameters$name, "' i ACCESS::KUBER, har du skrevet riktig?")
+  if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", parameters$name)
   return(KUBER)
 }
 
@@ -143,7 +143,7 @@ get_filegroup_information <- function(parameters){
   
   for(file in unique(unlist(parameters$files))){
     filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$FILFILTRE)
-    fileinfo[[file]] <- read_filegroups_and_add_values(filegroup_name = filename, parameters = parameters)
+    fileinfo[[file]] <- read_filegroups_and_add_values(filegroup = filename, parameters = parameters)
   }
   return(fileinfo)
 }
@@ -166,7 +166,7 @@ replace_filename_if_filefilters <- function(filename, filefilters){
 #' @noRd
 get_friskvik_information <- function(parameters){
   FRISKVIK <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
-                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$year, "AND KUBE_NAVN='", parameters$cube_name, "'")), 
+                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$year, "AND KUBE_NAVN='", parameters$name, "'")), 
                                    as.is = TRUE))
   return(FRISKVIK)
 }

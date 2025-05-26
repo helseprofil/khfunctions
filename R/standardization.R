@@ -80,7 +80,7 @@ estimate_predrate <- function(design, parameters){
 estimate_prednevner <- function(design, parameters){
   cat("* Estimerer PREDNEVNER...\n")
   PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, parameters = parameters)
-  PN <- fetch_filegroup_from_buffer(filegroup_name = parameters$files$PREDNEVNER, parameters = parameters)
+  PN <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
   PN <- OmkodFil(FIL = PN, RD = PNrd, parameters = parameters)
   PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(PredNevnerKol)) PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
@@ -129,7 +129,6 @@ estimate_predteller <- function(predrate, prednevner, parameters){
 #' @noRd
 find_design_after_filter <- function(file, parameters, originaldesign = NULL, outpredfilter = TRUE) {
   filename <- parameters$files[[file]]
-  # fileinformation <- parameters$fileinformation[[filename]]
   designfilter <- parameters$PredFilter$Design
   if(is.null(originaldesign)) originaldesign <- parameters$filedesign[[filename]]
   filtercolumns <- character()
@@ -138,7 +137,6 @@ find_design_after_filter <- function(file, parameters, originaldesign = NULL, ou
   outdesign <- FinnRedesignForFilter(originaldesign, designfilter, parameters = parameters)$Dekk
   outcols <- setdiff(names(outdesign), filtercolumns)
   outdesign <- outdesign[, ..outcols]
-  # return(FinnDesign(outdesign, FGP = fileinformation, parameters = parameters))
   return(find_filedesign(file = outdesign, filename = filename, parameters = parameters))
 }
 

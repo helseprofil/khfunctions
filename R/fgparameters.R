@@ -19,13 +19,13 @@ get_filegroup_parameters <- function(user_args){
 }
 
 #' @noRd
-read_filegroups_and_add_values <- function(filegroup_name = NULL, parameters){
-  if(is.null(filegroup_name)) filegroup_name <- parameters$filegroup_name
-  FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
-  if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup_name, " finnes ikke, er duplisert, eller er satt til inaktiv"))
+read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
+  if(is.null(filegroup)) filegroup <- parameters$name
+  FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup, "' AND ", parameters$validdates), as.is = TRUE))
+  if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
   isalderalle <- is_not_empty(FILGRUPPER$ALDER_ALLE)
-  if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filegroup_name)
+  if(isalderalle && !grepl("^\\d+_\\d+$", FILGRUPPER$ALDER_ALLE)) stop("Feil format på ALDER_ALLE for FILGRUPPE ", filegroup)
   if(isalderalle){
     alle_aldre <- as.integer(data.table::tstrsplit(FILGRUPPER$ALDER_ALLE, "_"))
     amin <- alle_aldre[1]
@@ -56,9 +56,9 @@ read_filegroups_and_add_values <- function(filegroup_name = NULL, parameters){
 #' Reads and combine orginnleskobl, originalfiler, and filgrupper from ACCESS.
 #' @noRd
 get_read_parameters <- function(parameters){
-  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", parameters$filegroup_name, "'"), as.is = TRUE))
+  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", parameters$name, "'"), as.is = TRUE))
   originalfiler <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", parameters$validdates)), as.is = TRUE))
-  innlesing <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", parameters$filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
+  innlesing <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", parameters$name, "' AND ", parameters$validdates), as.is = TRUE))
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
   out <- collapse::join(orginnleskobl, originalfiler, how = "i", on = "FILID", overid = 2, verbose = 0)
@@ -73,7 +73,7 @@ get_read_parameters <- function(parameters){
 get_codebook <- function(parameters){
   codebook <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
                                                 paste0("SELECT FELTTYPE, DELID, TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE FILGRUPPE='", 
-                                                       parameters$filegroup_name, "' AND ", parameters$validdates), as.is = TRUE))
+                                                       parameters$name, "' AND ", parameters$validdates), as.is = TRUE))
   codebook[is.na(ORGKODE), ORGKODE := ""]
   return(codebook)
 }
