@@ -10,7 +10,6 @@
 #' @param aggregate aggregate parts? Used in standardization, default = character()
 #' @param parameters global parameters
 find_redesign <- function(orgdesign, targetdesign, aggregate = character(), parameters) {
-  # KB = parameters$KB
   IntervallHull = parameters$DefDesign$IntervallHull
   AggPri = parameters$DefDesign$AggPri
   
@@ -23,104 +22,6 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   
   out <- list()
   Parts <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
-  
-  Parts <- list()
-  # DEV: Denne delen kan hentes ut til en egen funksjon
-  for (del in names(KB)) {
-    if (del %in% names(targetdesign$Part) & del %in% names(orgdesign$Part)) {
-      d <- data.table::copy(data.table::setDT(targetdesign$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
-      delH <- paste0(del, "_HAR")
-      delP <- paste0(del, "_pri")
-      delO <- paste0(del, "_obl")
-      delD <- paste0(del, "_Dekk")
-      if (!delH %in% names(d)) {
-        d[, (delH) := 1]
-      }
-      KBD <- data.table::as.data.table(KB[[del]])
-      kol <- as.character(parameters$DefDesign$DelKolN[del])
-      kolomk <- paste0(kol, "_omk")
-      kolomkpri <- c(kolomk, paste0(del, "_pri"))
-      kols <- parameters$DefDesign$DelKols[[del]]
-      kolsomk <- paste0(kols, "_omk")
-      kolsomkpri <- c(kolsomk, paste0(del, "_pri"))
-      
-      # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
-      if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
-        tilTabs <- d[, ..kol]
-        KBD <- data.table::setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
-        Parts[[del]] <- KBD
-      }
-      
-      if (parameters$DefDesign$DelType[del] == "COL") {
-        if (nrow(KBD) > 0) {
-          # Filtrer bort TIL-koder i global-KB som ikke er i targetdesign
-          KBD <- KBD[get(kolomk) %in% d[[kol]]]
-          data.table::setkeyv(KBD, kolomkpri)
-          KBD[, (delH) := as.integer(0L)]
-          KBD[get(kol) %in% orgdesign$Part[[del]][[kol]], (delH) := 1L]
-          KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
-          # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-          # Setter keep her, kaster til slutt
-          KBD[, keep := as.integer(any(get(delH) == 1)), by = kolsomkpri]
-        }
-      } else if (parameters$DefDesign$DelType[del] == "INT") {
-        # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
-        # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
-        Imin <- min(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "l")]])
-        Imax <- max(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "h")]])
-        alle <- paste0(Imin, "_", Imax)
-        if (nrow(KBD) > 0) {
-          KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
-          KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
-          KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
-          # Filtrer KBD mot TIL!!
-          KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
-        }
-        # Maa fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
-        # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
-        # Videre er disse bare med naar TilDes er satt fra FinnDesign(FG), ikke naar TilDes er fra Parts
-        # Usikker paa om det alltid er best aa slippe disse gjennom.
-        
-        IntFra <- orgdesign$Part[[del]][, ..kols]
-        IntTil <- d[, ..kols]
-        # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
-        IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-        IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-        KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
-        KBInt[, (delO) := 1]
-        
-        # DEVELOP:   DETTE ER TENMMELIG AD HOC!!!!!!!!!!
-        if (del == "A") {
-          KBInt[KBInt$ALDERl >= 90, (delO) := 0]
-        }
-        
-        KBInt[[paste0(del, "_ok")]] <- NULL # Denne brukes bare ved filtrering rett fra KBint
-        outnames <- names(KBInt)
-        # Legg til spesialkoder igjen
-        if (nrow(KBD) > 0) {
-          KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
-          KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
-        } else {
-          KBD <- KBInt
-        }
-        
-        # Koble paa "del_HAR"
-        data.table::setkeyv(KBD, kols)
-        KBD <- collapse::join(orgdesign$Part[[del]], KBD, how = "r", verbose = 0)
-        KBD[is.na(get(delH)), (delH) := 0]
-        KBD <- SettPartDekk(KBD, del = del, har = delH, parameters = parameters)
-        
-        # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-        # USIKKER paa om dette er optimalt. Det maa ikke kastes for mye for riktig bruk fra FinnFellesTab
-        # Egentlig er det jo unoedvenig aa kaste noe som helst. Dette er mest for rapport/lesing av KBD
-        # Setter keep her, kaster til slutt
-        KBD[, keep := as.integer(any(get(delH) == 1) | get(delO) == 0), by = kolsomkpri]
-      }
-      
-      KBD <- KBD[keep == 1][, keep := NULL]
-      Parts[[del]] <- KBD
-    }
-  }
   
   gc()
   SKombs <- list()
@@ -256,11 +157,17 @@ set_redesign_parts <- function(orgdesign, targetdesign, parameters){
   
   for(part in redesignparts){
     partinfo <- get_part_info(part = part)
-    d_part <- data.table::copy(targetdesign$Part[[part]])
-    if(!partinfo$h %in% names(d_part)) d_part[, partinfo$h := 1]
-    cb_part <- get_codebook_part(codebook = parameters$KB, d_part = d_part, partinfo = partinfo)
-    if(partinfo$type == "COL") out[[part]] <- format_codebook_col(kb = kb_part)
-    if(partinfo$type == "INT") out[[part]] <- format_codebook_int()
+    target_part <- data.table::copy(targetdesign$Part[[part]])
+    org_part <- data.table::copy(orgdesign$Part[[part]])
+    if(!partinfo$har %in% names(target_part)) target_part[, partinfo$har := 1]
+    cb_part <- get_codebook_part(codebook = parameters$KB, target_part = target_part, partinfo = partinfo)
+    if(partinfo$type == "COL") cb_part <- format_codebook_col(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
+    if(partinfo$type == "INT") cb_part <- format_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
+    
+    cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), by = c(partinfo$colsomk, partinfo$pri)]
+    cb_part <- cb_part[keep == 1][, keep := NULL]
+    setkeyv(cb_part, partinfo$cols)
+    out[[part]] <- cb_part
   }
   return(out)
 }
@@ -270,193 +177,62 @@ get_part_info <- function(part){
   out[["part"]] <- part
   out[["type"]] <- parameters$DefDesign$DelType[[part]]
   out[["name"]] <- parameters$DefDesign$DelKolN[[part]]
+  out[["omk"]] <- paste0(out$name, "_omk")
   out[["pri"]] <- paste0(part, "_pri")
-  out[["omk"]] <- paste0(part, "_omk")
   out[["obl"]] <- paste0(part, "_obl")
   out[["har"]] <- paste0(part, "_HAR")
   out[["dekk"]] <- paste0(part, "_Dekk")
   out[["cols"]] <- parameters$DefDesign$DelKols[[part]]
+  out[["colsomk"]] <- paste0(out$cols, "_omk")
   return(out)
 }
 
-get_codebook_part <- function(codebook, d_part, partinfo){
+get_codebook_part <- function(codebook, target_part, partinfo){
   out <- codebook[[partinfo$part]]
   if(grepl("^T\\d$", partinfo$part) & nrow(out) == 0){
-    col <- d_part[[partinfo$name]]
+    col <- target_part[[partinfo$name]]
     out <- data.table::data.table(col, col, 0, 1)
     data.table::setnames(out, unlist(partinfo[c("name", "omk", "pri", "obl")]))
   }
   return(out)
 }
 
-format_codebook_col <- function(){
-  
-  if (nrow(KBD) > 0) {
-    # Filtrer bort TIL-koder i global-KB som ikke er i targetdesign
-    KBD <- KBD[get(kolomk) %in% d[[kol]]]
-    data.table::setkeyv(KBD, kolomkpri)
-    KBD[, (delH) := as.integer(0L)]
-    KBD[get(kol) %in% orgdesign$Part[[del]][[kol]], (delH) := 1L]
-    KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
-    # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-    # Setter keep her, kaster til slutt
-    KBD[, keep := as.integer(any(get(delH) == 1)), by = kolsomkpri]
-  
-  KBD <- KBD[keep == 1][, keep := NULL]
-  }
-  return(kb)
+format_codebook_col <- function(cb_part, partinfo, target_part, org_part){
+  cb_part <- cb_part[get(partinfo$omk) %in% unique(target_part[[partinfo$name]])]
+  cb_part[, partinfo$har := 0]
+  cb_part[get(partinfo$name) %in% org_part[[partinfo$name]], partinfo$har := 1]
+  cb_part[, partinfo$dekk := as.integer(!any(get(partinfo$obl) == 1 & get(partinfo$har) == 0)), by = c(partinfo$omk, partinfo$pri)]
+  return(cb_part)
 }
 
-format_codebook_int <- function(){
-  
-  # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
-  # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
-  Imin <- min(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "l")]])
-  Imax <- max(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "h")]])
-  alle <- paste0(Imin, "_", Imax)
-  if (nrow(KBD) > 0) {
-    KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
-    KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
-    KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
-    # Filtrer KBD mot TIL!!
-    KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
-  }
-  # Maa fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
-  # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
-  # Videre er disse bare med naar TilDes er satt fra FinnDesign(FG), ikke naar TilDes er fra Parts
-  # Usikker paa om det alltid er best aa slippe disse gjennom.
-  
-  IntFra <- orgdesign$Part[[del]][, ..kols]
-  IntTil <- d[, ..kols]
-  # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
-  IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-  IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-  KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
-  KBInt[, (delO) := 1]
-  
-  # DEVELOP:   DETTE ER TENMMELIG AD HOC!!!!!!!!!!
-  if (del == "A") {
-    KBInt[KBInt$ALDERl >= 90, (delO) := 0]
-  }
-  
-  KBInt[[paste0(del, "_ok")]] <- NULL # Denne brukes bare ved filtrering rett fra KBint
-  outnames <- names(KBInt)
-  # Legg til spesialkoder igjen
-  if (nrow(KBD) > 0) {
-    KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
-    KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
-  } else {
-    KBD <- KBInt
-  }
-  
-  # Koble paa "del_HAR"
-  data.table::setkeyv(KBD, kols)
-  KBD <- collapse::join(orgdesign$Part[[del]], KBD, how = "r", verbose = 0)
-  KBD[is.na(get(delH)), (delH) := 0]
-  KBD <- SettPartDekk(KBD, del = del, har = delH, parameters = parameters)
-  
-  # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-  # USIKKER paa om dette er optimalt. Det maa ikke kastes for mye for riktig bruk fra FinnFellesTab
-  # Egentlig er det jo unoedvenig aa kaste noe som helst. Dette er mest for rapport/lesing av KBD
-  # Setter keep her, kaster til slutt
-  KBD[, keep := as.integer(any(get(delH) == 1) | get(delO) == 0), by = kolsomkpri]
-  KBD <- KBD[keep == 1][, keep := NULL]
-  return(kb)
-
+int_string <- function(dt, cols){
+  dt[, paste(get(cols[1]), get(cols[2]), sep = "_")]
 }
 
-
-delete <- function(){ 
-  Parts <- list()
-  # DEV: Denne delen kan hentes ut til en egen funksjon
-  for (del in names(KB)) {
-    KBD <- data.table::as.data.table(KB[[del]])
-    kol <- as.character(parameters$DefDesign$DelKolN[del])
-    kolomk <- paste0(kol, "_omk")
-    kolomkpri <- c(kolomk, paste0(del, "_pri"))
-    kols <- parameters$DefDesign$DelKols[[del]]
-    kolsomk <- paste0(kols, "_omk")
-    kolsomkpri <- c(kolsomk, paste0(del, "_pri"))
-    
-    # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
-    if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
-      tilTabs <- d[, ..kol]
-      KBD <- data.table::setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
-      Parts[[del]] <- KBD
-    }
-    
-    if (parameters$DefDesign$DelType[del] == "COL") {
-      if (nrow(KBD) > 0) {
-        # Filtrer bort TIL-koder i global-KB som ikke er i targetdesign
-        KBD <- KBD[get(kolomk) %in% d[[kol]]]
-        data.table::setkeyv(KBD, kolomkpri)
-        KBD[, (delH) := as.integer(0L)]
-        KBD[get(kol) %in% orgdesign$Part[[del]][[kol]], (delH) := 1L]
-        KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
-        # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-        # Setter keep her, kaster til slutt
-        KBD[, keep := as.integer(any(get(delH) == 1)), by = kolsomkpri]
-      }
-    } else if (parameters$DefDesign$DelType[del] == "INT") {
-      # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
-      # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
-      Imin <- min(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "l")]])
-      Imax <- max(orgdesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "h")]])
-      alle <- paste0(Imin, "_", Imax)
-      if (nrow(KBD) > 0) {
-        KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
-        KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
-        KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
-        # Filtrer KBD mot TIL!!
-        KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
-      }
-      # Maa fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
-      # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
-      # Videre er disse bare med naar TilDes er satt fra FinnDesign(FG), ikke naar TilDes er fra Parts
-      # Usikker paa om det alltid er best aa slippe disse gjennom.
-      
-      IntFra <- orgdesign$Part[[del]][, ..kols]
-      IntTil <- d[, ..kols]
-      # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
-      IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-      IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
-      KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
-      KBInt[, (delO) := 1]
-      
-      # DEVELOP:   DETTE ER TENMMELIG AD HOC!!!!!!!!!!
-      if (del == "A") {
-        KBInt[KBInt$ALDERl >= 90, (delO) := 0]
-      }
-      
-      KBInt[[paste0(del, "_ok")]] <- NULL # Denne brukes bare ved filtrering rett fra KBint
-      outnames <- names(KBInt)
-      # Legg til spesialkoder igjen
-      if (nrow(KBD) > 0) {
-        KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
-        KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
-      } else {
-        KBD <- KBInt
-      }
-      
-      # Koble paa "del_HAR"
-      data.table::setkeyv(KBD, kols)
-      KBD <- collapse::join(orgdesign$Part[[del]], KBD, how = "r", verbose = 0)
-      KBD[is.na(get(delH)), (delH) := 0]
-      KBD <- SettPartDekk(KBD, del = del, har = delH, parameters = parameters)
-      
-      # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
-      # USIKKER paa om dette er optimalt. Det maa ikke kastes for mye for riktig bruk fra FinnFellesTab
-      # Egentlig er det jo unoedvenig aa kaste noe som helst. Dette er mest for rapport/lesing av KBD
-      # Setter keep her, kaster til slutt
-      KBD[, keep := as.integer(any(get(delH) == 1) | get(delO) == 0), by = kolsomkpri]
-    }
-    
-    KBD <- KBD[keep == 1][, keep := NULL]
-    Parts[[del]] <- KBD
+format_codebook_int <- function(cb_part, partinfo, target_part, org_part){
+  org_min <- min(org_part[[partinfo$cols[1]]])
+  org_max <- max(org_part[[partinfo$cols[2]]])
+  target_intervals <- int_string(dt = target_part, cols = partinfo$cols)
+  if (nrow(cb_part) > 0) {
+    cb_part[, names(.SD) := lapply(.SD, function(x) gsub("^ALLE$", paste0(org_min, "_", org_max), x, ignore.case = TRUE)), .SDcols = c(partinfo$name, partinfo$omk)]
+    cb_part[, (partinfo$cols) := data.table::tstrsplit(get(partinfo$name), "_", fixed = TRUE)]
+    cb_part[, (partinfo$colsomk) := data.table::tstrsplit(get(partinfo$omk), "_", fixed = TRUE)]
+    cb_part <- cb_part[get(partinfo$omk) %in% target_intervals]
   }
+  interval_from <- org_part[, .SD, .SDcols = partinfo$cols][!int_string(dt = org_part, cols = partinfo$cols) %in% parameters$LegKoder]
+  interval_to <- target_part[, .SD, .SDcols = partinfo$cols][!int_string(dt = target_part, cols = partinfo$cols) %in% parameters$LegKoder]
+  cb_intervals <- FinnKodebokIntervaller(interval_from, interval_to, delnavn = partinfo$part)
+  cb_intervals[, (partinfo$obl) := 1]
+  if(partinfo$part == "A") cb_intervals[cb_intervals$ALDERl >= 90, (partinfo$obl) := 0]
+  
+  outnames <- names(cb_intervals)
+  cb_part <- data.table::rbindlist(list(cb_intervals, cb_part[, .SD, .SDcols = names(cb_intervals)]))
+  cb_part[, names(.SD) := lapply(.SD, as.integer), .SDcols = names(cb_intervals)]
+  cb_part <- collapse::join(org_part, cb_part, on = partinfo$cols, how = "r", verbose = 0, overid = 2) # bytt til "l" når alt fungerer
+  cb_part[is.na(get(partinfo$har)), (partinfo$har) := 0]
+  cb_part <- SettPartDekk(cb_part, del = partinfo$part, har = partinfo$har, parameters = parameters)
+  return(cb_part)
 }
- 
-
 
 #' handle_udekk (ybk)
 #'
@@ -543,11 +319,6 @@ FinnKodebokIntervaller <- function(FRA, TIL, delnavn = "INT") {
   for (i in 1:nrow(TIL)) {
     result <- list("pri" = 0, "KODEBOK" = KODEBOK0)
     result <- FinnKodebokForEtIntervall(KAND[[i]], FRA, TIL[i], OVLP, 0, result, utcolnavn)
-    # ???????? ok==1???????  Dette skal vel aldri skje????
-    #     if (result$ok==0){
-    #       result$KODEBOK<-rbind(result$KODEBOK,as.data.frame(setNames(list(NA_integer_,NA_integer_,TIL[i,1],TIL[i,2],0,1),utcolnavn)))
-    #     }
-    # print(result$KODEBOK)
     KODEBOK <- rbind(KODEBOK, result$KODEBOK)
   }
   return(KODEBOK)
