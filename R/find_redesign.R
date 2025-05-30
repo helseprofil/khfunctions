@@ -23,17 +23,20 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   out <- list()
   Parts <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
   
-  gc()
+  # TODO: Ekstrahere det under til en funksjon, legge alt direkte inn i out
+  # Sjekke om alle tabellene er nødvendig å beregne/ta med ut 
+  
   SKombs <- list()
   KBs <- list()
   Filters <- list()
   DelStatus <- list()
   
   # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
-  beting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
-  ubeting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$UBeting))
+  beting <- intersect(rev(AggPri), c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
+  ubeting <- intersect(rev(AggPri), c(parameters$DefDesign$UBeting))
+  partcols <- intersect(c(beting, ubeting), names(Parts))
   
-  for (del in intersect(c(beting, ubeting), names(Parts))) {
+  for(del in partcols) {
     kols <- parameters$DefDesign$DelKols[[del]]
     kolsomk <- paste0(kols, "_omk")
     delD <- paste0(del, "_Dekk")
