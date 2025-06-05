@@ -13,7 +13,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_handle_kastkols(dt = DF, filedescription = filedescription)  
   do_reshape_var(dt = DF, filedescription = filedescription, parameters = parameters)
   do_split_multihead(dt = DF, filedescription = filedescription)
-  DF <- do_special_handling(dt = DF, code = filedescription$RSYNT2, parameters = parameters, dumpname = "RSYNT2", koblid = filedescription$KOBLID)
+  DF <- do_special_handling(name = "RSYNT2", dt = DF, code = filedescription$RSYNT2, parameters = parameters, koblid = filedescription$KOBLID)
   give_columns_default_names(dt = DF, filedescription = filedescription, defcolumns = filecolumns$have)
   do_set_default_values(dt = DF, filedescription = filedescription, defaultcolumns = filecolumns$default)
   check_if_all_columns_exist(dt = DF, filecolumns = filecolumns)

@@ -53,6 +53,40 @@ find_common_standard_teller_nevner_prednevner_design <- function(parameters){
   return(list(STNdesign = STNdesign, STNPdesign = STNPdesign))
 }
 
+#' @title find_design_after_filter
+#'
+#' @param file name of file to design
+#' @param originaldesign original design if existing. Default is design for file.
+#' @param outpredfilter shuld columns in predfilter be removed, default = TRUE
+#' @param parameters parameters
+#' @keywords internal
+#' @noRd
+find_design_after_filter <- function(file, parameters, originaldesign = NULL, outpredfilter = TRUE) {
+  filename <- parameters$files[[file]]
+  designfilter <- parameters$PredFilter$Design
+  if(is.null(originaldesign)) originaldesign <- parameters$filedesign[[filename]]
+  filtercolumns <- character()
+  if(outpredfilter) filtercolumns <- parameters$PredFilter$Predfiltercolumns
+  
+  outdesign <- FinnRedesignForFilter(ORGd = originaldesign, Filter = designfilter, parameters = parameters)$Dekk
+  outcols <- setdiff(names(outdesign), filtercolumns)
+  outdesign <- outdesign[, ..outcols]
+  return(find_filedesign(file = outdesign, filename = filename, parameters = parameters))
+}
+
+#' @title FinnRedesignForFilter (kb)
+#' @keywords internal
+#' @noRd
+FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
+  MODd <- Filter
+  for (del in setdiff(names(ORGd$Part), names(Filter))) {
+    MODd[[del]] <- data.table::copy(ORGd$Part[[del]])
+  }
+  # return(FinnRedesign(fradesign = ORGd, tildesign = list(Part = MODd), parameters = parameters))
+  
+  return(find_redesign(orgdesign = ORGd, targetdesign = list(Part = MODd), parameters = parameters))
+}
+
 #' @title estimate_predrate
 #' @description finds predrate to be used to calculate predteller
 #' @keywords internal
@@ -79,7 +113,8 @@ estimate_predrate <- function(design, parameters){
 #' @noRd
 estimate_prednevner <- function(design, parameters){
   cat("* Estimerer PREDNEVNER...\n")
-  PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, parameters = parameters)
+  # PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, parameters = parameters)
+  PNrd <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
   PN <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
   PN <- OmkodFil(FIL = PN, RD = PNrd, parameters = parameters)
   PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
@@ -112,43 +147,12 @@ estimate_predteller <- function(predrate, prednevner, parameters){
   filename <- parameters$files$PREDNEVNER
   prednevnerdesign <- find_filedesign(file = prednevner, filename = filename, parameters = parameters)
   cubedesign <- list(Part = parameters$CUBEdesign)
-  redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = parameters$DefDesign$AggVedStand, parameters = parameters)
+  # redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = parameters$DefDesign$AggVedStand, parameters = parameters)
+  redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
   predteller <- OmkodFil(FIL = STNP, RD = redesign, parameters = parameters)
   
   cat("** PREDTELLER ferdig med dim:", dim(STNP), "\n")
   return(predteller)
-}
-
-#' @title find_design_after_filter
-#'
-#' @param file name of file to design
-#' @param originaldesign original design if existing. Default is design for file.
-#' @param outpredfilter shuld columns in predfilter be removed, default = TRUE
-#' @param parameters parameters
-#' @keywords internal
-#' @noRd
-find_design_after_filter <- function(file, parameters, originaldesign = NULL, outpredfilter = TRUE) {
-  filename <- parameters$files[[file]]
-  designfilter <- parameters$PredFilter$Design
-  if(is.null(originaldesign)) originaldesign <- parameters$filedesign[[filename]]
-  filtercolumns <- character()
-  if(outpredfilter) filtercolumns <- parameters$PredFilter$Predfiltercolumns
-  
-  outdesign <- FinnRedesignForFilter(originaldesign, designfilter, parameters = parameters)$Dekk
-  outcols <- setdiff(names(outdesign), filtercolumns)
-  outdesign <- outdesign[, ..outcols]
-  return(find_filedesign(file = outdesign, filename = filename, parameters = parameters))
-}
-
-#' @title FinnRedesignForFilter (kb)
-#' @keywords internal
-#' @noRd
-FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
-  MODd <- Filter
-  for (del in setdiff(names(ORGd$Part), names(Filter))) {
-    MODd[[del]] <- data.table::copy(ORGd$Part[[del]])
-  }
-  return(FinnRedesign(ORGd, list(Part = MODd), parameters = parameters))
 }
 
 #' @title add_meisskala

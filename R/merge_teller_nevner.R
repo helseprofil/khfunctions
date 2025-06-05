@@ -105,9 +105,11 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
-  RD1 <- FinnRedesign(DF1, list(Part = FTabs), parameters = parameters)
-  RD2 <- FinnRedesign(DF2, list(Part = FTabs), parameters = parameters)
-  ### kommet hit ---- 
+  # RD1 <- FinnRedesign(DF1, list(Part = FTabs), parameters = parameters)
+  RD1 <- find_redesign(orgdesign = DF1, targetdesign = list(Part = FTabs), parameters = parameters)
+  # RD2 <- FinnRedesign(DF2, list(Part = FTabs), parameters = parameters)
+  RD2 <- find_redesign(orgdesign = DF2, targetdesign = list(Part = FTabs), parameters = parameters)
+  ### kommet hit ---
   omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
   data.table::setkeyv(RD1$FULL, omktabs)
   data.table::setkeyv(RD2$FULL, omktabs)
@@ -115,7 +117,6 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
   Dekk12 <- Dekk1[Dekk2, nomatch = 0]
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  # FDes <- FinnDesign(Dekk12, parameters = parameters)
   FDes <- find_filedesign(Dekk12, parameters = parameters)
   cat(" Ferdig i FinnFellesTab\n")
   gc()
@@ -215,7 +216,8 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @keywords internal
 #' @noRd
 do_redesign_recode_file <- function(filename, filedesign, tndesign, parameters){
-  redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
+  # redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
+  redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
   if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   file <- fetch_filegroup_from_buffer(filegroup = filename, parameters = parameters)
   file <- OmkodFil(file, RD = redesign, parameters = parameters)

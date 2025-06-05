@@ -101,7 +101,8 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, parameters = parameters)
     if (length(Filter) > 0){
       prefilterdesign <- find_filedesign(FIL, parameters = parameters)
-      redesign_filter <- FinnRedesign(prefilterdesign, list(Parts = Filter), parameters = parameters)
+      # redesign_filter <- FinnRedesign(prefilterdesign, list(Parts = Filter), parameters = parameters)
+      redesign_filter <- find_redesign(orgdesign = prefilterdesign, targetdesign = list(Parts = Filter), parameters = parameters)
       FIL <- OmkodFil(FIL, redesign_filter, parameters = parameters)
     }
     
@@ -512,7 +513,8 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
     print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
     # dt <- OmkodFil(dt, FinnRedesign(FinnDesign(dt, parameters = parameters), list(Parts = OmkParts), parameters = parameters), parameters = parameters)
     design <- find_filedesign(dt, parameters = parameters)
-    redesign <- FinnRedesign(design, list(Parts = OmkParts), parameters = parameters)
+    # redesign <- FinnRedesign(design, list(Parts = OmkParts), parameters = parameters)
+    redesign <- find_redesign(orgdesign = design, targetdesign = list(Parts = OmkParts), parameters = parameters)
     dt <- OmkodFil(dt, redesign, parameters = parameters)
   }
   if(subsetstr != "") dt <- eval(parse(text = paste0("subset(dt,", subsetstr, ")"))) # BYTTE MED do_filter_columns????

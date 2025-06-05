@@ -32,7 +32,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   remove_helper_columns(dt = Filgruppe)
   
-  Filgruppe <- do_special_handling(dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters, dumpname = "RSYNT_PRE_FGLAGRING")
+  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   

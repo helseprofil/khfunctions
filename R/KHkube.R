@@ -38,7 +38,7 @@ LagKUBE <- function(name, write = FALSE, alarm = FALSE, geonaboprikk = TRUE, yea
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
   KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
 
-  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters, dumpname = "SLUTTREDIGER")
+  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
@@ -51,7 +51,7 @@ LagKUBE <- function(name, write = FALSE, alarm = FALSE, geonaboprikk = TRUE, yea
   outdimensions <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
   
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
-  KUBE <- do_special_handling(dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters, dumpname = "RSYNT_POSTPROSESS")
+  KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = outvalues)

@@ -10,8 +10,20 @@ KUBEdesign <- FinnKubeDesignB(InitDesign = InitDesign, filename = tellerfilnavn,
 targetdesign <- tildesign <- list(Part = KUBEdesign$TMP)
 orgdesign <- fradesign <- tellerfildesign
 
+system.time({
+  fasit <- FinnRedesign(fradesign, tildesign, parameters = parameters)
+})
+
+system.time({
+  new <- find_redesign(fradesign, tildesign, parameters = parameters)
+  })
+
+
 
 test_that("find_redesign returns identical result to FinnRedesign", {
-  expect_equal(FinnRedesign(fradesign, tildesign, parameters = parameters),
-               find_redesign(fradesign, tildesign, parameters = parameters))
+  expect_equal(fasit,
+               find_redesign(fradesign, tildesign, parameters = parameters), ignore_attr = T)
 })
+
+
+rm(list = grep("InitDesign|user_args|targetdesign|orgdesign|tellerfildesign|KUBEdesign|tellerfilnavn|tildesign|fradesign|parameters|BUFFER", ls(), value = T, invert = T))

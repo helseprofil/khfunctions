@@ -3,12 +3,14 @@
 #' Do special handling of data files, either in R or STATA. 
 #' code must be provided in specific files and specified in STATA to be used at certain points in data processing. 
 #' 
+#' @param name name of RSYNT point, refer to the column, to be used for filedump names
 #' @param dt data to be processed 
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
-do_special_handling <- function(dt, code, parameters, dumpname = NULL, koblid = NULL){
-  save_filedump_if_requested(dumpname = paste0(dumpname, "pre"), dt = dt, parameters = parameters, koblid = koblid)
-  on.exit({save_filedump_if_requested(dumpname = paste0(dumpname, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
+#' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
+do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
+  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
+  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
   
   is_code <- !is.null(code) && !is.na(code) && code != ""
   if(!is_code) return(dt)

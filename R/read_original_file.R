@@ -23,7 +23,7 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   
   if(is_not_empty(filedescription$RSYNT1)){
     DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-    DF <- do_special_handling(dt = DF, code = filedescription$RSYNT1, parameters = parameters, dumpname = "RSYNT1", koblid = filedescription$KOBLID)
+    DF <- do_special_handling(name = "RSYNT1", dt = DF, code = filedescription$RSYNT1, parameters = parameters, koblid = filedescription$KOBLID)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
     if(length(extracols) > 0) DF[, (extracols) := NULL]
   }

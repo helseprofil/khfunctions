@@ -1,125 +1,51 @@
 #' @title find_redesign
-#' 
-#' @description
-#' WIP: replacement for finnredesign()
-#' 
 #' @return A list with information to redesign a file into a target design.
-#'
 #' @param orgdesign design of file, must be set with FinnDesign()
 #' @param targetdesign target design, can be simpler than orgdesign as only uses $Part
 #' @param aggregate aggregate parts? Used in standardization, default = character()
 #' @param parameters global parameters
 find_redesign <- function(orgdesign, targetdesign, aggregate = character(), parameters) {
-  IntervallHull = parameters$DefDesign$IntervallHull
-  AggPri = parameters$DefDesign$AggPri
-  
   FULL <- get_all_dimension_combinations_targetdesign(targetdesign = targetdesign)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
   TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
   saveRDS(FULL, TempFile)
-  FULL <- add_betcols_to_full(dt = FULL, betcols = grep("HAR", names(orgdesign$SKombs$bet), value = T, invert = T))
+  FULL <- add_betcols_to_full(dt = FULL, orgdesign = orgdesign)
   targetdesign <- add_missing_parts_from_orgdesign(targetdesign, orgdesign)
+  any_ubeting <- length(orgdesign$UBeting) > 0
   
-  out <- list()
-  Parts <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
+  out <- setNames(replicate(8, list()), 
+                  c("Parts", "SKombs", "KBs", "Filters", "FULL", "Dekk", "Udekk", "DelStatus"))
+  out[["Parts"]] <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
+  partcols <- get_partcols_and_set_aggpri(Parts = out$Parts, parameters = parameters)
   
-  # TODO: Ekstrahere det under til en funksjon, legge alt direkte inn i out
-  # Sjekke om alle tabellene er nødvendig å beregne/ta med ut 
-  
-  SKombs <- list()
-  KBs <- list()
-  Filters <- list()
-  DelStatus <- list()
-  
-  # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
-  beting <- intersect(rev(AggPri), c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
-  ubeting <- intersect(rev(AggPri), c(parameters$DefDesign$UBeting))
-  partcols <- intersect(c(beting, ubeting), names(Parts))
-  
-  for(del in partcols) {
-    kols <- parameters$DefDesign$DelKols[[del]]
-    kolsomk <- paste0(kols, "_omk")
-    delD <- paste0(del, "_Dekk")
-    delP <- paste0(del, "_pri")
-    delH <- paste0(del, "_HAR")
-    if (length(orgdesign[["UBeting"]]) > 0) {
-      if (del %in% orgdesign[["UBeting"]]) {
-        kombn <- "bet"
-      } else {
-        kombn <- paste0("bet", del)
-      }
-      # Koble med orgdesign
-      data.table::setkeyv(Parts[[del]], kols)
-      data.table::setkeyv(orgdesign$SKombs[[kombn]], kols)
-      betD <- collapse::join(orgdesign$SKombs[[kombn]], Parts[[del]], how = "right", multiple = T, verbose = F)
-      betD[is.na(HAR), HAR := 0]
-      # Maa kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
-      # faa del_Dekk==1 under dersom del er i beting, da vil en annen del i beting faa NA og by=betcols gaar galt!)
-      betD <- subset(betD, eval(parse(text = paste0(del, "_Dekk==1"))))
-      betD <- betD[get(delD) == 1]
-      # Sett (betinget) dekning
-      betcols <- unlist(parameters$DefDesign$DelKols[setdiff(orgdesign[["UBeting"]], del)])
-      betD <- SettPartDekk(betD, del = del, har = "HAR", betcols = betcols, parameters = parameters)
-    } else {
-      betcols <- character()
-      betD <- data.table::copy(Parts[[del]])
-    }
+  for(part in partcols){
+    partinfo <- get_part_info(part)
+    partinfo[["kombname"]] <- ifelse(part %in% orgdesign$UBeting, "bet", paste0("bet", part))
+    partinfo[["aggregate"]] <- aggregate
+    if(any_ubeting) partinfo[["betcols"]] <- unlist(parameters$DefDesign$DelKols[setdiff(orgdesign$UBeting, part)]) 
+    partdata <- data.table::copy(out$Parts[[part]])
+    if(any_ubeting) partdata <- merge_partdata_orgdesign(partdata = partdata, orgdesign = orgdesign, partinfo = partinfo)
+    set_partdata_bruk(partdata = partdata, partinfo = partinfo)
+    cb_part <- partdata[Bruk == get(partinfo$pri) & get(partinfo$har) == 1]
+    FULL <- merge_cbpart_to_full(full = FULL, cb_part = cb_part)
     
-    # Finn beste alternativ
-    bycols <- c(kolsomk, betcols)
-    if (del %in% aggregate) {
-      betD[get(delD) == 1, Bruk := max(get(delP)), by = bycols]
-    } else {
-      betD[get(delD) == 1, Bruk := min(get(delP)), by = bycols]
-    }
+    out$SKombs[[part]] <- partdata
+    cb_part <- filter_cbpart(cb_part = cb_part, partinfo = partinfo)
     
-    KB <- betD[Bruk == get(delP) & get(delH) == 1]
-    SKombs[[del]] <- betD
+    filter <- all(cb_part$codebook[, .SD, .SDcols = partinfo$cols] == cb_part$codebook[, .SD, .SDcols = partinfo$colsomk])
+    if(filter) cb_part <- switch_cbpart_to_filter(cb_part = cb_part, partinfo = partinfo)
+    # if(part == "Y" & cb_part$status == "B") stop("Delstatus for AAR kan ikke være B"), tror ikke denne trengs da delstatus ikke brukes i omkodfil. Må sjekke. 
     
-    # Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
-    
-    # Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
-    # Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
-    maxBet <- KB[, .(NOPri = length(unique(get(delP)))), by = kolsomk][, max(NOPri)]
-    if (maxBet == 1) {
-      brukcols <- c(gsub("_omk$", "", kolsomk), kolsomk)
-      data.table::setkeyv(KB, brukcols)
-      KBs[[del]] <- unique(KB[, ..brukcols])
-      DelStatus[[del]] <- "P"
-    } else {
-      brukcols <- names(KB)[!grepl("(_obl|_{0,1}HAR|_Dekk|_pri|Bruk)$", names(KB))]
-      KBs[[del]] <- KB[, ..brukcols]
-      DelStatus[[del]] <- "B"
-    }
-    
-    if (del == "Y" & DelStatus[[del]] == "B") {
-      KHerr("Har DelStatus[[Y]]==B, dette takles per naa ikke i FilOmkod og vil gi feil der!!!")
-    }
-    
-    # Sett dekning i FULL
-    common <- intersect(names(FULL), names(KB))
-    data.table::setkeyv(KB, common)
-    data.table::setkeyv(FULL, common)
-    FULL <- FULL[KB[, ..common], nomatch = NULL, allow.cartesian = TRUE]
-    
-    # Ignorer KB der det ikke foregaar reell omkoding
-    if (all(KBs[[del]][, ..kols] == KBs[[del]][, ..kolsomk])) {
-      # Filters[[del]] <- KBs[[del]][, names(KBs[[del]])[!grepl("_omk$", names(KBs[[del]]))], with = FALSE]
-      Filters[[del]] <- KBs[[del]][, ..kols]
-      KBs[del] <- NULL
-      DelStatus[[del]] <- "F"
-    }
+    out$KBs[[part]] <- cb_part$codebook
+    out$DelStatus[[part]] <- cb_part$status
+    out$Filters[[part]] <- cb_part$filter
   }
-  omkkols <- names(FULL)[grepl("_omk$", names(FULL))]
-  data.table::setkeyv(FULL, omkkols)
-  Dekk <- unique(FULL[, ..omkkols])
-  data.table::setnames(Dekk, names(Dekk), gsub("_omk$", "", names(Dekk)))
   
-  data.table::setkeyv(FULL, namesFULL)
-  Udekk <- handle_udekk(FULL, namesFULL, TempFile)
-  
+  out[["FULL"]] <- FULL
+  out[["Dekk"]] <- get_dekk(full = FULL)
+  out[["Udekk"]] <- handle_udekk(FULL, namesFULL, TempFile)
   gc()
-  return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
+  return(out)
 }
 
 #' @title find_all_dimension_combinations
@@ -140,7 +66,8 @@ get_all_dimension_combinations_targetdesign <- function(targetdesign){
 
 #' @keywords internal
 #' @noRd
-add_betcols_to_full <- function(dt, betcols){
+add_betcols_to_full <- function(dt, orgdesign){
+  betcols <-  grep("HAR", names(orgdesign$SKombs$bet), value = T, invert = T)
   if(length(betcols) == 0) return(dt)
   return(expand.grid.dt(dt, orgdesign$SKombs$bet[, ..betcols]))
 }
@@ -154,6 +81,8 @@ add_missing_parts_from_orgdesign <- function(target, org){
   return(target)
 }
 
+#' @keywords internal
+#' @noRd
 set_redesign_parts <- function(orgdesign, targetdesign, parameters){
   out <- list()
   redesignparts <- intersect(names(orgdesign$Part), names(targetdesign$Part))
@@ -163,34 +92,24 @@ set_redesign_parts <- function(orgdesign, targetdesign, parameters){
     target_part <- data.table::copy(targetdesign$Part[[part]])
     org_part <- data.table::copy(orgdesign$Part[[part]])
     if(!partinfo$har %in% names(target_part)) target_part[, partinfo$har := 1]
-    cb_part <- get_codebook_part(codebook = parameters$KB, target_part = target_part, partinfo = partinfo)
-    if(partinfo$type == "COL") cb_part <- format_codebook_col(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
-    if(partinfo$type == "INT") cb_part <- format_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
+    cb_part <- get_global_codebook_part(codebook = parameters$KB, target_part = target_part, partinfo = partinfo)
+    if(partinfo$type == "COL") cb_part <- format_global_codebook_col(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
+    if(partinfo$type == "INT") cb_part <- format_global_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
     
-    cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), by = c(partinfo$colsomk, partinfo$pri)]
+    cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), keyby = c(partinfo$colsomk, partinfo$pri)]
+    data.table::setkeyv(cb_part, partinfo$cols) # KUTT? 
     cb_part <- cb_part[keep == 1][, keep := NULL]
-    setkeyv(cb_part, partinfo$cols)
     out[[part]] <- cb_part
   }
   return(out)
 }
-  
-get_part_info <- function(part){
-  out <- list()
-  out[["part"]] <- part
-  out[["type"]] <- parameters$DefDesign$DelType[[part]]
-  out[["name"]] <- parameters$DefDesign$DelKolN[[part]]
-  out[["omk"]] <- paste0(out$name, "_omk")
-  out[["pri"]] <- paste0(part, "_pri")
-  out[["obl"]] <- paste0(part, "_obl")
-  out[["har"]] <- paste0(part, "_HAR")
-  out[["dekk"]] <- paste0(part, "_Dekk")
-  out[["cols"]] <- parameters$DefDesign$DelKols[[part]]
-  out[["colsomk"]] <- paste0(out$cols, "_omk")
-  return(out)
-}
 
-get_codebook_part <- function(codebook, target_part, partinfo){
+#' @title get_global_codebook_part
+#' @description
+#' Fetch global codebook from parameters, read from ACCESS::KH_KODER
+#' @keywords internal
+#' @noRd
+get_global_codebook_part <- function(codebook, target_part, partinfo){
   out <- codebook[[partinfo$part]]
   if(grepl("^T\\d$", partinfo$part) & nrow(out) == 0){
     col <- target_part[[partinfo$name]]
@@ -200,7 +119,9 @@ get_codebook_part <- function(codebook, target_part, partinfo){
   return(out)
 }
 
-format_codebook_col <- function(cb_part, partinfo, target_part, org_part){
+#' @keywords internal
+#' @noRd
+format_global_codebook_col <- function(cb_part, partinfo, target_part, org_part){
   cb_part <- cb_part[get(partinfo$omk) %in% unique(target_part[[partinfo$name]])]
   cb_part[, partinfo$har := 0]
   cb_part[get(partinfo$name) %in% org_part[[partinfo$name]], partinfo$har := 1]
@@ -208,11 +129,9 @@ format_codebook_col <- function(cb_part, partinfo, target_part, org_part){
   return(cb_part)
 }
 
-int_string <- function(dt, cols){
-  dt[, paste(get(cols[1]), get(cols[2]), sep = "_")]
-}
-
-format_codebook_int <- function(cb_part, partinfo, target_part, org_part){
+#' @keywords internal
+#' @noRd
+format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part){
   org_min <- min(org_part[[partinfo$cols[1]]])
   org_max <- max(org_part[[partinfo$cols[2]]])
   target_intervals <- int_string(dt = target_part, cols = partinfo$cols)
@@ -237,68 +156,16 @@ format_codebook_int <- function(cb_part, partinfo, target_part, org_part){
   return(cb_part)
 }
 
-#' handle_udekk (ybk)
-#'
-#' @param FULL 
-#' @param namesFULL 
-#' @param TempFile 
-handle_udekk <- function(FULL, namesFULL, TempFile){
-  Udekk <- readRDS(TempFile)
-  data.table::setkeyv(Udekk, namesFULL)
-  Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
-  data.table::setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
-  return(Udekk)
-}
-
-#' @title SettPartDekk (kb)
-#'
-#' @param KB 
-#' @param del 
-#' @param har 
-#' @param betcols 
-#' @param parameters global parameters
-#' @param IntervallHull 
-SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = character(0), parameters) {
-  
-  IntervallHull = parameters$DefDesign$IntervallHull
-  
-  kol <- as.character(parameters$DefDesign$DelKolN[del])
-  kolsomkpri <- names(KB)[grepl("_(omk|pri)$", names(KB))]
-  bycols <- c(kolsomkpri, betcols)
-  kolL <- paste0(kol, "l")
-  kolLomk <- paste0(kolL, "_omk")
-  kolH <- paste0(kol, "h")
-  kolHomk <- paste0(kolH, "_omk")
-  delD <- paste0(del, "_Dekk")
-  delO <- paste0(del, "_obl")
-  
-  if (del %in% names(IntervallHull)) {
-    KB[, let(DekkInt = sum((get(har) == 1 | get(delO) == 0) * (1+get(kolH) - get(kolL))),
-             FRADELER = .N,
-             NHAR = sum(get(har) == 1 | get(delO) == 0),
-             TotInt = 1+get(kolHomk)-get(kolLomk),
-             NTOT = sum(get(delO) == 1)),
-       by = bycols]
-    
-    sjekkintervall <- rlang::parse_expr(IntervallHull[[del]])
-    KB[, (delD) := as.integer(eval(sjekkintervall)), by = bycols]
-    KB[, c("DekkInt", "NHAR", "TotInt", "NTOT", "FRADELER") := NULL]
-  } else {
-    KB[, (delD) := as.integer(!any(get(har) == 0 & get(delO) == 1)), by = bycols]
-  }
-  
-  gc()
-  return(KB)
+#' @keywords internal
+#' @noRd
+int_string <- function(dt, cols){
+  dt[, paste(get(cols[1]), get(cols[2]), sep = "_")]
 }
 
 #' @title FinnKodebokIntervaller
 #' @keywords internal
 #' @noRd
 FinnKodebokIntervaller <- function(FRA, TIL, delnavn = "INT") {
-  # I tilfelle input er data.table
-  # FRA <- as.data.frame(FRA)
-  # TIL <- as.data.frame(TIL)
-  # Bruk Intrevals-klassen
   utcolnavn <- c(names(FRA), paste0(names(FRA), "_omk"), paste0(delnavn, "_pri"))
   TILi <- intervals::Intervals(TIL, type = "Z")
   FRAi <- intervals::Intervals(FRA, type = "Z")
@@ -373,3 +240,149 @@ DekkerInt <- function(FRA, TIL) {
   all(TIL[[1]]:TIL[[2]] %in% unlist(mapply(seq, FRA[[1]], FRA[[2]])))
 }
 
+
+
+#' @description
+#' Creates a list of parts to set recoding
+#' @keywords internal
+#' @noRd
+get_partcols_and_set_aggpri <- function(Parts, parameters){
+  AggPri <- parameters$DefDesign$AggPri
+  # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
+  beting <- intersect(rev(AggPri), unlist(parameters$DefDesign[c("BetingOmk", "BetingF")], use.names = F))
+  ubeting <- intersect(rev(AggPri), parameters$DefDesign$UBeting)
+  return(intersect(c(beting, ubeting), names(Parts)))
+}
+
+#' @keywords internal
+#' @noRd
+get_part_info <- function(part){
+  out <- list()
+  out[["part"]] <- part
+  out[["type"]] <- parameters$DefDesign$DelType[[part]]
+  out[["name"]] <- parameters$DefDesign$DelKolN[[part]]
+  out[["omk"]] <- paste0(out$name, "_omk")
+  out[["pri"]] <- paste0(part, "_pri")
+  out[["obl"]] <- paste0(part, "_obl")
+  out[["har"]] <- paste0(part, "_HAR")
+  out[["dekk"]] <- paste0(part, "_Dekk")
+  out[["cols"]] <- parameters$DefDesign$DelKols[[part]]
+  out[["colsomk"]] <- paste0(out$cols, "_omk")
+  return(out)
+}
+
+#' @keywords internal
+#' @noRd
+merge_partdata_orgdesign <- function(partdata, orgdesign, partinfo){
+  orgdata <- orgdesign$SKombs[[partinfo$kombname]]
+  d <- collapse::join(orgdata, partdata, on = partinfo$cols, how = "right", multiple = T, verbose = F)[get(partinfo$dekk) == 1]
+  data.table::setkeyv(d, c(partinfo$cols, partinfo$colsomk)) # KUTT
+  d[is.na(HAR), HAR := 0]
+  d <- SettPartDekk(d, del = partinfo$part, har = "HAR", betcols = partinfo$betcols, parameters = parameters)
+  return(d)
+}
+
+#' @title SettPartDekk (kb)
+#' @keywords internal
+#' @noRd
+SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = NULL, parameters) {
+  
+  IntervallHull = parameters$DefDesign$IntervallHull
+  
+  kol <- as.character(parameters$DefDesign$DelKolN[del])
+  kolsomkpri <- names(KB)[grepl("_(omk|pri)$", names(KB))]
+  bycols <- c(kolsomkpri, betcols)
+  kolL <- paste0(kol, "l")
+  kolLomk <- paste0(kolL, "_omk")
+  kolH <- paste0(kol, "h")
+  kolHomk <- paste0(kolH, "_omk")
+  delD <- paste0(del, "_Dekk")
+  delO <- paste0(del, "_obl")
+  
+  if (del %in% names(IntervallHull)) {
+    KB[, let(DekkInt = sum((get(har) == 1 | get(delO) == 0) * (1+get(kolH) - get(kolL))),
+             FRADELER = .N,
+             NHAR = sum(get(har) == 1 | get(delO) == 0),
+             TotInt = 1+get(kolHomk)-get(kolLomk),
+             NTOT = sum(get(delO) == 1)),
+       by = bycols]
+    
+    sjekkintervall <- rlang::parse_expr(IntervallHull[[del]])
+    KB[, (delD) := as.integer(eval(sjekkintervall)), by = bycols]
+    KB[, c("DekkInt", "NHAR", "TotInt", "NTOT", "FRADELER") := NULL]
+  } else {
+    KB[, (delD) := as.integer(!any(get(har) == 0 & get(delO) == 1)), by = bycols]
+  }
+  
+  gc()
+  return(KB)
+}
+
+#' @description
+#' Set Bruk column, used to generate the codebook for the part, by reference.
+#' If part is aggregated, 'Bruk' is set to max(part_pri), otherwise it is set to min(part_pri). 
+#' This is done by in strata of the recode-column as well as conditional columns (year and geoniv)
+#' @keywords internal
+#' @noRd
+set_partdata_bruk <- function(partdata, partinfo){
+  bycols = unlist(partinfo[c("colsomk", "betcols")], use.names = F)
+  part_aggregate <- partinfo$part %in% partinfo$aggregate
+  if(part_aggregate) partdata[get(partinfo$dekk) == 1, Bruk := max(get(partinfo$pri)), by = bycols]
+  if(!part_aggregate) partdata[get(partinfo$dekk) == 1, Bruk := min(get(partinfo$pri)), by = bycols]
+}
+
+#' @keywords internal
+#' @noRd
+merge_cbpart_to_full <- function(full, cb_part){
+  commoncols <- intersect(names(full), names(cb_part))
+  full <- collapse::join(full, cb_part[, .SD, .SDcols = commoncols], 
+                         on = commoncols, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
+  return(full)
+}
+
+#' @description
+#' # Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
+# Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
+# Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
+#' @keywords internal
+#' @noRd
+filter_cbpart <- function(cb_part, partinfo){
+  out <- list()
+  n_pri <- cb_part[, .(n_pri = length(unique(get(partinfo$pri)))), by = c(partinfo$colsomk)][, max(n_pri)]
+  out[["status"]] <- ifelse(n_pri == 1, "P", "B") # omdøp til Partiell/Kodebok
+  items <- c("cols", "colsomk")
+  if(n_pri != 1) items <- c("betcols", items)  
+  out[["codebook"]] <- unique(cb_part[, .SD, .SDcols = unlist(partinfo[items], use.names = F)])
+  return(out)
+}
+
+#' @keywords internal
+#' @noRd
+switch_cbpart_to_filter <- function(cb_part, partinfo){
+  cb_part$filter <- cb_part$codebook[, .SD, .SDcols = partinfo$cols]
+  cb_part$codebook <- NULL
+  cb_part$status <-  "F" #rename to filter
+  return(cb_part)
+}
+
+#' @keywords internal
+#' @noRd
+get_dekk <- function(full){
+  omkkols <- grep("_omk$", names(full), value = T)
+  data.table::setkeyv(full, omkkols)
+  Dekk <- unique(full[, ..omkkols])
+  data.table::setnames(Dekk, names(Dekk), gsub("_omk$", "", names(Dekk)))
+  return(Dekk)
+}
+
+#' handle_udekk (ybk)
+#' @keywords internal
+#' @noRd
+handle_udekk <- function(FULL, namesFULL, TempFile){
+  Udekk <- readRDS(TempFile)
+  data.table::setkeyv(Udekk, namesFULL)
+  data.table::setkeyv(FULL, namesFULL)
+  Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
+  data.table::setnames(Udekk, namesFULL, gsub("_omk$", "", namesFULL))
+  return(Udekk)
+}

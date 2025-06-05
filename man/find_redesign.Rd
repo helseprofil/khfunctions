@@ -19,5 +19,5 @@ find_redesign(orgdesign, targetdesign, aggregate = character(), parameters)
 A list with information to redesign a file into a target design.
 }
 \description{
-WIP: replacement for finnredesign()
+find_redesign
 }
