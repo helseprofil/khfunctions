@@ -16,7 +16,7 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   out <- setNames(replicate(8, list()), 
                   c("Parts", "SKombs", "KBs", "Filters", "FULL", "Dekk", "Udekk", "DelStatus"))
   out[["Parts"]] <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
-  partcols <- get_partcols_and_set_aggpri(Parts = out$Parts, parameters = parameters)
+  partcols <- get_partcols_and_set_aggpri(cols = names(out$Parts), parameters = parameters)
   
   for(part in partcols){
     partinfo <- get_part_info(part)
@@ -246,12 +246,12 @@ DekkerInt <- function(FRA, TIL) {
 #' Creates a list of parts to set recoding
 #' @keywords internal
 #' @noRd
-get_partcols_and_set_aggpri <- function(Parts, parameters){
+get_partcols_and_set_aggpri <- function(cols, parameters){
   AggPri <- parameters$DefDesign$AggPri
   # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
   beting <- intersect(rev(AggPri), unlist(parameters$DefDesign[c("BetingOmk", "BetingF")], use.names = F))
   ubeting <- intersect(rev(AggPri), parameters$DefDesign$UBeting)
-  return(intersect(c(beting, ubeting), names(Parts)))
+  return(intersect(c(beting, ubeting), cols))
 }
 
 #' @keywords internal
@@ -341,9 +341,9 @@ merge_cbpart_to_full <- function(full, cb_part){
 }
 
 #' @description
-#' # Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
-# Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
-# Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
+#' Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
+#' Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
+#' Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
 #' @keywords internal
 #' @noRd
 filter_cbpart <- function(cb_part, partinfo){
@@ -359,7 +359,7 @@ filter_cbpart <- function(cb_part, partinfo){
 #' @keywords internal
 #' @noRd
 switch_cbpart_to_filter <- function(cb_part, partinfo){
-  cb_part$filter <- cb_part$codebook[, .SD, .SDcols = partinfo$cols]
+  cb_part$filter <- unique(cb_part$codebook[, .SD, .SDcols = partinfo$cols])
   cb_part$codebook <- NULL
   cb_part$status <-  "F" #rename to filter
   return(cb_part)

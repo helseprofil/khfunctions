@@ -13,19 +13,19 @@
 #' @noRd
 add_predteller <- function(dt, parameters){
   if (parameters$CUBEinformation$REFVERDI_VP != "P") return(dt)
-  cat("* Skal estimere PREDTELLER for standardisering\n")
+  cat("\n* Skal estimere PREDTELLER for standardisering")
   designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
   predrate <- estimate_predrate(design = designlist$STNdesign, parameters = parameters)
   prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters)
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters)
   
-  cat("* Merger med KUBE\n** Før merge dim:", dim(dt), "\n")
+  cat("\n* Merger PREDTELLER med KUBE\n** Før merge dim:", dim(dt))
   tabcols <- get_dimension_columns(names(dt))
   dt <- collapse::join(dt, predteller, how = "l", on = tabcols, overid = 2, verbose = 0)
-  cat("** Etter merge dim:", dim(dt), "\n")
+  cat("\n** Etter merge dim:", dim(dt))
   
   dt <- set_implicit_null_after_merge(dt, parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
-  cat("*** FERDIG MED Å ESTIMERE PREDTELLER\n")
+  cat("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
   return(dt)
 }
 
@@ -35,7 +35,7 @@ add_predteller <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 find_common_standard_teller_nevner_prednevner_design <- function(parameters){
-  cat("** Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
+  cat("\n** Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
   
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {
@@ -92,19 +92,19 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @keywords internal
 #' @noRd
 estimate_predrate <- function(design, parameters){
-  cat("* Estimerer PREDRATE...\n")
-  STNF <- merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)$TNF
-  STNF <- aggregate_to_periods(dt = STNF, reset_rate = FALSE, parameters = parameters)
-  STNF[, (parameters$PredFilter$Predfiltercolumns) := NULL]
-  STNF[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
-  STNF[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
-  STNF[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = 0)]
-  STNF[, let(PREDRATE.a = pmax(TELLER.a, NEVNER.a))]
+  cat("\n* Estimerer PREDRATE...")
+  predrate <- merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)$TNF
+  predrate <- aggregate_to_periods(dt = predrate, reset_rate = FALSE, parameters = parameters)
+  predrate[, (parameters$PredFilter$Predfiltercolumns) := NULL]
+  predrate[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
+  predrate[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
+  predrate[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = 0)]
+  predrate[, let(PREDRATE.a = pmax(TELLER.a, NEVNER.a))]
   
-  ukurante <- STNF[is.na(TELLER) | is.na(NEVNER), .N]
-  if (ukurante > 0) cat("!!! Missing verdier i standardteller og/eller standardnevner (", ukurante, "), dette vil gi problemer i PREDTELLER\n")
-  STNF <- STNF[, .SD, .SDcols = c(get_dimension_columns(names(STNF)), paste0("PREDRATE", c("", ".f", ".a")))]
-  return(STNF)
+  ukurante <- predrate[is.na(TELLER) | is.na(NEVNER), .N]
+  if (ukurante > 0) cat("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante, "), dette vil gi problemer i PREDTELLER\n")
+  predrate <- predrate[, .SD, .SDcols = c(get_dimension_columns(names(predrate)), paste0("PREDRATE", c("", ".f", ".a")))]
+  return(predrate)
 }
 
 #' @title estimate_prednevner
@@ -112,18 +112,18 @@ estimate_predrate <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_prednevner <- function(design, parameters){
-  cat("* Estimerer PREDNEVNER...\n")
+  cat("\n* Estimerer PREDNEVNER...")
   # PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, parameters = parameters)
-  PNrd <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
-  PN <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
-  PN <- OmkodFil(FIL = PN, RD = PNrd, parameters = parameters)
+  redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
+  prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
+  prednevner <- do_filter_and_recode_to_redesign(dt = prednevner, redesign = redesign, parameters = parameters)
   PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(PredNevnerKol)) PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
-  PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(PN))
-  data.table::setnames(PN, names(PN), PNnames)
-  PN <- PN[, .SD, .SDcols = c(get_dimension_columns(names(PN)), grep("^PREDNEVNER", names(PN), value= T))]
-  PN <- aggregate_to_periods(dt = PN, reset_rate = FALSE, parameters = parameters)
-  return(PN)
+  PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(prednevner))
+  data.table::setnames(prednevner, names(prednevner), PNnames)
+  prednevner <- prednevner[, .SD, .SDcols = c(get_dimension_columns(names(prednevner)), grep("^PREDNEVNER", names(prednevner), value= T))]
+  prednevner <- aggregate_to_periods(dt = prednevner, reset_rate = FALSE, parameters = parameters)
+  return(prednevner)
 }
 
 #' @title estimate_predteller
@@ -131,27 +131,24 @@ estimate_prednevner <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_predteller <- function(predrate, prednevner, parameters){
-  cat("* Estimerer PREDTELLER...\n")
+  cat("\n* Estimerer PREDTELLER...")
   commondims <- intersect(get_dimension_columns(names(prednevner)), get_dimension_columns(names(predrate)))
   mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
   if(mismatch > 0) cat("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
   
-  cat("** Før merge:\n - dim(prednevner):", dim(prednevner), "\n - dim(predrate):", dim(predrate), "\n")
-  STNP <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
-  STNP[, let(PREDTELLER = PREDRATE * PREDNEVNER,
+  # cat("** Før merge:\n - dim(prednevner):", dim(prednevner), "\n - dim(predrate):", dim(predrate), "\n")
+  predteller <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
+  predteller[, let(PREDTELLER = PREDRATE * PREDNEVNER,
              PREDTELLER.f = pmax(PREDRATE.f, PREDNEVNER.f),
              PREDTELLER.a = pmax(PREDRATE.a, PREDNEVNER.a))]
-  STNP <- STNP[, .SD, .SDcols = c(get_dimension_columns(names(STNP)), paste0("PREDTELLER", c("", ".f", ".a")))]
-  cat("** Etter merge dim:", dim(STNP), "\n")
+  predteller <- predteller[, .SD, .SDcols = c(get_dimension_columns(names(predteller)), paste0("PREDTELLER", c("", ".f", ".a")))]
+  # cat("** Etter merge dim:", dim(predteller), "\n")
   
   filename <- parameters$files$PREDNEVNER
   prednevnerdesign <- find_filedesign(file = prednevner, filename = filename, parameters = parameters)
   cubedesign <- list(Part = parameters$CUBEdesign)
-  # redesign <- FinnRedesign(fradesign = prednevnerdesign, tildesign = cubedesign, SkalAggregeresOpp = parameters$DefDesign$AggVedStand, parameters = parameters)
   redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
-  predteller <- OmkodFil(FIL = STNP, RD = redesign, parameters = parameters)
-  
-  cat("** PREDTELLER ferdig med dim:", dim(STNP), "\n")
+  predteller <- do_filter_and_recode_to_redesign(dt = predteller, redesign = redesign, parameters = parameters)
   return(predteller)
 }
 
@@ -162,7 +159,7 @@ estimate_predteller <- function(predrate, prednevner, parameters){
 #' @noRd
 add_meisskala <- function(dt, parameters){
   if(parameters$PredFilter$ref_year_type != "Specific") return(dt)
-  cat("* Legger til MEISskala for standardisering\n")
+  cat("\n* Legger til MEISskala for standardisering\n")
 
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
     dt[, MEISskala := NA_real_]

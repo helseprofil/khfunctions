@@ -96,7 +96,7 @@ find_missing_year <- function(aarl){
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
 #' @noRd
 calculate_period_sums <- function(dt, period, n_missing_year){
-  cat("* Aggregerer til ", period, "-årige tall\n", sep = "")
+  cat("\n* Aggregerer til ", period, "-årige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
   dt <- extend_to_periods(dt = dt, periods = allperiods)
   values <- get_value_columns(names(dt))

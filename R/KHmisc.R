@@ -34,7 +34,7 @@ expand.grid.dt <- function(...){
 #' @keywords internal
 #' @noRd
 set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
-  cat("\n*** Håndterer implisitte nuller\n")
+  cat("\n*** Håndterer implisitte nuller")
   vals <- get_value_columns(names(file))
   
   for (val in vals) {
@@ -54,7 +54,7 @@ set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
     valA <- paste0(val, ".a")
     missingrows <- which((is.na(file[[val]]) & file[[valF]] == 0) | is.na(file[[valF]]))
     n_missing <- length(missingrows)
-    if(n_missing > 0) cat(" - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader\n")
+    if(n_missing > 0) cat("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
     file[missingrows, names(.SD) := replacemissing, .SDcols = c(val, valF, valA)]
   }
   return(file)

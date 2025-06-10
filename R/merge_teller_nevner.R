@@ -5,11 +5,11 @@
 #' @param design Design list
 merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    cat("* Merger standardteller- og standardnevnerfil\n")
+    cat("\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    cat("* Merger teller- og nevnerfil\n")
+    cat("\n* Merger teller- og nevnerfil\n")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }
@@ -32,37 +32,37 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   }
   
   tellerfiltype <- ifelse(standardfiles, "standard tellerfil", "tellerfil")
-  cat("** Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
-  tellerfil <- do_redesign_recode_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters)
+  cat("** Lager", tellerfiltype, "fra", tellerfilnavn)
+  tellerfil <- do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
     nevnerfiltype <- ifelse(standardfiles, "standard nevnerfil", "nevnerfilfil")
-    cat("** Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
-    nevnerfil <- do_redesign_recode_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters)
+    cat("** Lager", nevnerfiltype, "fra", nevnerfilnavn)
+    nevnerfil <- do_redesign_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters)
   }
   
   implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
   if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, parameters$fileinformation[[nevnerfilnavn]]$vals)
   
   if (length(KUBEdesign) > 0) {
-    cat("** Rektangulariserer teller-nevner-fil\n")
+    cat("\n** Rektangulariserer teller-nevner-fil")
     rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, parameters = parameters)
     report_removed_codes(file = tellerfil, cube = rectangularizedcube)
     TNF <- collapse::join(rectangularizedcube, tellerfil, how = "l", overid = 0, verbose = 0)
     if(isnevnerfil) TNF <- collapse::join(TNF, nevnerfil, how = "l", overid = 0, verbose = 0)
     TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
-    cat("*** Ferdig rektangularisert og merget teller-nevner-fil, dim:", dim(TNF), "\n")
+    cat("\n*** Ferdig rektangularisert og merget teller-nevner-fil, dim:", dim(TNF))
   } else if (isnevnerfil) {
     TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
     TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
-    cat("*** Ferdig merget teller-nevner-fil, dim:", dim(TNF), "\n")
+    cat("\n*** Ferdig merget teller-nevner-fil, dim:", dim(TNF))
   } else {
     TNF <- tellerfil
-    cat("*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF), "\n")
+    cat("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF))
   }
   
   isNYEKOL_RAD <- !is.na(parameters$TNPinformation$NYEKOL_RAD) && parameters$TNPinformation$NYEKOL_RAD != ""
-  if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
+  if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(dt = TNF, NYdscr = parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- !is.na(parameters$TNPinformation$NYEKOL_KOL) && parameters$TNPinformation$NYEKOL_KOL != ""
   if(isNYEKOL_KOL) add_new_value_columns(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   
@@ -207,7 +207,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   return(Deler)
 }
 
-#' @title do_redesign_recode_file
+#' @title do_redesign_file
 #'
 #' @param filename 
 #' @param filedesign 
@@ -215,12 +215,12 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
-do_redesign_recode_file <- function(filename, filedesign, tndesign, parameters){
+do_redesign_file <- function(filename, filedesign, tndesign, parameters){
   # redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
   if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   file <- fetch_filegroup_from_buffer(filegroup = filename, parameters = parameters)
-  file <- OmkodFil(file, RD = redesign, parameters = parameters)
+  file <- do_filter_and_recode_to_redesign(dt = file, redesign = redesign, parameters = parameters)
   return(file)
 }
 
