@@ -4,7 +4,7 @@ if(version$major >= 4 & version$minor >= 2){
 }
 
 githubpath <- "https://raw.githubusercontent.com/helseprofil/khfunctions/"
-branch <- "master"
+branch <- "arkiv-pre-package"
 
 # Load packages
 library(conflicted)
