@@ -23,7 +23,7 @@ do_format_cube_columns <- function(dt, parameters){
   dt <- add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
   dt <- set_nonsumvalues(dt = dt)
   dt <- set_alder_aar(dt = dt)
-  if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) add_new_value_columns(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
+  if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
   dt <- add_maltall(dt = dt, maltallcolumn = parameters$MALTALL)
   return(dt)
 }

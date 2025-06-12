@@ -203,6 +203,9 @@ set_predictionfilter <- function(parameters) {
   out <- list(Design = list())
   delkolN <- parameters$DefDesign$DelKolN
   refverdicolumns <- delkolN[sapply(delkolN, grepl, refverdi)]
+  # HVIS GEONIV IKKE ER SATT I REFVERDI, DA MÅ DEN SETTES TIL 'L'. 
+  # refverdicolumns må inkludere geoniv
+  # refverdi må få på GEOniv=='L', paste med sep = "&"
   out[["Predfiltercolumns"]] <- as.character(unlist(parameters$DefDesign$DelKolsF[names(refverdicolumns)]))
   out[["ref_year_type"]] <- ifelse(grepl("AAR", refverdi), "Specific", "Moving")
   meisskalafilter <- character()

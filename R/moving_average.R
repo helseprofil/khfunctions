@@ -33,7 +33,7 @@ aggregate_to_periods <- function(dt, reset_rate = TRUE, parameters){
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods(dt = dt, parameters = parameters)
     dt <- do_filter_periods_with_missing_original(dt)
-    if(reset_rate && parameters$TNPinformation$NEVNERKOL != "-") add_new_value_columns(dt = dt, formulas = "RATE={TELLER/NEVNER}", post_moving_average = TRUE)
+    if(reset_rate && parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = dt, formulas = "RATE={TELLER/NEVNER}", post_moving_average = TRUE)
   } else {
     dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }

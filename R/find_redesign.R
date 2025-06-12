@@ -19,12 +19,12 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   partcols <- get_partcols_and_set_aggpri(cols = names(out$Parts), parameters = parameters)
   
   for(part in partcols){
-    partinfo <- get_part_info(part)
+    partinfo <- get_part_info(part = part, parameters = parameters)
     partinfo[["kombname"]] <- ifelse(part %in% orgdesign$UBeting, "bet", paste0("bet", part))
     partinfo[["aggregate"]] <- aggregate
     if(any_ubeting) partinfo[["betcols"]] <- unlist(parameters$DefDesign$DelKols[setdiff(orgdesign$UBeting, part)]) 
     partdata <- data.table::copy(out$Parts[[part]])
-    if(any_ubeting) partdata <- merge_partdata_orgdesign(partdata = partdata, orgdesign = orgdesign, partinfo = partinfo)
+    if(any_ubeting) partdata <- merge_partdata_orgdesign(partdata = partdata, orgdesign = orgdesign, partinfo = partinfo, parameters = parameters)
     set_partdata_bruk(partdata = partdata, partinfo = partinfo)
     cb_part <- partdata[Bruk == get(partinfo$pri) & get(partinfo$har) == 1]
     FULL <- merge_cbpart_to_full(full = FULL, cb_part = cb_part)
@@ -88,13 +88,13 @@ set_redesign_parts <- function(orgdesign, targetdesign, parameters){
   redesignparts <- intersect(names(orgdesign$Part), names(targetdesign$Part))
   
   for(part in redesignparts){
-    partinfo <- get_part_info(part = part)
+    partinfo <- get_part_info(part = part, parameters = parameters)
     target_part <- data.table::copy(targetdesign$Part[[part]])
     org_part <- data.table::copy(orgdesign$Part[[part]])
     if(!partinfo$har %in% names(target_part)) target_part[, partinfo$har := 1]
     cb_part <- get_global_codebook_part(codebook = parameters$KB, target_part = target_part, partinfo = partinfo)
     if(partinfo$type == "COL") cb_part <- format_global_codebook_col(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
-    if(partinfo$type == "INT") cb_part <- format_global_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
+    if(partinfo$type == "INT") cb_part <- format_global_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part, parameters = parameters)
     
     cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), keyby = c(partinfo$colsomk, partinfo$pri)]
     data.table::setkeyv(cb_part, partinfo$cols) # KUTT? 
@@ -131,7 +131,7 @@ format_global_codebook_col <- function(cb_part, partinfo, target_part, org_part)
 
 #' @keywords internal
 #' @noRd
-format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part){
+format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part, parameters){
   org_min <- min(org_part[[partinfo$cols[1]]])
   org_max <- max(org_part[[partinfo$cols[2]]])
   target_intervals <- int_string(dt = target_part, cols = partinfo$cols)
@@ -256,7 +256,7 @@ get_partcols_and_set_aggpri <- function(cols, parameters){
 
 #' @keywords internal
 #' @noRd
-get_part_info <- function(part){
+get_part_info <- function(part, parameters){
   out <- list()
   out[["part"]] <- part
   out[["type"]] <- parameters$DefDesign$DelType[[part]]
@@ -273,7 +273,7 @@ get_part_info <- function(part){
 
 #' @keywords internal
 #' @noRd
-merge_partdata_orgdesign <- function(partdata, orgdesign, partinfo){
+merge_partdata_orgdesign <- function(partdata, orgdesign, partinfo, parameters){
   orgdata <- orgdesign$SKombs[[partinfo$kombname]]
   d <- collapse::join(orgdata, partdata, on = partinfo$cols, how = "right", multiple = T, verbose = F)[get(partinfo$dekk) == 1]
   data.table::setkeyv(d, c(partinfo$cols, partinfo$colsomk)) # KUTT

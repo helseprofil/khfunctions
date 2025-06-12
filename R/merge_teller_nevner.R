@@ -61,10 +61,10 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     cat("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF))
   }
   
-  isNYEKOL_RAD <- !is.na(parameters$TNPinformation$NYEKOL_RAD) && parameters$TNPinformation$NYEKOL_RAD != ""
+  isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
   if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(dt = TNF, NYdscr = parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
-  isNYEKOL_KOL <- !is.na(parameters$TNPinformation$NYEKOL_KOL) && parameters$TNPinformation$NYEKOL_KOL != ""
-  if(isNYEKOL_KOL) add_new_value_columns(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
+  isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
+  if(isNYEKOL_KOL) compute_new_value_from_formula(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)

@@ -26,7 +26,7 @@
 ** AAR prior to AAR_START is removed
 ** ALDER < min and > max ALDER provided is removed
 ** TABs are filtered to only keep what is provided in TABX(_0)
-* Implemented standardization to multiyear-periods
+* Implemented standardization to multiyear-periods. In ACCESS, the last year of the period must be provided. It could be given as AARl=='XXXX', but it is more intuitive to use AARh =='XXXX'
 * Filegroups are always read from NYESTE, simplifying the code. 
 * When initially loading filegroups, the files will always be read from disk and never from BUFFER. 
 * Moved R and STATA censoring into the same function `do_censor_cube`
