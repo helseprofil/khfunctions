@@ -9,6 +9,7 @@
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
 #' @return complete data file, publication ready file, and quality control file.
+#' @export 
 LagKUBE <- function(name, write = FALSE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list()) {
   on.exit(lagkube_cleanup(), add = TRUE)
   check_connection_folders()

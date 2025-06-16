@@ -5,6 +5,7 @@
 #' @param gruppe name of filegroup
 #' @param write save output files? default = TRUE
 #' @param dumps list of intermediate files to save, used for debugging and development. 
+#' @export
 LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
   check_connection_folders()

@@ -1,4 +1,4 @@
-# khfunctions (development version)
+# khfunctions 1.0.0
 
 ## Summary of changes overall
 
