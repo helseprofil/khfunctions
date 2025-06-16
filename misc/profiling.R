@@ -41,3 +41,10 @@ for(b in c("master", "dev")){
   gc()
   
 }
+
+
+library(microbenchmark)
+
+microbenchmark(gammel = {FinnSumOverAar(KUBE = dt, per = period, FyllMiss = F, AntYMiss = n_missing_year, globs = globs)},
+               ny = {calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year, globs = globs)},
+               times = 50)

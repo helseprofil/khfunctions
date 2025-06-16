@@ -1,5 +1,4 @@
 Version: 1.0
-ProjectId: 175e8b54-0c82-4e6b-b414-a9d11d439348
 
 RestoreWorkspace: No
 SaveWorkspace: No
@@ -8,9 +7,14 @@ AlwaysSaveHistory: No
 EnableCodeIndexing: Yes
 UseSpacesForTab: Yes
 NumSpacesForTab: 2
-Encoding: ISO8859-1
+Encoding: UTF-8
 
 RnwWeave: Sweave
 LaTeX: pdfLaTeX
+
+BuildType: Package
+PackageUseDevtools: Yes
+PackageInstallArgs: --no-multiarch --with-keep.source
+PackageRoxygenize: rd,collate,namespace
 
 QuitChildProcessesOnExit: Yes

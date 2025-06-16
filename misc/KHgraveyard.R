@@ -1,4 +1,4 @@
-# Functions that apparently are no longer in use, with comment
+# Functions that apparently are no longer in use
 
 # Not used 
 SySammenFiler <- function(FILID1, FILID2, batch1 = NA, batch2 = NA, ROLLE1 = "", ROLLE2 = "", globs = FinnGlobs()) {
@@ -24,7 +24,7 @@ SySammenTabeller <- function(F1, F2, SJEF = 0, FGP1 = list(amin = 0, amax = 120)
   orgkey1 <- key(F1)
   orgkey2 <- key(F2)
   
-  # M≈ FIKSE EVT KOLLISJON AV FELTNAVN!
+  # M? FIKSE EVT KOLLISJON AV FELTNAVN!
   
   FU <- data.table()
   
@@ -38,7 +38,7 @@ SySammenTabeller <- function(F1, F2, SJEF = 0, FGP1 = list(amin = 0, amax = 120)
   
   if (etabmatchOK == FALSE && length(etabs1) > 0 && length(etabs2) > 0) {
     ok <- 0
-    print("FEIL!!!!! Noe tull med etabmatchOK") # Usikker pÂ hvorfor jeg har satt denne muligheten, bruker den ikke
+    print("FEIL!!!!! Noe tull med etabmatchOK") # Usikker p? hvorfor jeg har satt denne muligheten, bruker den ikke
   } else {
     DF1 <- FinnDesign(F1, FGP = FGP1)
     DF2 <- FinnDesign(F2, FGP = FGP2)
@@ -268,7 +268,7 @@ ListAlleOriginalFiler <- function(globs = FinnGlobs()) {
 FinnFilBeskFilid <- function(filid, batchdate = NULL, globs = FinnGlobs()) {
   is_kh_debug()
   
-  # Default er Â finne filbesk gyldige nÂ (Sys.time)
+  # Default er ? finne filbesk gyldige n? (Sys.time)
   datef <- format(Sys.time(), "#%Y-%m-%d#")
   # ALternativt kan man finne for en historisk batchdate
   if (!is.null(batchdate)) {
@@ -345,7 +345,7 @@ backup <- function(filename = c("KHfunctions.R", "KHELSA.mdb"), force = FALSE, .
   is_kh_debug()
   
   ## force : TRUE hvis man skal arkivere filen uansett ellers
-  ## for KHFunction.R sjekkes det dato filen er lagret f¯rst
+  ## for KHFunction.R sjekkes det dato filen er lagret f?rst
   
   if (isTRUE(grepl("function", filename))) {
     valgFil <- "fun"
@@ -431,7 +431,7 @@ SettPredFilterGml <- function(refvstr, FGP = list(amin = 0, amax = 120), globs =
   is_kh_debug()
   PredFilter <- list()
   Pcols <- character(0)
-  # MÂ utvikles til Â lese KUBEdscr$REFVERDI
+  # M? utvikles til ? lese KUBEdscr$REFVERDI
   if (is.null(refvstr) || is.na(refvstr)) {
     PredFilter <- list(Gn = data.frame(GEOniv = "L"))
   } else {
@@ -487,7 +487,7 @@ KHaggregerM <- function(FILn = "FG", orgcols, vals = list(), snitt = FALSE, glob
   valkols <- names(FIL)[!orgcols %in% tabnames]
   valkols <- valkols[!grepl("\\.(f|a)", valkols)]
   valkols <- valkols[!valkols %in% c("KOBLID", "ROW")]
-  setkeym(FIL, tabnames) # Sjekk om key ok for Â effektivisere?
+  setkeym(FIL, tabnames) # Sjekk om key ok for ? effektivisere?
   if (snitt == FALSE) {
     sumexp$tr1 <- paste("list(",
                         paste(valkols, "=sum(", valkols, "),",
@@ -500,7 +500,7 @@ KHaggregerM <- function(FILn = "FG", orgcols, vals = list(), snitt = FALSE, glob
     )
     # FILa<-FIL[, eval(parse(text=lp)), by=tabnames]
   } else {
-    # Sett ogsÂ hjelpest¯rrelser to vurdering av snitt
+    # Sett ogs? hjelpest?rrelser to vurdering av snitt
     sumexp$tr1 <- paste("list(",
                         paste(valkols, "=sum(", valkols, ",na.rm=TRUE),",
                               valkols, ".f=max(", valkols, ".f),",
@@ -588,9 +588,9 @@ ModifiserDesignFullRekt <- function(Nytt, Org = list(), globs = FinnGlobs()) {
   setkeym(FullDesign, OmkKols)
   Org[["OmkDesign"]] <- FullDesign[, list(HAR = max(HAR)), by = OmkKols]
   
-  # Merk, det gir bare mening Â bruke denne for Â lage et TIL-design, da trengs ikke de f¯lgende delene
-  # Om det modifiserte designet skal brukes som et FRA-design mÂ ogsÂ disse endres. Det er en kl¯nete operasjon (og som vel knapt er veldefinert)
-  # Kan altsÂ IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  # Merk, det gir bare mening ? bruke denne for ? lage et TIL-design, da trengs ikke de f?lgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design m? ogs? disse endres. Det er en kl?nete operasjon (og som vel knapt er veldefinert)
+  # Kan alts? IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
   
   Org[["Design"]] <- NULL
   Org[["SKombs"]] <- NULL
@@ -1456,7 +1456,7 @@ GeoHarm <- function(FIL, vals = list(), rektiser = TRUE, batchdate = SettKHBatch
     
     FDes <- FDesign$Design
     
-    # SAMME LOGIKK SOM I set_rectangularized_cube_design, b¯r ekstraheres ut.
+    # SAMME LOGIKK SOM I set_rectangularized_cube_design, b?r ekstraheres ut.
     for (Gn in FDesign$Part[["Gn"]][["GEOniv"]]) {
       GEOK <- subset(globs$GeoKoder, FRA <= GEOstdAAR & TIL > GEOstdAAR & GEOniv == Gn)$GEO
       FDesG <- FDes[HAR == 1 & GEOniv == Gn, intersect(names(FIL), names(FDes)), with = FALSE]
@@ -1546,3 +1546,2616 @@ KlargjorFil <- function(filename, tabfilter  = "", versjonert = FALSE, batchdate
   FILd <- FinnDesign(FIL, FGP = FGP, globs = globs)
   return(list(FIL = FIL, FGP = FGP, FILd = FILd))
 } 
+
+#' superseeded by find_design_after_filter()
+FinnDesignEtterFiltrering <- function(ORGd, Filter, FilterKols = character(0), FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  FiltD <- FinnRedesignForFilter(ORGd, Filter, globs = globs)$Dekk
+  FiltD <- FiltD[, setdiff(names(FiltD), FilterKols), with = FALSE]
+  return(FinnDesign(FiltD, FGP = FGP, globs = globs))
+}
+
+#' superseeded by calculate_period_sums()
+FinnSumOverAar <- function(KUBE, per = 0, FyllMiss = FALSE, AntYMiss = 0, globs = SettGlobs()) {
+  is_kh_debug()
+  UT <- KUBE[0, ]
+  tabs <- setdiff(get_dimension_columns(names(KUBE)), c("AARl", "AARh"))
+  valkols <- get_value_columns(names(KUBE))
+  # Utrykk for KH-aggregering (med hjelpestoerrelses for snitt)
+  lpv <- paste0(valkols, "=sum(", valkols, ",na.rm=TRUE),",
+                valkols, ".f=0,",
+                valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0)),",
+                valkols, ".fn1=sum(", valkols, ".f %in% 1:2),",
+                valkols, ".fn3=sum(", valkols, ".f==3),",
+                valkols, ".fn9=sum(", valkols, ".f==9),",
+                valkols, ".n=sum(", valkols, ".f==0)",
+                # valkols,".n=sum(as.numeric(!is.na(",valkols,")))",
+                collapse = ","
+  )
+  lpsvars <- unlist(lapply(valkols, function(x) {
+    paste0(x, c(".fn1", ".fn3", ".fn9", ".n"))
+  }))
+  UT[, (lpsvars) := NA_integer_]
+  
+  aara <- unique(KUBE$AARh)
+  if (FyllMiss == TRUE) {
+    aara <- (min(aara) + per - 1):max(aara)
+  } else {
+    aara <- intersect((min(aara) + per - 1):max(aara), aara)
+  }
+  cat("Finner", per, "-aars sum for ")
+  for (aar in aara) {
+    cat(aar, " ")
+    lp <- paste0("list(AARl=", aar - per + 1, ",AARh=", aar, ",", lpv, ")")
+    UT <- rbind(UT, KUBE[AARh %in% c((aar - per + 1):aar), eval(parse(text = lp)), by = tabs][, names(UT), with = FALSE])
+  }
+  cat("\n")
+  for (valkol in valkols) {
+    eval(parse(text = paste0("UT[", valkol, ".f>0,", valkol, ":=list(NA)]")))
+  }
+  
+  if (AntYMiss <= per) {
+    for (valkol in valkols) {
+      eval(parse(text = paste0("UT[", valkol, ".fn9>", AntYMiss, ",c(\"", valkol, "\",\"", valkol, ".f\"):=list(NA,9)]")))
+    }
+  }
+  
+  f9s <- names(UT)[grepl(".f9$", names(UT))]
+  if (length(f9s) > 0) {
+    UT[, (f9s) := NULL]
+  }
+  
+  return(UT)
+}
+
+#superseeded by get_read_parameters()
+FinnFilBeskGruppe <- function(filgruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  datef <- FormatSqlBatchdate(batchdate)
+  sqlt <- paste("SELECT KOBLID, ORIGINALFILER.FILID AS FILID, FILNAVN, FORMAT, DEFAAR, INNLESING.*
+              FROM INNLESING INNER JOIN
+              (  ORGINNLESkobl INNER JOIN ORIGINALFILER
+              ON ORGINNLESkobl.FILID = ORIGINALFILER.FILID)
+              ON   (INNLESING.DELID = ORGINNLESkobl.DELID)
+              AND (INNLESING.FILGRUPPE = ORGINNLESkobl.FILGRUPPE)
+              WHERE INNLESING.FILGRUPPE='", filgruppe, "'
+              AND ORIGINALFILER.IBRUKFRA<=", datef, "
+              AND ORIGINALFILER.IBRUKTIL>", datef, "
+              AND INNLESING.VERSJONFRA<=", datef, "
+              AND INNLESING.VERSJONTIL>", datef, sep = "")
+  fb <- RODBC::sqlQuery(globs$dbh, sqlt, stringsAsFactors = FALSE)
+  invisible(fb)
+}
+
+LagTabellFraFil <- function(filbesk, FGP, batchdate = SettKHBatchDate(), globs = SettGlobs(), versjonert = FALSE, dumps = list()) {
+  is_kh_debug()
+  
+  klokke <- proc.time()
+  # INNLESING
+  filn <- filbesk$filn
+  cat("\n#################\nLAGER TABELL FRA FIL:\n", filn, "\n")
+  LestFil <- LesFil(filbesk, batchdate = batchdate, globs = globs, dumps = dumps)
+  ok <- LestFil$ok
+  DF <- LestFil$DF
+  kolorgs <- getOption("khfunctions.kolorgs")
+  
+  if (ok == 1) {
+    
+    # Omdoep kolonnenavn.
+    # NB: for oversiktelighet i parameterfila gjoeres dette baade foer og etter reshape
+    # Dvs: kolonnenavn generert i reshape tillates aa avvike fra standardnavn, disse endres etterpaa
+    # Valdiering skjer ved siste endring
+    # Finn kolonner spesifisert i filbesk
+    HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
+    HarCols <- HarCols[HarCols %in% names(DF)]
+    # Sett standard kolonnenavn
+    names(DF) <- plyr::mapvalues(names(DF), HarCols, names(HarCols))
+    
+    # EVT INNFYLLING AV TABULATOR N?R DENNE ER INNRYKKET
+    if (is_not_empty(filbesk$FYLLTAB)) {
+      TAB <- as.character(read.csv(text = filbesk$FYLLTAB, header = FALSE, stringsAsFactors = FALSE))
+      if (all(TAB %in% names(DF))) {
+        DF[, TAB][DF[, TAB] == ""] <- NA
+        DF[, TAB] <- zoo::na.locf(DF[, TAB], na.rm = FALSE)
+      } else {
+        TilFilLogg(filbesk$KOBLID, "FYLLTABERR", paste("Kolonner", paste(TAB[!TAB %in% names(DF)], collapse = ","), " finnes ikke", sep = ""), batchdate = batchdate, globs = globs)
+        ok <- 0
+      }
+    }
+    
+    # EVT KASTING AV KOLONNER FoeR RESHAPE (GJoeR melt LETTERE aa BRUKE)
+    if(is_not_empty(filbesk$KASTKOLS)) {
+      eval(parse(text = paste("DF<-DF[,-", filbesk$KASTKOLS, "]", sep = "")))
+    }
+    
+    if ("RESHAPEpre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpre", sep = "_"), globs = globs, format = dumps[["RESHAPEpre"]])
+    
+    # if (!(is.na(filbesk$RESHAPEid) || filbesk$RESHAPEid=='')){
+    if (!(is.na(filbesk$RESHAPEvar) || filbesk$RESHAPEvar == "")) {
+      rshpDF <- ReshapeTab(DF, filbesk, batchdate = batchdate, globs = globs)
+      DF <- rshpDF$DF
+      ok <- min(ok, rshpDF$ok)
+      # cat("\nETTER RESHAPE\n#############################\n")
+      # print(head(DF))
+    }
+    
+    if ("RESHAPEpost" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RESHAPEpost", sep = "_"), globs = globs, format = dumps[["RESHAPEpost"]])
+    
+    TilFilLogg(filbesk$KOBLID, "RESHAPEh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
+  }
+  
+  if (ok == 1) {
+    
+    # Maa splitte evt kolonne fra MULTIHEAD
+    if (!is.na(filbesk$MULTIHEAD)) {
+      mhl <- LesMultiHead(filbesk$MULTIHEAD)
+      DF[, mhl$colnames] <- stringr::str_split_fixed(DF[, mhl$varname], mhl$sep, 2)
+    }
+    
+    if ("RSYNT2pre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2pre", sep = "_"), globs = globs, format = dumps[["RSYNT2pre"]])
+    DF <- do_special_handling(dt = DF, code = filbesk$RSYNT2, batchdate = batchdate, stata_exe = globs$StataExe, DTout = FALSE)
+    if ("RSYNT2post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT2post", sep = "_"), globs = globs, format = dumps[["RSYNT2post"]])
+  }
+  
+  if (ok == 1) {
+    
+    # Omdoep kolonnenavn, runde 2.
+    
+    # Finn kolonner spesifisert i filbesk
+    HarCols <- filbesk[kolorgs[grepl("^[^-<]", filbesk[kolorgs])]]
+    HarCols <- HarCols[HarCols %in% names(DF)]
+    # Sett standard kolonnenavn
+    names(DF) <- plyr::mapvalues(names(DF), HarCols, names(HarCols))
+    
+    # Finn kolonner med standardverdi ('<.*>' i filbesk)
+    DefVCols <- kolorgs[grepl("^<.*>", filbesk[kolorgs])]
+    DefV <- matrix(sub("^<(.*)>$", "\\1", filbesk[DefVCols]), nrow = 1)
+    # Sett standardverdier (faar ikke til dette med enklere syntaks naar det kan vaere tuppel, virker kloenete)
+    DF <- setNames(data.frame(DF, DefV, stringsAsFactors = FALSE), c(names(DF), DefVCols))
+    
+    # Sjekk for ikke-eksisterende/feilskrevet
+    colerr <- ""
+    if (!all(names(HarCols) %in% names(DF))) {
+      colerr <- paste(colerr, "Kolonnene <", HarCols[!(names(HarCols) %in% names(DF))], "> finnes ikke\n")
+      ok <- 0
+    }
+    
+    # Sjekk at paakrevde kolonner finnes
+    oblkols <- c("GEO", "AAR", "VAL1")
+    if (!all(oblkols %in% names(DF))) {
+      colerr <- paste(colerr, "KRITISK: Kolonnene <", oblkols[!(oblkols %in% names(DF))], "> finnes ikke\n")
+      ok <- 0
+    }
+    if (ok == 0) {
+      TilFilLogg(filbesk$KOBLID, "KOLNAVNERR", colerr, batchdate = batchdate, globs = globs)
+    }
+  }
+  
+  if (ok == 1) {
+    # Merge GEO delt i to
+    if (filbesk$GEOd2 != "-" & !is.na(filbesk$GEOd2)) {
+      DF[, filbesk$GEOd2] <- gsub("^(\\d|\\d{3})$", "0\\1", DF[, filbesk$GEOd2])
+      DF$GEO <- paste(DF$GEO, DF[, filbesk$GEOd2], sep = "")
+    }
+    
+    # KAST USPESIFISERTE KOLONNER
+    # Fiks for levekaar
+    harlevekaar <- FALSE
+    if("LEVEL" %in% names(DF) && "levekaar" %in% unique(DF$LEVEL)) harlevekaar <- TRUE
+    
+    DF <- DF[, names(DF)[names(DF) %in% kolorgs]]
+  }
+  
+  TilFilLogg(filbesk$KOBLID, "INNLES_OK", ok, batchdate = batchdate, globs = globs)
+  
+  if (!is.na(filbesk$GRUNNKRETS) && filbesk$GRUNNKRETS == 1) {
+    data.table::setDT(DF)
+    data.table::setkeyv(DF, "GEO")
+    data.table::setkeyv(globs$GkBHarm, "GK")
+    DF <- globs$GkBHarm[DF]
+    DF[is.na(Bydel2004), Bydel2004 := paste(substr(GK, 1, 4), "00", sep = "")]
+    DF[, GK := NULL]
+    data.table::setnames(DF, "Bydel2004", "GEO")
+    tabkols <- names(DF)[!grepl("^VAL\\d$", names(DF))]
+    valkols <- names(DF)[grepl("^VAL\\d$", names(DF))]
+    data.table::setkeyv(DF, tabkols)
+    lp <- paste("list(",
+                paste(valkols, "=as.character(sum(as.numeric(", valkols, ")))",
+                      sep = "", collapse = ","
+                ),
+                ")",
+                sep = ""
+    )
+    DF <- as.data.frame(DF[, eval(parse(text = lp)), by = tabkols])
+  }
+  
+  # SKILL EVT UT SOM EGEN FUNKSJON
+  # Nullstill logg
+  if ("KODEBOKpre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpre", sep = "_"), globs = globs, format = dumps[["KODEBOKpre"]])
+  
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, sep = ""))
+  if (ok == 1) {
+    colClass <- sapply(DF, class)
+    if (any(colClass != "character")) {
+      cat("Advarsel! Kolonnene ", names(DF)[colClass != "character"], " er ikke character (", colClass[colClass != "character"], ")\n", sep = "")
+      ## DF[,colClass!="character"]<-as.character(DF[,colClass!="character"])
+      
+      ## The above code creates lots of duplicated columns so it's changed as below
+      noneSTR <- names(colClass)[colClass != "character"]
+      DF[noneSTR] <- lapply(DF[noneSTR], as.character)
+    }
+    DF[is.na(DF)] <- ""
+    
+    ## TABS
+    ## KOPI_KOL will use the TAB1:TAB3 and defined in
+    ## INNLESING tabel KOPI_KOL column with Existing_col=New_col
+    ## New_col should be defined in one of the TABs
+    allTabs <- c("TAB1", "TAB2", "TAB3")
+    
+    if (!is.na(filbesk$KOPI_KOL)) {
+      message("Kopi kolonne er: ", filbesk$KOPI_KOL)
+      spVal <- unlist(strsplit(filbesk$KOPI_KOL, "="))
+      spVal <- trimws(spVal)
+      
+      if (isFALSE(spVal %in% names(filbesk))) {
+        stop("Har ikke funnet kolonnenavn som: ")
+      }
+      
+      spTab <- grep("<kopi_kol>", filbesk[allTabs], ignore.case = TRUE)
+      
+      if (length(spTab) == 0) {
+        stop("Hvor skal kolonne ", spVal[1], " kopieres til?")
+      }
+      
+      dfTab <- names(filbesk[allTabs][spTab])
+      
+      DF[dfTab] <- DF[spVal[1]]
+    }
+    
+    
+    # VASK AV TABx
+    for (tab in allTabs) {
+      if (tab %in% names(DF)) {
+        tabKB <- setNames(as.data.frame(table(DF[, tab], useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+        tabKB$KBOMK <- KBomkod(tabKB$ORG, type = tab, filbesk = filbesk, batchdate = batchdate, globs = globs)
+        tabKB$OMK <- gsub("^-$", "XXXKASTXXX", tabKB$KBOMK) # Dirty tricks. Beskytter '-' mot uttrykket nedenfor, uten aa gjoere regexp unoedvendig komplisert
+        tabKB$OMK <- gsub("[- ,\\/]", "_", tabKB$KBOMK)
+        tabKB$OMK <- gsub("XXXKASTXXX", "-", tabKB$KBOMK)
+        tabKB$OK <- 1
+        SkrivKBLogg(KB = tabKB, type = tab, filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+        DF[, tab] <- plyr::mapvalues(DF[, tab], tabKB$ORG, tabKB$OMK, warn_missing = FALSE)
+      }
+    }
+    
+    ## GEO
+    # RENSK GEO (Alle er legit inntil videre??? Eller kod til 9999???)
+    if ("GEO" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$GEO, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      geo <- GEOvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs, harlevekaar = harlevekaar)
+      
+      SkrivKBLogg(KB = geo, type = "GEO", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "GEO_ok", ifelse(0 %in% geo$OK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      DF$GEOniv <- plyr::mapvalues(DF$GEO, geo$ORG, geo$GEOniv, warn_missing = FALSE)
+      DF$FYLKE <- plyr::mapvalues(DF$GEO, geo$ORG, geo$FYLKE, warn_missing = FALSE)
+      DF$GEO <- plyr::mapvalues(DF$GEO, geo$ORG, geo$OMK, warn_missing = FALSE) # NB: rekkefoelge har betydning
+    }
+    # RENSK ALDER
+    # Sett intervall for alder ALLE
+    if ("ALDER" %in% names(DF)) {
+      DF$ALDER <- gsub(" \\Wr\\b", " ?r", DF$ALDER, perl = TRUE) # Problem med codebook i dbf
+      
+      org <- setNames(as.data.frame(table(DF$ALDER, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      alder <- ALDERvask(org, FGP = FGP, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      # Kast der ALDEr koder til "-" (maa ta det her og ikek generelle under pga intervall)
+      DF <- subset(DF, !ALDER %in% subset(alder, OMK == "-")$ORG)
+      
+      SkrivKBLogg(KB = alder, type = "ALDER", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "ALDER_ok", ifelse(getOption("khfunctions.alder_illegal") %in% alder$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      DF$ALDERl <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$LO, warn_missing = FALSE))
+      DF$ALDERh <- as.integer(plyr::mapvalues(DF$ALDER, alder$ORG, alder$HI, warn_missing = FALSE))
+      # DF$ALDERl<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$LO,warn_missing = FALSE))
+      # DF$ALDERh<-as.numeric(plyr::mapvalues(DF$ALDER,alder$ORG,alder$HI,warn_missing = FALSE))
+    }
+    
+    
+    # RENSK KJ?NN
+    if ("KJONN" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$KJONN, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      kjonn <- KJONNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      SkrivKBLogg(KB = kjonn, type = "KJONN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "KJONN_ok", ifelse(getOption("khfunctions.illegal") %in% kjonn$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      DF$KJONN <- as.integer(plyr::mapvalues(DF$KJONN, kjonn$ORG, kjonn$OMK, warn_missing = FALSE))
+    }
+    
+    # AAR TIL INTERVALL
+    if ("AAR" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$AAR, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      
+      aar <- AARvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      SkrivKBLogg(KB = aar, type = "AAR", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "AAR_ok", ifelse(getOption("khfunctions.aar_illegal") %in% aar$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      # Kast der AAR koder til "-" (maa ta det her og ikek generelle under pga intervall)
+      DF <- subset(DF, !AAR %in% subset(aar, OMK == "-")$ORG)
+      
+      DF$AARl <- as.integer(plyr::mapvalues(DF$AAR, aar$ORG, aar$LO, warn_missing = FALSE))
+      DF$AARh <- as.integer(plyr::mapvalues(DF$AAR, aar$ORG, aar$HI, warn_missing = FALSE))
+    }
+    
+    
+    # RENSK UTDANN
+    if ("UTDANN" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$UTDANN, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      utdann <- UTDANNvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      SkrivKBLogg(KB = utdann, type = "UTDANN", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "UTDANN_ok", ifelse(getOption("khfunctions.illegal") %in% utdann$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      DF$UTDANN <- as.integer(plyr::mapvalues(DF$UTDANN, utdann$ORG, utdann$OMK, warn_missing = FALSE))
+    }
+    
+    
+    # RENSK INNVKAT
+    if ("INNVKAT" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$INNVKAT, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      innvkat <- INNVKATvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      SkrivKBLogg(KB = innvkat, type = "INNVKAT", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "INNVKAT_ok", ifelse(getOption("khfunctions.illegal") %in% innvkat$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      DF$INNVKAT <- as.integer(plyr::mapvalues(DF$INNVKAT, innvkat$ORG, innvkat$OMK, warn_missing = FALSE))
+    }
+    
+    
+    # RENSK LANDBAK
+    if ("LANDBAK" %in% names(DF)) {
+      org <- setNames(as.data.frame(table(DF$LANDBAK, useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+      landbak <- LANDBAKvask(org, filbesk = filbesk, batchdate = batchdate, globs = globs)
+      
+      SkrivKBLogg(KB = landbak, type = "LANDBAK", filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+      TilFilLogg(filbesk$KOBLID, "LANDBAK_ok", ifelse(getOption("khfunctions.illegal") %in% landbak$OMK, 0, 1), batchdate = batchdate, globs = globs)
+      
+      DF$LANDBAK <- as.integer(plyr::mapvalues(DF$LANDBAK, landbak$ORG, landbak$OMK, warn_missing = FALSE))
+    }
+    
+    if ("KODEBOKpost" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "KODEBOKpost", sep = "_"), globs = globs, format = dumps[["KODEBOKpost"]])
+    
+    # DROPP ALLE MED '-' I TABULERING (merk: AAR og ALDER maatte tas over pga intervall)
+    DF <- subset(DF, rowSums(DF[, names(DF) %in% getOption("khfunctions.taborgs")] == "-") == 0)
+    
+    # VASK VERDIER. Litt annen prosess, bruker KB, men tabulerer bare ikke-numeriske.
+    # Setter numerisk, med flagg for type NA
+    for (val in c("VAL1", "VAL2", "VAL3")) {
+      # Bedre, men funker ikke i forhold til logg
+      # for (val in names(DF)[grepl("VAL\\d+$",names(DF))]){
+      if (val %in% names(DF)) {
+        DF[is.na(DF[, val]), val] <- ""
+        
+        valKB <- KBomkod(DF[, val], type = val, valsubs = TRUE, filbesk = filbesk, batchdate = batchdate, globs = globs)
+        valKB <- KBomkod(DF[[val]], type = val, valsubs = TRUE, filbesk = filbesk, batchdate = batchdate, globs = globs)
+        valKBut <- valKB$subsant
+        
+        valok <- 1
+        valf <- paste(val, ".f", sep = "")
+        vala <- paste(val, ".a", sep = "")
+        valomk <- paste(val, "omk", sep = "")
+        
+        
+        # Lag omkodet verdi med numerisk. Ikke numerisk blir foreloepig NA
+        suppressWarnings(DF[, valomk] <- as.numeric(valKB$omk))
+        DF[, valf] <- 0
+        DF[, vala] <- 1
+        DF[valKB$omk == ".." & DF[, val] != valKB$omk, valf] <- 1
+        DF[valKB$omk == "." & DF[, val] != valKB$omk, valf] <- 2
+        DF[valKB$omk == ":" & DF[, val] != valKB$omk, valf] <- 3
+        
+        
+        # Behandle (resterende) ikke-numeriske
+        nonNum <- which(is.na(DF[, valomk]) & DF[, val] == valKB$omk)
+        if (length(nonNum) > 0) {
+          # Kodebok
+          valKB <- setNames(as.data.frame(table(DF[nonNum, val], useNA = "ifany"), stringsAsFactors = FALSE), c("ORG", "FREQ"))
+          valKB$KBOMK <- KBomkod(valKB$ORG, type = val, filbesk = filbesk, batchdate = batchdate, globs = globs)
+          valKB$OMK <- valKB$KBOMK
+          
+          
+          # Gjoer nytt forsoek paa numerisk konvertering etter omkoding
+          kbNUM <- suppressWarnings(as.numeric(valKB$OMK))
+          
+          # Legitime
+          valKB$OK <- 0
+          Num2 <- which(!is.na(kbNUM))
+          valKB$OK[Num2] <- 1
+          valKB$OK[valKB$OMK %in% c(".", "..", ":")] <- 1
+          if (0 %in% valKB$OK) {
+            valok <- 0
+          }
+          valKBut <- rbind(valKBut, valKB)
+          
+          # if(valok==0){print(valKB)}
+          
+          # Internt, regnbart format med numerisk flagg i "VAL1f" etc
+          # ".." = 1, "." = 2, ":" = 3
+          valKB$kbNUM <- kbNUM
+          valKB$FLAG <- 0
+          valKB$FLAG[valKB$OMK == ".."] <- 1
+          valKB$FLAG[valKB$OMK == "."] <- 2
+          valKB$FLAG[valKB$OMK == ":"] <- 3
+          valKB$FLAG[valKB$OK == 0] <- 8
+          # valKB$kbNUM[valKB$FLAG>0]<-0
+          
+          # if(valok==0){print(valKB)}
+          DF[nonNum, valomk] <- as.numeric(plyr::mapvalues(DF[nonNum, val], valKB$ORG, valKB$kbNUM, warn_missing = FALSE))
+          # DF[nonNum,valomk]<-suppressWarnings(as.numeric(plyr::mapvalues(DF[nonNum,val],valKB$ORG,valKB$kbNUM,warn_missing = FALSE)))
+          DF[nonNum, valf] <- as.integer(plyr::mapvalues(DF[nonNum, val], valKB[, "ORG"], valKB[, "FLAG"], warn_missing = FALSE))
+        }
+        
+        if (nrow(valKBut) > 0) {
+          SkrivKBLogg(KB = valKBut, type = val, filbesk = filbesk, FGP$FILGRUPPE, batchdate = batchdate, globs = globs)
+        }
+        
+        
+        DF[, val] <- NULL
+        DF <- setNames(DF, plyr::mapvalues(names(DF), valomk, val))
+        
+        # DEVELOP20191219
+        
+        reskaler <- as.numeric(filbesk[[eval(paste("SKALA", "_", val, sep = ""))]])
+        
+        if (!(reskaler == 1 | is.na(reskaler))) {
+          DF[, val] <- DF[, val] * filbesk[[eval(paste("SKALA", "_", val, sep = ""))]]
+        }
+      }
+      
+      TilFilLogg(filbesk$KOBLID, paste(val, "OK", sep = "_"), valok, batchdate = batchdate, globs = globs)
+    }
+    
+    default.stringsAsFactors <- TRUE
+    Kols <- c(globs$DefDesign$DesignKolsFA[globs$DefDesign$DesignKolsFA %in% names(DF)], names(DF)[grepl("^VAL\\d+(\\.(f|a)|)$", names(DF))])
+    
+    # print(filbesk)
+    # kAN KRaeSJE VED UKJENT KOLNAVN!
+    # print(FGP)
+    DF <- DF[, Kols]
+    
+    # Kast rader for inaktive GEO med alle VAL==NA (maa gjoeres fordi alle kommunekoder gir utrapportert tall fra STATBANK og 0/NA er ikke noeytralt for ikke-sumerbare kolonner, jfr MEDIANINNT)
+    # Merk at ekte NA settes inn igjen naar det rektangulariseres paa aktive kommuner ved kubeproduksjon
+    GeoFra <- setNames(globs$GeoKoder$FRA, globs$GeoKoder$GEO)
+    GeoTil <- setNames(globs$GeoKoder$TIL, globs$GeoKoder$GEO)
+    valkols <- get_value_columns(names(DF))
+    # Skjoenner ikke hvorfor dette ikke funker
+    
+    DF2 <- DF[!((unlist(GeoTil[DF$GEO]) <= DF$AARl | unlist(GeoFra[DF$GEO]) >= DF$AARh) & rowSums(is.na(data.frame(DF[, valkols]))) == length(valkols)), ]
+    DF <- DF2
+    
+    
+    # Aggreger ned. Unntaksvis der filene er "ucollapset"
+    # etter f.eks omkoding av alder til aldersgrupper
+    # Om ikke dette gjoeres blir det masse dubletter
+    if (!is.na(filbesk$AGGERGER_DF) & filbesk$AGGERGER_DF == 1) {
+      print("SKAL COLLAPSE")
+      print(dim(DF))
+      DF <- KHaggreger(DF, globs = globs)
+      print(dim(DF))
+    }
+    
+    
+    DF$KOBLID <- filbesk$KOBLID
+    DF$ROW <- 1:nrow(DF)
+    
+    TilFilLogg(filbesk$KOBLID, "FINALh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
+  }
+  TilFilLogg(filbesk$KOBLID, "TidLagTab", (proc.time() - klokke)[3], batchdate = batchdate, globs = globs)
+  
+  if (versjonert == TRUE) {
+    SVcloneRecord(globs$log, "INNLES_LOGG", filbesk$KOBLID)
+    SVcloneRecord(globs$log, "KODEBOK_LOGG", filbesk$KOBLID)
+    # SVcloneRecord(globs$log,"KODEBOK_LOGG",filbesk$KOBLID)
+  }
+  
+  if (ok == 0) {
+    DF <- data.frame()
+    # DF<-DF[0,] #Fungerer ikke mht class, som kan vaere feil
+  }
+  
+  return(DF)
+}
+
+#' LesFil (kb)
+#'
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param dumps 
+LesFil <- function(filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs(), dumps = character()) {
+  is_kh_debug()
+  
+  klokke <- proc.time()
+  DF <- data.frame()
+  ok <- 1
+  filn <- filbesk$filn
+  format <- filbesk$FORMAT
+  opt <- filbesk$INNLESARG
+  
+  
+  # Initier log
+  RODBC::sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filbesk$KOBLID, "AND SV='S'", sep = ""))
+  RODBC::sqlQuery(globs$log, paste("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filbesk$KOBLID, ",'", batchdate, "', 'S','", FinnFilGruppeFraKoblid(filbesk$KOBLID, globs = globs), "'", sep = ""))
+  
+  # Sjekk om fil eksisterer
+  if (file.access(filn, mode = 0) == -1) {
+    TilFilLogg(filbesk$KOBLID, "FILNAVNERR", paste("KRITISK FEIL: ", filn, " finnes ikke", sep = ""), batchdate = batchdate, globs = globs)
+    ok <- 0
+  } else if (file.access(filn, mode = 4) == -1) {
+    TilFilLogg(filbesk$KOBLID, "FILNAVNERR", paste("KRITISK FEIL: ", filn, " finnes, men lar seg ikke lese", sep = ""), batchdate = batchdate, globs = globs)
+    ok <- 0
+  } else {
+    default.stringsAsFactors <- FALSE
+    
+    format <- toupper(format)
+    formats <- c("CSV", "XLS", "XLSX", "SPSS", "DBF", "SAS", "HTML")
+    if (!format %in% formats) {
+      ok <- 0
+      TilFilLogg(filbesk$KOBLID, "INNLESARGerr", paste("FORMAT ", format, " ikke kjent, kjenner bare (", paste(formats, collapse = ","), ")", sep = ""), batchdate = batchdate, globs = globs)
+    } else {
+      # LES INN FIL
+      # Skreddersydd feilstyring
+      innleserr <- ""
+      if (format == "XLS" || format == "XLSX") {
+        expr <- paste("Xls2R.KH(filn", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ",globs=globs)", sep = "")
+        xls <- eval(parse(text = expr))
+        DF <- xls$DF
+        ok <- xls$ok
+        innleserr <- xls$err
+      } else {
+        # Feilstyring fra eksterne rutiner med try()
+        if (format == "CSV") {
+          expr <- paste("KHCsvread(filn", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = "")
+          INNLES <- try(eval(parse(text = expr)), silent = TRUE)
+        } else if (format == "SPSS") {
+          INNLES <- try(as.data.frame(foreign::read.spss(file = filn, use.value.labels = FALSE, max.value.labels = 0), stringsAsFactors = FALSE), silent = TRUE)
+          # ALternativ metode: T<-spss.get(file=fil)
+        } else if (format == "DBF") {
+          # DEV sl? av Field name: '***NULL***' changed to: 'X...NULL...'
+          INNLES <- try(suppressMessages(foreign::read.dbf(file = filn, as.is = TRUE)), silent = TRUE)
+        } else if (format == "SAS") {
+          INNLES <- try(sas7bdat::read.sas7bdat(file = filn), silent = TRUE)
+        } else if (format == "HTML") {
+          INNLES <- try(eval(parse(text = paste("DF<-XML::readHTMLTable(doc=filn,as.data.frame = TRUE,stringsAsFactors=FALSE", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ")", sep = ""))), silent = TRUE)
+        }
+        if ("try-error" %in% class(INNLES)) {
+          innleserr <- INNLES
+          ok <- 0
+        } else {
+          DF <- INNLES
+        }
+      }
+      # Maa sikre at data.frame, noen filer kan vaere bare en skalar (jfr ENPERSON)
+      DF <- as.data.frame(DF, stringsAsFactors = FALSE)
+      if (ok == 0) {
+        TilFilLogg(filbesk$KOBLID, "INNLESARGerr", innleserr, batchdate = batchdate, globs = globs)
+      } else {
+        # PRINT INNLES
+        TilFilLogg(filbesk$KOBLID, "INNLESh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
+      }
+    }
+  }
+  
+  # Fortsett hvis lest inn er ok
+  if (ok == 1) {
+    # Gjoer om innlest CSV-aktig til tabell
+    
+    if (format %in% c("CSV", "XLS", "XLSX")) {
+      eval(parse(text = paste("DF<-cSVmod(DF,filbesk,", ifelse(is.na(opt), "", paste(",", opt, sep = "")), ",globs=globs)", sep = "")))
+    }
+    
+    # Sett header manuelt
+    # IKKE robust for feil parameter
+    if (!is.na(filbesk$MANHEADER)) {
+      mh <- unlist(stringr::str_split(filbesk$MANHEADER, "="))
+      mh[1] <- gsub("\\[|\\]", "", mh[1])
+      
+      ## Use old colnames to specify for new colnames with index or regex
+      mhi <- tryCatch({
+        as.numeric(unlist(strsplit(mh[1], ",")))
+      },
+      warning = function(w){
+        .colXX <- trimws(unlist(strsplit(mh[1], ",")))
+        vapply(.colXX, function(x) grep(x, names(DF)), numeric(1))
+      },
+      error = function(err){
+        .colXX <- trimws(unlist(strsplit(mh[1], ",")))
+        .varsDF <- sapply(.colXX, function(x) grep(x, names(DF), value = TRUE))
+        message("Columnames in the dataset to rename:")
+        print(.varsDF)
+        stop("Check MANHEADER! Columnames to rename must be unique: [", trimws( mh[1] ), "] =", mh[2])
+      })
+      
+      eval(parse(text = paste("mhs<-", mh[2], sep = "")))
+      names(DF)[mhi] <- mhs
+      
+      # Skjoenner ikke helt hvorfor ikke denne enkler funker:
+      # eval(parse(text=paste("names(DF)",filbesk$MANHEADER,sep="")))
+    }
+    
+    # Fix header
+    names(DF) <- gsub("^\\s", "", names(DF))
+    names(DF) <- gsub("\\s$", "", names(DF))
+    names(DF)[names(DF) == ""] <- paste("C", which(names(DF) == ""), sep = "")
+    
+    
+    # DEV dette b?r v?re un?dvendig '' skal v?re lest inn som NA
+    # DF[DF==""]<-NA
+    # des<-lapply(DF,class)
+    # if(length(des[des=="factor"])>0){
+    #  cat("FACTOR i DF <",paste(names(des[des=="factor"]),collapse="><"),">, det er ugreit\n",sep="")
+    # }
+    
+    TilFilLogg(filbesk$KOBLID, "modINNLESh", DFHeadToString(DF), batchdate = batchdate, globs = globs)
+    
+    # EVT SPESIALBEHANDLING
+    # Add special variables used in RSYNT1 STATA code
+    if ("RSYNT1pre" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1pre", sep = "_"), globs = globs, format = dumps[["RSYNT1pre"]])
+    DF$filgruppe <- filbesk$FILGRUPPE
+    DF$delid <- filbesk$DELID
+    DF$tab1_innles <- filbesk$TAB1
+    DF <- do_special_handling(dt = DF, code = filbesk$RSYNT1, batchdate = batchdate, stata_exe = globs$StataExe, DTout = FALSE)
+    DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
+    if ("RSYNT1post" %in% names(dumps)) DumpTabell(DF, paste(filbesk$FILGRUPPE, filbesk$KOBLID, "RSYNT1post", sep = "_"), globs = globs, format = dumps[["RSYNT1post"]])
+  }
+  
+  # sink(file=paste(getOption("khfunctions.root"),"/hoder.txt",sep=""),append=TRUE)
+  # cat("\n#################\nFIL: ")
+  # cat(filn)
+  # cat("\n")
+  # print(head(T))
+  # sink()
+  
+  ## These variables are needed only in RSYNT1 for Stata
+  DF[c("filgruppe", "delid", "tab1_innles")] <- NULL
+  
+  TilFilLogg(filbesk$KOBLID, "TidLesFil", (proc.time() - klokke)[3], batchdate = batchdate, globs = globs)
+  
+  default.stringsAsFactors <- TRUE
+  return(list(DF = DF, ok = ok))
+}
+
+#' KHCsvread (kb)
+#'
+#' @param filn 
+#' @param header 
+#' @param skip 
+#' @param colClasses 
+#' @param sep 
+#' @param quote 
+#' @param dec 
+#' @param fill 
+#' @param encoding 
+#' @param blank.lines.skip 
+#' @param na.strings 
+#' @param brukfread 
+#' @param ... 
+KHCsvread <- function(filn, header = FALSE, skip = 0, colClasses = "character", sep = ";", quote = "\"", dec = ".", fill = FALSE, encoding = "unknown", blank.lines.skip = FALSE, na.strings = c("NA"), brukfread = TRUE, ...) {
+  is_kh_debug()
+  
+  if (!(quote == "\"" && dec == "." && fill == FALSE && encoding == "unknown")) {
+    brukfread <- FALSE
+  }
+  if (brukfread == TRUE) {
+    csvT <- as.data.frame(data.table::fread(filn, header = FALSE, skip = 0, colClasses = "character", sep = sep, na.strings = na.strings))
+  } else {
+    csvT <- as.data.frame(read.csv(filn, header = FALSE, skip = 0, colClasses = "character", sep = sep, quote = quote, dec = dec, fill = TRUE, encoding = encoding, blank.lines.skip = FALSE, na.strings = na.strings))
+  }
+  return(csvT)
+}
+
+#' cSVmod (kb)
+#'
+#' @param DF 
+#' @param filbesk 
+#' @param header 
+#' @param skip 
+#' @param slettRader 
+#' @param sisteRad 
+#' @param TomRadSlutt 
+#' @param FjernTommeRader 
+#' @param FjernTommeKol 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param ... 
+cSVmod <- function(DF, filbesk, header = TRUE, skip = 0, slettRader = integer(0), sisteRad = -1, TomRadSlutt = FALSE, FjernTommeRader = FALSE, FjernTommeKol = TRUE, globs = SettGlobs(), ...) {
+  # Ved bruk av undertabeller med titler som ikke staar i egen kolonne
+  # Lager egen kolonne av undertitler som blir ekta TAB
+  # Ikke saa veldig elegant, men funker for de faar tilfellene der dette trengs og som ellers ville trengt haandsoem
+  # Syntaks UNDERTABLOK er TAB:kolonne:kommasep liste undertitler:kommasep liste/skalar offset av disse (dvs antall raders forrykking)
+  is_kh_debug()
+  
+  if (!is.na(filbesk$UNDERTABLOK)) {
+    utl <- unlist(stringr::str_split(filbesk$UNDERTABLOK, ":"))
+    loks <- as.numeric(unlist(stringr::str_split(utl[3], ",")))
+    offsets <- as.numeric(unlist(stringr::str_split(utl[4], ",")))
+    nytab <- character(nrow(DF))
+    nytab[loks + offsets] <- DF[loks, as.numeric(utl[2])]
+    nytab[nytab == ""] <- NA
+    nytab <- zoo::na.locf(nytab, na.rm = FALSE)
+    DF <- cbind(DF, nytab, stringsAsFactors = FALSE)
+  }
+  
+  if (length(slettRader) > 0) {
+    DF <- DF[-slettRader, ]
+  }
+  if (skip > 0) {
+    DF <- DF[-(1:skip), ]
+  }
+  if (sisteRad > 0) {
+    DF <- DF[1:(sisteRad - skip - length(slettRader)), ]
+  }
+  
+  if (TomRadSlutt == TRUE) {
+    tomr <- which(rowSums(is.na(DF) | DF == "") == ncol(DF))
+    if (!is.na(tomr[1])) {
+      DF <- DF[1:(tomr[1] - 1), ]
+    }
+  }
+  if (FjernTommeRader == TRUE) {
+    DF <- DF[rowSums(is.na(DF) | DF == "") != ncol(DF), ]
+  }
+  if (FjernTommeKol == TRUE) {
+    DF <- DF[, colSums(is.na(DF) | DF == "") != nrow(DF)]
+  }
+  # Maa sikre at data.frame, noen filer kan vaere bare en skalar (jfr ENPERSON)
+  DF <- as.data.frame(DF, stringsAsFactors = FALSE)
+  
+  # Sett header. Default er vanlige Excel-kolonnenavn
+  
+  names(DF) <- excelcols()[1:length(names(DF))]
+  
+  # Bruk av flernivaa header.
+  # Ikke saerlig elegant syntaks, men prinsippet er rett fram
+  # Disse pastes (evt) sammen til en header
+  # Etter reshape splittes kolonneraden (som naa har blitt en kolonne)
+  # i sine respektive kolonner
+  # Kan ogsaa vaere pastet sammen originalt
+  # Syntaks gir radnummer for de ulike leddene i multihead "c(TABNAVN1=rad1,TABNAVN2=rad2,...)
+  if (!is.na(filbesk$MULTIHEAD)) {
+    # Prossesser parameterstreng for multihead, gir liste med relevante deler
+    mhl <- LesMultiHead(filbesk$MULTIHEAD)
+    # Juster radnummerering for skip
+    mhl$rader <- mhl$rader - skip
+    headers <- DF[mhl$rader, ]
+    headers[headers == ""] <- NA
+    # Fyll inn ved "sparse" utfylling, slik som ved "innrykket" tabulering i kolonner
+    headers <- zoo::na.locf(t(headers), na.rm = FALSE)
+    # Paste sammen
+    headstr <- apply(headers, 1, paste, collapse = mhl$sep)
+    # Sett nye kolonnenavn for de som dekkes av headstr,
+    # resten beholder sine standard ("excel") genererte navn
+    nonempty <- as.vector(which(headstr != ""))
+    names(DF)[nonempty] <- headstr[nonempty]
+    # Dropp linjer brukt til header
+    DF <- DF[-(1:length(mhl$rader)), ]
+  } else if (header == TRUE) {
+    if (nrow(DF) > 1) {
+      # Bruk defaultnavn i celler der header mangler
+      nonempty <- as.vector(which(DF[1, ] != ""))
+      names(DF)[nonempty] <- DF[1, nonempty]
+      DF <- DF[-1, ]
+    } else {
+      print("*******************ADVARSEL: Kan ikke sette header fra fil med bare en rad. Skal vel ha opsjon 'header=FALSE'")
+    }
+  }
+  if (!is.na(filbesk$UNDERTABLOK)) {
+    names(DF)[ncol(DF)] <- gsub("^(.*?):.*", "\\1", filbesk$UNDERTABLOK)
+  }
+  names(DF) <- gsub("^ *| *$", "", names(DF))
+  # names(DF)<-gsub("[ ,./()+-]","_",names(DF))   #Skal navn fikses? Argumenter for og mot. Valgt: Nei!
+  return(DF)
+}
+
+#' Xls2R.KH (kb/ybk)
+#'
+#' @param xlsfil 
+#' @param ark 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param brukfread 
+#' @param na.strings 
+#' @param ryddOpp 
+#' @param ... 
+Xls2R.KH <- function(xlsfil, ark = "", globs = SettGlobs(), brukfread = TRUE, na.strings = c("NA"), ryddOpp = 1, ...) {
+  is_kh_debug()
+  
+  err <- ""
+  ok <- 1
+  DF <- data.frame()
+  # step 1: Validate sheetname with fuzzy match
+  # rdbh<-RODBC::odbcConnectExcel2007(xlsfil)
+  # rdbh<-RODBC::odbcConnectExcel(xlsfil)
+  # tables<-RODBC::sqlTables(rdbh)$TABLE_NAME
+  # close(rdbh)
+  
+  tables <- readxl::excel_sheets(xlsfil)
+  
+  tables <- gsub("\'", "", tables)
+  tables <- gsub("\\$", "", tables) # Something is strange with resepct to $ in R's regexp-syntax, but should work
+  if (ark == "" | is.na(ark)) {
+    ark <- tables[1]
+  } else if (!(ark %in% tables)) {
+    kand <- tables[grepl(ark, tables, ignore.case = TRUE)]
+    if (length(kand) == 1) {
+      ark <- kand[1]
+    } else if (length(kand) > 1) {
+      err <- paste("Arknavn ", ark, " ikke unik, passer med flere av (", paste(tables, collapse = ","), ")", sep = "")
+      ok <- 0
+    } else {
+      err <- paste("Arknavn ", ark, " finnes ikke (", paste(tables, collapse = ","), ")", sep = "")
+      ok <- 0
+    }
+  }
+  if (ok == 1) {
+    INNLES <- try(as.data.frame(readxl::read_excel(xlsfil, sheet = ark, col_names = FALSE, col_types = "text", skip = 0, na = na.strings)))
+    if ("try-error" %in% class(INNLES)) {
+      err <- INNLES
+      ok <- 0
+    } else {
+      DF <- setNames(INNLES, excelcols()[1:ncol(INNLES)])
+      ## ## Finner ut hvis hele kolonne er missing
+      ## colMISS = sapply(DF, function(x) all(is.na(x)))
+      ## missUT = attributes(colMISS[colMISS==1])$names
+      ## DF[missUT] = NULL
+    }
+  }
+  return(list(DF = DF, ok = ok, err = err))
+}
+
+#' FinnFilgruppeParametre (kb)
+#'
+#' @param gruppe 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+FinnFilgruppeParametre <- function(gruppe, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  dbh <- globs$dbh
+  datef <- FormatSqlBatchdate(batchdate)
+  FGPaktiv <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+                                                          "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
+                                        ",
+                                                          sep = ""
+  ), as.is = TRUE))
+  FGPfinnes <- as.integer(RODBC::sqlQuery(globs$dbh, paste("SELECT count(*) FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'", sep = ""), as.is = TRUE))
+  resultat <- list()
+  if(FGPfinnes == 0) stop(paste("Filgruppe", gruppe, "finnes ikke. Droppes."))
+  if(FGPaktiv == 0) stop(paste("Filgruppe", gruppe, "finnes, men er satt inaktiv"))
+  FGP <- as.list(RODBC::sqlQuery(globs$dbh, paste("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", gruppe, "'",
+                                                  "AND VERSJONFRA<=", datef, " AND VERSJONTIL>", datef, "
+                                        ",
+                                                  sep = ""
+  ), as.is = TRUE))
+  # Sette endelig default alder ALLE
+  # Default er 0_ALDinf    der ALDinf er global parameter i HOVEDPARAMETRE
+  amin <- getOption("khfunctions.amin")
+  amax <- getOption("khfunctions.amax")
+  # Evt egen def for filgruppe fra ALDER_ALLE i tabell FILGRUPPER
+  if (!is.na(FGP$ALDER_ALLE)) {
+    if (grepl("^\\d+_(\\d+|)$", FGP$ALDER_ALLE)) {
+      alle_aldre <- unlist(strsplit(FGP$ALDER_ALLE, "_"))
+      if (length(alle_aldre) == 1) {
+        amin <- as.numeric(alle_aldre[1])
+      } else if (length(alle_aldre) == 2) {
+        amin <- as.numeric(alle_aldre[1])
+        amax <- as.numeric(alle_aldre[2])
+      }
+    } else {
+      cat("FEIL!!!!!! Feil format FGP$ALDER_ALLE", FGP$ALDER_ALLE, "\n")
+    }
+  }
+  
+  vals <- list()
+  for (valf in names(FGP)[grepl("^VAL\\d+navn$", names(FGP))]) {
+    val <- gsub("(VAL\\d+)navn", "\\1", valf)
+    valn <- ifelse(is.na(FGP[[valf]]) || FGP[[valf]] == "", val, FGP[[valf]])
+    valmissf <- paste(val, "miss", sep = "")
+    valmiss <- ifelse(is.na(FGP[[valmissf]]) || FGP[[valmissf]] == "", "0", FGP[[valmissf]])
+    valsumf <- paste(val, "sumbar", sep = "")
+    valsum <- ifelse(is.na(FGP[[valsumf]]) || FGP[[valsumf]] == "", "0", FGP[[valsumf]])
+    vals[[valn]] <- list(miss = valmiss, sumbar = valsum)
+  }
+  resultat <- c(FGP, list(vals = vals, amin = amin, amax = amax))
+  
+  gc()
+  return(c(resultat))
+}
+
+#' SjekkDuplikater (kb)
+#'
+#' @param FG 
+#' @param filgruppe 
+#' @param FullResult 
+#' @param batchdate 
+#' @param versjonert 
+#' @param globs global parameters, defaults to SettGlobs
+SjekkDuplikater <- function(FG, filgruppe, FullResult = FALSE, batchdate = SettKHBatchDate(), versjonert = FALSE, globs = SettGlobs()) {
+  is_kh_debug()
+  
+  HarDuplikater <- 0
+  if (identical(class(FG), "data.frame")) {
+    FG <- data.table::data.table(FG)
+  }
+  orgkeys <- data.table::key(FG)
+  tabkols <- globs$DefDesign$DesignKolsFA
+  tabkols <- tabkols[tabkols %in% names(FG)]
+  valkols <- get_value_columns(names(FG))
+  setkeym(FG, tabkols)
+  
+  dubi <- duplicated(FG)
+  
+  DUB <- data.table::data.table()
+  result <- c(ANTdNO = 0, fANTV1 = 0, ANTdNOp = 0, fANTV1p = 0, ANTdNOg = 0, fANTV1g = 0)
+  # dubi<-duplicated(FG[,tabkols,with=FALSE])
+  if (any(dubi)) {
+    HarDuplikater <- 1
+    DUB <- FG[dubi, ]
+    eval(parse(text = paste(
+      "DUB[,dNO:=rank(", paste(valkols, collapse = ","), "),by=tabkols]",
+      sep = ""
+    )))
+    DUB[, antV := length(unique(dNO)), by = tabkols]
+    DUB[, antK := length(unique(KOBLID)), by = tabkols]
+    
+    
+    # Positive verdier
+    eval(parse(text = paste(
+      "DUBp<-subset(DUB,", paste(valkols, "!=0", sep = "", collapse = " | "), ")",
+      sep = ""
+    )))
+    if (nrow(DUBp) > 0) {
+      eval(parse(text = paste(
+        "DUBp[,dNOp:=rank(", paste(valkols, collapse = ","), "),by=tabkols]",
+        sep = ""
+      )))
+      DUBp[, antVp := length(unique(dNOp)), by = tabkols]
+      DUBp[, antKp := length(unique(KOBLID)), by = tabkols]
+      data.table::setkeyv(DUB, names(DUB))
+      data.table::setkeyv(DUBp, names(DUB))
+      DUB <- DUBp[DUB]
+      DUB[is.na(dNOp), dNOp := 0]
+      DUB[is.na(antVp), antVp := 0]
+      DUB[is.na(antKp), antKp := 0]
+    } else {
+      DUB[, dNOp := 0]
+      DUB[, antVp := 0]
+      DUB[, antKp := 0]
+    }
+    
+    # Hold ##99-geokoder utenom. Her blir det lagd dubeltter naar to illegitime KNR blir samme ##99 etc
+    DUBg <- subset(DUB, !grepl("99$", GEO))
+    if (nrow(DUBg) > 0) {
+      eval(parse(text = paste(
+        "DUBg[,dNOg:=rank(", paste(valkols, collapse = ","), "),by=tabkols]",
+        sep = ""
+      )))
+      DUBg[, antVg := length(unique(dNOg)), by = tabkols]
+      DUBg[, antKg := length(unique(KOBLID)), by = tabkols]
+      data.table::setkeyv(DUB, names(DUB))
+      data.table::setkeyv(DUBg, names(DUB))
+      DUB <- DUBg[DUB]
+      DUB[is.na(dNOg), dNOg := 0]
+      DUB[is.na(antVg), antVg := 0]
+      DUB[is.na(antKg), antKg := 0]
+    } else {
+      DUB[, dNOg := 0]
+      DUB[, antVg := 0]
+      DUB[, antKg := 0]
+    }
+    
+    ANTdNO <- nrow(DUB)
+    fANTV1 <- nrow(subset(DUB, antV > 1))
+    ANTdNOp <- nrow(subset(DUB, dNOp > 0))
+    fANTV1p <- nrow(subset(DUB, antVp > 1))
+    ANTdNOg <- nrow(subset(DUB, dNOg > 0))
+    fANTV1g <- nrow(subset(DUB, antVg > 1))
+    result <- c(ANTdNO = ANTdNO, fANTV1 = fANTV1, ANTdNOp = ANTdNOp, fANTV1p = fANTV1p, ANTdNOg = ANTdNOg, fANTV1g = fANTV1g)
+    
+    # Skriv dubletter til logg
+    RODBC::sqlQuery(globs$log, paste("DELETE * FROM DUBLETT WHERE FILGRUPPE='", filgruppe, "' AND SV='S'", sep = ""))
+    # Legg til resterende kolonner
+    # Maa ha ok kolonnenavn til database
+    data.table::setnames(DUB, names(DUB), gsub("^(VAL\\d+)\\.f$", "\\1f", names(DUB)))
+    
+    tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DUBLETT WHERE KOBLID=-1")
+    tmp2 <- tmp
+    tmp[1:nrow(DUB), ] <- NA
+    tmp[, intersect(names(tmp), names(DUB))] <- DUB[, intersect(names(tmp), names(DUB)), with = FALSE]
+    tmp$FILGRUPPE <- filgruppe
+    tmp$BATCHID <- batchdate
+    tmp$SV <- "S"
+    if (nrow(DUB) < 1000) {
+      RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+      if (versjonert == TRUE) {
+        tmp$SV <- "V"
+        RODBC::sqlSave(globs$log, tmp, "DUBLETT", rownames = FALSE, append = TRUE)
+      }
+    }
+  }
+  setkeym(FG, orgkeys)
+  if (FullResult == TRUE) {
+    return(list(DUB = DUB, ANT = result))
+  } else {
+    return(result)
+  }
+}
+
+#' ReshapeTab (kb)
+#'
+#' @param DELF 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ReshapeTab <- function(DELF, filbesk, batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  # Reshape av DELF basert paa parametre i filbesk
+  is_kh_debug()
+  
+  ok <- 1
+  if (!(is.na(filbesk$RESHAPEid) || filbesk$RESHAPEid == "")) {
+    idvars <- eval(parse(text = paste("c(", filbesk$RESHAPEid, ")")))
+  } else {
+    idvars <- NULL
+  }
+  mevars <- NULL
+  if (!(is.na(filbesk$RESHAPEmeas) || filbesk$RESHAPEmeas == "")) {
+    mevars <- eval(parse(text = paste("c(", filbesk$RESHAPEmeas, ")")))
+  }
+  varname <- "variable"
+  valname <- "value"
+  # varname maa tas fra MULTIHEAD om denne brukes
+  if (!is.na(filbesk$MULTIHEAD)) {
+    varname <- LesMultiHead(filbesk$MULTIHEAD)$varname
+  } else if (!(is.na(filbesk$RESHAPEvar) || filbesk$RESHAPEvar == "")) {
+    varname <- as.character(filbesk$RESHAPEvar)
+  }
+  if (!(is.na(filbesk$RESHAPEval) || filbesk$RESHAPEval == "")) {
+    valname <- as.character(filbesk$RESHAPEval)
+  }
+  
+  if (all(idvars %in% names(DELF)) & (is.null(mevars) | all(mevars %in% names(DELF)))) {
+    DELF[, idvars] <- sapply(DELF[, idvars], as.character) # Maa vaere av samme type for at ikke reshape skal kraesje
+    if (!is.null(mevars)) {
+      DELF <- data.table::melt(as.data.table(DELF), id.vars = idvars, measure.vars = mevars, variable.name = varname, value.name = valname, na.rm = FALSE)
+    } else {
+      DELF <- data.table::melt(as.data.table(DELF), id.vars = idvars, variable.name = varname, value.name = valname, na.rm = FALSE)
+    }
+    data.table::setDF(DELF)
+    DELF[, varname] <- as.character(DELF[, varname]) # Kan ha blitt factor, og det gir kroell senere
+  } else {
+    rshperr <- ""
+    if (!all(idvars %in% names(DELF))) {
+      rshperr <- paste(rshperr, "Ukjente idvars <", paste(idvars[!idvars %in% names(DELF)], ">."))
+    }
+    if (!is.null(mevars) & !all(mevars %in% names(DELF))) {
+      rshperr <- paste(rshperr, "Ukjente mevars <", paste(mevars[!mevars %in% names(DELF)], ">."))
+    }
+    TilFilLogg(filbesk$KOBLID, "RESHAPEERR", rshperr, batchdate = batchdate, globs = globs)
+    ok <- 0
+  }
+  
+  
+  return(list(DF = DELF, ok = ok))
+}
+
+#' KBomkod (kb)
+#'
+#' @param org 
+#' @param type 
+#' @param filbesk 
+#' @param valsubs 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+KBomkod <- function(org, type, filbesk, valsubs = FALSE, batchdate = NULL, globs = SettGlobs()) {
+  is_kh_debug()
+  
+  datef <- format(Sys.time(), "#%Y-%m-%d#")
+  if (!is.null(batchdate)) {
+    datef <- FormatSqlBatchdate(batchdate)
+  }
+  omk <- org
+  kbf <- paste(type, "kb", sep = "")
+  sql <- paste("SELECT TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE
+             FELTTYPE='", type,
+               "' AND FILGRUPPE='", filbesk$FILGRUPPE,
+               "' AND (DELID='", filbesk$DELID, "' OR DELID='FELLES')",
+               " AND VERSJONFRA<=", datef,
+               " AND VERSJONTIL>", datef,
+               sep = ""
+  )
+  kbok <- RODBC::sqlQuery(globs$dbh, sql, as.is = TRUE)
+  kbok[is.na(kbok)] <- ""
+  subsant <- data.frame(ORG = character(0), KBOMK = character(0), OMK = character(0), FREQ = integer(0), OK = integer(0))
+  if (nrow(kbok) > 0) {
+    KBsubs <- subset(kbok, TYPE == "SUB") # Regulaeruttrykk
+    KB <- subset(kbok, TYPE == "KB") # Oppslagsliste
+    i <- 1
+    while (i <= nrow(KBsubs)) {
+      KBsub <- KBsubs[i, ]
+      if (valsubs == TRUE) {
+        subsant <- rbind(subsant, data.frame(ORG = KBsub$ORGKODE, KBOMK = paste("<", KBsub$NYKODE, ">", sep = ""), OMK = paste("<", KBsub$NYKODE, ">", sep = ""), FREQ = length(grepl(KBsub$ORGKODE, omk, perl = TRUE)), OK = 1))
+      }
+      # omk<-sub(eval(parse(text=KBsub$ORGKODE)),eval(parse(text=KBsub$NYKODE)),omk)
+      omk <- sub(KBsub$ORGKODE, KBsub$NYKODE, omk, perl = TRUE)
+      i <- i + 1
+    }
+    if (valsubs == TRUE) {
+      # Ta bare numeriske fra
+      KB <- KB[!is.na(suppressWarnings(as.numeric(KB$ORGKODE))), ]
+      if (nrow(KB) > 0) {
+        freq <- table(omk)
+        freq <- freq[KB$ORGKODE]
+        if (!is.na(freq)) {
+          subsant <- rbind(subsant, data.frame(ORG = KB$ORGKODE, KBOMK = KB$NYKODE, OMK = KB$NYKODE, FREQ = freq, OK = 1))
+          # tmp2<-as.data.frame(table(DF$GEO,useNA="ifany"),stringsAsFactors=FALSE)
+          omk <- plyr::mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
+        }
+      }
+    } else {
+      omk <- plyr::mapvalues(omk, KB$ORGKODE, KB$NYKODE, warn_missing = FALSE)
+    }
+  }
+  
+  if (valsubs == FALSE) {
+    return(omk)
+  } else {
+    return(list(omk = omk, subsant = subsant))
+  }
+}
+
+#' GEOvask (kb)
+#'
+#' @param geo 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+GEOvask <- function(geo, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), harlevekaar = F) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    geo <- setNames(as.data.frame(geo, stringsAsFactors = FALSE), c("GEO"))
+    geo$KBOMK <- geo[, 1]
+  } else {
+    geo$KBOMK <- KBomkod(geo$ORG, type = "GEO", filbesk = filbesk, batchdate = batchdate, globs = globs)
+    if (!is.na(filbesk$TKNR)) {
+      suppressWarnings(geo$KBOMK[geo$ORG == geo$KBOMK] <- plyr::mapvalues(geo$ORG[geo$ORG == geo$KBOMK], globs$TKNR$ORGKODE, globs$TKNR$NYKODE, warn_missing = FALSE))
+    }
+  }
+  geo$OMK <- geo$KBOMK
+  geo$OK <- 1
+  # Litt dirty her, sprintf funker d?rlig p? Windows: sprintf("%04s","214") -> " 0214"
+  # M? bruke sprintf("%04s",as.numeric("0214")) for ? f? "0214", det blir for dumt
+  geo$OMK <- sub("^\\s*", "", geo$OMK, ignore.case = TRUE)
+  geo$OMK <- sub("\\s*$", "", geo$OMK, ignore.case = TRUE)
+  geo$OMK <- sub("^0{1,2}(( hele|) landet| *$)", "0", geo$OMK, ignore.case = TRUE)
+  geo$OMK <- sub("^(Hele +|)landet( i alt|) *$", "0", geo$OMK, ignore.case = TRUE)
+  geo$OMK <- sub("^Fylke (\\d{1,2})$", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{8})a{0,1}( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{7})a{0,1}( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{6})a{0,1}( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{5})a{0,1}( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{4})( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^(\\d{3})( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  geo$OMK <- sub("^([012][1-9]|10|20|88|99)( +[A-Z???].*| *$)", "\\1", geo$OMK)
+  geo$OMK <- sub("^([1-9])( +[A-Z???].*| *$)", "0\\1", geo$OMK)
+  
+  geo$OMK <- sub("^(\\d{4})xx*", "\\1", geo$OMK, ignore.case = TRUE)
+  
+  # Kode fra navn
+  # Maa bli mer avansert for aa bli robust. Koder naa 1 til flere (Nes, etc)
+  UGeo <- data.frame(NAVN = geo$OMK[!grepl("^\\d+$", geo$OMK)])
+  if (nrow(UGeo) > 0) {
+    GeoNavn <- RODBC::sqlQuery(globs$dbh, "SELECT * from GeoNavn", as.is = TRUE)
+    omk <- sqldf::sqldf("SELECT GEO, UGeo.NAVN FROM UGeo INNER JOIN GeoNavn ON UGeo.NAVN=GeoNavn.NAVN")
+    geo$OMK <- plyr::mapvalues(geo$OMK, omk$NAVN, omk$GEO, warn_missing = FALSE)
+  }
+  
+  if (grepl("4", filbesk$SONER)) {
+    geo$OMK[nchar(geo$OMK) == 4] <- paste(geo$OMK[nchar(geo$OMK) == 4], "00", sep = "")
+  }
+  
+  # Finn ukjente koder. Sett til ukjent (99) under fylke eller by om mulig, ellers
+  # TMP<-globs$GeoKoder
+  # ukjent<-sqldf("SELECT OMK FROM geo LEFT JOIN TMP ON geo.OMK=TMP.GEO WHERE TMP.ID Is NULL")
+  # print(head(globs$GeoKoder))
+  # print(geo[1:50,])
+  # print(which(!(geo[,"OMK"] %in% globs$GeoKoder$GEO)))
+  ukjent <- geo$OMK[!(geo$OMK %in% c(globs$GeoKoder$GEO, "-"))]
+  
+  
+  ukjent99 <- ukjent
+  ukjent99 <- sub("^\\d{2}$", 99, ukjent99) # Ukjent fylke
+  ukjent99 <- gsub("^(\\d{2})\\d{2}$", paste("\\1", "99", sep = ""), ukjent99) # Ukjent kommune
+  ukjent99 <- sub("^(\\d{2})(\\d{2})00$", paste("\\1", "9900", sep = ""), ukjent99) # Ukjent bydel
+  ukjent99 <- sub("^(\\d{4})([1-9]\\d|0[1-9])$", paste("\\1", "99", sep = ""), ukjent99) # Ukjent bydel
+  ukjent99 <- sub("^(\\d{6})([1-9]\\d|0[1-9])$", paste("\\1", "99", sep = ""), ukjent99)
+  
+  # Sjekk om legitime 99-ukjente
+  ukjent <- ukjent[ukjent99 %in% globs$GeoKoder$GEO]
+  ukjent99 <- ukjent99[ukjent99 %in% globs$GeoKoder$GEO]
+  geo$OMK <- plyr::mapvalues(geo$OMK, ukjent, ukjent99, warn_missing = FALSE)
+  
+  ukjent <- geo$OMK[!(geo$OMK %in% c(globs$GeoKoder$GEO, "-"))]
+  heltukjent <- ukjent
+  heltukjent[nchar(ukjent) == 9] <- 99999999
+  heltukjent[nchar(ukjent) == 6] <- 999999
+  heltukjent[nchar(ukjent) == 4] <- 9999
+  heltukjent[nchar(ukjent) == 2] <- 99
+  geo$OMK <- plyr::mapvalues(geo$OMK, ukjent, heltukjent, warn_missing = FALSE)
+  
+  # Sett GEOniv
+  geo$GEOniv <- as.character(NA)
+  geo$GEOniv[nchar(geo$OMK) == 8] <- ifelse(harlevekaar, "V", "G")
+  if (grepl("6", filbesk$SONER)) {
+    geo$GEOniv[nchar(geo$OMK) == 6] <- "S"
+  } else {
+    geo$GEOniv[nchar(geo$OMK) == 6] <- "B"
+    geo$OMK[nchar(geo$OMK) == 6] <- gsub("^(\\d{4})00$", paste("\\1", "99", sep = ""), geo$OMK[nchar(geo$OMK) == 6])
+  }
+  geo$GEOniv[nchar(geo$OMK) == 4] <- "K"
+  # geo$GEOniv[nchar(geo$OMK)==2 & !geo$OMK %in% c(51:54)]<-"F"
+  geo$GEOniv[nchar(geo$OMK) == 2 & !geo$OMK %in% c(81:84)] <- "F"
+  # geo$GEOniv[geo$OMK %in% c(51:54)]<-"H"
+  geo$GEOniv[geo$OMK %in% c(81:84)] <- "H"
+  geo$GEOniv[geo$OMK == 0] <- "L"
+  geo$GEOniv[geo$OMK == "-"] <- "-"
+  geo$GEOniv[is.na(geo$GEOniv)] <- "U"
+  
+  # Ekte ulegit
+  geo$OK[geo$GEOniv == "-"] <- 1
+  # DEVELOP: bare et GEOniv, sett ukjent paa dette nivaaet
+  # Fil har bare kommunedata -> bruker 8888
+  if (sum(c("G", "B", "F", "L") %in% geo$GEOniv) == 0) {
+    geo$OMK[geo$OK == 0] <- "8888"
+    geo$GEOniv[geo$OK == 0] <- "K"
+  } else {
+    geo$OMK[geo$OK == 0] <- getOption("khfunctions.geo_illegal")
+  }
+  # Sett fylke
+  geo$FYLKE <- NA
+  subfylke <- which(geo$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
+  geo$FYLKE[subfylke] <- substr(geo$OMK[subfylke], 1, 2)
+  geo$FYLKE[geo$GEOniv %in% c("H", "L")] <- "00"
+  
+  return(geo)
+}
+
+#' ALDERvask (kb)
+#'
+#' @param alder 
+#' @param filbesk 
+#' @param FGP 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+ALDERvask <- function(alder, filbesk = data.frame(), FGP = list(amin = 0, amax = 120), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  amax <- FGP$amax
+  amin <- FGP$amin
+  if (nrow(filbesk) == 0) {
+    alder <- setNames(as.data.frame(alder, stringsAsFactors = FALSE), c("ALDER"))
+    alder$KBOMK <- alder[, 1]
+  } else {
+    alder$KBOMK <- KBomkod(alder$ORG, type = "ALDER", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  alder$OMK <- alder$KBOMK
+  alder$OK <- 1
+  # alder$OMK<-sub("^ *(\\d+) *[\\_\\-] *(\\d+) *(.r|) *, *totalt$","\\1_\\2",alder$OMK,ignore.case = TRUE)
+  alder$OMK <- sub("_?r$", " ?r", alder$OMK)
+  alder$OMK <- sub("(.+?),* *totalt *$", "\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *[-_] *(\\d+)( +?r| *$)", "\\1_\\2", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *- *high( +?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *low *- *(\\d+)( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *\\+( +?r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) +?r +\\+ *$", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *-( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *?r *-$", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *- *(\\d+)( +?r| *$)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) ?r (og|eller) eldre", "\\1_", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *over (\\d+)( ??r| *$)", "\\1_", alder$OMK, ignore.case = TRUE)
+  # alder$OMK<-sub("^ *under (\\d+)( +?r| *$)","_\\1",alder$OMK,ignore.case = TRUE)  # Dette blri galt, maa erstatte med "_(\\1-1)", men faar ikke det til. Maa bruke kdoebok
+  alder$OMK <- sub("^ *(\\d+)( ?r|) *(og|eller) (yngre|under)", "_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(\\d+) *( +?r| *$)", "\\1_\\1", alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(Alle( *aldre.*|)|Totalt{0,1}|I alt) *$", paste(amin, "_", amax, sep = ""), alder$OMK, ignore.case = TRUE)
+  alder$OMK <- sub("^ *(Ukjent|Uoppgitt|Ikke kjent) *$", getOption("khfunctions.alder_ukjent"), alder$OMK, ignore.case = TRUE)
+  
+  # alder$OMK[is.na(alder$OMK)]<-"999_999"
+  alder$OMK <- sub("^(\\d+)_$", paste("\\1_", amax, sep = ""), alder$OMK)
+  alder$OMK <- sub("^_(\\d+)$", paste(amin, "_\\1", sep = ""), alder$OMK)
+  
+  # Ukjent????????
+  # !Maa ha to amax, en for ukjent som er hoeyere, se ogsaa ulest under!!!
+  
+  okformat <- grepl("^\\d+_\\d+$|^-$", alder$OMK)
+  # Ugyldig verdi/ukjent kode
+  alder$OMK[!okformat] <- getOption("khfunctions.alder_illegal")
+  alder$OK[!okformat] <- 0
+  
+  # Sett intervall
+  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
+  # Ugyldig intervall
+  alder$OMK[alder$HI < alder$LO] <- getOption("khfunctions.alder_illegal")
+  alder$OMK[alder$HI > 130 & !(alder$OMK %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_ukjent")))] <- getOption("khfunctions.alder_illegal")
+  alder[, c("LO", "HI")] <- suppressWarnings(matrix(as.integer(stringr::str_split_fixed(alder$OMK, "_", 2)), ncol = 2))
+  return(alder)
+}
+
+#' KJONNvask (kb)
+#'
+#' @param kjonn 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+KJONNvask <- function(kjonn, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    kjonn <- setNames(as.data.frame(kjonn, stringsAsFactors = FALSE), c("KJONN"))
+    kjonn <- kjonn[, 1]
+  } else {
+    kjonn$KBOMK <- KBomkod(kjonn$ORG, type = "KJONN", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  kjonn$OK <- 1
+  kjonn$OMK <- kjonn$KBOMK
+  kjonn$OMK <- sub("^ *(M|Menn|Mann|gutt(er|)|g|1) *$", "1", kjonn$OMK, ignore.case = TRUE)
+  kjonn$OMK <- sub("^ *(K|F|Kvinner|Kvinne|jente(r|)|j|2) *$", "2", kjonn$OMK, ignore.case = TRUE)
+  kjonn$OMK <- sub("^ *(Tot(alt{0,1}|)|Begge([ \\._]*kj?nn|)|Alle|A|0|M\\+K) *$", "0", kjonn$OMK, ignore.case = TRUE)
+  kjonn$OMK <- sub("^ *(Uspesifisert|Uoppgitt|Ikke spesifisert|Ikke oppgitt|Ukjent|) *$", "9", kjonn$OMK, ignore.case = TRUE)
+  # kjonn$OMK[is.na(kjonn$ORG)]<-9
+  
+  # Ugyldig verdi/ukjent kode
+  kjonn$OMK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- getOption("khfunctions.illegal")
+  kjonn$OK[!(kjonn$OMK %in% c(0, 1, 2, 9, "-"))] <- 0
+  
+  return(kjonn)
+}
+
+#' UTDANNvask
+#'
+#' @param utdann 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param regexp 
+UTDANNvask <- function(utdann, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    utdann <- setNames(as.data.frame(utdann, stringsAsFactors = FALSE), c("UTDANN"))
+    utdann$KBOMK <- utdann[, 1]
+  } else {
+    utdann$KBOMK <- KBomkod(utdann$ORG, type = "UTDANN", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  utdann$OK <- 1
+  utdann$OMK <- utdann$KBOMK
+  utdann$OMK <- sub("^0([0-4])$", "\\1", utdann$OMK, ignore.case = TRUE)
+  if (regexp == TRUE) {
+    utdann$OMK <- sub("^ *(grunnskole) *$", "1", utdann$OMK, ignore.case = TRUE)
+    utdann$OMK <- sub("^ *(videreg?ende( skole|)) *$", "2", utdann$OMK, ignore.case = TRUE)
+    utdann$OMK <- sub("^ *(Universitet.*) *$", "3", utdann$OMK, ignore.case = TRUE)
+    utdann$OMK <- sub("^ *(anne[nt]|ingen|uopgitt|ukjent) *$", "4", utdann$OMK, ignore.case = TRUE)
+  }
+  utdann$OMK <- sub("^ *(alle) *$", "0", utdann$OMK, ignore.case = TRUE)
+  
+  # Ugyldig verdi/ukjent kode
+  utdann$OMK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- getOption("khfunctions.illegal")
+  utdann$OK[!(utdann$OMK %in% c(0, 1, 2, 3, 4, "-"))] <- 0
+  return(utdann)
+}
+
+#' INNVKATvask
+#'
+#' @param innvkat 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param regexp 
+INNVKATvask <- function(innvkat, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    innvkat <- setNames(as.data.frame(innvkat, stringsAsFactors = FALSE), c("INNVKAT"))
+    innvkat$KBOMK <- innvkat[, 1]
+  } else {
+    innvkat$KBOMK <- KBomkod(innvkat$ORG, type = "INNVKAT", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  innvkat$OK <- 1
+  innvkat$OMK <- innvkat$KBOMK
+  if (regexp == TRUE) {
+    innvkat$OMK <- sub("^ *(ugift|ug) *$", "1", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(gift|g) *$", "2", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(enke.*|e) *$", "3", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(skilt|separert|s|skilt\\/separert) *$", "4", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(annen) *$", "5", innvkat$OMK, ignore.case = TRUE)
+    innvkat$OMK <- sub("^ *(ukjent|uoppgitt) *$", "9", innvkat$OMK, ignore.case = TRUE)
+  }
+  innvkat$OMK <- sub("^ *(alle) *$", "0", innvkat$OMK, ignore.case = TRUE)
+  
+  # Ugyldig verdi/ukjent kode
+  innvkat$OMK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- getOption("khfunctions.illegal")
+  innvkat$OK[!(innvkat$OMK %in% c(0, 1, 2, 3, 4, 5, 9, 20, "-"))] <- 0
+  
+  return(innvkat)
+}
+
+#' LANDBAKvask
+#'
+#' @param landbak 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param regexp 
+LANDBAKvask <- function(landbak, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs(), regexp = FALSE) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    landbak <- setNames(as.data.frame(landbak, stringsAsFactors = FALSE), c("LANDBAK"))
+    landbak$KBOMK <- landbak[, 1]
+  } else {
+    landbak$KBOMK <- KBomkod(landbak$ORG, type = "LANDBAK", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  landbak$OK <- 1
+  landbak$OMK <- landbak$KBOMK
+  if (regexp == TRUE) {
+    landbak$OMK <- sub("^ *(Europa.*) *$", "1", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Afrika) *$", "2", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Asia.*) *$", "3", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Nord[ -]{1,3}Amerika) *$", "4", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(S?r.*Amerika) *$", "5", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Oseania) *$", "6", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Statsl?se) *$", "7", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Uoppgitt|Ukjent) *$", "8", landbak$OMK, ignore.case = TRUE)
+    landbak$OMK <- sub("^ *(Andre) *$", "9", landbak$OMK, ignore.case = TRUE)
+  }
+  landbak$OMK <- sub("^ *(Alle) *$", "0", landbak$OMK, ignore.case = TRUE)
+  
+  # Ugyldig verdi/ukjent kode
+  landbak$OMK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- getOption("khfunctions.illegal")
+  landbak$OK[!(landbak$OMK %in% c(-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, "-"))] <- 0
+  
+  return(landbak)
+}
+
+#' AARvask
+#'
+#' @param aar 
+#' @param filbesk 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+AARvask <- function(aar, filbesk = data.frame(), batchdate = SettKHBatchDate(), globs = SettGlobs()) {
+  is_kh_debug()
+  
+  if (nrow(filbesk) == 0) {
+    aar <- setNames(as.data.frame(aar, stringsAsFactors = FALSE), c("AAR"))
+    aar$KBOMK <- aar[, 1]
+  } else {
+    aar$KBOMK <- KBomkod(aar$ORG, type = "AAR", filbesk = filbesk, batchdate = batchdate, globs = globs)
+  }
+  aar$OMK <- aar$KBOMK
+  aar$OK <- 1
+  
+  aar$OMK <- sub("^H?sten ", "", aar$OMK)
+  aar$OMK <- sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", aar$OMK)
+  aar$OMK <- sub("^ *(\\d+) *$", "\\1_\\1", aar$OMK)
+  
+  # Ugyldig verdi/ukjent kode
+  okformat <- grepl("^\\d+_\\d+$|^-$", aar$OMK)
+  aar$OMK[!okformat] <- getOption("khfunctions.aar_illegal")
+  aar$OK[!okformat] <- 0
+  
+  # Sett intervall
+  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
+  # Ugyldig intervall
+  aar$OMK[aar$HI < aar$LO] <- getOption("khfunctions.aar_illegal")
+  aar[, c("LO", "HI")] <- suppressMessages(matrix(as.integer(stringr::str_split_fixed(aar$OMK, "_", 2)), ncol = 2))
+  return(aar)
+}
+
+#   # Diagnostisering og rapportering paa hele filgruppa under ett
+#   
+#   # L? opprinnelig f?r eksterne kolonnenavn ble satt. 
+#   
+#   if (nrow(Filgruppe) > 0 & diagnose == 1) {
+#     # Finn og rapporter duplikater
+#     HarDuplikater <- SjekkDuplikater(Filgruppe, batchdate = batchdate, filgruppe = gruppe, versjonert = versjonert, globs = globs)
+#     RODBC::sqlQuery(globs$dbh, paste("UPDATE FILGRUPPER SET DUPLIKATER='", HarDuplikater, "' WHERE FILGRUPPE='", gruppe, "'", sep = ""))
+#     
+#     # Sjekk design
+#     FGd <- FinnDesign(Filgruppe, FGP = FGP, globs = globs)
+#     
+#     # Er ubalansert?
+#     subset(FGd$Design, HAR != 1)
+#     
+#     FGdT <- FGd$Design
+#     RODBC::sqlQuery(globs$log, paste("DELETE * FROM DESIGN WHERE FILGRUPPE='", gruppe, "' AND SV='S'", sep = ""))
+#     # Legg til resterende kolonner
+#     tmp <- RODBC::sqlQuery(globs$log, "SELECT * FROM DESIGN WHERE FILGRUPPE=''")
+#     tmp[1:nrow(FGdT), ] <- NA
+#     tmp[, names(FGdT)] <- FGdT
+#     tmp$FILGRUPPE <- gruppe
+#     tmp$BATCH <- batchdate
+#     tmp$SV <- "S"
+#     RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+#     if (versjonert == TRUE) {
+#       tmp$SV <- "V"
+#       RODBC::sqlSave(globs$log, tmp, "DESIGN", rownames = FALSE, append = TRUE)
+#     }
+#   }
+# }
+
+#' LagFlereFilgrupper (kb)
+#'
+#' @param filgrupper 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+#' @param printR 
+#' @param printCSV 
+#' @param printSTATA 
+#' @param versjonert 
+LagFlereFilgrupper <- function(filgrupper = character(0), batchdate = SettKHBatchDate(), globs = SettGlobs(), printR = TRUE, printSTATA = FALSE, versjonert = FALSE) {
+  is_kh_debug()
+  
+  # SKall rundt LagFilGruppe, lager og lagrer evt til fil
+  # Default er aa ta alle grupper, ellers angis oensket batch i filgrupper-argumentet
+  if (length(filgrupper) == 0) {
+    # filgrupper<-as.matrix(RODBC::sqlQuery(globs$dbh,"SELECT DISTINCT Filgruppe from INNLESING WHERE Bruk=1",as.is=TRUE))
+    filgrupper <- as.matrix(RODBC::sqlQuery(globs$dbh, "SELECT DISTINCT Filgruppe from FILGRUPPER", as.is = TRUE))
+  }
+  cat("BATCH:", batchdate, "\n")
+  # HOVEDLOOP
+  for (gruppe in filgrupper) {
+    FG <- LagFilgruppe(gruppe, batchdate = batchdate, globs = globs, versjonert = versjonert)
+  }
+}
+
+#' AggregerRader (kb)
+#'
+#' @param FG 
+#' @param nyeexpr 
+#' @param FGP 
+AggregerRader <- function(FG, nyeexpr, FGP) {
+  # is_kh_debug()
+  
+  if (!(is.na(nyeexpr) || nyeexpr == "")) {
+    nytabs <- unlist(stringr::str_split(nyeexpr, ";"))
+    for (nytab in nytabs) {
+      # PARSING av syntaks
+      nylab <- gsub("^\\[(.*?)\\]=.*", "\\1", nytab)
+      subexp <- gsub(".*\\]=\\{(.*)\\}", "\\1", nytab)
+      if (grepl("%in%|==", subexp)) {
+        tab <- gsub("^ *(.*) *(%in%|==).*", "\\1", subexp)
+      } else {
+        tab <- gsub("^ *(.*) *$", "\\1", subexp)
+        subexp <- TRUE
+      }
+      if (!tab %in% names(FG)) {
+        tabE <- names(FGP)[which(FGP == tab)]
+        subexp <- gsub("^ *tab(.*)", paste0(tabE, "\\1"), subexp)
+        tab <- tabE
+      }
+      FG2 <- eval(parse(text = paste0("subset(FG,", subexp, ")")))
+      FG2 <- KHaggreger(FG2[, setdiff(names(FG), tab), with = FALSE], globs = globs)
+      FG2[, eval(parse(text = paste0(tab, ":='", nylab, "'")))]
+      FG <- rbind(FG, FG2[, names(FG), with = FALSE])
+    }
+  }
+  return(FG)
+}
+
+#' OmkodFilFraPart (kb)
+#'
+#' @param Fil 
+#' @param Part 
+#' @param FGP 
+#' @param globs global parameters, defaults to SettGlobs
+OmkodFilFraPart <- function(Fil, Part, FGP = list(amin = 0, amax = 120), parameters) {
+  Dorg <- FinnDesign(Fil, FGP = FGP, parameters = parameters)
+  Dmod <- ModifiserDesign(Part, Dorg, parameters = parameters)
+  RD <- FinnRedesign(Dorg, Dmod, parameters = parameters)
+  return(OmkodFil(Fil, RD, parameters = parameters))
+}
+
+#' ModifiserDesign (kb)
+#'
+#' @param Nytt 
+#' @param Org 
+#' @param globs global parameters, defaults to SettGlobs
+ModifiserDesign <- function(Nytt, Org = list(), parameters) {
+  # is_kh_debug()
+  
+  Nkombs <- 1
+  for (del in names(Org$Part)) {
+    Nkombs <- Nkombs * nrow(Org$Part[[del]])
+  }
+  
+  
+  for (del in names(Nytt)) {
+    delT <- data.table::as.data.table(Nytt[[del]])
+    delT[, paste0(del, "_HAR")] <- 1
+    Org$Part[[del]] <- delT
+    Nkombs <- Nkombs * nrow(delT)
+  }
+  
+  if (any(grepl("_HAR", names(Org$OmkDesign)))) {
+    cat("************************************************************\n*\n*  OBSN NOE RART MED ModifiserDesign HAR\n*\n*********************************\n")
+  }
+  
+  omkDeler <- intersect(names(Nytt), c(parameters$DefDesign$UBeting, parameters$DefDesign$BetingOmk))
+  if (length(omkDeler) > 0) {
+    NyKols <- unlist(parameters$DefDesign$DelKols[omkDeler])
+    NyKols <- intersect(names(Org$OmkDesign), NyKols)
+    OmkDesignGmlKols <- setdiff(names(Org$OmkDesign), c(NyKols, "HAR"))
+    delerlist <- paste0("as.data.frame(Nytt[[\"", names(Nytt), "\"]])", collapse = ",")
+    # Skal beholdes
+    if (length(OmkDesignGmlKols) > 0) {
+      OmkDesGml <- Org$OmkDesign[, c(OmkDesignGmlKols, "HAR"), with = FALSE]
+      data.table::setkeyv(OmkDesGml, OmkDesignGmlKols)
+      OmkDesGml <- OmkDesGml[, list(HAR = max(HAR)), by = OmkDesignGmlKols]
+      delerlist <- paste0(delerlist, ",as.data.frame(OmkDesGml)")
+    }
+    OmkDesNy <- data.table::data.table(eval(parse(text = paste0("expand.grid.df(", delerlist, ")"))))
+    if (length(OmkDesignGmlKols) == 0) {
+      OmkDesNy[, HAR := 1]
+    }
+    OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(OmkDesNy)]
+    setkeym(OmkDesNy, OmkKols)
+    Org[["OmkDesign"]] <- OmkDesNy
+  }
+  # Merk, det gir bare mening aa bruke denne for aa lage et TIL-design, da trengs ikke de foelgende delene
+  # Om det modifiserte designet skal brukes som et FRA-design maa ogsaa disse endres. Det er en kloenete operasjon (og som vel knapt er veldefinert)
+  # Kan altsaa IKKE bruke FinnFellesTab(Org,ModifiserDesign(PredFilter,Org))
+  
+  Org[["Design"]] <- NULL
+  Org[["SKombs"]] <- NULL
+  Org[["FKombs"]] <- NULL
+  
+  return(Org)
+}
+
+#' DFHeadToString (kb)
+#'
+#' @param innDF 
+#' @param topn 
+DFHeadToString <- function(innDF, topn = 10) {
+  # is_kh_debug()
+  
+  # Bruker data.table print for summary
+  DT <- data.table::data.table(innDF)
+  optdef <- getOption("width") # Sett bred output
+  options(width = 250)
+  head <- paste(capture.output(print(print(DT, topn = topn))), collapse = "\n")
+  head <- sub("NULL$", "", head)
+  options(width = optdef)
+  return(head)
+}
+
+#' KHaggreger (kb)
+#'
+#' @param FIL 
+#' @param vals 
+#' @param snitt 
+#' @param globs global parameters, defaults to SettGlobs
+KHaggreger <- function(FIL, vals = list(), parameters) {
+  orgclass <- class(FIL)
+  orgcols <- names(FIL)
+  if (identical(orgclass, "data.frame")) {
+    FIL <- data.table::setDT(FIL)
+  }
+  orgkeys <- data.table::key(FIL)
+  tabnames <- names(FIL)[names(FIL) %in% parameters$DefDesign$DesignKolsFA]
+  valkols <- get_value_columns(names(FIL))
+  if(!identical(data.table::key(FIL), tabnames)) data.table::setkeyv(FIL, tabnames)
+  
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = valkols, by = tabnames]
+  FIL[, names(.SD) := lapply(.SD, max), .SDcols = paste0(valkols, ".f"), by = tabnames]
+  colorder <- tabnames
+  for(val in valkols){
+    FIL[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
+  }
+  FIL[, names(.SD) := lapply(.SD, sum), .SDcols = paste0(valkols, ".a"), by = tabnames]
+  data.table::setcolorder(FIL, colorder)
+  
+  vals <- vals[valkols]
+  usumbar <- valkols[unlist(lapply(vals[valkols], function(x) {
+    x$sumbar == 0
+  }))]
+  for (val in valkols) {
+    if (!is.null(vals[[val]]) && vals[[val]]$sumbar == 0) {
+      eval(parse(text = paste(
+        "FIL[", val, ".a>1,c(\"", val, "\",\"", val, ".f\"):=list(NA,2)]",
+        sep = ""
+      )))
+    }
+  }
+  if(!identical(data.table::key(FIL), orgkeys)) data.table::setkeyv(FIL, tabnames)
+  
+  return(unique(FIL))
+}
+
+get_merge_teller_nevner_args <- function(standardfiles, parameters){
+  args <- list()
+  args[["files"]] <- parameters$files
+  args[["filedesigns"]] <- parameters$filedesign
+  args[["fileparameters"]] <- parameters$fileinformation
+  args[["TELLERFIL"]] <- ifelse(standardfiles, "STANDARDTELLER", "TELLER")
+  args[["NEVNERFIL"]] <- ifelse(standardfiles, "STANDARDNEVNER", "NEVNER")
+  if(standardfiles){
+    args[["TNPparameters"]] <- parameters$STNPinformation
+    args[["KUBEparameters"]] <- NULL
+  } else {
+    args[["TNPparameters"]] <- parameters$TNPinformation
+    args[["KUBEparameters"]] <- parameters$CUBEinformation
+  }
+  return(args)
+}
+
+#' is_kh_debug (ybk)
+#' 
+#' Debugging all other functions in the project
+#' To use, set show_functions or show_arguments = TRUE
+# is_kh_debug <- function(fun = show_functions, arg = show_arguments, show = FALSE){
+#   
+#   # If both are TRUE then show_arguments will be deactivated automatically.
+#   if (fun & arg)
+#     arg <- FALSE
+#   
+#   if (arg) {
+#     show = show_arguments
+#     out = sys.calls()[[1]]
+#   }
+#   
+#   if (fun) {
+#     show = show_functions
+#     out = sys.calls()[[1]][1]
+#   }
+#   
+#   if (show) {
+#     message("Execute: ", deparse(out))
+#   }
+#   
+#   invisible()
+# }
+
+#' FinnFil (kb)
+#'
+#' @param FILID 
+#' @param versjonert 
+#' @param batch 
+#' @param ROLLE 
+#' @param TYP 
+#' @param IDKOLS 
+#' @param globs global parameters, defaults to SettGlobs
+FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = get_global_parameters()) {
+  FT <- data.frame()
+  if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
+    FT <- data.table::copy(BUFFER[[FILID]])
+    cat("Hentet ", ROLLE, "FIL ", FILID, " fra BUFFER (", dim(FT)[1], " x ", dim(FT)[2], ")\n", sep = "")
+  } else {
+    if (!is.na(batch)) {
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"), paste0(FILID, "_", batch, ".rds"))
+    } else if (versjonert == TRUE) {
+      orgwd <- getwd()
+      path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.dat"))
+      Filer <- unlist(list.files(path, include.dirs = FALSE, pattern = paste0("^", FILID, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.rds$")))
+      Filer <- Filer[grepl(paste("^", FILID, "_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", sep = ""), Filer)]
+      if (length(Filer) > 0) {
+        filn <- file.path(path, Filer[order(Filer)][length(Filer)])
+        batch <- gsub(".*_(\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}).rds$", "\\1", Filer[order(Filer)][length(Filer)])
+      } else {
+        filn <- file.path(path, paste0(FILID, ".rds"))
+      }
+    } else {
+      filn <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(FILID, ".rds"))
+      print(filn)
+    }
+    if (file.access(filn, mode = 0) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes ikke\n")
+    } else if (file.access(filn, mode = 4) == -1) {
+      cat("KRITISK FEIL: ", filn, " finnes, men lar seg ikke lese\n")
+    } else {
+      FT <- readRDS_KH(filn, IDKOLS = IDKOLS)
+      cat("Lest inn ", ROLLE, "FIL ", FILID, " (", dim(FT)[1], " x ", dim(FT)[2], "), batch=", batch, "\n", sep = "")
+    }
+  }
+  return(list(FT = data.table::as.data.table(FT), batch = batch))
+}
+
+#' FinnFilT (kb)
+#'
+#' @param ... 
+FinnFilT <- function(filid) {
+  return(FinnFil(filid, globs = globs)$FT)
+}
+
+
+ht2 <- function(x, n = 3) {
+  rbind(head(x, n), tail(x, n))
+}
+
+#' @title usebranch
+#' @description
+#' use to test other branches, loads all functions from a specified branch
+usebranch <- function(branch){
+  rm(list = lsf.str(all.names = T))
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHpaths.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHfilgruppe.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkubefunctions.R"), encoding = "latin1")
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHkube.R"), encoding = "latin1")
+  # source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHother.R"), encoding = "latin1")
+  cat("\nLoaded functions from branch: ", branch)
+}
+
+#' @title KH_options
+#' @description
+#' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
+#' option is different from the config-file, and give the option to update. 
+KH_options <- function(){
+  # Set global options
+  op <- options()
+  optOrg <- orgdata:::is_globs("khfunctions")
+  orgDT <- !(names(optOrg) %in% names(op))
+  if(any(orgDT)) options(optOrg[orgDT])
+  corrglobs <- orgdata:::is_correct_globs(optOrg)
+  if(!isTRUE(corrglobs)){
+    x <- utils::askYesNo("Options are not the same as in the config file, update options now?")
+    if(isTRUE(x)){
+      orgdata::update_globs("khfunctions")
+    }
+  }
+}
+
+#' @title usebranch
+#' @description
+#' use to test other branches, loads all functions from a specified branch
+use_branch <- function(branch, debug = FALSE){
+  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
+  # show_functions <<- debug
+  # show_arguments <<- debug
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
+  KH_options()
+  source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHglobs.R"), encoding = "latin1")
+  
+  rfiles <- list_files_github(branch = branch)
+  rfiles <- grep("KHmisc.R|KHglobs.R|KHsetup.R", rfiles, value = T, invert = T)
+  for(file in rfiles){
+    source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/", file), encoding = "latin1")
+  }
+  cat("\nLoaded functions from branch: ", branch)
+}
+
+list_files_github <- function(branch){
+  req <- httr2::request(paste0("https://api.github.com/repos/helseprofil/khfunctions/git/trees/", branch, "?recursive=1"))
+  response <- httr2::req_perform(req)
+  files <- httr2::resp_body_json(response, simplifyDataFrame = TRUE)$tree$path
+  files <- basename(grep("^R/", files, value = T))
+  return(files)
+}
+
+#' FinnDesign (kb)
+#' 
+#' Brukes i lagkube og lagfilgruppe
+#'
+#' @param FIL 
+#' @param FGP 
+#' @param globs global parameters, defaults to SettGlobs
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
+  if (identical(class(FIL), "data.frame")) {
+    FIL <- data.table::data.table(FIL)
+  }
+  keyorg <- data.table::key(FIL)
+  DelKols <- parameters$DefDesign$DelKols
+  UBeting <- parameters$DefDesign$UBeting
+  BetingOmk <- parameters$DefDesign$BetingOmk
+  BetingF <- parameters$DefDesign$BetingF
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
+  
+  Design <- list()
+  Design[["KolNavn"]] <- names(FIL)
+  # Finn faktisk design
+  setkeym(FIL, c(DesignKols))
+  ObsDesign <- unique(FIL[, ..DesignKols])
+  
+  # Finn deler inneholdt i tabell
+  Deler <- character()
+  for (del in names(DelKols)) {
+    if (all(DelKols[[del]] %in% DesignKols)) {
+      Deler <- c(Deler, del)
+    }
+  }
+  
+  # Sett omkodingskombinasjoner
+  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
+  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
+  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
+  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
+  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
+  
+  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
+  for (del in Deler) {
+    kols <- DelKols[[del]]
+    data.table::setkeyv(ObsDesign, kols)
+    # SETT HAR
+    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+  }
+  
+  # Fyll evt hull i aldersintervaller
+  if ("A" %in% names(Design$Part)) {
+    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    if (nrow(mangler) > 0) {
+      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
+      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
+    }
+  }
+  
+  # Finn fullt design, dvs kryssing av alle partielle.
+  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
+  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FullDesign, names(ObsDesign))
+  # Sett HAR=1 om denne finnes i fakttisk design
+  FullDesign[, HAR := 0]
+  FullDesign[ObsDesign, HAR := 1]
+  Design[["Design"]] <- FullDesign
+  
+  # Sett omkodingskombinasjone
+  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
+  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
+  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
+  komb <- Design[["UBeting"]]
+  for (del in Beting) {
+    if (del != "") {
+      komb <- c(Design[["UBeting"]], del)
+    }}
+    if (length(komb) > 0) {
+      kols <- character(0)
+      for (k in komb) {
+        kols <- c(kols, DelKols[[k]])
+      }
+      data.table::setkeyv(ObsDesign, kols)
+      data.table::setkeyv(FullDesign, kols)
+      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
+      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
+      kombFull[, HAR := 0]
+      kombFull[kombObs, HAR := 1]
+      kombn <- paste("bet", del, sep = "")
+      Design[["SKombs"]][[kombn]] <- kombFull
+    }
+  }
+  
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FIL, keyorg)
+  gc()
+  return(Design)
+}
+
+#' @title SettFilterDesign (kb)
+#' @description
+#' WIP:
+#' - bruk0 var aldri satt til noe annet enn FALSE, tatt bort
+#' 
+#' @keywords internal
+#' @noRd
+SettFilterDesign <- function(KUBEdscr, OrgParts = list(), FGP = list(amin = 0, amax = 120), parameters) {
+  Deler <- list()
+  for (del in names(parameters$DefDesign$DelKolN)) {
+    # for (del in names(unlist(globs$DefDesign$DelKolN[ORGd$OmkDeler]))){
+    # if (del %in% names(ORGd$Part) | grepl("^T\\d$",del)){
+    # Les liste
+    koldel <- parameters$DefDesign$DelKolN[del]
+    koldel0 <- paste0(koldel, "_0")
+    # 
+    # if (bruk0 == TRUE && !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != "") {
+    #   delListStr <- KUBEdscr[[koldel0]]
+    # } else {
+    delListStr <- KUBEdscr[[koldel]]
+    # }
+    if (!(is.null(delListStr) || is.na(delListStr) || delListStr == "")) {
+      delListStr <- gsub("^ *| *$", "", delListStr)
+      minus <- grepl("^-\\[", delListStr)
+      delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
+      delListA <- unlist(stringr::str_split(delListStr, ","))
+      if (parameters$DefDesign$DelType[del] == "INT") {
+        if (del == "A") {
+          delListA <- gsub("ALLE", paste0(FGP$amin, "_", FGP$amax), delListA)
+          delListA <- gsub("^_(\\d+)", paste0(FGP$amin, "_\\1"), delListA)
+          delListA <- gsub("(\\d+)_$", paste0("\\1_", FGP$amax), delListA)
+        }
+        delListA <- gsub("^(\\d+)$", "\\1_\\1", delListA)
+        delListA <- data.table::as.data.table(matrix(as.integer(stringr::str_split_fixed(delListA, "_", 2)), ncol = 2))
+      } else if (parameters$DefDesign$DelFormat[del] == "integer") {
+        delListA <- as.integer(delListA)
+      } else if (parameters$DefDesign$DelFormat[del] == "numeric") {
+        delListA <- as.numeric(delListA)
+      }
+      listDT <- data.table::setnames(data.table::as.data.table(delListA), parameters$DefDesign$DelKols[[del]])
+      if (minus == TRUE) {
+        if (!is.null(OrgParts[[del]])) {
+          data.table::setkeyv(listDT, names(listDT))
+          data.table::setkeyv(OrgParts[[del]], names(listDT))
+          Deler[[del]] <- OrgParts[[del]][!listDT, ]
+        } else {
+          print("**********************KAN IKKE BRUKE -[liste] i SettFilterDesign naar ikke OrgParts")
+        }
+      } else {
+        Deler[[del]] <- listDT
+      }
+    } else if (parameters$DefDesign$DelType[del] == "INT") {
+      start <- KUBEdscr[[paste0(koldel, "_START")]]
+      stopp <- KUBEdscr[[paste0(koldel, "_STOP")]]
+      if (!(is.null(start) | is.null(stopp))) {
+        if (!(is.na(start) | is.na(stopp))) {
+          if (!(start == "" | stopp == "")) {
+            if (stopp >= start) {
+              if (!is.null(OrgParts[[del]])) {
+                Deler[[del]] <- subset(OrgParts[[del]], eval(parse(text = paste0(koldel, "l>=", start, " & ", koldel, "h<=", stopp))))
+              } else {
+                # Deler[[del]]<-setNames(as.data.frame(cbind(start:stopp,start:stopp)),paste(koldel,c("l","h"),sep=""))
+              }
+            } else {
+              cat("FEIL!!!!!!!! kan ikke ha start ", start, "> stopp ", stopp, "\n")
+            }
+          }
+        }
+      }
+    }
+  }
+  return(Deler)
+}
+
+#' @title LeggTilNyeVerdiKolonner (kb)
+#' FIKS DENNE
+#' @noRd
+LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, postMA = FALSE) {
+  TNF <- data.table::copy(TNF) # Faar uoensket warning om self.reference under om ikke gjoer slik
+  data.table::setDT(TNF)
+  valKols <- gsub("^(.+)\\.f$", "\\1", names(TNF)[grepl(".+\\.f$", names(TNF))])
+  # get_value_columns(names(TNF))
+  if (!(is.na(NYEdscr) | NYEdscr == "")) {
+    for (nycolexpr in unlist(stringr::str_split(NYEdscr, ";"))) {
+      nycol <- gsub("^(.*?)=(.*)$", "\\1", nycolexpr)
+      expr <- gsub("^(.*?)=(.*)$", "\\2", nycolexpr)
+      invKols <- valKols[sapply(valKols, FUN = function(x) {
+        grepl(x, expr)
+      })]
+      eval(parse(text = paste(
+        "TNF[,c(\"", paste(nycol, c("", ".f", ".a"), collapse = "\",\"", sep = ""), "\")
+      :=list(", expr, ",pmax(", paste(invKols, ".f", collapse = ",", sep = ""), "),
+                      pmax(", paste(invKols, ".a", collapse = ",", sep = ""), "))]",
+        sep = ""
+      )))
+      if (postMA == TRUE) {
+        eval(parse(text = paste(
+          "TNF[,c(\"", paste(nycol, c(".n", ".fn1", ".fn3", ".fn9"), collapse = "\",\"", sep = ""), "\")
+        :=list(1,0,0,0)]",
+          sep = ""
+        )))
+      }
+      eval(parse(text = paste("suppressWarnings(",
+                              "TNF[", nycol, "%in% c(Inf,NaN,NA),c(\"", paste(nycol, c("", ".f"), collapse = "\",\"", sep = ""), "\"):=list(NA,2)])",
+                              sep = ""
+      )))
+    }
+  }
+  return(TNF)
+}
+
+#' FinnDesign (kb)
+#' 
+#' Brukes i lagkube og lagfilgruppe
+#'
+#' @param FIL 
+#' @param FGP 
+#' @param parameters global parameters
+FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
+  if (identical(class(FIL), "data.frame")) {
+    FIL <- data.table::data.table(FIL)
+  }
+  keyorg <- data.table::key(FIL)
+  DelKols <- parameters$DefDesign$DelKols
+  UBeting <- parameters$DefDesign$UBeting
+  BetingOmk <- parameters$DefDesign$BetingOmk
+  BetingF <- parameters$DefDesign$BetingF
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  
+  DesignKols <- parameters$DefDesign$DesignKolsF[parameters$DefDesign$DesignKolsF %in% names(FIL)]
+  OmkKols <- parameters$DefDesign$DesignKols[parameters$DefDesign$DesignKols %in% names(FIL)]
+  
+  Design <- list()
+  Design[["KolNavn"]] <- names(FIL)
+  # Finn faktisk design
+  setkeym(FIL, c(DesignKols))
+  ObsDesign <- unique(FIL[, ..DesignKols])
+  
+  # Finn deler inneholdt i tabell
+  Deler <- character()
+  for (del in names(DelKols)) {
+    if (all(DelKols[[del]] %in% DesignKols)) {
+      Deler <- c(Deler, del)
+    }
+  }
+  
+  # Sett omkodingskombinasjoner
+  Design[["UBeting"]] <- UBeting[UBeting %in% Deler]
+  Design[["BetingOmk"]] <- BetingOmk[BetingOmk %in% Deler]
+  Design[["BetingF"]] <- BetingF[BetingF %in% Deler]
+  Alle <- c(Design[["UBeting"]], Design[["BetingOmk"]], Design[["BetingF"]])
+  Design[["OmkDeler"]] <- c(Design[["UBeting"]], Design[["BetingOmk"]])
+  
+  # Sett alle partielle tabuleringer (Gn,Y,K,A,T1,T2,T3),
+  for (del in Deler) {
+    kols <- DelKols[[del]]
+    data.table::setkeyv(ObsDesign, kols)
+    # SETT HAR
+    Design[["Part"]][[del]] <- data.table::data.table(setNames(cbind(unique(ObsDesign[, kols, with = FALSE]), 1), c(kols, paste(del, "_HAR", sep = ""))), key = kols)
+  }
+  
+  # Fyll evt hull i aldersintervaller
+  if ("A" %in% names(Design$Part)) {
+    mangler <- intervals::interval_difference(intervals::Intervals(c(FGP$amin, FGP$amax), type = "Z"), intervals::Intervals(Design$Part$A[, DelKols$A, with = FALSE], type = "Z"))
+    if (nrow(mangler) > 0) {
+      mangler <- setNames(cbind(as.data.frame(mangler), 0), c("ALDERl", "ALDERh", "A_HAR"))
+      Design[["Part"]][["A"]] <- rbind(Design[["Part"]][["A"]], mangler)
+    }
+  }
+  
+  # Finn fullt design, dvs kryssing av alle partielle.
+  delerlist <- paste("as.data.frame(Design[[\"Part\"]][[\"", Alle, "\"]])", sep = "", collapse = ",")
+  FullDesign <- data.table::data.table(eval(parse(text = paste("expand.grid.df(", delerlist, ")", sep = ""))))
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FullDesign, names(ObsDesign))
+  # Sett HAR=1 om denne finnes i fakttisk design
+  FullDesign[, HAR := 0]
+  FullDesign[ObsDesign, HAR := 1]
+  Design[["Design"]] <- FullDesign
+  
+  # Sett omkodingskombinasjone
+  # Noen dimensjoner faar variere fritt (UBeting). Andre maa vaere fast for alle versjoner av UBeting
+  # Def er at Gn og Y er frie, mens K og A maa vaere fast for hver Gn,Y kombinasjon
+  Beting <- c("", Design[["BetingOmk"]], Design[["BetingF"]])
+  komb <- Design[["UBeting"]]
+  for (del in Beting) {
+    if (del != "") {
+      komb <- c(Design[["UBeting"]], del)
+    }
+    if (length(komb) > 0) {
+      kols <- character(0)
+      for (k in komb) {
+        kols <- c(kols, DelKols[[k]])
+      }
+      data.table::setkeyv(ObsDesign, kols)
+      data.table::setkeyv(FullDesign, kols)
+      kombFull <- data.table::data.table(unique(FullDesign[, kols, with = FALSE]))
+      kombObs <- data.table::data.table(unique(ObsDesign[, kols, with = FALSE]))
+      kombFull[, HAR := 0]
+      kombFull[kombObs, HAR := 1]
+      kombn <- paste("bet", del, sep = "")
+      Design[["SKombs"]][[kombn]] <- kombFull
+    }
+  }
+  
+  setkeym(ObsDesign, names(ObsDesign))
+  setkeym(FIL, keyorg)
+  gc()
+  return(Design)
+}
+
+#' readRDS_KH (kb)
+#'
+#' @param file 
+#' @param IDKOLS 
+#' @param ... 
+readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
+  FIL <- readRDS(file, ...)
+  if (IDKOLS == FALSE) {
+    if ("KOBLID" %in% names(FIL)) {
+      FIL$KOBLID <- NULL
+    }
+    if ("ROW" %in% names(FIL)) {
+      FIL$ROW <- NULL
+    }
+  }
+  return(FIL)
+}
+
+#' setkeym (kb)
+#'
+#' @param DTo 
+#' @param keys 
+setkeym <- function(DTo, keys) {
+  
+  # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
+  if (!("data.table" %in% class(DTo) && identical(data.table::key(DTo), keys))) {
+    data.table::setDT(DTo)
+    data.table::setkeyv(DTo, keys)
+  }
+}
+
+#' @title DumpTabell
+#' @description 
+DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
+  if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
+  for(fmt in format){
+    if (fmt == "CSV") {
+      write.table(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".csv")), sep = ";", na = "", row.names = FALSE)
+    } else if (fmt == "R") {
+      .GlobalEnv$DUMPtabs[[TABELLnavn]] <- TABELL
+      saveRDS(TABELL, file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".rds")))
+    } else if (fmt == "STATA") {
+      TABELL[TABELL == ""] <- " " # STATA stoetter ikke "empty-string"
+      names(TABELL) <- gsub("^(\\d.*)$", "S_\\1", names(TABELL)) # STATA 14 taaler ikke numeriske kolonnenavn
+      names(TABELL) <- gsub("^(.*)\\.([afn].*)$", "\\1_\\2", names(TABELL)) # Endre .a, .f, .n til _
+      foreign::write.dta(TABELL, file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0(TABELLnavn, ".dta"), sep = ""))
+    }
+  }
+}
+
+#' @title FinnRedesign (kb)
+#'
+#' @param fradesign 
+#' @param tildesign 
+#' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
+#' @param parameters global parameters
+FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), parameters) {
+  KB = parameters$KB
+  AggPri = parameters$DefDesign$AggPri
+  # Merk assymtri mellom fradesign og tildesign.
+  # For tildesign brukes bare tildesign$Part og tildesign$OmkDesign.
+  # fradesign maa derfor komme fra FinnDesign med alle egenskaper satt der, mens tildesign kan vaere enklere og satt andre steder
+  
+  # Deler i fradesign som ikke er i tildesign maa legegs til i tildesign (full kryss mot Part[del])
+  # Merk at deler i tildesign som ikke er i fradesign gaar greit (all omkoding er indirekte "betinget" paa disse)
+  
+  # Sett partiell omkoding
+  # For intervaller kalles FinnKodebokINtervaller, elllers hentes fast kodebok som utgnagspunkt
+  # Disse kodeboekene (KJONN etc) filtreres til de omkodingene som er aktuelle (boer gjoeres her for aa begrense kombinatorikk, selv om dette kunne vaert utsatt)
+  # Dvs omkodinger til en TIL som ikke har alle noedvendige deler i FRA filtreres bort
+  # Merk at noen deler i FRA ikke er obligatoriske (slik som KJONN=9 for omkoding til KJONN=0)
+  
+  # Rydd tildesign$Design (Kan variere litt mht HAR avhengig av hvor kallet paa denne funksjonen er gjort fra. Skal ha 1 har felt)
+  if (is.null(tildesign$Design)) {
+    FULL <- do.call(expand.grid.dt, tildesign$Part)
+    FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$", names(FULL), value = T)]
+  } else {
+    FULL <- tildesign$Design[HAR == 1, ]
+    FULL[, names(.SD) := NULL, .SDcols = grep("_HAR$|^HAR$", names(FULL), value = T)]
+  }
+  data.table::setnames(FULL, names(FULL), paste0(names(FULL), "_omk"))
+  
+  TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
+  saveRDS(FULL, TempFile)
+  namesFULL <- names(FULL) # Need to get the original colnames before manipulation
+  
+  betKols <- setdiff(names(fradesign$SKombs$bet), "HAR")
+  if (length(betKols) > 0) {
+    FULL <- expand.grid.dt(FULL, fradesign$SKombs$bet[, ..betKols])
+  }
+  for (del in fradesign$UBeting) {
+    if (is.null(tildesign$Part[[del]])) {
+      tildesign$Part[[del]] <- data.table::copy(fradesign$Part[[del]])
+    }
+  }
+  
+  Parts <- list()
+  # DEV: Denne delen kan hentes ut til en egen funksjon
+  for (del in names(KB)) {
+    if (del %in% names(tildesign$Part) & del %in% names(fradesign$Part)) {
+      d <- data.table::copy(data.table::setDT(tildesign$Part[[del]])) # Faar noen rare warnings uten copy, boer debugge dette
+      delH <- paste0(del, "_HAR")
+      delP <- paste0(del, "_pri")
+      delO <- paste0(del, "_obl")
+      delD <- paste0(del, "_Dekk")
+      if (!delH %in% names(d)) {
+        d[, (delH) := 1]
+      }
+      KBD <- data.table::as.data.table(KB[[del]])
+      kol <- as.character(parameters$DefDesign$DelKolN[del])
+      kolomk <- paste0(kol, "_omk")
+      kolomkpri <- c(kolomk, paste0(del, "_pri"))
+      kols <- parameters$DefDesign$DelKols[[del]]
+      kolsomk <- paste0(kols, "_omk")
+      kolsomkpri <- c(kolsomk, paste0(del, "_pri"))
+      
+      # Sett 1-1 koding for T1,T2,.. dersom ikke annet gitt
+      if (grepl("^T\\d$", del) & nrow(KBD) == 0) {
+        tilTabs <- d[, ..kol]
+        KBD <- data.table::setnames(data.table::data.table(tilTabs, tilTabs, 0, 1), c(kol, kolomk, delP, delO))
+        Parts[[del]] <- KBD
+      }
+      
+      if (parameters$DefDesign$DelType[del] == "COL") {
+        if (nrow(KBD) > 0) {
+          # Filtrer bort TIL-koder i global-KB som ikke er i tildesign
+          KBD <- KBD[get(kolomk) %in% d[[kol]]]
+          data.table::setkeyv(KBD, kolomkpri)
+          KBD[, (delH) := as.integer(0L)]
+          KBD[get(kol) %in% fradesign$Part[[del]][[kol]], (delH) := 1L]
+          KBD[, (delD) := as.integer(!any(get(delH) == 0 & get(delO) == 1)), by = kolsomkpri]
+          # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
+          # Setter keep her, kaster til slutt
+          KBD[, keep := as.integer(any(get(delH) == 1)), by = kolsomkpri]
+        }
+      } else if (parameters$DefDesign$DelType[del] == "INT") {
+        # Global KB kan inneholde (fil)spesifikke koden "ALLE", maa erstatte denne med "amin_amax" og lage intervall
+        # Merk: dette gjelder typisk bare tilfellene der ukjent alder og evt tilsvarende skal settes inn under "ALLE"
+        Imin <- min(fradesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "l")]])
+        Imax <- max(fradesign$Part[[del]][[paste0(parameters$DefDesign$DelKolN[[del]], "h")]])
+        alle <- paste0(Imin, "_", Imax)
+        if (nrow(KBD) > 0) {
+          KBD[, names(.SD) := lapply(.SD, function(x) gsub("^(ALLE)$", alle, x)), .SDcols = c(kol, kolomk)]
+          KBD[, (kols) := data.table::tstrsplit(get(kol), "_", fixed = TRUE)]
+          KBD[, (kolsomk) := data.table::tstrsplit(get(kolomk), "_", fixed = TRUE)]
+          # Filtrer KBD mot TIL!!
+          KBD <- KBD[get(kolomk) %in% apply(d[, ..kols], 1, paste, collapse = "_"), ]
+        }
+        # Maa fjerne "del_HAR" inn i omkodintervall, fjerner dessuten del_HAR==0 i TIL
+        # Merk: eneste som ikke har del_HAR er udekkede intervaller mellom amin og amax.
+        # Videre er disse bare med naar TilDes er satt fra FinnDesign(FG), ikke naar TilDes er fra Parts
+        # Usikker paa om det alltid er best aa slippe disse gjennom.
+        
+        IntFra <- fradesign$Part[[del]][, ..kols]
+        IntTil <- d[, ..kols]
+        # Fjerner spesialkoder (dvs uoppgitt etc i KB) foer intervallomregning
+        IntFra <- IntFra[!apply(IntFra[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
+        IntTil <- IntTil[!apply(IntTil[, ..kols], 1, paste, collapse = "_") %in% parameters$LegKoder[[del]]$KODE]
+        KBInt <- FinnKodebokIntervaller(IntFra, IntTil, delnavn = del)
+        KBInt[, (delO) := 1]
+        
+        # DEVELOP:   DETTE ER TENMMELIG AD HOC!!!!!!!!!!
+        if (del == "A") {
+          KBInt[KBInt$ALDERl >= 90, (delO) := 0]
+        }
+        
+        KBInt[[paste0(del, "_ok")]] <- NULL # Denne brukes bare ved filtrering rett fra KBint
+        outnames <- names(KBInt)
+        # Legg til spesialkoder igjen
+        if (nrow(KBD) > 0) {
+          KBD <- data.table::rbindlist(list(KBInt, KBD[, ..outnames]))
+          KBD[, names(.SD) := lapply(.SD, as.integer), .SDcols = outnames]
+        } else {
+          KBD <- KBInt
+        }
+        
+        # Koble paa "del_HAR"
+        data.table::setkeyv(KBD, kols)
+        KBD <- collapse::join(fradesign$Part[[del]], KBD, how = "r", verbose = 0)
+        KBD[is.na(get(delH)), (delH) := 0]
+        KBD <- SettPartDekk(KBD, del = del, har = delH, parameters = parameters)
+        
+        # Kast omkodinger uten noen deler i FRA, behold de som dekkes helt og delvis
+        # USIKKER paa om dette er optimalt. Det maa ikke kastes for mye for riktig bruk fra FinnFellesTab
+        # Egentlig er det jo unoedvenig aa kaste noe som helst. Dette er mest for rapport/lesing av KBD
+        # Setter keep her, kaster til slutt
+        KBD[, keep := as.integer(any(get(delH) == 1) | get(delO) == 0), by = kolsomkpri]
+      }
+      
+      KBD <- KBD[keep == 1][, keep := NULL]
+      Parts[[del]] <- KBD
+    }
+  }
+  
+  gc()
+  SKombs <- list()
+  KBs <- list()
+  Filters <- list()
+  DelStatus <- list()
+  
+  # Maa passe paa rekkefoelge (Ubeting til slutt), ellers kan det gaa galt i FULL
+  beting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
+  ubeting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$UBeting))
+  
+  for (del in intersect(c(beting, ubeting), names(Parts))) {
+    kols <- parameters$DefDesign$DelKols[[del]]
+    kolsomk <- paste0(kols, "_omk")
+    delD <- paste0(del, "_Dekk")
+    delP <- paste0(del, "_pri")
+    delH <- paste0(del, "_HAR")
+    if (length(fradesign[["UBeting"]]) > 0) {
+      if (del %in% fradesign[["UBeting"]]) {
+        kombn <- "bet"
+      } else {
+        kombn <- paste0("bet", del)
+      }
+      # Koble med fradesign
+      data.table::setkeyv(Parts[[del]], kols)
+      data.table::setkeyv(fradesign$SKombs[[kombn]], kols)
+      betD <- collapse::join(fradesign$SKombs[[kombn]], Parts[[del]], how = "right", multiple = T, verbose = F)
+      betD[is.na(HAR), HAR := 0]
+      # Maa kaste de som ikke har del_Dekk==1 hvis ikke kan de feilaktig
+      # faa del_Dekk==1 under dersom del er i beting, da vil en annen del i beting faa NA og by=betcols gaar galt!)
+      betD <- subset(betD, eval(parse(text = paste0(del, "_Dekk==1"))))
+      betD <- betD[get(delD) == 1]
+      # Sett (betinget) dekning
+      betcols <- unlist(parameters$DefDesign$DelKols[setdiff(fradesign[["UBeting"]], del)])
+      betD <- SettPartDekk(betD, del = del, har = "HAR", betcols = betcols, parameters = parameters)
+    } else {
+      betcols <- character()
+      betD <- data.table::copy(Parts[[del]])
+    }
+    
+    # Finn beste alternativ
+    bycols <- c(kolsomk, betcols)
+    if (del %in% SkalAggregeresOpp) {
+      betD[get(delD) == 1, Bruk := max(get(delP)), by = bycols]
+    } else {
+      betD[get(delD) == 1, Bruk := min(get(delP)), by = bycols]
+    }
+    
+    KB <- betD[Bruk == get(delP) & get(delH) == 1]
+    SKombs[[del]] <- betD
+    
+    # Sjekk om del kan omkodes helt partielt (fra Part) eller om maa betinge (dvs KB)
+    
+    # Finner om en omk_kode bruker flere versjoner av partiell omkoding (hver versjon fra Part har ulik prid)
+    # Om en slik finnes beholdes KB, ellers fjernes overloedig betinging
+    maxBet <- KB[, .(NOPri = length(unique(get(delP)))), by = kolsomk][, max(NOPri)]
+    if (maxBet == 1) {
+      brukcols <- c(gsub("_omk$", "", kolsomk), kolsomk)
+      data.table::setkeyv(KB, brukcols)
+      KBs[[del]] <- unique(KB[, ..brukcols])
+      DelStatus[[del]] <- "P"
+    } else {
+      brukcols <- names(KB)[!grepl("(_obl|_{0,1}HAR|_Dekk|_pri|Bruk)$", names(KB))]
+      KBs[[del]] <- KB[, ..brukcols]
+      DelStatus[[del]] <- "B"
+    }
+    
+    if (del == "Y" & DelStatus[[del]] == "B") {
+      KHerr("Har DelStatus[[Y]]==B, dette takles per naa ikke i FilOmkod og vil gi feil der!!!")
+    }
+    
+    # Sett dekning i FULL
+    common <- intersect(names(FULL), names(KB))
+    data.table::setkeyv(KB, common)
+    data.table::setkeyv(FULL, common)
+    FULL <- FULL[KB[, ..common], nomatch = NULL, allow.cartesian = TRUE]
+    
+    # Ignorer KB der det ikke foregaar reell omkoding
+    if (all(KBs[[del]][, ..kols] == KBs[[del]][, ..kolsomk])) {
+      # Filters[[del]] <- KBs[[del]][, names(KBs[[del]])[!grepl("_omk$", names(KBs[[del]]))], with = FALSE]
+      Filters[[del]] <- KBs[[del]][, ..kols]
+      KBs[del] <- NULL
+      DelStatus[[del]] <- "F"
+    }
+  }
+  omkkols <- names(FULL)[grepl("_omk$", names(FULL))]
+  data.table::setkeyv(FULL, omkkols)
+  Dekk <- unique(FULL[, ..omkkols])
+  data.table::setnames(Dekk, names(Dekk), gsub("_omk$", "", names(Dekk)))
+  
+  data.table::setkeyv(FULL, namesFULL)
+  Udekk <- handle_udekk(FULL, namesFULL, TempFile)
+  
+  gc()
+  return(list(Parts = Parts, SKombs = SKombs, KBs = KBs, Filters = Filters, FULL = FULL, Dekk = Dekk, Udekk = Udekk, DelStatus = DelStatus))
+}
+
+#' @title OmkodFil (kb)
+#' @noRd
+OmkodFil <- function(FIL, RD, parameters) {
+  orgkols <- names(FIL)
+  data.table::setDT(FIL)
+  tabnames <- get_dimension_columns(names(FIL))
+  valkols <- get_value_columns(names(FIL))
+  lp <- paste0(valkols, "=sum(", valkols, "),",
+               valkols, ".f=max(", valkols, ".f),",
+               valkols, ".a=sum(", valkols, ".a*(!is.na(", valkols, ") & ", valkols, "!=0))",
+               collapse = ",")
+  
+  if (nrow(RD$FULL) > 0) {
+    for (del in names(RD$Filters)) {
+      data.table::setkeyv(FIL, names(RD$Filters[[del]]))
+      data.table::setkeyv(RD$Filters[[del]], names(RD$Filters[[del]]))
+      cat(" - Filtrerer ", del, ", dim f√∏r: ", dim(FIL), sep = "")
+      if (any(duplicated(RD$Filters[[del]]))) {
+        print("CARTESIAN????")
+        print(RD$Filters[[del]])
+        print(RD$Filters[[del]][duplicated(RD$Filters[[del]]), ])
+      }
+      FIL <- FIL[RD$Filters[[del]], nomatch = 0]
+      cat(", og etter:", dim(FIL), "\n")
+    }
+    
+    # NB! Rekkefoelge er essensiell, dvs at ubeting kommer til slutt
+    beting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$BetingOmk, parameters$DefDesign$BetingF))
+    ubeting <- intersect(parameters$DefDesign$AggPri[length(parameters$DefDesign$AggPri):1], c(parameters$DefDesign$UBeting))
+    
+    for (del in intersect(c(beting, ubeting), names(RD$KBs))) {
+      orgtabs <- names(RD$KBs[[del]])[!grepl("_omk$", names(RD$KBs[[del]]))]
+      omktabs <- names(RD$KBs[[del]])[grepl("_omk$", names(RD$KBs[[del]]))]
+      bycols <- c(setdiff(tabnames, gsub("_omk", "", omktabs)), omktabs)
+      
+      # Sjekk type omkoding som trengs.
+      # Dersom hver orgkode skal til mange omkkoder
+      # er det uheldig aa merge FIL[KB] om FIL er stor siden det lages mange kopier av orglinjer i FIL
+      # i slike tilfeller kobles i stedet inn en loop over omkoding til hver omktab  (jfr laging av tiaarssnitt i KREFT)
+      
+      data.table::setkeyv(RD$KBs[[del]], orgtabs)
+      replikfaktor <- RD$KBs[[del]][, list(N = .N), by = orgtabs][, mean(N)]
+      data.table::setkeyv(FIL, orgtabs)
+      cat(" - Omkoder ", del, ", dim originalt er :", dim(FIL), sep = "")
+      if (nrow(FIL) < 1000000 | replikfaktor < 4 | del == "Gn") {
+        FIL <- FIL[RD$KBs[[del]], nomatch = 0, allow.cartesian = TRUE]
+        # FIL<-FIL[RD$KBs[[del]],nomatch=0]
+        cat(", etter merge:", dim(FIL))
+        if (del == "Gn") {
+          FIL[GEOniv_omk == "K", GEO := substr(GEO, 0, 4)]
+          FIL[GEOniv_omk == "F", GEO := FYLKE]
+          FIL[GEOniv_omk == "L", c("GEO", "FYLKE") := list("0", "00")]
+          # FIL[GEOniv_omk == "B" & GEOniv == "S" & !grepl("^(0301|1103|1201|1601|4601|5001)", GEO), c("GEO", "FYLKE") := list("999999", "99")]
+          FIL[GEOniv_omk=="B" & GEOniv=="S" & !GEO %in% parameters$GeoKoder[GEOniv=="B"]$GEO,c("GEO","FYLKE"):=list("999999","99")]
+          FIL[GEOniv_omk == "H" & GEOniv != "H", GEO := plyr::mapvalues(FYLKE, parameters$HELSEREG$FYLKE, parameters$HELSEREG$HELSEREG, warn_missing = FALSE)]
+          FIL[GEOniv_omk == "H", FYLKE := "00"]
+        }
+        data.table::setkeyv(FIL, bycols)
+        lpl <- paste0("list(", lp, ")")
+        FIL <- FIL[, eval(parse(text = lpl)), by = bycols]
+        # Dette skulle vel vaert bedre, men blir alt for tregt? naar ikke bycols er key
+        # FIL<-FIL[RD$KBs[[del]],nomatch=0,allow.cartesian=TRUE][, eval(parse(text=lp)), by=bycols]
+      } else {
+        KB <- data.table::copy(RD$KBs[[del]])
+        data.table::setkeyv(KB, omktabs)
+        OMKs <- unique(KB[, omktabs, with = FALSE])
+        FILt <- FIL[0, ]
+        for (i in 1:nrow(OMKs)) {
+          OMK <- OMKs[i, ]
+          print(OMK)
+          KBt <- KB[OMK]
+          data.table::setkeyv(KBt, orgtabs)
+          FILd <- FIL[KBt, nomatch = 0, allow.cartesian = TRUE]
+          data.table::setkeyv(FILd, bycols)
+          lpt <- paste0("list(", paste(gsub("_omk$", "", names(OMK)), OMK, sep = "=", collapse = ","), ",", lp, ")")
+          FILt <- rbind(FILt, FILd[, eval(parse(text = lpt)), by = bycols][, names(FILt), with = FALSE])
+        }
+        FIL <- FILt
+      }
+      cat(", og til slutt:", dim(FIL), "\n")
+      data.table::setnames(FIL, names(FIL), gsub("_omk$", "", names(FIL)))
+    }
+  }
+  
+  if (nrow(RD$Udekk) > 0) {
+    UDekk <- data.table::copy(RD$Udekk)
+    restkols <- setdiff(tabnames, names(UDekk))
+    data.table::setkeyv(FIL, names(UDekk))
+    data.table::setkeyv(UDekk, names(UDekk))
+    FIL <- FIL[!UDekk, ]
+    valkolsF <- unlist(lapply(valkols, function(x) {
+      paste0(x, c("", ".f", ".a"))
+    }))
+    UDekk[, (valkols) := NA]
+    valg_f <- grep(".f$", valkolsF, value = TRUE)
+    UDekk[, (valg_f) := 9]
+    valg_a <- grep(".a$", valkolsF, value = TRUE)
+    UDekk[, (valg_a) := 0]
+    if (length(restkols) > 0) {
+      rest <- as.data.frame(unique(FIL[, restkols, with = FALSE]))
+      UDekk <- data.table::data.table(expand.grid.df(rest, as.data.frame(UDekk)))
+    }
+    FIL <- rbind(FIL[, orgkols, with = FALSE], UDekk[, orgkols, with = FALSE])
+    cat("UDEKKA:", nrow(RD$Udekk), "\n")
+  }
+  return(FIL)
+}

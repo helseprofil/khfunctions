@@ -1,76 +1,76 @@
 #' merge_teller_nevner
 #' 
-#' @param files 
-#' @param s 
-#' @param fileparameters 
-#' @param TNPparameters 
-#' @param TELLERFIL 
-#' @param NEVNERFIL 
-#' @param Design 
-#' @param KUBEparameters 
-#' @param globs 
-merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameters, TELLERFIL = NULL, NEVNERFIL = NULL, Design = NULL, KUBEparameters = NULL, globs = SettGlobs()) {
-  is_kh_debug()
-  if(is.null(TELLERFIL)) TELLERFIL <- "TELLER"
-  if(is.null(NEVNERFIL)) NEVNERFIL <- "NEVNER"
-  
-  tellerfilnavn <- files[[TELLERFIL]]
-  tellerfildesign <- filedesigns[[tellerfilnavn]]
-  isnevnerfil <- NEVNERFIL %in% names(files)
+#' @param parameters parameters generated with get_cubeparameters()
+#' @param standardfiles Should standard teller and nevner files be used? default = FALSE
+#' @param design Design list
+merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
+  if(standardfiles){
+    cat("\n* Merger standardteller- og standardnevnerfil\n")
+    tellerfile <- "STANDARDTELLER"
+    nevnerfile <- "STANDARDNEVNER"
+  } else {
+    cat("\n* Merger teller- og nevnerfil\n")
+    tellerfile <- "TELLER"
+    nevnerfile <- "NEVNER"
+  }
+  tellerfilnavn <- parameters$files[[tellerfile]]
+  tellerfildesign <- parameters$filedesign[[tellerfilnavn]]
+  isnevnerfil <- is_not_empty(parameters$files[[nevnerfile]])
   nevnerfildesign <- NULL
   if(isnevnerfil) {
-    nevnerfilnavn <- files[[NEVNERFIL]]
-    nevnerfildesign <- filedesigns[[nevnerfilnavn]]
+    nevnerfilnavn <- parameters$files[[nevnerfile]]
+    nevnerfildesign <- parameters$filedesign[[nevnerfilnavn]]
   }
-  InitDesign <- get_initialdesign(design = Design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, globs = globs)
+  InitDesign <- get_initialdesign(design = design, tellerfildesign = tellerfildesign, nevnerfildesign = nevnerfildesign, parameters = parameters)
   
-  if(!is.null(KUBEparameters)){
-    KUBEdesign <- FinnKubeDesignB(KUBEdscr = KUBEparameters, ORGd = InitDesign, FGP = fileparameters[[tellerfilnavn]], globs = globs)
+  if(!standardfiles){
+    KUBEdesign <- FinnKubeDesignB(InitDesign = InitDesign, filename = tellerfilnavn, parameters = parameters)
     TNdesign <- list(Part = KUBEdesign$TMP)
   } else {
     KUBEdesign <- list()
     TNdesign <- InitDesign
   }
   
-  cat("***Lager tellerfil fra", tellerfilnavn, "\n")
-  tellerfil <- do_redesign_recode_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, globs = globs)
+  tellerfiltype <- ifelse(standardfiles, "standard tellerfil", "tellerfil")
+  cat("** Lager", tellerfiltype, "fra", tellerfilnavn)
+  tellerfil <- do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
-    cat("Lager nevnerfil fra", nevnerfilnavn, "\n")
-    nevnerfil <- do_redesign_recode_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, globs = globs)
+    nevnerfiltype <- ifelse(standardfiles, "standard nevnerfil", "nevnerfilfil")
+    cat("** Lager", nevnerfiltype, "fra", nevnerfilnavn)
+    nevnerfil <- do_redesign_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters)
   }
   
-  implicitnull_defs <- fileparameters[[tellerfilnavn]]$vals
-  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, fileparameters[[nevnerfilnavn]]$vals)
+  implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
+  if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, parameters$fileinformation[[nevnerfilnavn]]$vals)
   
   if (length(KUBEdesign) > 0) {
-    rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, globs = globs)
+    cat("\n** Rektangulariserer teller-nevner-fil")
+    rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, parameters = parameters)
     report_removed_codes(file = tellerfil, cube = rectangularizedcube)
     TNF <- collapse::join(rectangularizedcube, tellerfil, how = "l", overid = 0, verbose = 0)
     if(isnevnerfil) TNF <- collapse::join(TNF, nevnerfil, how = "l", overid = 0, verbose = 0)
     TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
-    cat("--TNF ferdig rektangularisert og merget, dim(TNF)", dim(TNF), "\n")
+    cat("\n*** Ferdig rektangularisert og merget teller-nevner-fil, dim:", dim(TNF))
   } else if (isnevnerfil) {
     TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
     TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
-    cat("--TNF ferdig merget, dim(TNF)", dim(TNF), "\n")
+    cat("\n*** Ferdig merget teller-nevner-fil, dim:", dim(TNF))
   } else {
     TNF <- tellerfil
-    cat("--TNF ferdig, har ikke nevnerfil, s� TNF == tellerfil\n")
+    cat("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF))
   }
   
-  isNYEKOL_RAD <- !is.na(TNPparameters$NYEKOL_RAD) && TNPparameters$NYEKOL_RAD != ""
-  if (isNYEKOL_RAD) TNF <- LeggTilSumFraRader(TNF, TNPparameters$NYEKOL_RAD, FGP = fileparameters[[tellerfilnavn]], globs = globs)
-  isNYEKOL_KOL <- !is.na(TNPparameters$NYEKOL_KOL) && TNPparameters$NYEKOL_KOL != ""
-  if (isNYEKOL_KOL) TNF <- LeggTilNyeVerdiKolonner(TNF, TNPparameters$NYEKOL_KOL, slettInf = TRUE)
+  isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
+  if(isNYEKOL_RAD) TNF <- LeggTilSumFraRader(dt = TNF, NYdscr = parameters$TNPinformation$NYEKOL_RAD, FGP = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
+  isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
+  if(isNYEKOL_KOL) compute_new_value_from_formula(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   
   dimorg <- dim(TNF)
-  TNF <- do_filter_file(TNF, KUBEdesign$MAIN, globs = globs)
-  if (!identical(dimorg, dim(TNF))) cat("Siste filtrering av TNF, hadde dim(TNF)", dimorg, "fikk dim(TNF)", dim(TNF), "\n")
+  TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
+  if (!identical(dimorg, dim(TNF))) cat("*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
-  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = TNPparameters)
-  
-  cat("---Ferdig i LagTNtabell\n")
+  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
   return(list(TNF = TNF, KUBEd = KUBEdesign))
 }
 
@@ -78,13 +78,13 @@ merge_teller_nevner <- function(files, filedesigns, fileparameters, TNPparameter
 #' @param design 
 #' @param tellerfildesign 
 #' @param nevnerfildesign 
-#' @param globs 
-get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
+#' @param parameters global parameters
+get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, parameters){
   
   if(!is.null(design)) return(design)
-  if (is.null(nevnerfildesign)) return(tellerfildesign)
+  if(is.null(nevnerfildesign)) return(tellerfildesign)
   
-  fellesdesign <- FinnFellesTab(tellerfildesign, nevnerfildesign, globs = globs)$FDes
+  fellesdesign <- FinnFellesTab(DF1 = tellerfildesign, DF2 = nevnerfildesign, parameters = parameters)$FDes
   for(del in setdiff(names(tellerfildesign$Part), names(nevnerfildesign$Part))) {
     fellesdesign$Part[[del]] <- tellerfildesign$Part[[del]]
   }
@@ -98,18 +98,18 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, globs){
 #'
 #' @param DF1 
 #' @param DF2 
-#' @param globs 
-FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
-  # Diff<-union(setdiff(names(DF1$Part),names(DF2$Part)),setdiff(names(DF2$Part),names(DF1$Part)))
-  is_kh_debug()
+#' @param parameters global parameters
+FinnFellesTab <- function(DF1, DF2, parameters) {
   cat("Starter i FinnFellesTab.")
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
-  RD1 <- FinnRedesign(DF1, list(Part = FTabs), globs = globs)
-  RD2 <- FinnRedesign(DF2, list(Part = FTabs), globs = globs)
-  ### kommet hit ---- 
+  # RD1 <- FinnRedesign(DF1, list(Part = FTabs), parameters = parameters)
+  RD1 <- find_redesign(orgdesign = DF1, targetdesign = list(Part = FTabs), parameters = parameters)
+  # RD2 <- FinnRedesign(DF2, list(Part = FTabs), parameters = parameters)
+  RD2 <- find_redesign(orgdesign = DF2, targetdesign = list(Part = FTabs), parameters = parameters)
+  ### kommet hit ---
   omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
   data.table::setkeyv(RD1$FULL, omktabs)
   data.table::setkeyv(RD2$FULL, omktabs)
@@ -117,7 +117,7 @@ FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
   Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
   Dekk12 <- Dekk1[Dekk2, nomatch = 0]
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  FDes <- FinnDesign(Dekk12, globs = globs)
+  FDes <- find_filedesign(Dekk12, parameters = parameters)
   cat(" Ferdig i FinnFellesTab\n")
   gc()
   return(list(Dekk = Dekk12, FDes = FDes))
@@ -129,25 +129,98 @@ FinnFellesTab <- function(DF1, DF2, globs = SettGlobs()) {
 #'
 #' @param ORGd 
 #' @param FGP 
-#' @param globs 
-FinnKubeDesignB <- function(KUBEdscr, ORGd, FGP = list(amin = 0, amax = 120), globs = SettGlobs()) {
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+FinnKubeDesignB <- function(InitDesign, filename, parameters) {
   KubeD <- list(
-    TMP = FinnKubeDesign(KUBEdscr, ORGd, bruk0 = TRUE, FGP = FGP, globs = globs),
-    MAIN = FinnKubeDesign(KUBEdscr, ORGd, bruk0 = FALSE, FGP = FGP, globs = globs)
+    TMP = FinnKubeDesign(parameters$CUBEinformation, InitDesign, bruk0 = TRUE, FGP = parameters$fileinformation[[filename]], parameters = parameters),
+    MAIN = FinnKubeDesign(parameters$CUBEinformation, InitDesign, bruk0 = FALSE, FGP = parameters$fileinformation[[filename]], parameters = parameters)
   )
   return(KubeD)
 }
 
-#' @title do_redesign_recode_file
+#' FinnKubeDesign (kb)
+#'
+#' @param KUBEdscr 
+#' @param ORGd 
+#' @param bruk0 finn design med _0-kolonnene, brukes  
+#' @param FGP 
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, amax = 120), parameters) {
+  Deler <- list()
+  for (del in names(parameters$DefDesign$DelKolN)) {
+    if (del %in% names(ORGd$Part)) {
+      koldel <- parameters$DefDesign$DelKolN[del]
+      koldel0 <- paste0(koldel, "_0")
+      iskoldel0 <- !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != ""
+      
+      if (bruk0 == TRUE && iskoldel0) {
+        delListStr <- KUBEdscr[[koldel0]]
+      } else {
+        delListStr <- KUBEdscr[[koldel]]
+      }
+      isdelListStr <- !is.null(delListStr) && !is.na(delListStr) && delListStr != ""
+      if (isdelListStr) {
+        minus <- grepl("^-\\[", delListStr)
+        delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
+        delListA <- unlist(stringr::str_split(delListStr, ","))
+        if (parameters$DefDesign$DelType[del] == "INT") {
+          if (del == "A") {
+            delListA <- gsub("ALLE", paste0(FGP$amin, "_", FGP$amax), delListA)
+            delListA <- gsub("^_(\\d+)", paste0(FGP$amin, "_\\1"), delListA)
+            delListA <- gsub("(\\d+)_$", paste0("\\1_", FGP$amax), delListA)
+          }
+          delListA <- gsub("^(\\d+)$", "\\1_\\1", delListA)
+          delListA <- data.table::as.data.table(matrix(as.integer(stringr::str_split_fixed(delListA, "_", 2)), ncol = 2))
+        } else if (parameters$DefDesign$DelFormat[del] == "integer") {
+          delListA <- as.integer(delListA)
+        } else if (parameters$DefDesign$DelFormat[del] == "numeric") {
+          delListA <- as.numeric(delListA)
+        }
+        listDT <- data.table::setnames(data.table::as.data.table(delListA), parameters$DefDesign$DelKols[[del]])
+        if (minus == TRUE) {
+          data.table::setkeyv(listDT, data.table::key(ORGd$Part[[del]]))
+          Deler[[del]] <- ORGd$Part[[del]][!listDT, ]
+        } else {
+          Deler[[del]] <- listDT
+        }
+      } else if (parameters$DefDesign$DelType[del] == "INT") {
+        delN <- parameters$DefDesign$DelKolN[del]
+        start <- KUBEdscr[[paste0(delN, "_START")]]
+        stopp <- KUBEdscr[[paste0(delN, "_STOP")]]
+        if (!(is.null(start) | is.null(stopp))) {
+          if(start > stopp) stop(paste0("Kan ikke ha ACCESS::KUBER::", delN, "start (", start, ") > ", delN, "stopp (", stopp, ")"))
+          delL <- paste0(delN, "l")
+          delH <- paste0(delN, "h")
+          Deler[[del]] <- ORGd$Part[[del]][get(delL) >= start & get(delH) <= stopp, mget(c(delL, delH))]
+        } else {
+          Deler[[del]] <- ORGd$Part[[del]]  
+        }
+      } else {
+        Deler[[del]] <- ORGd$Part[[del]][, ..koldel]
+      }
+    } 
+  }
+  return(Deler)
+}
+
+#' @title do_redesign_file
 #'
 #' @param filename 
 #' @param filedesign 
 #' @param tndesign 
-#' @param globs 
-do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
-  redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, globs = globs)
-  if (nrow(redesign$Udekk) > 0) KHerr(paste0("UDEKKA i redesign av", filename))
-  file <- OmkodFil(FinnFilT(filename), redesign, globs = globs)
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+do_redesign_file <- function(filename, filedesign, tndesign, parameters){
+  # redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
+  redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
+  if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  file <- fetch_filegroup_from_buffer(filegroup = filename, parameters = parameters)
+  file <- do_filter_and_recode_to_redesign(dt = file, redesign = redesign, parameters = parameters)
   return(file)
 }
 
@@ -156,13 +229,12 @@ do_redesign_recode_file <- function(filename, filedesign, tndesign, globs){
 #' rectangularizes cube based on the given design
 #' @param colnames 
 #' @param design 
-#' @param globs 
-set_rectangularized_cube_design <- function(colnames, design, globs = SettGlobs()) {
-  GEOstdAAR <- getOption("khfunctions.year")
+#' @param parameters global parameters
+set_rectangularized_cube_design <- function(colnames, design, parameters) {
   DTlist <- list()
   delkolonner <- character(0)
   for (del in names(design)) {
-    delkols <- globs$DefDesign$DelKols[[del]]
+    delkols <- parameters$DefDesign$DelKols[[del]]
     if (all(delkols %in% colnames)) {
       delkolonner <- c(delkolonner, delkols)
       DTlist[[del]] <- data.table::setDT(design[[del]])
@@ -172,7 +244,7 @@ set_rectangularized_cube_design <- function(colnames, design, globs = SettGlobs(
   
   rektangularisert <- data.table::data.table()    
   for (Gn in design[["Gn"]][["GEOniv"]]) {
-    GEOK <- globs$GeoKoder[GEOniv == Gn & FRA <= getOption("khfunctions.year") & TIL > getOption("khfunctions.year")]
+    GEOK <- parameters$GeoKoder[GEOniv == Gn & FRA <= parameters$year & TIL > parameters$year]
     subfylke <- which(GEOK$GEOniv %in% c("G", "V", "S", "K", "F", "B"))
     GEOK$FYLKE <- NA_character_
     GEOK$FYLKE[subfylke] <- substr(GEOK$GEO[subfylke], 1, 2)
@@ -204,10 +276,10 @@ report_removed_codes <- function(file, cube){
 #'
 #' @param file 
 #' @param design 
-#' @param globs 
-do_filter_file <- function(file, design, globs = SettGlobs()) {
+#' @param parameters global parameters
+do_filter_file <- function(file, design, parameters){
   for (del in names(design)) {
-    cols <- globs$DefDesign$DelKols[[del]]
+    cols <- parameters$DefDesign$DelKols[[del]]
     if (all(cols %in% names(file))) {
       file <- collapse::join(file, design[[del]][, ..cols], on = cols, how = "right", multiple = T, overid = 0, verbose = 0)
     }

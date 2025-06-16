@@ -1,7 +1,6 @@
 #' @title godkjent
-#' @param profil 
-#' @param geoniv 
-#' @param year
+#' @keywords internal
+#' @noRd
 godkjent <- function(profil = c("FHP", "OVP"),
                      geoniv = c("K", "F", "B"),
                      year = getOption("khfunctions.year")) {
@@ -51,7 +50,7 @@ godkjent_summary_msg <- function(friskvik, alle){
   all <- friskvik[, length(unique(KUBE_NAVN))]
   complete <- alle[, length(unique(KUBE_NAVN))]
   remaining <- all - complete
-  message("Per nå er ", complete, " av ", all, " kuber godkjent, ", remaining, " kuber gjenstår")
+  message("Per nÃ¥ er ", complete, " av ", all, " kuber godkjent, ", remaining, " kuber gjenstÃ¥r")
 }
 
 #' @noRd
