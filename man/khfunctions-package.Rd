@@ -4,7 +4,7 @@
 \name{khfunctions-package}
 \alias{khfunctions}
 \alias{khfunctions-package}
-\title{khfunctions: What the Package Does (One Line, Title Case)}
+\title{khfunctions: Data processing for FHP/OVP}
 \description{
 What the package does (one paragraph).
 }

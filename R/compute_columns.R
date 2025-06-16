@@ -126,9 +126,6 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
   return(fparts)
 }
 
-#' @description
-#' 
-#' 
 #' @keywords internal
 #' @noRd
 get_recode_design <- function(filter){
