@@ -18,7 +18,7 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
 }
 
 .onAttach <- function(libname, pkgname){
-  newversion <- check_for_new_version()
+  newversion <- orgdata:::is_latest_version("khfunctions", "master")
   if(newversion){
     x <- utils::askYesNo("Update khfunctions now?")
     if(x) remotes::install_github("helseprofil/khfunctions@master")
@@ -27,25 +27,6 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
   packageStartupMessage("khfunctions version: ",
                         utils::packageDescription("khfunctions")[["Version"]])
   check_connection_folders()
-}
-
-check_for_new_version <- function(){
-  out <- FALSE
-  localversion <- utils::packageDescription("khfunctions")[["Version"]]
-  desc <- paste("https://raw.githubusercontent.com/helseprofil/khfunctions/master/DESCRIPTION")
-  isOn <- orgdata:::is_online(desc)
-  if(!isOn){
-    cat("No online connection, cannot check for updated package version")
-    return(invisible(out))
-  } 
-  gitversion <- data.table::fread(desc, nrows = 4, fill = TRUE)[grepl("Version", V1), V2]
-  new <- numeric_version(gitversion) > numeric_version(localversion)
-  
-  if(new){
-    cat("\nNew version available:", gitversion)
-    cat("\nYour installed version:", localversion)
-    return(invisible(TRUE))
-  }
 }
 
 check_connection_folders <- function(){
