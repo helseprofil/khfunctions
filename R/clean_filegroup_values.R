@@ -57,7 +57,7 @@ check_if_value_ok <- function(dt, val, cleanlog){
   if(n_not_ok == 0) cat("\n*** Alle ", val, " ok", sep = "")
 }
 
-do_set_value_names <- function(dt, parameters){
+do_set_fg_value_names <- function(dt, parameters){
   vals <- get_value_columns(names(dt))
   valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
   suffixes <- c("", ".a", ".f")

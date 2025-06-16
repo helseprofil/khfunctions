@@ -22,22 +22,23 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
-  write_codebooklog(log = codebooklog, parameters = parameters)
   
-  cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog)
+  cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   analyze_cleanlog(log = cleanlog)
-  do_set_value_names(dt = Filgruppe, parameters = parameters)
+  
   cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
+  do_set_fg_column_order(dt = Filgruppe)
+  do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
   
   Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  
-  write_filegroup_output(outfile = Filgruppe, parameters)
-  RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  RESULTAT <- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  write_filegroup_output(outputs = RESULTAT, parameters = parameters)
+  RESULTAT <<- RESULTAT
   cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
@@ -59,12 +60,15 @@ delete_old_filegroup_log <- function(filegroup, parameters){
 #' @description
 #' Initiates log for filegroup cleaning
 #' @noRd
-initiate_cleanlog <- function(dt, codebooklog){
-  log <- dt[, .(N_rows = .N), by = KOBLID]
-  n_recoded <- codebooklog[, .(N = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
-  n_deleted <- codebooklog[OMK == "-", .(N = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
-  log[n_recoded, on = "KOBLID", N_values_recoded := i.N]
-  log[n_deleted, on = "KOBLID", N_rows_deleted := i.N]
+initiate_cleanlog <- function(dt, codebooklog, parameters){
+  log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
+  n_rows <- dt[, .(N_rows = .N), by = KOBLID]
+  log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
+  n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
+  n_deleted <- codebooklog[KBOMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
+  data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
   return(log)
 }
 
@@ -87,16 +91,15 @@ analyze_cleanlog <- function(log){
   stop("Kolonnene vist i tabellen over med verdi = 0 må ordnes i kodebok")
 }
 
-#' @title write_codebooklog
+#' @keywords internal
 #' @noRd
-write_codebooklog <- function(log, parameters){
-  log[, let(FILGRUPPE = parameters$name, BATCHDATE = parameters$batchdate, SV = "S", OK = 1)]
-  data.table::setcolorder(log, c("KOBLID", "FILGRUPPE", "DELID", "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ", "SV", "BATCHDATE", "OK")) # sett som options
-  
-  if(!parameters$write) return(invisible(NULL))
-  cat("\n* Skriver kodebok-logg")
-  # KODE FOR Å TØME GAMMEL LOGG
-  # KODE FOR Å SKRIVE NY LOGG
+do_set_fg_column_order <- function(dt){
+  colorder <- "GEO"
+  dims <- c(grep("GEO", getOption("khfunctions.standarddimensions"), value = T, invert = T))
+  for(i in c(dims, "TAB", "VAL", "GEOniv", "FYLKE", "KOBLID")){
+    colorder <- c(colorder, (names(dt)[startsWith(names(dt), i)]))
+  }
+  data.table::setcolorder(dt, colorder)
 }
 
 #' @title remove_helper_columns

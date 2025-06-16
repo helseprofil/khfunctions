@@ -20,6 +20,8 @@
 * Collect information on recoding with kodebok and cleaning of columns into tables in R, instead of writing continuously to ACCESS
 * Adding analysis of the column cleaning, which give a warning if something is not ok
 * Output will always be both to NYESTE and to DATERT folder, removing the need for argument `versjonert`
+* KODEBOK_LOGG is now written as a date tagged CSV instead of writing to ACCESS
+* FILGRUPPE_SJEKK is written as a date tagged CSV, and replaces INNLESLOGG previously written to ACCESS
 
 ## Changes in LagKube
 * All filegroups are now consistently filtered to only use relevant TABX, AAR, and ALDER based on ACCESS input. This reduces data size, and avoids unnecessary memory use. 
