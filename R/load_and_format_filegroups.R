@@ -95,7 +95,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     
     isnyekolkolprerad <- grepl("\\S", filefilter$NYEKOL_KOL_preRAD)
     # TODO: optimalisere leggtilnyeverdikolonner
-    if(isnyekolkolprerad) add_new_value_columns(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
+    if(isnyekolkolprerad) compute_new_value_from_formula(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
     
     # TODO: optimalisere finnredesign (find_redesign) og OmkodFil (recode_file)
     Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, parameters = parameters)
