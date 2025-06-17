@@ -203,9 +203,10 @@ set_predictionfilter <- function(parameters) {
   out <- list(Design = list())
   delkolN <- parameters$DefDesign$DelKolN
   refverdicolumns <- delkolN[sapply(delkolN, grepl, refverdi)]
-  # HVIS GEONIV IKKE ER SATT I REFVERDI, DA MÅ DEN SETTES TIL 'L'. 
-  # refverdicolumns må inkludere geoniv
-  # refverdi må få på GEOniv=='L', paste med sep = "&"
+  if(!"Gn" %in% names(refverdicolumns)){
+    refverdicolumns <- c(setNames("L", "Gn"), refverdicolumns)
+    refverdi <- paste("GEOniv=='L'", refverdi, sep = " & ")
+  }
   out[["Predfiltercolumns"]] <- as.character(unlist(parameters$DefDesign$DelKolsF[names(refverdicolumns)]))
   out[["ref_year_type"]] <- ifelse(grepl("AAR", refverdi), "Specific", "Moving")
   meisskalafilter <- character()
@@ -221,7 +222,7 @@ set_predictionfilter <- function(parameters) {
     
     if(del == "Y"){
       aar <- as.numeric(ifelse(grepl("siste", refverdi), maxaar, gsub(paste0(".*AAR[lh]*== *\'(.*?)\'.*"), "\\1", refverdi)))
-      if(movav > 1) aar <- (aar-movav+1):aar
+      if(movav > 1) aar <- (maxaar-movav+1):maxaar # Always most recent period
       out$Design[[del]] <- data.table::setDT(setNames(list(aar, aar), c("AARl", "AARh")))
       meisfilter <- paste0("AARh == '", max(aar), "'")
       meisskalafilter <- c(meisskalafilter, meisfilter)
