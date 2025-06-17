@@ -1,3 +1,7 @@
+# khfunctions 1.0.2
+
+* Fixed bugs in friskvik and write_cube_output
+
 # khfunctions 1.0.1
 
 * Fixed predictionfilter to make sure last period is always used for moving averages, and GEOniv=='L' is added if missing in REFVERDI

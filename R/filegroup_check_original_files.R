@@ -14,7 +14,7 @@ filegroup_check_original_files_and_spec <- function(parameters){
     # feilrapport <- file.path("STI TIL FEILRAPPORTMAPPE", paste0("filgruppe_feil_", parameters$batchdate, ".txt"))
     # sink(feilrapport)
     for(i in 1:length(checks)){
-      cat("*", names(checks[i]), ":\n\n")
+      cat("\n*", names(checks[i]), ":\n\n")
       cat(checks[[1]])
     }
     # sink()

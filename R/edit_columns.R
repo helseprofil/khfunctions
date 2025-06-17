@@ -6,7 +6,7 @@ scale_rate_and_meisskala <- function(dt, parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
   scale <- as.numeric(parameters$CUBEinformation$RATESKALA)
   if(!is_rateskala) return(dt)
-  cat("* Skalerer RATE til per", scale, "\n")
+  cat("\n* Skalerer RATE til per", scale, "\n")
   
   if("RATE" %in% names(dt)) dt[, RATE := RATE * scale]
   if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scale]
@@ -183,7 +183,7 @@ fix_geo_special <- function(dt, parameters){
   
   if(!isbydelstart && !isdk2020) return(invisible(dt))
   
-  cat("* Håndterer bydelsstartår og delingskommuner\n")
+  cat("\n* Håndterer bydelsstartår og delingskommuner\n")
   
   if (isbydelstart) {
     cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")

@@ -67,13 +67,10 @@ write_cube_output <- function(outputlist, parameters){
   cat("SAVING OUTPUT FILES:\n")
   saveRDS(outputlist$KUBE, file = datert_R)
   cat("\n", datert_R)
-  
-  if(csvcopy) {
-    data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
-    cat("\n", datert_csv)
-    data.table::fwrite(outputlist$QC, file = qc, sep = ";")
-    cat("\n", qc)
-  }
+  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
+  cat("\n", datert_csv)
+  data.table::fwrite(outputlist$QC, file = qc, sep = ";")
+  cat("\n", qc)
 }
 
 #' @title write_access_specs

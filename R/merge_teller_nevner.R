@@ -68,7 +68,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
-  if (!identical(dimorg, dim(TNF))) cat("*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
+  if (!identical(dimorg, dim(TNF))) cat("\*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
   return(list(TNF = TNF, KUBEd = KUBEdesign))
