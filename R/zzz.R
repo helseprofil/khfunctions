@@ -1,7 +1,8 @@
 ## Global options
 opt.khfunctions <- orgdata:::is_globs("khfunctions")
 
-.onLoad <- function(libname, pkgname) {
+.onLoad <- function(libname, pkgname){
+  
   optkhfunctions <- orgdata:::is_globs("khfunctions")
   orgDT <- !(names(optkhfunctions) %in% names(options()))
   if (any(orgDT)) options(optkhfunctions[orgDT])
@@ -20,16 +21,14 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
 .onAttach <- function(libname, pkgname){
   newversion <- orgdata:::is_latest_version("khfunctions", "master")
   if(newversion){
-    x <- utils::askYesNo("Update khfunctions now?")
-    if(x){
-      unloadNamespace("khfunctions")
-      remotes::install_github("helseprofil/khfunctions@master")
-      attachNamespace("khfunctions")
+    x <- utils::menu(title = "Update khfunctions now?", choices = c("Yes", "No"))
+    if(x == 1){
+        packageStartupMessage("Please restart your R session and then run:")
+        packageStartupMessage('remotes::install_github("helseprofil/khfunctions@master")')
     }
   }
     
-  packageStartupMessage("khfunctions version: ",
-                        utils::packageDescription("khfunctions")[["Version"]])
+  packageStartupMessage("khfunctions version: ", utils::packageDescription("khfunctions")[["Version"]])
   check_connection_folders()
 }
 
@@ -42,3 +41,4 @@ check_connection_folders <- function(){
 utils::globalVariables(c("HAR", "..betKols", "..kol", "keep", "..kols", "..outnames", "Bruk",
                          ".", "NOPri", "..brukcols", "..common", "..kolsomk", "..omkkols",
                          "filbesk"))
+
