@@ -1,6 +1,7 @@
 # khfunctions 1.0.1
 
 * Fixed predictionfilter to make sure last period is always used for moving averages, and GEOniv=='L' is added if missing in REFVERDI
+* Fix auto-update function
 
 # khfunctions 1.0.0
 

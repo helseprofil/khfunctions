@@ -21,7 +21,11 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
   newversion <- orgdata:::is_latest_version("khfunctions", "master")
   if(newversion){
     x <- utils::askYesNo("Update khfunctions now?")
-    if(x) remotes::install_github("helseprofil/khfunctions@master")
+    if(x){
+      unloadNamespace("khfunctions")
+      remotes::install_github("helseprofil/khfunctions@master")
+      attachNamespace("khfunctions")
+    }
   }
     
   packageStartupMessage("khfunctions version: ",
