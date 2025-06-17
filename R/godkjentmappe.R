@@ -1,9 +1,9 @@
-#' @title godkjent
-#' @keywords internal
+#' @title make_godkjent_folder
 #' @noRd
-godkjent <- function(profil = c("FHP", "OVP"),
-                     geoniv = c("K", "F", "B"),
-                     year = getOption("khfunctions.year")) {
+#' @export
+make_godkjent_folder <- function(profil = c("FHP", "OVP"),
+                                 geoniv = c("K", "F", "B"),
+                                 year = getOption("khfunctions.year")) {
   profil <- match.arg(profil)
   geoniv <- match.arg(geoniv)
   message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)
