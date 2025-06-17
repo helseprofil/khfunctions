@@ -1,5 +1,4 @@
 #' @title make_godkjent_folder
-#' @noRd
 #' @export
 make_godkjent_folder <- function(profil = c("FHP", "OVP"),
                                  geoniv = c("K", "F", "B"),

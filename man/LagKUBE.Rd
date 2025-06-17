@@ -6,7 +6,7 @@
 \usage{
 LagKUBE(
   name,
-  write = FALSE,
+  write = TRUE,
   alarm = FALSE,
   geonaboprikk = TRUE,
   year = getOption("khfunctions.year"),
