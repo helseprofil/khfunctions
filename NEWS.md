@@ -25,8 +25,9 @@
 * FILGRUPPE_SJEKK is written as a date tagged CSV, and replaces ACCESS::INNLESLOGG
 * Output are stored as a list "RESULTAT" in the global environment 
 
-## Changes in LagKube
-* All filegroups are now consistently filtered to only use relevant TABX, AAR, and ALDER based on ACCESS input. This reduces data size, and avoids unnecessary memory use. 
+## Changes in LagKUBE
+* Changed default for write to TRUE
+* All filegroups are now consistently filtered to only use relevant TAB1/2/3, AAR, and ALDER based on ACCESS input. This reduces data size, and avoids unnecessary memory use. 
 ** AAR prior to AAR_START is removed
 ** ALDER < min and > max ALDER provided is removed
 ** TABs are filtered to only keep what is provided in TABX(_0)
