@@ -1,5 +1,6 @@
-# khfunctions 1.0.2
+# khfunctions 1.0.3
 
+* Fixed bugs in setting SPVFLAGG
 * Fixed bugs in friskvik and write_cube_output
 
 # khfunctions 1.0.1

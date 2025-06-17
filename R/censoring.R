@@ -281,12 +281,11 @@ find_dims_for_stataprikk <- function(dt, etabs){
 do_remove_censored_observations <- function(dt, outvalues){
   valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
   valF <- intersect(names(dt), valF)
-  dt[, let(SPVFLAGG = 0, tSPV_alle = 0, tSPV_uten2 = 0)]
   if(length(valF) > 0){
     dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-    
-    dt[rowSums(dt[, ..valF] == 2) == 0, tSPV_uten2 := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-    dt[, SPVFLAGG := ifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
+    dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, NA_real_, x))], 
+                                       list(na.rm = TRUE))), .SDcols = valF] 
+    dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
     dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
     dt[SPVFLAGG > 0, (outvalues) := NA]
   }
