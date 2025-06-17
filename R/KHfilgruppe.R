@@ -23,10 +23,12 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
+  write_codebooklog(log = codebooklog, parameters = parameters)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
+  write_cleanlog(log = cleanlog, parameters = parameters)
   analyze_cleanlog(log = cleanlog)
   
   cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
@@ -37,9 +39,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   set_integer_columns(dt = Filgruppe)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  RESULTAT <- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
-  write_filegroup_output(outputs = RESULTAT, parameters = parameters)
-  RESULTAT <<- RESULTAT
+  write_filegroup_output(dt = Filgruppe, parameters = parameters)
+  RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
   cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }

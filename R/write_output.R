@@ -4,16 +4,13 @@
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
-write_filegroup_output <- function(outputs, parameters){
+write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
   cat("SAVING OUTPUT FILES:\n")
-  write_codebooklog(log = outputs$codebooklog, parameters = parameters)
-  write_cleanlog(log = outputs$cleanlog, parameters = parameters)
-  
   root <- getOption("khfunctions.root")
   nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$name, ".rds"))
   datert <- file.path(root, getOption("khfunctions.filegroups.dat"), paste0(parameters$name, "_", parameters$batchdate, ".rds"))
-  saveRDS(outputs$Filgruppe, file = nyeste)
+  saveRDS(dt, file = nyeste)
   cat("\n", nyeste)
   file.copy(from = nyeste, to = datert)
   cat("\n", datert)
@@ -23,6 +20,7 @@ write_filegroup_output <- function(outputs, parameters){
 #' @keywords internal
 #' @noRd
 write_codebooklog <- function(log, parameters){
+  if(!parameters$write) return(invisible(NULL))
   log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "ORG", "KBOMK", "FREQ"))]
   cat("\n* Skriver kodebok-logg til", getOption("khfunctions.filegroups.kblogg"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.kblogg"))
@@ -35,6 +33,7 @@ write_codebooklog <- function(log, parameters){
 #' @keywords internal
 #' @noRd
 write_cleanlog <- function(log, parameters){
+  if(!parameters$write) return(invisible(NULL))
   cat("\n* Skriver filgruppesjekk til", getOption("khfunctions.filegroups.fgsjekk"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.fgsjekk"))
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")

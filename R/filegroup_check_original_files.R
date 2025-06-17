@@ -6,9 +6,6 @@ filegroup_check_original_files_and_spec <- function(parameters){
   checks[["FORMAT_OK"]] <- check_if_format_is_ok(read_parameters = parameters$read_parameters)
   
   
-  
-  
-  
   # Hvis noe feil oppdages, skriv en feilrapport som .txt-fil ved hjelp av sink(), 
   # og lagre denne et sted. For alle elementer over som ikke er NULL, limes disse inn 
   # i rapporten. Stopp så kjøringen og vis til denne rapporten for hva som må fikses i ACCESS.
@@ -21,7 +18,7 @@ filegroup_check_original_files_and_spec <- function(parameters){
       cat(checks[[1]])
     }
     # sink()
-    stop("FEIL funnet i originalfiler eller innlesingsspecs, se feillogg for oversikt: ", feilrapport)
+    stop("FEIL funnet i originalfiler eller innlesingsspecs, se feillogg for oversikt")
   } else {
     cat("\n* ALLE SJEKKER FERDIG OG OK!")
   }
