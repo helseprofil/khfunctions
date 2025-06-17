@@ -13,6 +13,17 @@ scale_rate_and_meisskala <- function(dt, parameters){
   return(dt)
 }
 
+#' @title get_maltall_column
+#' @description gets the column containing maltall
+#' @param parameters cube parameters
+#' @keywords internal
+#' @noRd
+get_maltall_column <- function(parameters){
+  if(is_not_empty(parameters$CUBEinformation$MTKOL)) return(parameters$CUBEinformation$MTKOL)
+  if(parameters$TNPinformation$NEVNERKOL == "-") return("TELLER")
+  return("RATE")
+}
+
 #' @title do_format_cube_columns
 #' @description
 #' Adds missing columns, creates sumvalues and nonsumvalues, sets alder and aar columns
@@ -40,44 +51,6 @@ add_missing_columns <- function(dt){
   return(dt)
 }
 
-#' @title get_outvalues_allvis
-#' @description finds value columns to be included in output
-#' @param parameters cube parameters   
-#' @noRd
-get_outvalues_allvis <- function(parameters){
-  cols <- character(0)
-  if(parameters$CUBEinformation$REFVERDI_VP == "P") cols <- c("T", "RATE", "SMR", "MEIS")
-  if(is_not_empty(parameters$CUBEinformation$NESSTARTUPPEL)){
-    cols <- gsub("\\s", "", parameters$CUBEinformation$NESSTARTUPPEL)
-    cols <- unlist(strsplit(cols, ","))
-    if(any(!cols %in% names(getOption("khfunctions.valcols")))){
-      stop("Feil i ACCESS::KUBER::NESSTARTUPPEL, aksepterte verdier (kommaseparert): ",
-           paste0(names(getOption("khfunctions.valcols")), collapse = ","))
-    } 
-  }
-  cols <- as.character(getOption("khfunctions.valcols")[cols])
-  
-  if(is_not_empty(parameters$CUBEinformation$EKSTRAVARIABLE)){
-    extravalue <- unlist(stringr::str_split(parameters$CUBEinformation$EKSTRAVARIABLE, ","))
-    cols <- c(cols, extravalue)
-  }
-  return(cols)
-}
-
-#' @title filter_invalid_outcodes
-#' @description remove GEO codes not listed in ACCESS:GEOkoder
-#' @param dt dataset
-#' @param parameters global parameters
-#' @keywords internal
-#' @noRd
-filter_invalid_geo_alder_kjonn <- function(dt, parameters){
-  valid_geo <- parameters[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
-  dt <- dt[GEO %in% valid_geo]
-  if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
-  if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
-  return(dt)
-}
-
 #' @title add_sumvalues
 #' @description adds sumTELLER, sumNEVNER, sumPREDTELLER to data
 #' @param dt dataset
@@ -100,27 +73,18 @@ set_nonsumvalues <- function(dt){
   values <- setdiff(get_value_columns(names(dt)), c("RATE", "SMR"))
   if(length(values) == 0) return(dt)
   for(val in values){
-      valN = paste0(val, ".n")
-      dt[, (val) := get(val)/get(valN)]
+    valN = paste0(val, ".n")
+    dt[, (val) := get(val)/get(valN)]
   }
   return(dt)
 }
 
+#' @keywords internal
+#' @noRd
 set_alder_aar <- function(dt){
   dt[, AAR := paste0(AARl, "_", AARh)]
   if (all(c("ALDERl", "ALDERh") %in% names(dt))) dt[, ALDER := paste0(ALDERl, "_", ALDERh)]
   return(dt)
-}
-
-#' @title get_maltall_column
-#' @description gets the column containing maltall
-#' @param parameters cube parameters
-#' @keywords internal
-#' @noRd
-get_maltall_column <- function(parameters){
-  if(is_not_empty(parameters$CUBEinformation$MTKOL)) return(parameters$CUBEinformation$MTKOL)
-  if(parameters$TNPinformation$NEVNERKOL == "-") return("TELLER")
-  return("RATE")
 }
 
 #' @title add_maltall
@@ -131,6 +95,20 @@ get_maltall_column <- function(parameters){
 #' @noRd
 add_maltall <- function(dt, maltallcolumn){
   dt[, MALTALL := get(maltallcolumn)]
+  return(dt)
+}
+
+#' @title filter_invalid_outcodes
+#' @description remove GEO codes not listed in ACCESS:GEOkoder
+#' @param dt dataset
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+filter_invalid_geo_alder_kjonn <- function(dt, parameters){
+  valid_geo <- parameters[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
+  dt <- dt[GEO %in% valid_geo]
+  if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
+  if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
   return(dt)
 }
 
@@ -164,6 +142,30 @@ get_outdimensions <- function(dt, etabs, parameters){
   if("ALDER" %notin% names(dt)) dims <- setdiff(dims, "ALDER")
   if("KJONN" %notin% names(dt)) dims <- setdiff(dims, "KJONN")
   return(dims)
+}
+
+#' @title get_outvalues_allvis
+#' @description finds value columns to be included in output
+#' @param parameters cube parameters   
+#' @noRd
+get_outvalues_allvis <- function(parameters){
+  cols <- character(0)
+  if(parameters$CUBEinformation$REFVERDI_VP == "P") cols <- c("T", "RATE", "SMR", "MEIS")
+  if(is_not_empty(parameters$CUBEinformation$NESSTARTUPPEL)){
+    cols <- gsub("\\s", "", parameters$CUBEinformation$NESSTARTUPPEL)
+    cols <- unlist(strsplit(cols, ","))
+    if(any(!cols %in% names(getOption("khfunctions.valcols")))){
+      stop("Feil i ACCESS::KUBER::NESSTARTUPPEL, aksepterte verdier (kommaseparert): ",
+           paste0(names(getOption("khfunctions.valcols")), collapse = ","))
+    } 
+  }
+  cols <- as.character(getOption("khfunctions.valcols")[cols])
+  
+  if(is_not_empty(parameters$CUBEinformation$EKSTRAVARIABLE)){
+    extravalue <- unlist(stringr::str_split(parameters$CUBEinformation$EKSTRAVARIABLE, ","))
+    cols <- c(cols, extravalue)
+  }
+  return(cols)
 }
 
 #' @title fix_geo_special
@@ -204,3 +206,4 @@ fix_geo_special <- function(dt, parameters){
   }
   return(invisible(dt))
 }
+

@@ -12,7 +12,7 @@
 #' @keywords internal
 #' @noRd
 add_predteller <- function(dt, parameters){
-  if (parameters$CUBEinformation$REFVERDI_VP != "P") return(dt)
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(dt)
   cat("\n* Skal estimere PREDTELLER for standardisering")
   designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
   predrate <- estimate_predrate(design = designlist$STNdesign, parameters = parameters)
@@ -136,19 +136,18 @@ estimate_predteller <- function(predrate, prednevner, parameters){
   mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
   if(mismatch > 0) cat("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
   
-  # cat("** Før merge:\n - dim(prednevner):", dim(prednevner), "\n - dim(predrate):", dim(predrate), "\n")
   predteller <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
   predteller[, let(PREDTELLER = PREDRATE * PREDNEVNER,
-             PREDTELLER.f = pmax(PREDRATE.f, PREDNEVNER.f),
-             PREDTELLER.a = pmax(PREDRATE.a, PREDNEVNER.a))]
+                   PREDTELLER.f = pmax(PREDRATE.f, PREDNEVNER.f),
+                   PREDTELLER.a = pmax(PREDRATE.a, PREDNEVNER.a))]
   predteller <- predteller[, .SD, .SDcols = c(get_dimension_columns(names(predteller)), paste0("PREDTELLER", c("", ".f", ".a")))]
-  # cat("** Etter merge dim:", dim(predteller), "\n")
   
   filename <- parameters$files$PREDNEVNER
   prednevnerdesign <- find_filedesign(file = prednevner, filename = filename, parameters = parameters)
   cubedesign <- list(Part = parameters$CUBEdesign)
   redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
   predteller <- do_filter_and_recode_to_redesign(dt = predteller, redesign = redesign, parameters = parameters)
+  predteller[, PREDTELLER.n := parameters$MOVAVparameters$movav]
   return(predteller)
 }
 

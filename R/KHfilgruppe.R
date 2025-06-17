@@ -33,8 +33,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   do_set_fg_column_order(dt = Filgruppe)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
-  
   Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
+  set_integer_columns(dt = Filgruppe)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   RESULTAT <- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)

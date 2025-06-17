@@ -74,7 +74,7 @@ get_parts_design <- function(designdata, fileparameters, args){
 #' @noRd
 fill_age_interval_gaps <- function(agedata, agecolumns, fileparameters){
   age_interval_total <- intervals::Intervals(c(fileparameters$amin, fileparameters$amax), type = "Z")
-  age_interval_covered <- intervals::Intervals(agedata[, ..agecolumns], type = "Z")
+  age_interval_covered <- intervals::Intervals(agedata[, .SD, .SDcols = agecolumns], type = "Z")
   age_interval_missing <- intervals::interval_difference(age_interval_total, age_interval_covered)
   if(nrow(age_interval_missing) == 0) return(agedata)
   

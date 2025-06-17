@@ -165,10 +165,11 @@ set_filter_year <- function(parameters){
 read_filegroup <- function(filegroup){
   file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup, ".rds"))
   if(!file.exists(file)) stop("Finner ikke filgruppe: ", file, "! Filgruppen må kjøres først.")
-  DT <- data.table::setDT(readRDS(file))
-  DT[, (names(.SD)) := NULL, .SDcols = names(DT)[names(DT) %in% c("KOBLID", "ROW")]]
+  dt <- data.table::setDT(readRDS(file))
+  dt[, (names(.SD)) := NULL, .SDcols = names(dt)[names(dt) %in% c("KOBLID", "ROW")]]
+  set_integer_columns(dt = dt)
   cat("\n** Lest inn fil: ", file)
-  return(DT)
+  return(dt)
 }
 
 #' @title fetch_filegroup_from_buffer
@@ -308,3 +309,10 @@ set_recode_filter_filfiltre <- function(fileinfo, parameters){
 #   
 #   return(dt)
 # }
+
+#' @keywords internal
+#' @noRd
+set_integer_columns <- function(dt){
+  integercols <- names(dt)[grep("^(AAR(l|h)|ALDER(l|h)|KJONN|UTDANN|LANDBAK|INNVKAT)$", names(dt))]
+  dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = integercols]
+}
