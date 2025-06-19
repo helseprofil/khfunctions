@@ -197,7 +197,7 @@ set_predictionfilter <- function(parameters) {
   refverdi <- parameters$CUBEinformation$REFVERDI
   tellerfile <- parameters$files$TELLER
   maxaar <- max(BUFFER[[tellerfile]]$AARh)
-  movav <- parameters$CUBEinformation$MOVAV
+  movav <- ifelse(is_not_empty(parameters$CUBEinformation$MOVAV), parameters$CUBEinformation$MOVAV, 1) 
   if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
   
   out <- list(Design = list())
@@ -221,8 +221,14 @@ set_predictionfilter <- function(parameters) {
     }
     
     if(del == "Y"){
-      aar <- as.numeric(ifelse(grepl("siste", refverdi), maxaar, gsub(paste0(".*AAR[lh]*== *\'(.*?)\'.*"), "\\1", refverdi)))
-      if(movav > 1) aar <- (maxaar-movav+1):maxaar # Always most recent period
+      aar <- as.numeric(ifelse(grepl("AAR[lh]*=='siste'", refverdi, ignore.case = TRUE), maxaar, gsub(paste0(".*AAR[lh]*== *\'(.*?)\'.*"), "\\1", refverdi)))
+      if(is_not_empty(movav) && movav > 1){
+        if(grepl("AAR[lh]*=='siste'|AARh", refverdi, ignore.case = TRUE)){
+          aar <- (aar-movav+1):aar
+        } else if(grepl("AARl", refverdi)){
+          aar <- aar:(aar+movav-1)
+        }
+      } 
       out$Design[[del]] <- data.table::setDT(setNames(list(aar, aar), c("AARl", "AARh")))
       meisfilter <- paste0("AARh == '", max(aar), "'")
       meisskalafilter <- c(meisskalafilter, meisfilter)

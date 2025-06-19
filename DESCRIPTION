@@ -1,6 +1,6 @@
 Package: khfunctions
 Title: Data processing for FHP/OVP
-Version: 1.0.3
+Version: 1.0.4
 Authors@R: 
     person("Vegard", "Lysne", , "vegard.lysne@helsedir.no", role = c("aut", "cre"))
 Description: What the package does (one paragraph).

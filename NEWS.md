@@ -1,8 +1,9 @@
-# khfunctions 1.0.3
+# khfunctions 1.0.4
 
 * Fixed bugs in setting SPVFLAGG
 * Fixed bugs in friskvik and write_cube_output
 * Fixed bug in year-filter when loading filegroups 
+* Ignore case in KUBER::REFVERDI, allowing both siste and SISTE
 
 # khfunctions 1.0.1
 
