@@ -17,7 +17,7 @@ load_and_format_files <- function(parameters){
   
   nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
   for (file in nonteller_files) {
-    isbuffer <- file %in% names(BUFFER)
+    isbuffer <- file %in% names(.GlobalEnv$BUFFER)
     if(isbuffer) BUFFER[[file]] <- NULL
     load_filegroup_to_buffer(filegroup = file, filter = NULL, parameters = parameters)
   }
@@ -153,7 +153,12 @@ set_filter_age <- function(parameters){
 #' @keywords internal
 #' @noRd
 set_filter_year <- function(parameters){
-  return(paste0("AARl >= ", parameters$CUBEinformation$AAR_START))
+  tellerfile <- parameters$files[["TELLER"]]
+  aarstart <- parameters$CUBEinformation$AAR_START
+  if(tellerfile %in% names(.GlobalEnv$BUFFER)){
+    aarstart <- .GlobalEnv$BUFFER[[tellerfile]][, min(AARl)]
+  }
+  return(paste0("AARl >= ", aarstart))
 }
 
 

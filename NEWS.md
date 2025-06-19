@@ -2,6 +2,7 @@
 
 * Fixed bugs in setting SPVFLAGG
 * Fixed bugs in friskvik and write_cube_output
+* Fixed bug in year-filter when loading filegroups 
 
 # khfunctions 1.0.1
 
