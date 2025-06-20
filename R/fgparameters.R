@@ -21,6 +21,7 @@ get_filegroup_parameters <- function(user_args){
 #' @noRd
 read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
   if(is.null(filegroup)) filegroup <- parameters$name
+  if(filegroup == "BEF_Gkny") filegroup <- "BEF_GKny"
   FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup, "' AND ", parameters$validdates), as.is = TRUE))
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
@@ -57,14 +58,16 @@ read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
 #' @noRd
 get_read_parameters <- function(parameters){
   orginnleskobl <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", parameters$name, "'"), as.is = TRUE))
+  orginnleskobl[, FILGRUPPE := fix_befgk_spelling(FILGRUPPE)]
   originalfiler <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", parameters$validdates)), as.is = TRUE))
   innlesing <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", parameters$name, "' AND ", parameters$validdates), as.is = TRUE))
+  innlesing[, FILGRUPPE := fix_befgk_spelling(FILGRUPPE)]
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
   out <- collapse::join(orginnleskobl, originalfiler, how = "i", on = "FILID", overid = 2, verbose = 0)
   out <- collapse::join(out, innlesing, how = "i", on = c("FILGRUPPE", "DELID"), overid = 2, verbose = 0)
   out <- out[, .SD, .SDcols = outcols]
-  out[, let(FILNAVN = gsub("\\\\", "/", FILNAVN))]
+  out[, let(FILNAVN = fix_befgk_spelling(gsub("\\\\", "/", FILNAVN)))]
   out[, let(filepath = file.path(getOption("khfunctions.root"), FILNAVN), FORMAT = toupper(FORMAT))]
   out[AAR == "<$y>", let(AAR = paste0("<", DEFAAR, ">"))]
   return(out)

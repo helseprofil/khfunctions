@@ -173,8 +173,8 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
   
   alderint <- c("ALDERl", "ALDERh")
   dt[, (alderint) := data.table::tstrsplit(ALDER, "_")]
-  dt[ALDERl > ALDERh, let(ALDER = getOption("khfunctions.aar_illegal"))]
-  dt[ALDERl > ALDERh, (alderint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
+  dt[ALDERl > ALDERh, let(ALDER = getOption("khfunctions.alder_illegal"))]
+  dt[ALDERl > ALDERh, (alderint) := data.table::tstrsplit(getOption("khfunctions.alder_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
   dt[, let(ALDER = NULL)]
 }
@@ -214,9 +214,9 @@ do_clean_INNVKAT <- function(dt, cleanlog){
   cat("\n** Renser INNVKAT")
   dt[, let(INNVKAT = trimws(INNVKAT))]
   dt[grepl("^alle$", INNVKAT, ignore.case = TRUE), let(INNVKAT = "0")]
-  dt[is.na(INNVKAT), let(INNVKAT = getOption("khfunctions.ukjent"))]
-  dt[!INNVKAT %in% c(0, 2, 3, 20, getOption("khfunctions.ukjent")), let(INNVKAT = getOption("khfunctions.illegal"))]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "INNVKAT", illegal = getOption("khfunctions.illegal"))
+  dt[is.na(INNVKAT), let(INNVKAT = getOption("khfunctions.innvkat_ukjent"))]
+  dt[!INNVKAT %in% c(0, 2, 3, 20, getOption("khfunctions.innvkat_ukjent")), let(INNVKAT = getOption("khfunctions.innvkat_illegal"))]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "INNVKAT", illegal = getOption("khfunctions.innvkat_illegal"))
 }
 
 #' @title do_clean_LANDBAK

@@ -1,12 +1,16 @@
-# khfunctions 1.0.4
+# khfunctions 1.0.5
+* Implemented function `fix_befgk_spelling()` to handle problem with inconsistent spelling of BEF_GK[..], which sometimes appears as BEF_Gk.
+* Fixed bugs in LagFilgruppe where illegal values for INNVKAT was corrected, and illegal values for ALDER was mixed up with AAR. 
+* `analyze_cleanlog()` now only gives a warning if illegal values are found. 
+* Fixed bug when converting column names before STATA export
 
+# khfunctions 1.0.4
 * Fixed bugs in setting SPVFLAGG
 * Fixed bugs in friskvik and write_cube_output
 * Fixed bug in year-filter when loading filegroups 
 * Ignore case in KUBER::REFVERDI, allowing both siste and SISTE
 
 # khfunctions 1.0.1
-
 * Fixed predictionfilter to make sure last period is always used for moving averages, and GEOniv=='L' is added if missing in REFVERDI
 * Fix auto-update function
 

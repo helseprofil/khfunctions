@@ -52,6 +52,9 @@ get_tnp_information <- function(parameters){
   TNP_PROD <- as.list(RODBC::sqlQuery(parameters$dbh, 
                                       query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", parameters$CUBEinformation$TNP, "' AND ", parameters$validdates), 
                                       as.is = TRUE))
+  for(col in c("TNP_NAVN", "TELLERFIL", "NEVNERFIL", "PREDNEVNERFIL")){
+    TNP_PROD[[col]] <- fix_befgk_spelling(TNP_PROD[[col]])
+  }
   return(TNP_PROD)
 }
 

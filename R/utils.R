@@ -33,3 +33,13 @@ get_dimension_columns <- function(columnnames) {
 get_tab_columns <- function(columnnames){
   grep("^TAB\\d+$", columnnames, value = T)
 }
+
+
+
+#' @title fix_befgk_spelling
+#' @description Make sure BEF_GK is always read in with the same case (in access the spelling differs)
+#' @keywords internal
+#' @noRd
+fix_befgk_spelling <- function(x){
+  return(sub("BEF_GK", "BEF_GK", x, ignore.case = T))
+}

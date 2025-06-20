@@ -29,18 +29,18 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   write_cleanlog(log = cleanlog, parameters = parameters)
-  analyze_cleanlog(log = cleanlog)
   
   cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   do_set_fg_column_order(dt = Filgruppe)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
-  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   set_integer_columns(dt = Filgruppe)
+  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  analyze_cleanlog(log = cleanlog)
   cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
@@ -90,7 +90,8 @@ analyze_cleanlog <- function(log){
   cat("\nTabellen viser hvilke filer og hvilke kolonner det er funnet feil i\n-----\n")
   print(out)
   cat("\n-----\n")
-  stop("Kolonnene vist i tabellen over med verdi = 0 må ordnes i kodebok")
+  warning(paste0("Kolonnene i tabellen over med verdi = 0 indikerer at det finnes ugyldige verdier. Dette må sannsynligvis ordnes i kodebok før ny kjøring.",
+                 "\nSe fullstendig logg her: ", getOption("khfunctions.filegroups.fgsjekk")))
 }
 
 #' @keywords internal

@@ -55,14 +55,14 @@ do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), st
   orgwd <- getwd()
   setwd(tmpdir)
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
-  TABLE <- fix_column_names_pre_stata(TABLE = TABLE)
+  fix_column_names_pre_stata(TABLE = TABLE)
   haven::write_dta(TABLE, statafiles$dta)
   on.exit(file.remove(statafiles$dta), add = T)
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = stata_exe)
   check_stata_log_for_error(statafiles = statafiles)
   TABLE <- haven::read_dta(statafiles$dta)
-  TABLE <- fix_column_names_post_stata(TABLE = TABLE)
+  fix_column_names_post_stata(TABLE = TABLE)
   if(!is(TABLE, "data.table")) data.table::setDT(TABLE)
   setwd(orgwd)
   return(TABLE)
@@ -75,22 +75,24 @@ do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), st
 #' @noRd
 fix_column_names_pre_stata <- function(TABLE){
   TABLE[TABLE == ""] <- " " 
-  names(TABLE) <- gsub("^(\\d.*)$", "S_\\1", names(TABLE))
-  names(TABLE) <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", names(TABLE))
+  fixednames <- names(TABLE)
+  fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames)
+  fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
   
-  names(TABLE) <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", names(TABLE))
-  names(TABLE) <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", names(TABLE), perl = TRUE)
-  names(TABLE) <- gsub("^_+$", "var", names(TABLE))
-  names(TABLE) <- substr(names(TABLE), 1, 32)
-  return(TABLE)
+  fixednames <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", fixednames)
+  fixednames <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", fixednames, perl = TRUE)
+  fixednames <- gsub("^_+$", "var", names(TABLE))
+  fixednames <- substr(fixednames, 1, 32)
+  data.table::setnames(TABLE, fixednames)
 }
 
 #' @noRd
 fix_column_names_post_stata <- function(TABLE){
   TABLE[TABLE == " "] <- ""
-  names(TABLE) <- gsub("^S_(\\d.*)$", "\\1", names(TABLE))
-  names(TABLE) <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", names(TABLE))
-  return(TABLE)
+  fixednames <- names(TABLE)
+  fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
+  fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
+  data.table::setnames(TABLE, fixednames)
 }
 
 #' @noRd
