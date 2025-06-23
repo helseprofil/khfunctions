@@ -1,3 +1,7 @@
+# khfunctions 1.0.6
+* Critical bugfix when fixing column names pre and post stata handling
+* Added parameter `removebuffer` to LagKUBE, to disable removing of original files during processing. This is useful for dev work, and will be necessary when implementing KUBEFAMILIE which is using the same files.
+
 # khfunctions 1.0.5
 * Implemented function `fix_befgk_spelling()` to handle problem with inconsistent spelling of BEF_GK[..], which sometimes appears as BEF_Gk.
 * Fixed bugs in LagFilgruppe where illegal values for INNVKAT was corrected, and illegal values for ALDER was mixed up with AAR. 

@@ -1,3 +1,5 @@
+#' @keywords internal
+#' @noRd
 do_censor_cube <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "PRIKKpre", dt = KUBE, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = KUBE, parameters = parameters)}, add = TRUE)
@@ -17,7 +19,7 @@ do_censor_cube <- function(dt, parameters){
     cat("\n* Prikker data (STATA-prikking)")
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
-    dt <- do_stata_censoring(dt = dt, parameters = parameters)
+    dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
   return(dt)
 }
@@ -191,7 +193,7 @@ SettNaboAnoSpec <- function(parameters) {
   return(Foverkat)
 }
 
-#' @title do_stata_censoring
+#' @title do_censor_kube_stata
 #' @description
 #' Reads censoring information from ACCESS. 
 #' If Stata_PRIKK parameters are set, the STATA censoring script (by Jørgen Meisfjord) 
@@ -200,10 +202,10 @@ SettNaboAnoSpec <- function(parameters) {
 #' @param parameters cube parameters
 #' @keywords internal
 #' @noRd
-do_stata_censoring <- function(dt, parameters){
+do_censor_kube_stata <- function(dt, parameters){
   sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
-  synt <- paste0('include "', sfile, '"')
-  dt <- do_stata_processing(TABLE = dt, script = synt, batchdate = parameters$batchdate, stata_exe = parameters$StataExe)
+  script <- paste0('include "', sfile, '"')
+  dt <- do_stata_processing(dt = dt, script = script, parameters = parameters)
   return(dt)
 }
 
