@@ -3,19 +3,13 @@
 do_censor_cube <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "PRIKKpre", dt = KUBE, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = KUBE, parameters = parameters)}, add = TRUE)
+  if(is_empty(parameters$Censor_type)) return(dt)
   
-  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
-  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
-  spc <- data.table::as.data.table(parameters$CUBEinformation)[, .SD, .SDcols = c(stataVar, RprikkVar)]
-  s_prikk <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
-  r_prikk <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
-  check_if_only_r_or_stata_prikk(r = r_prikk, s = s_prikk)
-  
-  if(r_prikk > 0){
+  if(parameters$Censor_type == "R"){
     cat("\n* Prikker data (R-prikking)")
     dt <- do_censor_kube_r(dt = dt, parameters = parameters)
   }
-  if(s_prikk > 0){
+  if(parameters$Censor_type == "STATA"){
     cat("\n* Prikker data (STATA-prikking)")
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
@@ -207,13 +201,6 @@ do_censor_kube_stata <- function(dt, parameters){
   script <- paste0('include "', sfile, '"')
   dt <- do_stata_processing(dt = dt, script = script, parameters = parameters)
   return(dt)
-}
-
-#' @keywords internal
-#' @noRd
-check_if_only_r_or_stata_prikk <- function(r, s){
-  if (r > 0 & s > 0) stop("You can't prikk for both R and Stata way. Choose either one!")
-  invisible()
 }
 
 #' @keywords internal
