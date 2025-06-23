@@ -3,7 +3,8 @@
                      year = getOption("khfunctions.year"),
                      dumps = list(),
                      write = FALSE,
-                     geonaboprikk = TRUE)
+                     geonaboprikk = TRUE,
+                     removebuffer = FALSE)
 }
 
 .SetFilgruppeParameters <- function(filgruppenavn){

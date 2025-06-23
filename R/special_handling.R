@@ -19,7 +19,7 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   
   if(is_stata){
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
-    dt <- do_stata_processing(TABLE = dt, script = code, batchdate = parameters$batchdate, stata_exe = parameters$StataExe)
+    dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
     return(dt)
   }
   
@@ -49,23 +49,27 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
 #' @param script stata script
 #' @param batchdate used to generate file names
 #' @param stata_exe path to STATA program
-do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), stata_exe){
+do_stata_processing <- function(dt, script, parameters){
   tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
   if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
+  batchdate <- parameters$batchdate
   orgwd <- getwd()
   setwd(tmpdir)
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
-  fix_column_names_pre_stata(TABLE = TABLE)
-  haven::write_dta(TABLE, statafiles$dta)
+  charactercols <- names(dt)[sapply(dt, is.character)]
+  dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == "", " ", x)), .SDcols = charactercols] 
+  fix_column_names_pre_stata(dt = dt)
+  haven::write_dta(dt, statafiles$dta)
   on.exit(file.remove(statafiles$dta), add = T)
   generate_stata_do_file(script = script, statafiles = statafiles)
-  run_stata_script(dofile = statafiles$do, stata_exe = stata_exe)
+  run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
-  TABLE <- haven::read_dta(statafiles$dta)
-  fix_column_names_post_stata(TABLE = TABLE)
-  if(!is(TABLE, "data.table")) data.table::setDT(TABLE)
+  dt <- data.table::setDT(haven::read_dta(statafiles$dta))
+  dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
+  fix_column_names_post_stata(dt = dt)
+  # if(!is(dt, "data.table")) data.table::setDT(dt)
   setwd(orgwd)
-  return(TABLE)
+  return(dt)
 }
 
 #' @description 
@@ -73,26 +77,24 @@ do_stata_processing <- function(TABLE, script, batchdate = SettKHBatchDate(), st
 #' Some specific conversions are later reversed when data is read back into R.
 #' Some general conversions are not reversed. 
 #' @noRd
-fix_column_names_pre_stata <- function(TABLE){
-  TABLE[TABLE == ""] <- " " 
-  fixednames <- names(TABLE)
+fix_column_names_pre_stata <- function(dt){
+  fixednames <- names(dt)
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
   
   fixednames <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", fixednames)
   fixednames <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", fixednames, perl = TRUE)
-  fixednames <- gsub("^_+$", "var", names(TABLE))
+  fixednames <- gsub("^_+$", "var", fixednames)
   fixednames <- substr(fixednames, 1, 32)
-  data.table::setnames(TABLE, fixednames)
+  data.table::setnames(dt, old = names(dt), new = fixednames)
 }
 
 #' @noRd
-fix_column_names_post_stata <- function(TABLE){
-  TABLE[TABLE == " "] <- ""
-  fixednames <- names(TABLE)
+fix_column_names_post_stata <- function(dt){
+  fixednames <- names(dt)
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
-  data.table::setnames(TABLE, fixednames)
+  data.table::setnames(dt, fixednames)
 }
 
 #' @noRd

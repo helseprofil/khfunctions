@@ -8,13 +8,14 @@
 #' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
+#' @param removebuffer should original files in the buffer be removed when no longer needed to free memory?
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list()) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE) {
   on.exit(lagkube_cleanup(), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
-  user_args = as.list(environment())
+  user_args <-as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
@@ -35,7 +36,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   KUBE <- add_predteller(dt = KUBE, parameters = parameters)
   KUBE <- add_meisskala(dt = KUBE, parameters = parameters)
-  remove_original_files_from_buffer()
+  if(parameters$removebuffer) remove_original_files_from_buffer()
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
   KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
 
