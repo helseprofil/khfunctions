@@ -90,10 +90,6 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   } 
   
   if(isfilefilter){
-    # 
-    # issubset <- grepl("\\S", filefilter$SUBSET)
-    # if(issubset) FIL <- do_filter_columns(file = FIL, filter = filefilter$SUBSET)
-    
     iskollapsdel <- grepl("\\S", filefilter$KOLLAPSdeler)
     if(iskollapsdel) FIL <- do_filfiltre_kollapsdeler(file = FIL, parts = filefilter$KOLLAPSdeler, parameters = parameters)
     
