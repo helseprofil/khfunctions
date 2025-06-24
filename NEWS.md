@@ -1,3 +1,7 @@
+# khfunctions 1.0.7
+* Critical bugfix in set_recode_filter_filfiltre() when a cube use > 1 FILFILTRE
+* Reactivated FF_RSYNT1 making it possible to add custom R code to a filefilter
+
 # khfunctions 1.0.6
 * Critical bugfix when fixing column names pre and post stata handling
 * Added parameter `removebuffer` to LagKUBE, to disable removing of original files during processing. This is useful for dev work, and will be necessary when implementing KUBEFAMILIE which is using the same files.
