@@ -102,7 +102,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     if(isnyekolkolprerad) compute_new_value_from_formula(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
     
     # TODO: optimalisere finnredesign (find_redesign) og OmkodFil (recode_file)
-    Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, parameters = parameters)
+    Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, filefilter = filefilter, parameters = parameters)
     if (length(Filter) > 0){
       prefilterdesign <- find_filedesign(FIL, parameters = parameters)
       redesign_filter <- find_redesign(orgdesign = prefilterdesign, targetdesign = list(Parts = Filter), parameters = parameters)
@@ -124,6 +124,9 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
       commoncols <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
       FIL <- collapse::join(FIL, NY, on = commoncols, how = "l", overid = 2, verbose = 0)
     }
+    
+    isffrsynt <- grepl("\\S", filefilter$FF_RSYNT1)
+    if(isffrsynt) FIL <- do_special_handling(name = "FF_RSYNT1", dt = FIL, code = filefilter$FF_RSYNT1, parameters = parameters)
   }
   .GlobalEnv$BUFFER[[filegroup]] <- FIL
   return(invisible(NULL))
@@ -281,8 +284,8 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
 #' Years < KUBER:: AAR_START is already filtered out, and is therefore not included here. 
 #' @keywords internal
 #' @noRd
-set_recode_filter_filfiltre <- function(fileinfo, parameters){
-  filters <- parameters$FILFILTRE
+set_recode_filter_filfiltre <- function(fileinfo, filefilter, parameters){
+  filters <- filefilter
   filtercols <- names(filters)[names(filters) %in% grep("^AAR$|^TAB\\d{1}$", parameters$DefDesign$DelKolN, value = T, invert = T)]
   filtercols <- filtercols[sapply(filters[, ..filtercols], function(col) is_not_empty(col))]
   deler <- parameters$DefDesign$DelKolN
