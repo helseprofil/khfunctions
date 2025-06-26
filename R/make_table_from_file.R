@@ -86,7 +86,7 @@ do_reshape_var <- function(dt, filedescription, parameters){
   on.exit({save_filedump_if_requested(dumpname = "RESHAPEpost", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)}, add = TRUE)
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
-  cols <- get_reshape_parameters(filedescription = filedescription)
+  cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = names(dt))
   if(!is.null(cols$id) && !all(cols$id %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
   if(!is.null(cols$measure) && !all(cols$measure %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
   if(!is.null(cols$id) && is.null(cols$measure)) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
@@ -100,10 +100,11 @@ do_reshape_var <- function(dt, filedescription, parameters){
 #' @description
 #' Identifies a list of columns needed for reshape
 #' @noRd
-get_reshape_parameters <- function(filedescription){
+get_reshape_parameters <- function(filedescription, allcolumns){
   id <- measure <- NULL
   if(is_not_empty(filedescription$RESHAPEid)) id <- gsub("\"", "", strsplit(filedescription$RESHAPEid, ",")[[1]])
   if(is_not_empty(filedescription$RESHAPEmeas)) measure <- gsub("\"", "", strsplit(filedescription$RESHAPEmeas, ",")[[1]])
+  if(length(measure) == 0) measure <- setdiff(allcolumns, id)
   val <- ifelse(is_not_empty(filedescription$RESHAPEval), as.character(filedescription$RESHAPEval), "value")
   var <- data.table::fcoalesce(ifelse(is_not_empty(filedescription$MULTIHEAD), LesMultiHead(filedescription$MULTIHEAD)$varname, NA_character_),
                                ifelse(is_not_empty(filedescription$RESHAPEvar), as.character(filedescription$RESHAPEvar), NA_character_),

@@ -9,14 +9,15 @@
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
 #' @param removebuffer should original files in the buffer be removed when no longer needed to free memory?
-#' @param qualcontrol perform initial qualcontrol of data
+#' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = FALSE) {
   on.exit(lagkube_cleanup(), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
   user_args <- as.list(environment())
+  # For dev and debug: use .SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   

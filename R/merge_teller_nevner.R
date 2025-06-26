@@ -32,12 +32,12 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   }
   
   tellerfiltype <- ifelse(standardfiles, "standard tellerfil", "tellerfil")
-  cat("\n** Lager", tellerfiltype, "fra", tellerfilnavn)
+  cat("\n* Lager", tellerfiltype, "fra", tellerfilnavn)
   tellerfil <- do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
     nevnerfiltype <- ifelse(standardfiles, "standard nevnerfil", "nevnerfilfil")
-    cat("\n** Lager", nevnerfiltype, "fra", nevnerfilnavn)
+    cat("\n* Lager", nevnerfiltype, "fra", nevnerfilnavn)
     nevnerfil <- do_redesign_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters)
   }
   
