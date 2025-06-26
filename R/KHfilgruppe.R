@@ -10,8 +10,9 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
+  # For dev and debug: use .SetFilgruppeParameters("NAME") and run step by step below
   parameters <- get_filegroup_parameters(user_args = user_args)
-  if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres")
+  if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   Filgruppe <- data.table::data.table()

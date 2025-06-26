@@ -161,6 +161,7 @@ set_filter_year <- function(parameters){
   if(tellerfile %in% names(.GlobalEnv$BUFFER)){
     aarstart <- .GlobalEnv$BUFFER[[tellerfile]][, min(AARl)]
   }
+  if(aarstart == 0) return(invisible(NULL))
   return(paste0("AARl >= ", aarstart))
 }
 

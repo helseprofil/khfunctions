@@ -1,3 +1,9 @@
+# khfunctions 1.0.8
+
+* Fixed do_reshape_var when measure.var is not provided and should be all non-id-columns
+* Added Censor_type to parameters
+* Started implementing qualcontrol in LagKUBE, set to inactive until done
+
 # khfunctions 1.0.7
 * Critical bugfix in set_recode_filter_filfiltre() when a cube use > 1 FILFILTRE
 * Reactivated FF_RSYNT1 making it possible to add custom R code to a filefilter

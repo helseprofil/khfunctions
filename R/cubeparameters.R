@@ -18,6 +18,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["KB"]] <- SettKodeBokGlob(parameters = parameters)
+  parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
   return(parameters)
 }
 
@@ -269,6 +270,8 @@ get_geo_recoding <- function(parameters){
 #' @title SettKodeBokGlob
 #' @author Kåre Bævre
 #' @param parameters global parameters
+#' @keywords internal
+#' @noRd
 SettKodeBokGlob <- function(parameters) {
   OmkodD <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM KH_OMKOD
                                               UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE))
@@ -298,4 +301,18 @@ SettKodeBokGlob <- function(parameters) {
     KB[[del]] <- KBD
   }
   return(KB)
+}
+
+#' @keywords internal
+#' @noRd
+get_censor_type <- function(parameters){
+  stataVar <- c("Stata_PRIKK_T", "Stata_PRIKK_N", "Stata_STATTOL_T")
+  RprikkVar <- c("PRIKK_T", "PRIKK_N", "STATTOL_T")
+  spc <- data.table::as.data.table(parameters$CUBEinformation)[, .SD, .SDcols = c(stataVar, RprikkVar)]
+  r <- sum(sapply(spc[, ..RprikkVar], get_col), na.rm = TRUE)
+  s <- sum(sapply(spc[, ..stataVar], get_col), na.rm = TRUE)
+  if(r > 0 & s > 0) stop("You can't prikk for both R and Stata way. Choose either one in ACCESS::KUBER!")
+  if(r > 0) return("R")
+  if(s > 0) return("STATA")
+  return(invisible(NULL))
 }

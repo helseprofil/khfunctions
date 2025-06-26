@@ -9,13 +9,15 @@
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
 #' @param removebuffer should original files in the buffer be removed when no longer needed to free memory?
+#' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = FALSE) {
   on.exit(lagkube_cleanup(), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
-  user_args <-as.list(environment())
+  user_args <- as.list(environment())
+  # For dev and debug: use .SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
   sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
@@ -49,22 +51,23 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
   parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
   KUBE <- set_etab_names(dt = KUBE, etablist = parameters$etabs)
-  outvalues <- get_outvalues_allvis(parameters = parameters)
-  outdimensions <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
+  parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
+  parameters[["outdimensions"]] <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
   
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
   KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   
   ALLVIS <- data.table::copy(KUBE)
-  ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = outvalues)
+  ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues)
   generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
-  ALLVIS <- ALLVIS[, c(..outdimensions, ..outvalues, "SPVFLAGG")]
-  QC <- LagQCKube(allvis = ALLVIS, allvistabs = outdimensions, kube = KUBE)
+  ALLVIS <- ALLVIS[, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
+  QC <- LagQCKube(allvis = ALLVIS, allvistabs = parameters$outdimensions, kube = KUBE)
   
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
-  cat("-------------------------KUBE", parameters$name, "FERDIG--------------------------------------\n")
-  cat("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  if(parameters$qualcontrol) control_cube_output(dt = QC, parameters = parameters)
+  cat("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
+  cat("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
 
