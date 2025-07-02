@@ -59,7 +59,7 @@ move_old_files_to_archive <- function(path, parameters){
 write_cube_output <- function(outputlist, parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
-  name <- ifelse(parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
+  name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
   datert_R <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".rds"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
   qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))

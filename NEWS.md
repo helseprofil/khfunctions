@@ -1,3 +1,6 @@
+# khfunctions 1.0.9
+* Fix: cube files was saved with wrong name
+
 # khfunctions 1.0.8
 
 * Fixed do_reshape_var when measure.var is not provided and should be all non-id-columns
