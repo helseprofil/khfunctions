@@ -1,6 +1,5 @@
 filegroup_check_original_files_and_spec <- function(parameters){
   cat("\n* SJEKK AV ORIGINALFILER OG PARAMETRE")
-  parameters$read_parameters
   checks <- list()
   checks[["FILER_FINNES"]] <- check_if_files_exists_and_are_readable(files = parameters$read_parameters$filepath)
   checks[["FORMAT_OK"]] <- check_if_format_is_ok(read_parameters = parameters$read_parameters)
@@ -18,7 +17,7 @@ filegroup_check_original_files_and_spec <- function(parameters){
       cat(checks[[1]])
     }
     # sink()
-    stop("FEIL funnet i originalfiler eller innlesingsspecs, se feillogg for oversikt")
+    stop("FEIL funnet i originalfiler eller innlesingsspecs. Sjekk `sessionInfo()` og se om locale = [...]NO.UTF-8. Hvis ikke, kjør `Sys.setlocale('LC_ALL', 'nb-NO.UTF-8')` og prøv igjen")
   } else {
     cat("\n* ALLE SJEKKER FERDIG OG OK!")
   }
@@ -37,7 +36,7 @@ check_if_files_exists_and_are_readable <- function(files){
       not_readable <- c(not_readable, sub(getOption("khfunctions.root"), "", file))
     }
   }
-  if(length(not_exist) == 0 || length(not_readable) == 0){
+  if(length(not_exist) == 0 && length(not_readable) == 0){
     cat("\n** Alle filer eksisterer og kan leses")
     return(invisible(NULL))
   } 

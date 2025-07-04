@@ -27,7 +27,7 @@ write_filegroup_output <- function(dt, parameters){
 #' @noRd
 do_write_parquet <- function(dt, filepath){
   attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
-  for(att in attrmove) data.table::setattr(dt, att, NULL)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
   arrow::write_parquet(dt, sink = filepath, compression = "snappy")
 }
 

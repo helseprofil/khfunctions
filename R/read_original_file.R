@@ -82,13 +82,13 @@ do_read_parquet <- function(filepath){
 #' @param filedescription file description
 #' @keywords internal
 #' @noRd
-do_read_qs <- function(filedescription){
-  nthreads <- parallel::detectCores()
-  file <- try(qs2::qs_read(file = filedescription$filepath, nthreads = nthreads))
-  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
-  # convert_all_columns_to_character(file)
-  return(file)
-}
+# do_read_qs <- function(filedescription){
+#   nthreads <- parallel::detectCores()
+#   file <- try(qs2::qs_read(file = filedescription$filepath, nthreads = nthreads))
+#   if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+#   # convert_all_columns_to_character(file)
+#   return(file)
+# }
 
 #' @noRd
 do_read_spss <- function(filedescription){
