@@ -167,15 +167,22 @@ set_filter_year <- function(parameters){
 
 
 #' @title read_filegroup
-#' @description Reads original filegroup. Will always read from "NYESTE" folder
-#' @keywords internal
-#' @noRd
+#' @description Reads original filegroup. Will always read from "PARQUET" folder first. 
+#' If filegroup does not exist it will look in "NYESTE" to read the .rds file, and throw an error if not found.
+#' Can be used alone to read filegroups from PARQUET/NYESTE by name. 
 #' @returns data.table
+#' @export
 read_filegroup <- function(filegroup){
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup, ".rds"))
-  if(!file.exists(file)) stop("Finner ikke filgruppe: ", file, "! Filgruppen må kjøres først.")
-  dt <- data.table::setDT(readRDS(file))
-  dt[, (names(.SD)) := NULL, .SDcols = names(dt)[names(dt) %in% c("KOBLID", "ROW")]]
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.parquet"), paste0(filegroup, ".parquet"))
+  if(file.exists(file)){
+    dt <- collapse::qDT(arrow::read_parquet(file))
+  } else {
+    file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup, ".rds"))
+    if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/PARQUET eller STABLAORG/R/NYESTE! Filgruppen må kjøres først.")
+    dt <- collapse::qDT(readRDS(file))
+  }
+  delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
+  dt[, (delcols) := NULL]
   set_integer_columns(dt = dt)
   cat("\n** Lest inn fil: ", file)
   return(dt)
@@ -322,6 +329,8 @@ set_recode_filter_filfiltre <- function(fileinfo, filefilter, parameters){
 #' @keywords internal
 #' @noRd
 set_integer_columns <- function(dt){
-  integercols <- names(dt)[grep("^(AAR(l|h)|ALDER(l|h)|KJONN|UTDANN|LANDBAK|INNVKAT)$", names(dt))]
-  dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = integercols]
+  integers <- names(dt)[grep("^(AAR(l|h)|ALDER(l|h)|KJONN|UTDANN|LANDBAK|INNVKAT)$", names(dt))]
+  non_int_cols <- names(dt)[!sapply(dt, is.integer)]
+  to_integer <- intersect(non_int_cols, integers)
+  dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = to_integer]
 }

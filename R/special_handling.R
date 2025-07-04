@@ -18,11 +18,14 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   is_stata <- grepl("<STATA>", code)
   
   if(is_stata){
+    cat("\n**Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
+    cat("\n**Ferdig i STATA")
     return(dt)
   }
   
+  cat("\n**Starter R-snutt:", name)
   code_env <- new.env()
   dtname <- as.character(substitute(dt))
   assign(dtname, dt, envir = code_env)
@@ -34,6 +37,7 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   }
   assign(dtname, get(dtname, envir = code_env), envir = code_env)
   dt <- get(dtname, envir = code_env)
+  cat("\n**R-snutt ferdig")
   return(dt)
 }
 
@@ -57,16 +61,21 @@ do_stata_processing <- function(dt, script, parameters){
   setwd(tmpdir)
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   charactercols <- names(dt)[sapply(dt, is.character)]
+  cat("\n***Fikser kolonnenavn før stata")
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == "", " ", x)), .SDcols = charactercols] 
-  fix_column_names_pre_stata(dt = dt)
+  statanames <- fix_column_names_pre_stata(oldnames = names(dt))
+  data.table::setnames(dt, statanames)
+  cat("\n***Skriver STATA-fil")
   haven::write_dta(dt, statafiles$dta)
   on.exit(file.remove(statafiles$dta), add = T)
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
+  cat("\n**Leser filen inn igjen og fikser kolonnenavn")
   dt <- data.table::setDT(haven::read_dta(statafiles$dta))
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
-  fix_column_names_post_stata(dt = dt)
+  rnames <- fix_column_names_post_stata(oldnames = names(dt))
+  data.table::setnames(dt, rnames)
   # if(!is(dt, "data.table")) data.table::setDT(dt)
   setwd(orgwd)
   return(dt)
@@ -77,24 +86,23 @@ do_stata_processing <- function(dt, script, parameters){
 #' Some specific conversions are later reversed when data is read back into R.
 #' Some general conversions are not reversed. 
 #' @noRd
-fix_column_names_pre_stata <- function(dt){
-  fixednames <- names(dt)
-  fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames)
+fix_column_names_pre_stata <- function(oldnames){
+  fixednames <- oldnames
+  fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
-  
-  fixednames <- gsub("[^a-zA-Z0-9_æÆøØåÅ]", "_", fixednames)
+  fixednames <- gsub("[^[:alnum:]_æÆøØåÅ]", "_", fixednames, perl = TRUE)
   fixednames <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^_+$", "var", fixednames)
   fixednames <- substr(fixednames, 1, 32)
-  data.table::setnames(dt, old = names(dt), new = fixednames)
+  return(fixednames)
 }
 
 #' @noRd
-fix_column_names_post_stata <- function(dt){
-  fixednames <- names(dt)
+fix_column_names_post_stata <- function(oldnames){
+  fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
-  data.table::setnames(dt, fixednames)
+  return(fixednames)
 }
 
 #' @noRd

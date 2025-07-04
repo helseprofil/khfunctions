@@ -1,6 +1,6 @@
 Package: khfunctions
 Title: Data processing for FHP/OVP
-Version: 1.0.9
+Version: 1.0.10
 Authors@R: 
     person("Vegard", "Lysne", , "vegard.lysne@helsedir.no", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
@@ -26,7 +26,8 @@ Imports:
     zoo (>= 1.8.14),
     data.table (>= 1.17.2),
     stringi (>= 1.8.7),
-    beepr (>= 2.0)
+    beepr (>= 2.0),
+    arrow
 Suggests: 
     methods,
     remotes,
