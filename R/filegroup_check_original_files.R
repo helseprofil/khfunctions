@@ -1,6 +1,5 @@
 filegroup_check_original_files_and_spec <- function(parameters){
   cat("\n* SJEKK AV ORIGINALFILER OG PARAMETRE")
-  parameters$read_parameters
   checks <- list()
   checks[["FILER_FINNES"]] <- check_if_files_exists_and_are_readable(files = parameters$read_parameters$filepath)
   checks[["FORMAT_OK"]] <- check_if_format_is_ok(read_parameters = parameters$read_parameters)
@@ -18,7 +17,7 @@ filegroup_check_original_files_and_spec <- function(parameters){
       cat(checks[[1]])
     }
     # sink()
-    stop("FEIL funnet i originalfiler eller innlesingsspecs, se feillogg for oversikt")
+    stop("FEIL funnet i originalfiler eller innlesingsspecs. Sjekk `sessionInfo()` og se om locale = [...]NO.UTF-8. Hvis ikke, kjør `Sys.setlocale('LC_ALL', 'nb-NO.UTF-8')` og prøv igjen")
   } else {
     cat("\n* ALLE SJEKKER FERDIG OG OK!")
   }
@@ -37,7 +36,7 @@ check_if_files_exists_and_are_readable <- function(files){
       not_readable <- c(not_readable, sub(getOption("khfunctions.root"), "", file))
     }
   }
-  if(length(not_exist) == 0 || length(not_readable) == 0){
+  if(length(not_exist) == 0 && length(not_readable) == 0){
     cat("\n** Alle filer eksisterer og kan leses")
     return(invisible(NULL))
   } 
@@ -49,10 +48,11 @@ check_if_files_exists_and_are_readable <- function(files){
 
 check_if_format_is_ok <- function(read_parameters){
   read_parameters[, FORMAT := toupper(FORMAT)]
-  not_valid_format <- read_parameters[FORMAT %notin% c(c("CSV", "XLS", "XLSX", "SPSS"))]
+  not_valid_format <- read_parameters[FORMAT %notin% c(c("CSV", "XLS", "XLSX", "SPSS", "PARQUET"))]
   mismatch_extension <- read_parameters[FORMAT == "CSV" & !grepl(".csv$", FILNAVN) |
                                   FORMAT %in% c("XLS", "XSLX") & !grepl(".xls$|.xlsx$", FILNAVN)|
-                                  FORMAT == "SPSS" & !grepl(".sav$", FILNAVN)]
+                                  FORMAT == "SPSS" & !grepl(".sav$", FILNAVN) |
+                                  FORMAT == "PARQUET" & !grepl(".parquet$", FILNAVN)]
   if(nrow(not_valid_format) == 0 | nrow(mismatch_extension) == 0){
     cat("\n** Alle filformater ok og korresponderer med filnavn")
     return(invisible(NULL))

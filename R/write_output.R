@@ -8,12 +8,27 @@ write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
   cat("SAVING OUTPUT FILES:\n")
   root <- getOption("khfunctions.root")
+  parquet <- file.path(root, getOption("khfunctions.filegroups.parquet"), paste0(parameters$name, ".parquet"))
   nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$name, ".rds"))
   datert <- file.path(root, getOption("khfunctions.filegroups.dat"), paste0(parameters$name, "_", parameters$batchdate, ".rds"))
   saveRDS(dt, file = nyeste)
   cat("\n", nyeste)
   file.copy(from = nyeste, to = datert)
   cat("\n", datert)
+  do_write_parquet(dt = dt, filepath = parquet)
+}
+
+#' @title do_write_parquet
+#' @description
+#' Wrapper around arrow::write_parquet which first strips away all unneccessary attributes
+#' @param dt data
+#' @param filepath filepath to save file
+#' @keywords internal
+#' @noRd
+do_write_parquet <- function(dt, filepath){
+  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
+  arrow::write_parquet(dt, sink = filepath, compression = "snappy")
 }
 
 #' @title write_codebooklog

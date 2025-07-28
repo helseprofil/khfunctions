@@ -1,3 +1,9 @@
+# khfunctions 1.0.10
+* Implemented `.parquet`-format. Filegroups are now saved as .parquet in addition to .rds. 
+* `read_filegroup()` now prioritizes reading from PARQUET folder
+* `read_original_file()` gains the ability to read .parquet files (FORMAT must be 'PARQUET'). When orgdata produces parquet files, this will be more efficient.
+* Bugfix: fix_column_name_pre_stata is no longer failing due to encoding
+
 # khfunctions 1.0.9
 * Fix: cube files was saved with wrong name
 
