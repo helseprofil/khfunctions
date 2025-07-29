@@ -101,5 +101,3 @@ report_godkjent_files_notfound <- function(notfoundfiles, year){
           "Eventuelt sjekk om friskvikfil er produsert\n",
           paste0(" - ", notfoundfiles, collapse = "\n"))
 }
-
-
