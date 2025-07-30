@@ -13,7 +13,7 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   cat("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   DF <- switch(filedescription$FORMAT,
-               "PARQUET" = do_read_parquet(filepath = filedescription$filepath),
+               "PARQUET" = do_read_parquet(filedescription = filedescription),
                "XLS" = do_read_excel(filedescription = filedescription, read_arg_list = read_arg_list),
                "XLSX" = do_read_excel(filedescription = filedescription, read_arg_list = read_arg_list),
                "CSV" = do_read_csv(filedescription = filedescription, read_arg_list = read_arg_list),
@@ -67,10 +67,10 @@ format_innlesarg_as_list <- function(args){
 #' Reads .parquet files. As orgfiles must be read as character only, read_parquet cannot be used here.
 #' @keywords internal
 #' @noRd
-do_read_parquet <- function(filepath){
-  file <- arrow::open_dataset(filepath)
+do_read_parquet <- function(filedescription){
+  file <- arrow::open_dataset(filedescription$filepath)
   chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
-  file <- try(data.table::as.data.table(arrow::open_dataset(filepath, schema = chrschema)))
+  file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
   if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
   do_convert_na_to_empty(file)
   return(file)
