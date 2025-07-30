@@ -1,8 +1,20 @@
-# khfunctions 1.0.10
-* Implemented `.parquet`-format. Filegroups are now saved as .parquet in addition to .rds. 
-* `read_filegroup()` now prioritizes reading from PARQUET folder
-* `read_original_file()` gains the ability to read .parquet files (FORMAT must be 'PARQUET'). When orgdata produces parquet files, this will be more efficient.
-* Bugfix: fix_column_name_pre_stata is no longer failing due to encoding
+# khfunctions 1.0.10 (development version)
+
+## New features
+* Implemented `.parquet`-format. Filegroups are now saved as .parquet in addition to .rds.
+** `read_filegroup()` now prioritizes reading from PARQUET folder
+** `read_original_file()` gains the ability to read .parquet files (FORMAT must be 'PARQUET'). When orgdata produces parquet files, this will be more efficient.
+** QC-files and full dated cube are saved as `.parquet` (in addition to `.csv`, which will be deprecated in the future)
+* A written log of LagFilgruppe is saved, similar to what is saved when running LagKUBE. Both files are now only saved when write = TRUE. 
+* `generate_specific_friskvik_indicators()` can be used to generate friskvik indicators without remaking the cube file. Useful if any friskvik spec is wrong or a new indicator must be set up. 
+* `update_production_folder()` can be used to update the production folder, removing outdated and adding missing files from DATERT
+
+## Bugfixes
+* `fix_column_name_pre_stata()` is no longer failing due to encoding
+
+## Other updates
+* Remove all use of `with = FALSE` inside data.table
+* In `LagFilgruppe`, codebooklog and cleanlog is only saved if write = TRUE
 
 # khfunctions 1.0.9
 * Fix: cube files was saved with wrong name
