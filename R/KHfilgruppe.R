@@ -7,11 +7,12 @@
 #' @param dumps list of intermediate files to save, used for debugging and development. 
 #' @export
 LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
-  on.exit(lagfilgruppe_cleanup(), add = TRUE)
+  on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
   # For dev and debug: use .SetFilgruppeParameters("NAME") and run step by step below
   parameters <- get_filegroup_parameters(user_args = user_args)
+  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("FGLOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
@@ -24,12 +25,12 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")
-  write_codebooklog(log = codebooklog, parameters = parameters)
+  if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
-  write_cleanlog(log = cleanlog, parameters = parameters)
+  if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
   
   cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   do_set_fg_column_order(dt = Filgruppe)
@@ -46,8 +47,9 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
-lagfilgruppe_cleanup <- function(){
+lagfilgruppe_cleanup <- function(parameters){
   RODBC::odbcCloseAll()
+  if(parameters$write) sink()
 }
 
 #' @title delete_old_filegroup_log

@@ -13,13 +13,13 @@
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
 LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = FALSE) {
-  on.exit(lagkube_cleanup(), add = TRUE)
+  on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
   user_args <- as.list(environment())
   # For dev and debug: use .SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
-  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   load_and_format_files(parameters = parameters)
@@ -106,10 +106,10 @@ get_lagkube_guardfile_path <- function(){
 
 #' @keywords internal
 #' @noRd
-lagkube_cleanup <- function(){
+lagkube_cleanup <- function(parameters){
   fs::file_delete(get_lagkube_guardfile_path())
   RODBC::odbcCloseAll()
-  sink()
+  if(parameters$write) sink()
 }
 
 #' @keywords internal

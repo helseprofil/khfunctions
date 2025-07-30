@@ -76,16 +76,20 @@ write_cube_output <- function(outputlist, parameters){
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
   name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
   datert_R <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".rds"))
+  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "PARQUET", paste0(name, "_", parameters$batchdate, ".parquet"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
   qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
+  qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   
   cat("SAVING OUTPUT FILES:\n")
   saveRDS(outputlist$KUBE, file = datert_R)
-  cat("\n", datert_R)
+  do_write_parquet(outputlist$KUBE, filepath = datert_parquet)
+  cat("\n", datert_R, "\n", datert_parquet)
   data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
   cat("\n", datert_csv)
   data.table::fwrite(outputlist$QC, file = qc, sep = ";")
-  cat("\n", qc)
+  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet)
+  cat("\n", qc, "\n", qc_parquet)
 }
 
 #' @title write_access_specs
