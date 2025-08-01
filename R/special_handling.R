@@ -54,9 +54,11 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
 #' @param batchdate used to generate file names
 #' @param stata_exe path to STATA program
 do_stata_processing <- function(dt, script, parameters){
-  on.exit(stata_processing_cleanup(statanames = statanames), add = T)
+  on.exit(stata_processing_cleanup(statafiles = statafiles, orgwd = orgwd), add = T)
   tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
   if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
+  orgwd <- getwd()
+  setwd(tmpdir)
   batchdate <- parameters$batchdate
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   charactercols <- names(dt)[sapply(dt, is.character)]
@@ -70,7 +72,6 @@ do_stata_processing <- function(dt, script, parameters){
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
   cat("\n**Leser filen inn igjen og fikser kolonnenavn")
-  # LES PARQUET-fil statafiles$parquet_in
   dt <- arrow::read_parquet(statafiles$parquet_in)
   data.table::setDT(dt)
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
@@ -79,11 +80,14 @@ do_stata_processing <- function(dt, script, parameters){
   return(dt)
 }
 
-stata_processing_cleanup <- function(statanames, orgwd){
+#' @descriptio Delete temporary data files and reset working directory
+#' @keywords internal
+#' @noRd
+stata_processing_cleanup <- function(statafiles, orgwd){
   cat("\n***Sletter midlertidige datafiler")
   file.remove(statafiles$parquet_in)
   file.remove(statafiles$parquet_out)
-  setwd()
+  setwd(orgwd)
 }
 
 #' @description 
