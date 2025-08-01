@@ -68,23 +68,26 @@ do_stata_processing <- function(dt, script, parameters){
   data.table::setnames(dt, statanames)
   cat("\n***Skriver STATA-fil")
   do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
+  cat("\n***Kjører STATA-script")
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
-  cat("\n**Leser filen inn igjen og fikser kolonnenavn")
-  dt <- arrow::read_parquet(statafiles$parquet_in)
-  data.table::setDT(dt)
+  cat("\n***Leser filen inn igjen og fikser kolonnenavn")
+  dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
   rnames <- fix_column_names_post_stata(oldnames = names(dt))
   data.table::setnames(dt, rnames)
   return(dt)
 }
 
+
+
 #' @descriptio Delete temporary data files and reset working directory
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
   cat("\n***Sletter midlertidige datafiler")
+  gc()
   file.remove(statafiles$parquet_in)
   file.remove(statafiles$parquet_out)
   setwd(orgwd)
