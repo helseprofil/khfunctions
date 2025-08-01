@@ -31,6 +31,17 @@ do_write_parquet <- function(dt, filepath){
   arrow::write_parquet(dt, sink = filepath, compression = "snappy")
 }
 
+# do_write_parquet2 <- function(dt, filepath){
+#   temppath <- tempfile(fileext = ".parquet")
+#   # Lagre filen som tempfil
+#   # les den inn igjen med ønsket skjema
+#   # lagre til ønsket sted
+#   
+#   
+#     chrschema <- arrow::schema(lapply(names(dt2), function(x) arrow::Field$create(name = x, type = arrow::string())))
+#   outtable <- arrow::Table$create(dt2, schema = chrschema)
+# }
+
 #' @title write_codebooklog
 #' @keywords internal
 #' @noRd
@@ -76,19 +87,19 @@ write_cube_output <- function(outputlist, parameters){
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
   name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
   datert_R <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".rds"))
-  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "PARQUET", paste0(name, "_", parameters$batchdate, ".parquet"))
+  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
   qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   
   cat("SAVING OUTPUT FILES:\n")
-  saveRDS(outputlist$KUBE, file = datert_R)
-  do_write_parquet(outputlist$KUBE, filepath = datert_parquet)
-  cat("\n", datert_R, "\n", datert_parquet)
-  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
+  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
   cat("\n", datert_csv)
-  data.table::fwrite(outputlist$QC, file = qc, sep = ";")
-  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet)
+  saveRDS(outputlist$KUBE, file = datert_R) # Full cube .rds format (to be deprecated)
+  do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
+  cat("\n", datert_R, "\n", datert_parquet)
+  data.table::fwrite(outputlist$QC, file = qc, sep = ";") # QC csv format (to be deprecated)
+  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
   cat("\n", qc, "\n", qc_parquet)
 }
 

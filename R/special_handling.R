@@ -54,11 +54,10 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
 #' @param batchdate used to generate file names
 #' @param stata_exe path to STATA program
 do_stata_processing <- function(dt, script, parameters){
+  on.exit(stata_processing_cleanup(statanames = statanames), add = T)
   tmpdir <- file.path(fs::path_home(), "helseprofil", "STATAtmp")
   if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
   batchdate <- parameters$batchdate
-  orgwd <- getwd()
-  setwd(tmpdir)
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   charactercols <- names(dt)[sapply(dt, is.character)]
   cat("\n***Fikser kolonnenavn før stata")
@@ -66,19 +65,25 @@ do_stata_processing <- function(dt, script, parameters){
   statanames <- fix_column_names_pre_stata(oldnames = names(dt))
   data.table::setnames(dt, statanames)
   cat("\n***Skriver STATA-fil")
-  haven::write_dta(dt, statafiles$dta)
-  on.exit(file.remove(statafiles$dta), add = T)
+  do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
   cat("\n**Leser filen inn igjen og fikser kolonnenavn")
-  dt <- data.table::setDT(haven::read_dta(statafiles$dta))
+  # LES PARQUET-fil statafiles$parquet_in
+  dt <- arrow::read_parquet(statafiles$parquet_in)
+  data.table::setDT(dt)
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
   rnames <- fix_column_names_post_stata(oldnames = names(dt))
   data.table::setnames(dt, rnames)
-  # if(!is(dt, "data.table")) data.table::setDT(dt)
-  setwd(orgwd)
   return(dt)
+}
+
+stata_processing_cleanup <- function(statanames, orgwd){
+  cat("\n***Sletter midlertidige datafiler")
+  file.remove(statafiles$parquet_in)
+  file.remove(statafiles$parquet_out)
+  setwd()
 }
 
 #' @description 
@@ -109,7 +114,8 @@ fix_column_names_post_stata <- function(oldnames){
 set_stata_filenames <- function(batchdate, tmpdir){
   statafiles <- list()
   statafiles[["do"]] <-  file.path(tmpdir, paste0("STATAtmp_", batchdate, ".do"))
-  statafiles[["dta"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".dta"))
+  statafiles[["parquet_out"]] <- file.path(tmpdir, paste0("STATAtmp_out", batchdate, ".parquet"))
+  statafiles[["parquet_in"]] <- file.path(tmpdir, paste0("STATAtmp_in", batchdate, ".parquet"))
   statafiles[["log"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".log"))
   return(statafiles)
 }
@@ -117,9 +123,10 @@ set_stata_filenames <- function(batchdate, tmpdir){
 #' @noRd
 generate_stata_do_file <- function(script, statafiles){
   sink(statafiles$do)
-  cat("use ", statafiles$dta, "\n", sep = "")
+  cat("net install pq, from(http://fmwww.bc.edu/RePEc/bocode/p)\n") 
+  cat("pq use using ", statafiles$parquet_out, "\n", sep = "")
   cat(script, "\n")
-  cat("save ", statafiles$dta, ", replace\n", sep = "")
+  cat("pq save using ", statafiles$parquet_in, ", replace\n", sep = "")
   sink()
 }
 
