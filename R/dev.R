@@ -1,4 +1,4 @@
-.SetKubeParameters <- function(cube){
+SetKubeParameters <- function(cube){
   user_args <<- list(name = cube,
                      year = getOption("khfunctions.year"),
                      dumps = list(),
@@ -7,7 +7,7 @@
                      removebuffer = FALSE)
 }
 
-.SetFilgruppeParameters <- function(filgruppenavn){
+SetFilgruppeParameters <- function(filgruppenavn){
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
                      dumps = list())

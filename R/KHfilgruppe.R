@@ -10,7 +10,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
-  # For dev and debug: use .SetFilgruppeParameters("NAME") and run step by step below
+  # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   parameters <- get_filegroup_parameters(user_args = user_args)
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("FGLOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")

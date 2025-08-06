@@ -95,7 +95,7 @@ write_cube_output <- function(outputlist, parameters){
   cat("SAVING OUTPUT FILES:\n")
   data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
   cat("\n", datert_csv)
-  saveRDS(outputlist$KUBE, file = datert_R) # Full cube .rds format (to be deprecated)
+  # saveRDS(outputlist$KUBE, file = datert_R) # Full cube .rds format (to be deprecated)
   do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
   cat("\n", datert_R, "\n", datert_parquet)
   data.table::fwrite(outputlist$QC, file = qc, sep = ";") # QC csv format (to be deprecated)

@@ -34,8 +34,8 @@ do_censor_kube_r <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_censor_teller <- function(dt, limit){
-  cat("T-PRIKKER", dt[TELLER <= limit, .N], "rader\n")
-  cat("N-T-PRIKKER", dt[TELLER > limit & NEVNER - TELLER <= limit, .N], "rader\n")
+  cat("\n** T-PRIKKER", dt[TELLER <= limit, .N], "rader")
+  cat("\n** N-T-PRIKKER", dt[TELLER > limit & NEVNER - TELLER <= limit, .N], "rader")
   dt[(TELLER <= limit & TELLER.f >= 0) | (NEVNER - TELLER <= limit & TELLER.f >= 0 & NEVNER.f >= 0), 
      let(TELLER.f = 3, RATE.f = 3)]
   return(dt)
@@ -44,7 +44,7 @@ do_censor_teller <- function(dt, limit){
 #' @keywords internal
 #' @noRd
 do_censor_nevner <- function(dt, limit){
-  cat("N-PRIKKER", dt[NEVNER <= limit, .N], "rader\n")
+  cat("\n** N-PRIKKER", dt[NEVNER <= limit, .N], "rader")
   dt[NEVNER <= limit & NEVNER.f >= 0, let(TELLER.f = 3, RATE.f = 3)]
   return(dt)
 }
@@ -61,7 +61,7 @@ do_censor_statistical_tolerance <- function(dt, limit){
   dt[TELLER.f < 9, let(n_year = .N, n_weak = sum(is.na(TELLER) | TELLER <= limit), n_missing = sum(TELLER.f == 3)), by = dims]
   dt[TELLER.f < 9, censor := ifelse(n_weak / n_year > weak_limit | n_missing / n_year > missing_limit, 1, 0)]
   
-  cat("Skjuler", dt[censor == 1, .N], "rader (serieprikking og svake tidsserier)\n")
+  cat("\n** Skjuler", dt[censor == 1, .N], "rader (serieprikking og svake tidsserier)\n")
   dt[censor == 1, let(TELLER.f = 3, RATE.f = 3)]
   dt[, (helper_columns) := NULL]
   return(dt)

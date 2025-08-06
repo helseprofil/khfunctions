@@ -18,14 +18,14 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   is_stata <- grepl("<STATA>", code)
   
   if(is_stata){
-    cat("\n**Starter STATA-snutt:", name)
+    cat("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
-    cat("\n**Ferdig i STATA")
+    cat("\n** Ferdig i STATA")
     return(dt)
   }
   
-  cat("\n**Starter R-snutt:", name)
+  cat("\n** Starter R-snutt:", name)
   code_env <- new.env()
   dtname <- as.character(substitute(dt))
   assign(dtname, dt, envir = code_env)
@@ -37,7 +37,7 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   }
   assign(dtname, get(dtname, envir = code_env), envir = code_env)
   dt <- get(dtname, envir = code_env)
-  cat("\n**R-snutt ferdig")
+  cat("\n** R-snutt ferdig")
   return(dt)
 }
 
@@ -62,17 +62,17 @@ do_stata_processing <- function(dt, script, parameters){
   batchdate <- parameters$batchdate
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   charactercols <- names(dt)[sapply(dt, is.character)]
-  cat("\n***Fikser kolonnenavn før stata")
+  cat("\n*** Fikser kolonnenavn før stata")
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == "", " ", x)), .SDcols = charactercols] 
   statanames <- fix_column_names_pre_stata(oldnames = names(dt))
   data.table::setnames(dt, statanames)
-  cat("\n***Skriver STATA-fil")
+  cat("\n*** Skriver STATA-fil")
   do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
-  cat("\n***Kjører STATA-script")
+  cat("\n*** Kjører STATA-script...")
   generate_stata_do_file(script = script, statafiles = statafiles)
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
-  cat("\n***Leser filen inn igjen og fikser kolonnenavn")
+  cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
   dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
   rnames <- fix_column_names_post_stata(oldnames = names(dt))
@@ -86,7 +86,7 @@ do_stata_processing <- function(dt, script, parameters){
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
-  cat("\n***Sletter midlertidige datafiler")
+  cat("\n*** Sletter midlertidige datafiler")
   gc()
   file.remove(statafiles$parquet_in)
   file.remove(statafiles$parquet_out)

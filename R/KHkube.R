@@ -17,7 +17,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   check_connection_folders()
   check_if_lagkube_available()
   user_args <- as.list(environment())
-  # For dev and debug: use .SetKubeParameters("NAME") and run step by step below
+  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
@@ -65,7 +65,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
-  if(parameters$qualcontrol) control_cube_output(dt = QC, parameters = parameters)
+  if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   cat("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
   cat("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
