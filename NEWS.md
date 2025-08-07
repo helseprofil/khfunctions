@@ -1,8 +1,9 @@
 # khfunctions 1.0.10 (development version)
 
 ## New features
-* Implemented `.parquet`-format. Filegroups are now saved as .parquet in addition to .rds.
-** `read_filegroup()` now prioritizes reading from PARQUET folder before R folder
+* Implemented `.parquet`-format. 
+** Filegroups are now saved as `.parquet` instead of `.rds`.
+** `read_filegroup()` now prioritizes reading `.parquet` files
 ** `read_original_file()` gains the ability to read `.parquet` files (FORMAT must be 'PARQUET'), in preparation for when orgdata produces `.parquet` files.
 ** QC-files and are saved as `.parquet` (in addition to `.csv`, which will be deprecated in the future)
 ** Full cube files are saved as `.parquet` instead of `.rds`

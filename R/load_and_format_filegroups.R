@@ -173,12 +173,12 @@ set_filter_year <- function(parameters){
 #' @returns data.table
 #' @export
 read_filegroup <- function(filegroup){
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.parquet"), paste0(filegroup, ".parquet"))
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".parquet"))
   if(file.exists(file)){
     dt <- collapse::qDT(arrow::read_parquet(file))
   } else {
-    file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.ny"), paste0(filegroup, ".rds"))
-    if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/PARQUET eller STABLAORG/R/NYESTE! Filgruppen må kjøres først.")
+    file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".rds"))
+    if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/NYESTE! Filgruppen må kjøres først.")
     dt <- collapse::qDT(readRDS(file))
   }
   delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]

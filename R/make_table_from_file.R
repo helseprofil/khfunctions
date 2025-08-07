@@ -177,16 +177,6 @@ do_convert_na_to_empty <- function(dt){
   dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
 }
 
-#' @title initiate_codebook_log
-#' @description initiates an empty codebooklog
-#' @noRd
-initiate_codebooklog <- function(nrow = 0){
-  columns <- c("KOBLID", "DELID",  "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ")
-  log <- data.table::setDT(as.list(setNames(rep(NA_character_, length(columns)), columns)))
-  if(nrow == 0) return(log[0])
-  return(log[1:nrow])
-}
-
 #' @title update_codebooklog
 #' @description updates codebooklog by reference
 #' @noRd

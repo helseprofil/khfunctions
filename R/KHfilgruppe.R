@@ -12,14 +12,15 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   user_args = as.list(environment())
   # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   parameters <- get_filegroup_parameters(user_args = user_args)
-  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("FGLOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   Filgruppe <- data.table::data.table()
   codebooklog <- initiate_codebooklog(nrow = 0)
   cat("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
-  for(file_number in 1:parameters$n_files){
+  # For dev and debug: set file_number = the file you want to test
+  for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
     new_file <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     Filgruppe <- data.table::rbindlist(list(Filgruppe, new_file), fill = T)
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
@@ -40,8 +41,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  write_filegroup_output(dt = Filgruppe, parameters = parameters)
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  write_filegroup_output(dt = Filgruppe, parameters = parameters)
   analyze_cleanlog(log = cleanlog)
   cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
@@ -71,7 +72,7 @@ initiate_cleanlog <- function(dt, codebooklog, parameters){
   log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
   n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
   log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
-  n_deleted <- codebooklog[KBOMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  n_deleted <- codebooklog[OMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
   log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
   data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
   return(log)
@@ -94,7 +95,7 @@ analyze_cleanlog <- function(log){
   print(out)
   cat("\n-----\n")
   warning(paste0("Kolonnene i tabellen over med verdi = 0 indikerer at det finnes ugyldige verdier. Dette må sannsynligvis ordnes i kodebok før ny kjøring.",
-                 "\nSe fullstendig logg her: ", getOption("khfunctions.filegroups.fgsjekk")))
+                 "\nSe fullstendig logg her: ", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk")))
 }
 
 #' @keywords internal

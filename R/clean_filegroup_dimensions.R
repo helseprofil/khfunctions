@@ -12,7 +12,6 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   return(dt)
 }
 
-# GEO ----
 #' @title do_clean_GEO
 #' @noRd
 do_clean_GEO <- function(dt, parameters, cleanlog){

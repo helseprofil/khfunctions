@@ -19,7 +19,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   user_args <- as.list(environment())
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
-  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   load_and_format_files(parameters = parameters)
