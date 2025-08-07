@@ -74,6 +74,7 @@ do_stata_processing <- function(dt, script, parameters){
   check_stata_log_for_error(statafiles = statafiles)
   cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
   dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
+  charactercols <- names(dt)[sapply(dt, is.character)]
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
   rnames <- fix_column_names_post_stata(oldnames = names(dt))
   data.table::setnames(dt, rnames)
