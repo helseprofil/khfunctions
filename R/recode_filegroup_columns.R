@@ -25,17 +25,38 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   cat("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
+    orgvalues <- dt[, unique(get(col))]
     cb_subset <- codebook[FELTTYPE == col]
     recodelog <- do_recode_kb(dt = dt, cb = cb_subset, col = col, log = recodelog)
     recodelog <- do_recode_regex(dt = dt, cb = cb_subset, col = col, log = recodelog)
+    recodelog <- do_list_unchanged_values(col = col, orgvalues = orgvalues, log = recodelog)
   }
   recodelog[, KOBLID := filedescription$KOBLID]
-  n_recoded <- sum(as.numeric(recodelog$FREQ))
-  cat("\n** Omkodet ", n_recoded, " verdier", sep = "")
+  n_recoded <- collapse::fsum(as.numeric(recodelog$FREQ))
+  cat("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
   if(length(recodecols) > 0) dt <- do_remove_deleted_rows(dt = dt, cols = recodecols)
   return(dt)
+}
+
+do_list_unchanged_values <- function(col, orgvalues, log){
+  if(grepl("^VAL\\d{1}", col) | col == "GEO") return(log)
+  unchanged <- setdiff(orgvalues, log$ORG)
+  newlog <- initiate_codebooklog(nrow = length(unchanged))
+  newlog[, let(FELTTYPE = col, TYPE = "IKKE_OMKODET", ORG = unchanged)]
+  log <- data.table::rbindlist(list(log, newlog))
+  return(log)
+}
+
+#' @title initiate_codebook_log
+#' @description initiates an empty codebooklog
+#' @noRd
+initiate_codebooklog <- function(nrow = 0){
+  columns <- c("KOBLID", "DELID",  "FELTTYPE", "TYPE", "ORG", "OMK", "FREQ")
+  log <- data.table::setDT(as.list(setNames(rep(NA_character_, length(columns)), columns)))
+  if(nrow == 0) return(log[0])
+  return(log[1:nrow])
 }
 
 #' @title do_recode_kb
@@ -49,7 +70,7 @@ do_recode_kb <- function(dt, cb, col, log){
   cb <- cb[TYPE == "KB" & ORGKODE %in% unique(dt[[col]])]
   if(nrow(cb) == 0) return(log)
   newlog <- initiate_codebooklog(nrow = nrow(cb))
-  newlog[, let(DELID = cb$DELID, FELTTYPE = col, ORG = cb$ORGKODE, KBOMK = cb$NYKODE, OMK = cb$NYKODE)]
+  newlog[, let(DELID = cb$DELID, FELTTYPE = col, TYPE = "KB", ORG = cb$ORGKODE, OMK = cb$NYKODE)]
   freq <- data.table::setnames(dt[get(col) %in% cb$ORGKODE, .N, by = col], c("ORG", "FREQ"))
   newlog <- newlog[freq, on = "ORG", FREQ := i.FREQ]
   dt[cb, on = setNames("ORGKODE", col), (col) := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, get(col))]
@@ -60,17 +81,39 @@ do_recode_kb <- function(dt, cb, col, log){
 #' @title do_recode_regex
 #' @description 
 #' Recode data using regex with sub() function to allow for regex also in the replacement value. 
+#' For VALx-columns, only one line per regex is recorded in the log. 
+#' For other columns, one line is recored per unique value that is recoded
 #' @returns recoded data (by reference) and updated recode_log to be appended to 
 #' complete recode log. 
 #' @noRd
 do_recode_regex <- function(dt, cb, col, log){
   cb <- cb[TYPE == "SUB"]
   if(nrow(cb) == 0) return(log)
-  newlog <- initiate_codebooklog(nrow = nrow(cb))
-  newlog[, let(DELID = cb$DELID, FELTTYPE = col, ORG = cb$ORGKODE, KBOMK = cb$NYKODE, OMK = cb$NYKODE)]
-  for(i in 1:nrow(cb)){
-    newlog[i, FREQ := dt[grepl(cb[i, ORGKODE], get(col)), .N]]
-    dt[grepl(cb[i, ORGKODE], get(col)), (col) := sub(cb[i, ORGKODE], cb[i, NYKODE], get(col), perl = TRUE)]
+  
+  if(!grepl("^VAL\\d{1}", col)){
+    newlog <- initiate_codebooklog()
+    for(i in 1:nrow(cb)){
+      cb_i <- cb[i]
+      orgcodes_i <- dt[grepl(paste(cb_i$ORGKODE, collapse = "|"), get(col)), unique(get(col))]
+      newlog_i <- initiate_codebooklog(nrow = length(orgcodes_i))
+      newlog_i[, let(DELID = cb_i$DELID, FELTTYPE = col, TYPE = "SUB", ORG = orgcodes_i)]
+      newlog_i[, OMK := sub(cb_i$ORGKODE, cb_i$NYKODE, ORG, perl = TRUE)]
+      newlog <- data.table::rbindlist(list(newlog, newlog_i))
+    }
+    
+    freq <- data.table::setnames(dt[get(col) %in% newlog$ORG, .N, by = col], c("ORG", "FREQ"))
+    newlog <- newlog[freq, on = "ORG", FREQ := i.FREQ]
+    translated_cb <- newlog[, .SD, .SDcols = c("ORG", "OMK")]
+    dt[translated_cb, on = setNames("ORG", col), (col) := data.table::fifelse(!is.na(i.OMK), i.OMK, get(col))]
+  }
+  
+  if(grepl("^VAL\\d{1}", col)){
+    newlog <- initiate_codebooklog(nrow = nrow(cb))
+    newlog[, let(DELID = cb$DELID, FELTTYPE = col, TYPE = "SUB", ORG = cb$ORGKODE, OMK = cb$NYKODE)]
+    for(i in 1:nrow(cb)){
+      newlog[i, FREQ := dt[grepl(cb[i, ORGKODE], get(col)), .N]]
+      dt[grepl(cb[i, ORGKODE], get(col)), (col) := sub(cb[i, ORGKODE], cb[i, NYKODE], get(col), perl = TRUE)]
+    }
   }
   log <- data.table::rbindlist(list(log, newlog))
   return(log)
