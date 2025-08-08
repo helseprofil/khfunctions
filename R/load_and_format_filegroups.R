@@ -175,7 +175,7 @@ set_filter_year <- function(parameters){
 read_filegroup <- function(filegroup){
   file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".parquet"))
   if(file.exists(file)){
-    dt <- collapse::qDT(arrow::read_parquet(file))
+    dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(file)))
   } else {
     file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".rds"))
     if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/NYESTE! Filgruppen må kjøres først.")

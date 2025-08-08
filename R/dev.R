@@ -4,13 +4,15 @@ SetKubeParameters <- function(cube){
                      dumps = list(),
                      write = FALSE,
                      geonaboprikk = TRUE,
-                     removebuffer = FALSE)
+                     removebuffer = FALSE, 
+                     qualcontrol = TRUE)
 }
 
 SetFilgruppeParameters <- function(filgruppenavn){
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
-                     dumps = list())
+                     dumps = list(), 
+                     qualcontrol = TRUE)
 }
 
 fg_get_all_read_args <- function(globs = get_global_parameters()){

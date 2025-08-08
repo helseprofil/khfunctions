@@ -7,13 +7,18 @@
 ** `read_original_file()` gains the ability to read `.parquet` files (FORMAT must be 'PARQUET'), in preparation for when orgdata produces `.parquet` files.
 ** QC-files and are saved as `.parquet` (in addition to `.csv`, which will be deprecated in the future)
 ** Full cube files are saved as `.parquet` instead of `.rds`
-** `do_stata_processing()` now write and read a `.parquet`-file, and `generate_stata_do_file()` is adapted to use these files. This saves much time previously spent writing and reading large `.dta`-files
+** `do_stata_processing()` now write and read `.parquet`, unless values contains norwegian characters (due to encoding).
+** `generate_stata_do_file()` is adapted to use the correct files. This saves much time previously spent writing and reading large `.dta`-files
 * A written log of LagFilgruppe is saved, similar to what is saved when running LagKUBE. Both files are now only saved when write = TRUE. 
 * `generate_specific_friskvik_indicators()` can be used to generate friskvik indicators without remaking the cube file. Useful if any friskvik spec is wrong or a new indicator must be set up. 
 * `update_production_folder()` can be used to update the production folder, removing outdated and adding missing files from DATERT
-* Qualcontrol 
-** Check if standardization year is the most recent
-** Check if aggregation between geographical levels is ok for sumteller and sumnevner (if in file)
+* Qualcontrol of filegroup
+** `analyze_cleanlog()` moved into qualcontrol
+** `warn_geo_99` checks if any 99-codes is found, and tell the user to scroll up to find the original codes. 
+* Qualcontrol of cube 
+** `control_censoring` checks if any value are outside the limits
+** `control_standardization` checks if standardization year is the most recent
+** `control_aggregation`, `compare_geolevels`, and `compare_bydel_kommune` checks if aggregation between geographical levels is ok for sumteller and sumnevner (if in file)
 ** Print a summary message after all checks are performed
 
 ## Bugfixes
