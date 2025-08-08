@@ -60,20 +60,19 @@ do_stata_processing <- function(dt, script, parameters){
   orgwd <- getwd()
   setwd(tmpdir)
   batchdate <- parameters$batchdate
+  use_parquet <- can_use_parquet(dt = dt)
   statafiles <- set_stata_filenames(batchdate = batchdate, tmpdir = tmpdir)
   charactercols <- names(dt)[sapply(dt, is.character)]
-  cat("\n*** Fikser kolonnenavn før stata")
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == "", " ", x)), .SDcols = charactercols] 
   statanames <- fix_column_names_pre_stata(oldnames = names(dt))
   data.table::setnames(dt, statanames)
-  cat("\n*** Skriver STATA-fil")
-  do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
-  cat("\n*** Kjører STATA-script...")
-  generate_stata_do_file(script = script, statafiles = statafiles)
+  
+  do_write_stata_file(dt = dt, statafiles = statafiles, use_parquet = use_parquet)
+  generate_stata_do_file(script = script, statafiles = statafiles, use_parquet = use_parquet)
   run_stata_script(dofile = statafiles$do, stata_exe = parameters$StataExe)
   check_stata_log_for_error(statafiles = statafiles)
-  cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
-  dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
+  dt <- do_read_stata_file(statafiles = statafiles, use_parquet = use_parquet)
+  
   charactercols <- names(dt)[sapply(dt, is.character)]
   dt[, (charactercols) := lapply(.SD, function(x) ifelse(x == " ", "", x)), .SDcols = charactercols] 
   rnames <- fix_column_names_post_stata(oldnames = names(dt))
@@ -81,16 +80,16 @@ do_stata_processing <- function(dt, script, parameters){
   return(dt)
 }
 
-
-
 #' @descriptio Delete temporary data files and reset working directory
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
   cat("\n*** Sletter midlertidige datafiler")
   gc()
-  file.remove(statafiles$parquet_in)
-  file.remove(statafiles$parquet_out)
+  for(file in c("parquet_in", "parquet_out", "dta")){
+    path <- statafiles[[file]]
+    if(file.exists(path)) file.remove(path)
+  }
   setwd(orgwd)
 }
 
@@ -100,6 +99,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
+  cat("\n*** Fikser kolonnenavn før stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -112,34 +112,101 @@ fix_column_names_pre_stata <- function(oldnames){
 
 #' @noRd
 fix_column_names_post_stata <- function(oldnames){
+  cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
   fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
   return(fixednames)
 }
 
+#' @title can_use_parquet
+#' @description
+#' If the longest value of a column contain [æøå], STATA will crop the value when reading a .parquet file, as these characters are multibyte. 
+#' This function returns TRUE if this is not the case, indicating that .parquet can be used.
+#' If the longest value of any column contain [æøå], FALSE is returned, indicating that .dta-format should be used. 
+#' @param dt data
+#' @keywords internal
+#' @noRd
+can_use_parquet <- function(dt){
+  out <- TRUE
+  i <- 1
+  while(out && i < ncol(dt)){
+    vals <- unique(dt[[i]])
+    vals <- vals[nchar(vals) == collapse::fmax(nchar(vals))]
+    if(any(grepl("[æøå]", vals))){
+      out <- FALSE
+    }
+    i <- i + 1
+  }
+  return(out)
+}
+
 #' @noRd
 set_stata_filenames <- function(batchdate, tmpdir){
   statafiles <- list()
   statafiles[["do"]] <-  file.path(tmpdir, paste0("STATAtmp_", batchdate, ".do"))
+  statafiles[["dta"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".dta"))
+  statafiles[["log"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".log"))
   statafiles[["parquet_out"]] <- file.path(tmpdir, paste0("STATAtmp_out", batchdate, ".parquet"))
   statafiles[["parquet_in"]] <- file.path(tmpdir, paste0("STATAtmp_in", batchdate, ".parquet"))
-  statafiles[["log"]] <- file.path(tmpdir, paste0("STATAtmp_", batchdate, ".log"))
   return(statafiles)
 }
 
+#' @title do_write_stata_file
+#' @description
+#' Write file to be processed by stata.
+#' If use_parquet, the statafiles$parquet_out file is written. If not, the statafiles$dta file is used.
+#' @param dt data
+#' @param statafiles list of paths
+#' @param use_parquet TRUE/FALSE
+#' @keywords internal
 #' @noRd
-generate_stata_do_file <- function(script, statafiles){
-  sink(statafiles$do)
-  cat("net install pq, from(http://fmwww.bc.edu/RePEc/bocode/p)\n") 
-  cat("pq use using ", statafiles$parquet_out, "\n", sep = "")
-  cat(script, "\n")
-  cat("pq save using ", statafiles$parquet_in, ", replace\n", sep = "")
-  sink()
+do_write_stata_file <- function(dt, statafiles, use_parquet){
+  cat("\n*** Skriver STATA-fil")
+  if(use_parquet){
+    do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
+  } else {
+    haven::write_dta(dt, statafiles$dta)
+  }
+}
+
+#' @title do_read_stata_file
+#' @description
+#' Reads in file after stata processing. If use_parquet, the statafiles$parquet_in file is read, or the statafiles$dta file is read.
+#' @param statafiles list of paths
+#' @param use_parquet TRUE/FALSE
+#' @keywords internal
+#' @noRd
+do_read_stata_file <- function(statafiles, use_parquet){
+  if(use_parquet){
+    dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
+  } else {
+    dt <- data.table::setDT(haven::read_dta(statafiles$dta))
+  }
+  return(dt)
+}
+
+#' @noRd
+generate_stata_do_file <- function(script, statafiles, use_parquet){
+  if(use_parquet){
+    sink(statafiles$do)
+    cat("net install pq, from(http://fmwww.bc.edu/RePEc/bocode/p)\n") 
+    cat("pq use using ", statafiles$parquet_out, "\n", sep = "")
+    cat(script, "\n")
+    cat("pq save using ", statafiles$parquet_in, ", replace\n", sep = "")
+    sink()
+  } else {
+    sink(statafiles$do)
+    cat("use ", statafiles$dta, "\n", sep = "")
+    cat(script, "\n")
+    cat("save ", statafiles$dta, ", replace\n", sep = "")
+    sink()
+  }
 }
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
+  cat("\n*** Kjører STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }
@@ -154,5 +221,4 @@ check_stata_log_for_error <- function(statafiles){
   }
   return(invisible(NULL))
 }
-
 
