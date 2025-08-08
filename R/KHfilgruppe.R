@@ -6,7 +6,7 @@
 #' @param write save output files? default = TRUE
 #' @param dumps list of intermediate files to save, used for debugging and development. 
 #' @export
-LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
+LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
@@ -32,8 +32,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
+  cat("\n-----\n* Alle dimensjoner og verdikolonner vasket")
   
-  cat("\n-----\n* Alle dimensjoner og verdikolonner vasket og ok")
   do_set_fg_column_order(dt = Filgruppe)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
@@ -43,14 +43,16 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list()) {
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
-  analyze_cleanlog(log = cleanlog)
+  if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
+
   cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
   cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
-  RODBC::odbcCloseAll()
   if(parameters$write) sink()
+  RODBC::odbcCloseAll()
+  if(exists(.GlobalEnv$org_geo_codes)) rm(.GlobalEnv$org_geo_codes)
 }
 
 #' @title delete_old_filegroup_log
@@ -76,26 +78,6 @@ initiate_cleanlog <- function(dt, codebooklog, parameters){
   log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
   data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
   return(log)
-}
-
-#' @title analyze_cleanlog
-#' @description
-#' Analyzes log after cleaning dimensions and values, and stops data processing 
-#' if any invalid values are found and prints a report. 
-#' @noRd
-analyze_cleanlog <- function(log){
-  ok_cols <- grep("_ok$", names(log), value = T)
-  any_not_ok <- log[rowSums(log[, .SD, .SDcols = ok_cols] == 0) > 0]
-  if(nrow(any_not_ok) == 0) return(invisible(NULL))
-  
-  not_ok_cols <- ok_cols[sapply(any_not_ok[, .SD, .SDcols = ok_cols], function(col) any(col == 0))]
-  out <- any_not_ok[, .SD, .SDcols = c("KOBLID", not_ok_cols)]
-  cat("\n***** OBS! Feil funnet\n-----")
-  cat("\nTabellen viser hvilke filer og hvilke kolonner det er funnet feil i\n-----\n")
-  print(out)
-  cat("\n-----\n")
-  warning(paste0("Kolonnene i tabellen over med verdi = 0 indikerer at det finnes ugyldige verdier. Dette må sannsynligvis ordnes i kodebok før ny kjøring.",
-                 "\nSe fullstendig logg her: ", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk")))
 }
 
 #' @keywords internal
