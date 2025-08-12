@@ -9,6 +9,7 @@
 ** Full cube files are saved as `.parquet` instead of `.rds`
 ** `do_stata_processing()` now write and read `.parquet`, unless values contains norwegian characters (due to encoding).
 ** `generate_stata_do_file()` is adapted to use the correct files. This saves much time previously spent writing and reading large `.dta`-files
+* `check_encoding()` scans character columns in filegroups looking for garbled characters indicating that files are read with wrong encoding.
 * A written log of LagFilgruppe is saved, similar to what is saved when running LagKUBE. Both files are now only saved when write = TRUE. 
 * `generate_specific_friskvik_indicators()` can be used to generate friskvik indicators without remaking the cube file. Useful if any friskvik spec is wrong or a new indicator must be set up. 
 * `update_production_folder()` can be used to update the production folder, removing outdated and adding missing files from DATERT

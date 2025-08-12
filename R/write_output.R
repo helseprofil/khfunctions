@@ -5,7 +5,7 @@
 #' @noRd
 write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
-  cat("SAVING OUTPUT FILES:\n")
+  cat("\n\n* SAVING OUTPUT FILES:\n")
   root <- getOption("khfunctions.root")
   parquet <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   nyeste <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".rds"))

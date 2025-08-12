@@ -12,7 +12,7 @@
 #' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = FALSE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = TRUE) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()

@@ -27,6 +27,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   }
   cat("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
+  check_encoding(dt = Filgruppe)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
@@ -45,14 +46,14 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  cat("-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------\n")
-  cat("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  cat("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
+  cat("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
   if(parameters$write) sink()
   RODBC::odbcCloseAll()
-  if(exists(.GlobalEnv$org_geo_codes)) rm(.GlobalEnv$org_geo_codes)
+  if(exists("org_geo_codes", envir = .GlobalEnv)) rm(.GlobalEnv$org_geo_codes)
 }
 
 #' @title delete_old_filegroup_log
@@ -97,4 +98,51 @@ remove_helper_columns <- function(dt){
   helpers <- c("LEVEL")
   helpers <- helpers[helpers %in% names(dt)]
   dt[, (helpers) := NULL]
+}
+
+#' @title check_encoding
+#' @description
+#' Scans all character columns for potential encoding issues. 
+#' Searches for `<c3><a6>`, etc., which indicates UTF-8 read by a single-byte locale.
+#' Searches for `Ã`, which indicates UTF-8 bytes were misinterpreted as Latin-1 characters.
+#'
+#' @param dt file group
+#' @returns a list of unique problematic values which indicates that a specific file should be read with different encoding
+check_encoding <- function(dt) {
+  encoding_error_pattern <- "<c3>|<c2>|<e2>|<c5>|Ã"
+  char_cols <- names(dt)[sapply(dt, is.character)]
+  setdiff(char_cols, "KOBLID")
+  errors <- list()
+  ok <- TRUE
+  
+  for (col in char_cols) {
+    if (any(grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE))) {
+      # If an error is found, store the column name and unique values
+      values <- unique(dt[[col]][grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE)])
+      koblid <- dt[get(col) %in% values, unique(KOBLID)]
+      errors[[col]] <- list(values = values, koblid = koblid)
+    }
+  }
+  
+  if (length(errors) > 0) {
+    warning("Potential encoding issues detected in the following columns.
+            The values below are examples of garbled characters.
+            The file might have been read with the wrong encoding (e.g., Latin-1 instead of UTF-8).",
+            immediate. = TRUE)
+    
+    # Print the detailed information in a readable format
+    for (col in names(errors)) {
+      message(paste0("\nColumn '", col, "' has the following values with encoding issues in files specified by koblid: "))
+      print(errors[[col]])
+    }
+    ok <- FALSE
+  } else {
+    cat("\n** Ingen encoding-problemer oppdaget")
+  }
+  
+  if(!ok){
+    choice <- utils::menu(c("Ja, fortsett", "Nei, stopp her"),
+                          title = "\nPotensielle encodingproblemer funnet, vil du fortsette?")
+    if(choice == 2) stop("Dataprosesseringen stoppet pga encodingproblematikk")
+  }
 }

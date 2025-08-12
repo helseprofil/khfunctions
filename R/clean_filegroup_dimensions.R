@@ -1,5 +1,5 @@
 clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
-  cat("\n* Starter rensing av dimensjoner...")
+  cat("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO(dt = dt, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR(dt = dt, cleanlog = cleanlog)
   do_clean_ALDER(dt = dt, parameters = parameters, cleanlog = cleanlog)
