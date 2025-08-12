@@ -103,7 +103,7 @@ fix_column_names_pre_stata <- function(oldnames){
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
-  fixednames <- gsub("[^[:alnum:]_æÆøØåÅ]", "_", fixednames, perl = TRUE)
+  fixednames <- gsub("[^[:alnum:]_\u00c6\u00d8\u00c5\u00e6\u00f8\u00e5]", "_", fixednames, perl = TRUE)
   fixednames <- gsub("^(?![a-zA-Z_])(.*)", "_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^_+$", "var", fixednames)
   fixednames <- substr(fixednames, 1, 32)
@@ -121,7 +121,8 @@ fix_column_names_post_stata <- function(oldnames){
 
 #' @title can_use_parquet
 #' @description
-#' If the longest value of a column contain [æøå], STATA will crop the value when reading a .parquet file, as these characters are multibyte. 
+#' If the longest value of a character column contain [æøå], represented by unicode sequences.
+#' STATA will crop the value when reading a .parquet file, as these characters are multibyte. 
 #' This function returns TRUE if this is not the case, indicating that .parquet can be used.
 #' If the longest value of any column contain [æøå], FALSE is returned, indicating that .dta-format should be used. 
 #' @param dt data
@@ -129,11 +130,12 @@ fix_column_names_post_stata <- function(oldnames){
 #' @noRd
 can_use_parquet <- function(dt){
   out <- TRUE
+  charcols <- names(dt)[sapply(dt, is.character)]
   i <- 1
-  while(out && i < ncol(dt)){
-    vals <- unique(dt[[i]])
+  while(out && i <= length(charcols)){
+    vals <- collapse::funique(dt[[charcols[i]]])
     vals <- vals[nchar(vals) == collapse::fmax(nchar(vals))]
-    if(any(grepl("[æøå]", vals))){
+    if(any(grepl("[\u00c6\u00d8\u00c5\u00e6\u00f8\u00e5]", vals))){
       out <- FALSE
     }
     i <- i + 1
