@@ -1,3 +1,35 @@
+# khfunctions 1.0.10 (development version)
+
+## New features
+* Implemented `.parquet`-format. 
+** Filegroups are now saved as `.parquet` instead of `.rds`.
+** `read_filegroup()` now prioritizes reading `.parquet` files
+** `read_original_file()` gains the ability to read `.parquet` files (FORMAT must be 'PARQUET'), in preparation for when orgdata produces `.parquet` files.
+** QC-files and are saved as `.parquet` (in addition to `.csv`, which will be deprecated in the future)
+** Full cube files are saved as `.parquet` instead of `.rds`
+** `do_stata_processing()` now write and read `.parquet`, unless values contains norwegian characters (due to encoding).
+** `generate_stata_do_file()` is adapted to use the correct files. This saves much time previously spent writing and reading large `.dta`-files
+* `check_encoding()` scans character columns in filegroups looking for garbled characters indicating that files are read with wrong encoding.
+* A written log of LagFilgruppe is saved, similar to what is saved when running LagKUBE. Both files are now only saved when write = TRUE. 
+* `generate_specific_friskvik_indicators()` can be used to generate friskvik indicators without remaking the cube file. Useful if any friskvik spec is wrong or a new indicator must be set up. 
+* `update_production_folder()` can be used to update the production folder, removing outdated and adding missing files from DATERT
+* Qualcontrol of filegroup
+** `analyze_cleanlog()` moved into qualcontrol
+** `warn_geo_99` checks if any 99-codes is found, and tell the user to scroll up to find the original codes. 
+* Qualcontrol of cube 
+** `control_censoring` checks if any value are outside the limits
+** `control_standardization` checks if standardization year is the most recent
+** `control_aggregation`, `compare_geolevels`, and `compare_bydel_kommune` checks if aggregation between geographical levels is ok for sumteller and sumnevner (if in file)
+** Print a summary message after all checks are performed
+
+## Bugfixes
+* `fix_column_name_pre_stata()` is no longer failing due to encoding
+* `control_censoring()` handles cases where no values were outside the limits resulting in nrow = 0
+
+## Other updates
+* Remove all use of `with = FALSE` inside data.table
+* In `LagFilgruppe`, codebooklog and cleanlog is only saved if write = TRUE
+
 # khfunctions 1.0.9
 * Fix: cube files was saved with wrong name
 

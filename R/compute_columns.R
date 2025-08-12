@@ -294,7 +294,7 @@ YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
   data.table::setnames(FGl, unlist(lapply(vals, function(x) {
     paste(x, c("", ".f", ".a"), sep = "")
   })), lvals)
-  FGl <- FGl[, c(tabkols, lvals), with = FALSE]
+  FGl <- FGl[, .SD, .SDcols = c(tabkols, lvals)]
   data.table::setkeyv(FG, tabkols)
   data.table::setkeyv(FGl, tabkols)
   return(FGl)

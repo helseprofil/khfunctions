@@ -13,10 +13,11 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   cat("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   DF <- switch(filedescription$FORMAT,
-               "XLS" = do_read_excel(filedescription = filedescription, read_arg_list = read_arg_list),
-               "XLSX" = do_read_excel(filedescription = filedescription, read_arg_list = read_arg_list),
-               "CSV" = do_read_csv(filedescription = filedescription, read_arg_list = read_arg_list),
-               "SPSS" = do_read_spss(filedescription = filedescription))
+               "PARQUET" = do_read_org_parquet(filedescription = filedescription),
+               "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),
+               "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),
+               "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list),
+               "SPSS" = do_read_org_spss(filedescription = filedescription))
   DF <- set_manheader(file = DF, manheader = filedescription$MANHEADER)
   names(DF) <- trimws(names(DF))
   names(DF)[names(DF) == ""] <- paste("C", which(names(DF) == ""), sep = "")
@@ -61,8 +62,22 @@ format_innlesarg_as_list <- function(args){
   return(arglist)
 }
 
+#' @title do_read_org_parquet
+#' @description
+#' Reads .parquet files. As orgfiles must be read as character only, read_parquet cannot be used here.
+#' @keywords internal
 #' @noRd
-do_read_spss <- function(filedescription){
+do_read_org_parquet <- function(filedescription){
+  file <- arrow::open_dataset(filedescription$filepath)
+  chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
+  file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
+  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+  do_convert_na_to_empty(file)
+  return(file)
+}
+
+#' @noRd
+do_read_org_spss <- function(filedescription){
   file <-try(foreign::read.spss(file = filedescription$filepath, use.value.labels = FALSE, max.value.labels = 0, as.data.frame = T), silent = T)
   if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
@@ -70,7 +85,7 @@ do_read_spss <- function(filedescription){
 }
 
 #' @noRd
-do_read_csv <- function(filedescription, read_arg_list){
+do_read_org_csv <- function(filedescription, read_arg_list){
   # Change encoding = "latin1" (works for read.csv) to "Latin-1" (works for fread)
   if(is_not_empty(read_arg_list$encoding) && read_arg_list$encoding == "latin1") read_arg_list$encoding <- "Latin-1"
   sep <- ifelse("sep" %in% names(read_arg_list), read_arg_list$sep, ";")
@@ -83,7 +98,7 @@ do_read_csv <- function(filedescription, read_arg_list){
 }
 
 #' @noRd
-do_read_excel <- function(filedescription, read_arg_list){
+do_read_org_excel <- function(filedescription, read_arg_list){
   sheets <- gsub("\'|\\$", "", readxl::excel_sheets(filedescription$filepath))
   sheet <- sheets[1]
   if(is_not_empty(read_arg_list$ark)){

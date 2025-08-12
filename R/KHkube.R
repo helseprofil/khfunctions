@@ -12,14 +12,14 @@
 #' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = FALSE) {
-  on.exit(lagkube_cleanup(), add = TRUE)
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = TRUE) {
+  on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
   user_args <- as.list(environment())
-  # For dev and debug: use .SetKubeParameters("NAME") and run step by step below
+  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   parameters <- get_cubeparameters(user_args = user_args)
-  sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"), paste0("KUBELOGG/", parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   load_and_format_files(parameters = parameters)
@@ -65,7 +65,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
-  if(parameters$qualcontrol) control_cube_output(dt = QC, parameters = parameters)
+  if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   cat("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
   cat("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
@@ -106,10 +106,10 @@ get_lagkube_guardfile_path <- function(){
 
 #' @keywords internal
 #' @noRd
-lagkube_cleanup <- function(){
+lagkube_cleanup <- function(parameters){
   fs::file_delete(get_lagkube_guardfile_path())
   RODBC::odbcCloseAll()
-  sink()
+  if(parameters$write) sink()
 }
 
 #' @keywords internal

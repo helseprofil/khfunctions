@@ -146,22 +146,35 @@ check_if_all_columns_exist <- function(dt, filecolumns){
 #' @param dt data
 #' @noRd
 convert_all_columns_to_character <- function(dt){
+  orgcolorder <- data.table::copy(names(dt))
   non_char_cols <- names(dt)[!sapply(dt, is.character)]
-  if(length(non_char_cols) > 0) dt[, names(.SD) := lapply(.SD, as.character), .SDcols = non_char_cols]
+  if(length(non_char_cols) > 0){
+    for(col in non_char_cols){
+      dt[, tempvar := as.character(get(col)), by = col][, (col) := NULL]
+      data.table::setnames(dt, "tempvar", col)
+    }
+  }
+  data.table::setcolorder(dt, orgcolorder)
 }
+
+# convert_to_integer_if_possible <- function(dt, cols){
+#   orgcolorder <- data.table::copy(names(dt))
+#   convert <- character()
+#   for(col in cols){
+#     if(all.equal(dt[[col]], as.integer(dt[[col]]))) convert <- c(convert, col)
+#   }
+#   if(length(convert) > 0){
+#     for(col in convert){
+#       dt[, tempvar := as.integer(get(col)), by = col]
+#       dt[, (col) := NULL]
+#       data.table::setnames(dt, "tempvar", col)
+#     }
+#   }
+#   data.table::setcolorder(dt, orgcolorder)
+# }
 
 do_convert_na_to_empty <- function(dt){
   dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
-}
-
-#' @title initiate_codebook_log
-#' @description initiates an empty codebooklog
-#' @noRd
-initiate_codebooklog <- function(nrow = 0){
-  columns <- c("KOBLID", "DELID",  "FELTTYPE", "ORG", "KBOMK", "OMK", "FREQ")
-  log <- data.table::setDT(as.list(setNames(rep(NA_character_, length(columns)), columns)))
-  if(nrow == 0) return(log[0])
-  return(log[1:nrow])
 }
 
 #' @title update_codebooklog

@@ -1,4 +1,28 @@
+# PRODUCTION ----
+
+# update_production_folder <- function(year = getOption("khfunctions.year"), prodfolder = getOption("khfunctions.kube.prod")){
+#   prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
+#   if(!dir.exists(prod)) dir.create(prod)
+#   arkiv <- file.path(prod, "arkiv")
+#   if(!dir.exists(arkiv)) dir.create(arkiv)
+#   orgprodfiles <- list.files(prod, pattern = ".csv")
+#   
+#   con <- connect_khelsa()
+#   kubestatus_ok <- read_kubestatus(con, year = year)[, filenames := paste0(KUBE_NAVN, "_", DATOTAG_KUBE, ".csv")]
+#   alltargetfiles <- kubestatus_ok[, filenames]
+#   
+#   # alltargetfiles must be a complete list, this must be fixed before this function can be activated
+#   # notwanted <- setdiff(orgprodfiles, alltargetfiles)
+#   # missing <- setdiff(alltargetfiles, orgprodfiles)
+#   # Move all notwanted into arkiv
+#   # Find all missing in DATERT folder
+# }
+
+# GODKJENT ----
+
 #' @title make_godkjent_folder
+#' @description
+#' Generate a new folder with approved friskvik indicator files
 #' @export
 make_godkjent_folder <- function(profil = c("FHP", "OVP"),
                                  geoniv = c("K", "F", "B"),
@@ -24,7 +48,7 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   do_godkjent_copy_files(filelist$found, paths)
   if(length(filelist$notfound) > 0) report_godkjent_files_notfound(filelist$notfound, year)
 }
-  
+
 #' @noRd
 read_friskvik <- function(con, profil, geoniv, year){
   friskvik_columns <- paste(c("PROFILTYPE", "INDIKATOR", "KUBE_NAVN", "MODUS", "AARGANG"), collapse = ", ")
@@ -88,8 +112,8 @@ do_godkjent_copy_files <- function(files, paths){
   fs::dir_create(paths$to)
   message("\nKopierer friskvikfiler fra csv til GODKJENT:\n")
   for(file in files){
-      fs::file_copy(file.path(paths$from, file), file.path(paths$to, file), overwrite = T)
-      message(" - ", file)
+    fs::file_copy(file.path(paths$from, file), file.path(paths$to, file), overwrite = T)
+    message(" - ", file)
   }
 }
 
@@ -101,5 +125,3 @@ report_godkjent_files_notfound <- function(notfoundfiles, year){
           "Eventuelt sjekk om friskvikfil er produsert\n",
           paste0(" - ", notfoundfiles, collapse = "\n"))
 }
-
-

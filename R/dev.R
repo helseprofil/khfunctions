@@ -1,16 +1,18 @@
-.SetKubeParameters <- function(cube){
+SetKubeParameters <- function(cube){
   user_args <<- list(name = cube,
                      year = getOption("khfunctions.year"),
                      dumps = list(),
                      write = FALSE,
                      geonaboprikk = TRUE,
-                     removebuffer = FALSE)
+                     removebuffer = FALSE, 
+                     qualcontrol = TRUE)
 }
 
-.SetFilgruppeParameters <- function(filgruppenavn){
+SetFilgruppeParameters <- function(filgruppenavn){
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
-                     dumps = list())
+                     dumps = list(), 
+                     qualcontrol = TRUE)
 }
 
 fg_get_all_read_args <- function(globs = get_global_parameters()){

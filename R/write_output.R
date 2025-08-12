@@ -1,20 +1,44 @@
 #' @title write_filegroup_output
-#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
 #' @param outfile filgruppe
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
 write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
-  cat("SAVING OUTPUT FILES:\n")
+  cat("\n\n* SAVING OUTPUT FILES:\n")
   root <- getOption("khfunctions.root")
-  nyeste <- file.path(root, getOption("khfunctions.filegroups.ny"), paste0(parameters$name, ".rds"))
-  datert <- file.path(root, getOption("khfunctions.filegroups.dat"), paste0(parameters$name, "_", parameters$batchdate, ".rds"))
-  saveRDS(dt, file = nyeste)
-  cat("\n", nyeste)
-  file.copy(from = nyeste, to = datert)
+  parquet <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
+  nyeste <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".rds"))
+  datert <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
+  do_write_parquet(dt = dt, filepath = parquet)
+  cat("\n", parquet)
+  file.copy(from = parquet, to = datert)
   cat("\n", datert)
 }
+
+#' @title do_write_parquet
+#' @description
+#' Wrapper around arrow::write_parquet which first strips away all unneccessary attributes
+#' @param dt data
+#' @param filepath filepath to save file
+#' @keywords internal
+#' @noRd
+do_write_parquet <- function(dt, filepath){
+  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
+  arrow::write_parquet(dt, sink = filepath, compression = "snappy")
+}
+
+# do_write_parquet2 <- function(dt, filepath){
+#   temppath <- tempfile(fileext = ".parquet")
+#   # Lagre filen som tempfil
+#   # les den inn igjen med ønsket skjema
+#   # lagre til ønsket sted
+#   
+#   
+#     chrschema <- arrow::schema(lapply(names(dt2), function(x) arrow::Field$create(name = x, type = arrow::string())))
+#   outtable <- arrow::Table$create(dt2, schema = chrschema)
+# }
 
 #' @title write_codebooklog
 #' @keywords internal
@@ -22,8 +46,8 @@ write_filegroup_output <- function(dt, parameters){
 write_codebooklog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
   log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "ORG", "KBOMK", "FREQ"))]
-  cat("\n* Skriver kodebok-logg til", getOption("khfunctions.filegroups.kblogg"))
-  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.kblogg"))
+  cat("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
   data.table::fwrite(log, file = file.path(path, name), sep = ";", bom = T)
@@ -34,8 +58,8 @@ write_codebooklog <- function(log, parameters){
 #' @noRd
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
-  cat("\n* Skriver filgruppesjekk til", getOption("khfunctions.filegroups.fgsjekk"))
-  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.filegroups.fgsjekk"))
+  cat("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
   data.table::fwrite(log, file = file.path(path, name), sep = ";", bom = T)
@@ -60,17 +84,18 @@ write_cube_output <- function(outputlist, parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
   name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
-  datert_R <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".rds"))
+  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
-  qc <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
+  qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
+  qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   
   cat("SAVING OUTPUT FILES:\n")
-  saveRDS(outputlist$KUBE, file = datert_R)
-  cat("\n", datert_R)
-  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
-  cat("\n", datert_csv)
-  data.table::fwrite(outputlist$QC, file = qc, sep = ";")
-  cat("\n", qc)
+  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
+  do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
+  cat("\n", datert_csv, "\n", datert_parquet)
+  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";") # QC csv format (to be deprecated)
+  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
+  cat("\n", qc_csv, "\n", qc_parquet)
 }
 
 #' @title write_access_specs

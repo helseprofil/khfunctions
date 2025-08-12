@@ -1,5 +1,5 @@
 clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
-  cat("\n* Starter rensing av dimensjoner...")
+  cat("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO(dt = dt, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR(dt = dt, cleanlog = cleanlog)
   do_clean_ALDER(dt = dt, parameters = parameters, cleanlog = cleanlog)
@@ -12,7 +12,6 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   return(dt)
 }
 
-# GEO ----
 #' @title do_clean_GEO
 #' @noRd
 do_clean_GEO <- function(dt, parameters, cleanlog){
@@ -57,6 +56,7 @@ recode_geo_from_name <- function(dt, parameters){
 set_unknown_geo_99 <- function(dt, parameters){
   unknown <- unique(dt$GEO)[!unique(dt$GEO) %in% parameters$GeoKoder$GEO]
   if(length(unknown) > 0){
+    org_geo_codes <- character()
     unknown99 <- unknown
     unknown99 <- sub("^\\d{2}$", 99, unknown99) # Ukjent fylke
     unknown99 <- gsub("^(\\d{2})\\d{2}$", paste("\\1", "99", sep = ""), unknown99) # Ukjent kommune
@@ -68,14 +68,21 @@ set_unknown_geo_99 <- function(dt, parameters){
     
     recode_valid99 <- data.table::data.table(ORGGEO = unknown[valid99_ind], RECODE = unknown99[valid99_ind])
     n_valid99 <- dt[GEO %in% recode_valid99$ORGGEO, .N]
-    if(n_valid99 > 0) cat("\n*** Setter ", n_valid99, " kjente 99-koder", sep = "")
-    dt[recode_valid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
+    if(n_valid99 > 0){
+      org_geo_codes <- c(org_geo_codes, recode_valid99$ORGGEO)
+      cat("\n*** Setter ", n_valid99, " kjente 99-koder, fra originalkode(r): ", paste(unknown[valid99_ind], collapse = ", "), sep = "")
+      dt[recode_valid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
+    }
     
     recode_invalid99 <- data.table::data.table(ORGGEO = unknown[invalid99_ind], RECODE = getOption("khfunctions.geo_illegal"))
     recode_invalid99[grepl("^\\d+$", ORGGEO), RECODE := sapply(nchar(ORGGEO), function(x) paste0(rep(9, x), collapse = ""))]
     n_invalid99 <- dt[GEO %in% recode_invalid99[RECODE != getOption("khfunctions.geo_illegal"), ORGGEO], .N]
-    if(n_invalid99 > 0) cat("\n*** Setter ", n_invalid99, " helt ukjente 99-koder", sep = "")
-    dt[recode_invalid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
+    if(n_invalid99 > 0){
+      org_geo_codes <- c(org_geo_codes, recode_invalid99$ORGGEO)
+      cat("\n*** Setter ", n_invalid99, " helt ukjente 99-koder, fra originalkode(r): ", paste(unknown[invalid99_ind], collapse = ", "), sep = "")
+      dt[recode_invalid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
+    }
+    org_geo_codes <<- org_geo_codes
   }
 }
 

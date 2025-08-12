@@ -113,8 +113,8 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
   data.table::setkeyv(RD1$FULL, omktabs)
   data.table::setkeyv(RD2$FULL, omktabs)
-  Dekk1 <- unique(RD1$FULL[, omktabs, with = FALSE])
-  Dekk2 <- unique(RD2$FULL[, omktabs, with = FALSE])
+  Dekk1 <- unique(RD1$FULL[, ..omktabs])
+  Dekk2 <- unique(RD2$FULL[, ..omktabs])
   Dekk12 <- Dekk1[Dekk2, nomatch = 0]
   data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
   FDes <- find_filedesign(Dekk12, parameters = parameters)
