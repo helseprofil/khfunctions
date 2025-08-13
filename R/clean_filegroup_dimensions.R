@@ -180,8 +180,8 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
   
   alderint <- c("ALDERl", "ALDERh")
   dt[, (alderint) := data.table::tstrsplit(ALDER, "_")]
-  dt[ALDERl > ALDERh, let(ALDER = getOption("khfunctions.alder_illegal"))]
-  dt[ALDERl > ALDERh, (alderint) := data.table::tstrsplit(getOption("khfunctions.alder_illegal"), "_")]
+  dt[as.integer(ALDERl) > as.integer(ALDERh), let(ALDER = getOption("khfunctions.alder_illegal"))]
+  dt[as.integer(ALDERl) > as.integer(ALDERh), (alderint) := data.table::tstrsplit(getOption("khfunctions.alder_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
   dt[, let(ALDER = NULL)]
 }

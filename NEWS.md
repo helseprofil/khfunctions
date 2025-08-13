@@ -1,3 +1,8 @@
+# khfunctions 1.0.11
+
+## Bugfix
+* Fixed problem in `do_clean_ALDER` where checks for ALDERl > ALDERh was performed on character columns, not numeric.
+
 # khfunctions 1.0.10 (development version)
 
 ## New features
