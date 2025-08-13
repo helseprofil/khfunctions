@@ -1,3 +1,8 @@
+# khfunctions (development version)
+
+# Other changes
+* Improved reporting on 99-codes in `LagFilgruppe`
+
 # khfunctions 1.0.11
 
 ## Bugfix
