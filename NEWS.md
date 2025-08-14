@@ -3,6 +3,9 @@
 ## New features
 * In `LagKUBE()`, moved Rsynt SLUTTREDIGER to after POSTPROSESS
 
+## Bugfix
+* In compute_new_value_from_formula(), the .n column is now set to the maximum of the included .n-columns. Previously it was set to 1. 
+
 # Other changes
 * Improved reporting on 99-codes in `LagFilgruppe`
 

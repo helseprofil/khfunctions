@@ -24,7 +24,8 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
     dt[, paste0(name, ".a") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".a")]
     
     if(post_moving_average){
-      dt[, (paste0(name, c(".n", ".fn1", ".fn3", ".fn9"))) := list(1,0,0,0)]
+      dt[, paste0(name, ".n") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".n")]
+      dt[, (paste0(name, c(".fn1", ".fn3", ".fn9"))) := list(0,0,0)]
     }  
     dt[is.na(get(name)) | is.infinite(get(name)) | is.nan(get(name)), (paste0(name, c("", ".f"))) := list(NA, 2)]
   }
