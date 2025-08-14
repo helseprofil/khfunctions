@@ -1,5 +1,8 @@
 # khfunctions (development version)
 
+## New features
+* In `LagKUBE()`, moved Rsynt SLUTTREDIGER to after POSTPROSESS
+
 # Other changes
 * Improved reporting on 99-codes in `LagFilgruppe`
 
