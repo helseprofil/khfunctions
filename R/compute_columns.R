@@ -31,6 +31,22 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   }
 }
 
+add_crude_rate <- function(dt, parameters){
+  if(!"NEVNER" %in% names(dt)){
+    cat("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+    return(invisible(NULL))
+  } 
+  
+  dt[, let(RATE = TELLER/NEVNER,
+           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
+           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
+           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  
+  if(parameters$MOVAVparameters$is_movav){
+    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
+  }
+}
+
 #' @title compute_new_value_from_strata_sum
 #' @description
 #' WIP: replacement for LeggTilSumFraRader()

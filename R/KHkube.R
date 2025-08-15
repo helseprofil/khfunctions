@@ -30,10 +30,11 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   TNF <- merge_teller_nevner(parameters = parameters)
   KUBE <- TNF$TNF
-  if(parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = KUBE, formulas = "RATE={TELLER/NEVNER}", post_moving_average = FALSE)
+  # if(parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = KUBE, formulas = "RATE={TELLER/NEVNER}", post_moving_average = FALSE)
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  KUBE <- aggregate_to_periods(dt = KUBE, reset_rate = TRUE, parameters = parameters)
+  KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
+  add_crude_rate(dt = KUBE, parameters = parameters)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
   KUBE <- add_predteller(dt = KUBE, parameters = parameters)

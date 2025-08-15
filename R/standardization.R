@@ -22,6 +22,7 @@ add_predteller <- function(dt, parameters){
   cat("\n* Merger PREDTELLER med KUBE\n** Før merge dim:", dim(dt))
   tabcols <- get_dimension_columns(names(dt))
   dt <- collapse::join(dt, predteller, how = "l", on = tabcols, overid = 2, verbose = 0)
+  dt[, PREDTELLER.n := TELLER.n]
   cat("\n** Etter merge dim:", dim(dt))
   
   dt <- set_implicit_null_after_merge(dt, parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
@@ -93,8 +94,15 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @noRd
 estimate_predrate <- function(design, parameters){
   cat("\n* Estimerer PREDRATE...")
+  missyears <- parameters$MOVAVparameters$missyears
   predrate <- merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)$TNF
-  predrate <- aggregate_to_periods(dt = predrate, reset_rate = FALSE, parameters = parameters)
+  if(missyears$n > 0 && any(missyears$years %in% unique(predrate$AARl))){
+    problem <- intersect(missyears$years, unique(predrate$AARl))
+    warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 
+            "\n*** Dette vil påvirke landsraten i standardiseringsperioden!\n--\n", immediate. = TRUE)
+    predrate <- predrate[!AARl %in% missyears$years]
+  }
+  predrate <- aggregate_to_periods(dt = predrate, parameters = parameters)
   predrate[, (parameters$PredFilter$Predfiltercolumns) := NULL]
   predrate[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
   predrate[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
@@ -113,7 +121,7 @@ estimate_predrate <- function(design, parameters){
 #' @noRd
 estimate_prednevner <- function(design, parameters){
   cat("\n* Estimerer PREDNEVNER...")
-  # PNrd <- FinnRedesign(fradesign = parameters$filedesign[[parameters$files$PREDNEVNER]], tildesign = design, parameters = parameters)
+  missyears <- parameters$MOVAVparameters$missyears
   redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
   prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
   prednevner <- do_filter_and_recode_to_redesign(dt = prednevner, redesign = redesign, parameters = parameters)
@@ -122,7 +130,8 @@ estimate_prednevner <- function(design, parameters){
   PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(prednevner))
   data.table::setnames(prednevner, names(prednevner), PNnames)
   prednevner <- prednevner[, .SD, .SDcols = c(get_dimension_columns(names(prednevner)), grep("^PREDNEVNER", names(prednevner), value= T))]
-  prednevner <- aggregate_to_periods(dt = prednevner, reset_rate = FALSE, parameters = parameters)
+  if(missyears$n > 0) prednevner <- prednevner[!AARl %in% missyears$years]
+  prednevner <- aggregate_to_periods(dt = prednevner, parameters = parameters)
   return(prednevner)
 }
 
@@ -147,7 +156,7 @@ estimate_predteller <- function(predrate, prednevner, parameters){
   cubedesign <- list(Part = parameters$CUBEdesign)
   redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
   predteller <- do_filter_and_recode_to_redesign(dt = predteller, redesign = redesign, parameters = parameters)
-  predteller[, PREDTELLER.n := parameters$MOVAVparameters$movav]
+  # predteller[, PREDTELLER.n := TELLER.n]
   return(predteller)
 }
 

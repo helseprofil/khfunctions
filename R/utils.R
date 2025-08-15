@@ -24,7 +24,7 @@ get_value_columns <- function(columnnames, full = FALSE) {
 #' @keywords internal
 #' @noRd
 get_dimension_columns <- function(columnnames) {
-  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW")
+  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear")
   return(setdiff(columnnames, nodim))
 }
 
