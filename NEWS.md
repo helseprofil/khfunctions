@@ -1,12 +1,13 @@
-# khfunctions 1.0.12
+# khfunctions 1.0.12 (2025-08-05)
 
 ## New features
 * In `LagKUBE()`, moved Rsynt SLUTTREDIGER to after POSTPROSESS
 * `add_crude_rate()` calculates crude RATE and helper columns, replacing compute_new_value_from_formula. 
+* `control_meis_rate()` added to cube quality control, reports min/max of the MEIS/RATE ratio.
 
 ## Bugfix
 * In `compute_new_value_from_formula()`, the .n column is now set to the maximum of the included .n-columns. Previously it was set to 1. 
-* In `estimate_prednevner()`, missing years are filtered out, to ensure match between observed and predicted teller. Otherwise, MEIS was not correct.
+* In `estimate_prednevner()`, missing years are filtered out to ensure match between observed and predicted teller. Otherwise, MEIS was not correct.
 
 # Other changes
 * Improved reporting on 99-codes in `LagFilgruppe`
