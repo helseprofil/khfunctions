@@ -6,7 +6,7 @@ control_cube_output <- function(outputlist, parameters){
   all_checks <- c(all_checks, control_censoring(dt = outputlist$QC, parameters = parameters))
   all_checks <- c(all_checks, control_standardization(dt = outputlist$ALLVIS, parameters = parameters))
   all_checks <- c(all_checks, control_aggregation(dt = outputlist$KUBE))
-  
+  control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   if(sum(all_checks) == 0){
     cat("\n\n---\n* Alle sjekker passert!\n---\n")
   } else {
@@ -123,6 +123,8 @@ compare_geolevels <- function(dt, overcat, undercat, nevner){
   return(0)
 }
 
+#' @keywords internal
+#' @noRd
 compare_kommune_bydel <- function(dt, nevner){
   if(!all(c("B", "K") %in% unique(dt$GEOniv))) return(0)
   byer <- c("0301", "1103", "4601", "5001")
@@ -133,3 +135,12 @@ compare_kommune_bydel <- function(dt, nevner){
   return(out)
 }
 
+#' @keywords internal
+#' @noRd
+control_meis_rate <- function(dt, parameters){
+  cat("\n\n* Sjekker forholdet mellom MEIS og RATE")
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
+  cols <- c("MEIS", "RATE")
+  d <- dt[, .SD, .SDcols = cols][, ratio := round(MEIS/RATE, 3)]
+  cat("\n** MEIS/RATE varierer fra", min(d$ratio, na.rm = T), "til", max(d$ratio, na.rm = T))
+}

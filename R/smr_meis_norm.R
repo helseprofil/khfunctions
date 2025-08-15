@@ -9,10 +9,10 @@ add_smr_and_meis <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 calculate_smr_and_meis <- function(dt, parameters){
-  dt[, let(SMR = NA_real_, MEIS = MALTALL)]
   if(parameters$CUBEinformation$REFVERDI_VP == "P"){
     dt[, let(SMR = sumTELLER / sumPREDTELLER * 100,
              MEIS = sumTELLER / sumPREDTELLER * MEISskala)]
+    dt[sumPREDTELLER == 0, let(SMR = NA, MEIS = NA)]
   }
   return(dt)
 }

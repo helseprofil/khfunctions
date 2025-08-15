@@ -30,10 +30,11 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   TNF <- merge_teller_nevner(parameters = parameters)
   KUBE <- TNF$TNF
-  if(parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = KUBE, formulas = "RATE={TELLER/NEVNER}", post_moving_average = FALSE)
+  # if(parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = KUBE, formulas = "RATE={TELLER/NEVNER}", post_moving_average = FALSE)
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  KUBE <- aggregate_to_periods(dt = KUBE, reset_rate = TRUE, parameters = parameters)
+  KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
+  add_crude_rate(dt = KUBE, parameters = parameters)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
   KUBE <- add_predteller(dt = KUBE, parameters = parameters)
@@ -42,8 +43,6 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
   KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
 
-  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
-  
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
   KUBE <- add_smr_and_meis(dt = KUBE, parameters = parameters)
@@ -56,6 +55,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
   KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
+  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues)

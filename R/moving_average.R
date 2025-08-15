@@ -9,6 +9,7 @@ get_movav_information <- function(dt, parameters){
   mapar[["is_orig_snitt"]] <- !is.na(mapar$snitt) && mapar$snitt != 0
   snitt_orgintmult <- ifelse(mapar$is_orig_snitt, mapar$int_lengde, 1)
   mapar[["orgintMult"]] <- ifelse(mapar$is_movav, 1, snitt_orgintmult)
+  mapar[["missyears"]] <- find_missing_year(unique(dt$AARl))
   return(mapar)
 }
 
@@ -25,7 +26,7 @@ get_movav_information <- function(dt, parameters){
 #' @param dt KUBE to be aggregated 
 #' @param reset_rate Reset RATE after aggregating to periods?
 #' @param parameters cube parameters
-aggregate_to_periods <- function(dt, reset_rate = TRUE, parameters){
+aggregate_to_periods <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "MOVAVpre", dt = dt, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = dt, parameters = parameters)}, add = TRUE)
   dt <- do_balance_missing_teller_nevner(dt = dt)
@@ -33,7 +34,7 @@ aggregate_to_periods <- function(dt, reset_rate = TRUE, parameters){
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods(dt = dt, parameters = parameters)
     dt <- do_filter_periods_with_missing_original(dt)
-    if(reset_rate && parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = dt, formulas = "RATE={TELLER/NEVNER}", post_moving_average = TRUE)
+    # if(reset_rate && parameters$TNPinformation$NEVNERKOL != "-") compute_new_value_from_formula(dt = dt, formulas = "RATE={TELLER/NEVNER}", post_moving_average = TRUE)
   } else {
     dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }
@@ -77,8 +78,7 @@ do_balance_missing_teller_nevner <- function(dt){
 do_aggregate_periods <- function(dt, parameters){
   period = parameters$MOVAVparameters$movav
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
-  n_missing_year <- find_missing_year(aarl = parameters$MOVAVparameters$aar$AARl)
-  aggregated_dt <- calculate_period_sums(dt = dt, period = period, n_missing_year = n_missing_year)
+  aggregated_dt <- calculate_period_sums(dt = dt, period = period, missing_year = parameters$MOVAVparameters$missyears)
   return(aggregated_dt)
 }
 
@@ -87,15 +87,15 @@ do_aggregate_periods <- function(dt, parameters){
 find_missing_year <- function(aarl){
   aarl_min_max <- min(aarl):max(aarl)
   aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
-  if(length(aarl_missing) > 0) cat("Setter rullende gjennomsnitt, mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
-  return(length(aarl_missing))
+  if(length(aarl_missing) > 0) cat("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
+  return(list(n = length(aarl_missing), years = aarl_missing))
 }
 
 #' @title calculate_period_sums
 #' @description
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
 #' @noRd
-calculate_period_sums <- function(dt, period, n_missing_year){
+calculate_period_sums <- function(dt, period, missing_year){
   cat("\n* Aggregerer til ", period, "-årige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
   dt <- extend_to_periods(dt = dt, periods = allperiods)
@@ -122,8 +122,11 @@ calculate_period_sums <- function(dt, period, n_missing_year){
   aggdt[, (paste0(values, ".f")) := 0]
   data.table::setcolorder(aggdt, colorder)
   
-  if(n_missing_year <= period){
-    for(val in values) aggdt[aggdt[[paste0(val, ".fn9")]] > n_missing_year, (c(val, paste0(val, ".f"))) := list(NA, 9)]
+  # add_n_missing_year(dt = aggdt, periods = allperiods, missing_year = missing_year)
+  # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1.
+  # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
+  if(missing_year$n <= period){
+    for(val in values) aggdt[aggdt[[paste0(val, ".fn9")]] > missing_year$n, (c(val, paste0(val, ".f"))) := list(NA, 9)]
   }
   
   f9s <- names(aggdt)[grepl(".f9$", names(aggdt))]
@@ -148,6 +151,14 @@ extend_to_periods <- function(dt, periods){
   }
   return(out)
 }
+
+# add_n_missing_year <- function(dt, periods, missing_year){
+#   periods[, missyear := 0]
+#   for(i in 1:nrow(periods)){
+#     periods[i, missyear := sum(missing_year$years %in% aarl:aarh)]
+#   }
+#   dt[periods, on = c("AARl" = "aarl"), missyear := i.missyear]
+# }
 
 #' @title handle_indata_periods
 #' @description

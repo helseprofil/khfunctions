@@ -33,7 +33,12 @@ analyze_cleanlog <- function(log){
 warn_geo_99 <- function(dt){
   any99 <- dt[grepl("99$", GEO), .N]
   if(any99 > 0){
-    cat("\n**", any99, "99-koder funnet, kodet om fra følgende originalkode(r):", paste(.GlobalEnv$org_geo_codes, collapse = ", "))
+    cat("\n**", any99, "99-koder funnet. ")
+    if(exists("org_geo_codes", envir = .GlobalEnv)){
+      cat("Disse kan være 99 originalt, men er også omkodet fra følgende originalkode(r):", paste(.GlobalEnv$org_geo_codes, collapse = ", "))
+    } else {
+      cat("Disse er ikke omkodet, og har vært 99 originalt.")
+    }
   } else {
     cat("\n** Ingen 99-koder funnet, OK!")
   }

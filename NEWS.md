@@ -1,9 +1,23 @@
-# khfunctions 1.0.11
+# khfunctions 1.0.12 (2025-08-15)
+
+## New features
+* In `LagKUBE()`, moved Rsynt SLUTTREDIGER to after POSTPROSESS
+* `add_crude_rate()` calculates crude RATE and helper columns, replacing compute_new_value_from_formula. 
+* `control_meis_rate()` added to cube quality control, reports min/max of the MEIS/RATE ratio.
+
+## Bugfix
+* In `compute_new_value_from_formula()`, the .n column is now set to the maximum of the included .n-columns. Previously it was set to 1. 
+* In `estimate_prednevner()`, missing years are filtered out to ensure match between observed and predicted teller. Otherwise, MEIS was not correct.
+
+# Other changes
+* Improved reporting on 99-codes in `LagFilgruppe`
+
+# khfunctions 1.0.11 (2025-08-13)
 
 ## Bugfix
 * Fixed problem in `do_clean_ALDER` where checks for ALDERl > ALDERh was performed on character columns, not numeric.
 
-# khfunctions 1.0.10 (development version)
+# khfunctions 1.0.10 (2025-08-12)
 
 ## New features
 * Implemented `.parquet`-format. 
@@ -35,40 +49,40 @@
 * Remove all use of `with = FALSE` inside data.table
 * In `LagFilgruppe`, codebooklog and cleanlog is only saved if write = TRUE
 
-# khfunctions 1.0.9
+# khfunctions 1.0.9 (2025-07-02)
 * Fix: cube files was saved with wrong name
 
-# khfunctions 1.0.8
+# khfunctions 1.0.8 (2025-06-26)
 
 * Fixed do_reshape_var when measure.var is not provided and should be all non-id-columns
 * Added Censor_type to parameters
 * Started implementing qualcontrol in LagKUBE, set to inactive until done
 
-# khfunctions 1.0.7
+# khfunctions 1.0.7 (2025-06-24)
 * Critical bugfix in set_recode_filter_filfiltre() when a cube use > 1 FILFILTRE
 * Reactivated FF_RSYNT1 making it possible to add custom R code to a filefilter
 
-# khfunctions 1.0.6
+# khfunctions 1.0.6 (2025-06-23)
 * Critical bugfix when fixing column names pre and post stata handling
 * Added parameter `removebuffer` to LagKUBE, to disable removing of original files during processing. This is useful for dev work, and will be necessary when implementing KUBEFAMILIE which is using the same files.
 
-# khfunctions 1.0.5
+# khfunctions 1.0.5 (2025-06-20)
 * Implemented function `fix_befgk_spelling()` to handle problem with inconsistent spelling of BEF_GK[..], which sometimes appears as BEF_Gk.
 * Fixed bugs in LagFilgruppe where illegal values for INNVKAT was corrected, and illegal values for ALDER was mixed up with AAR. 
 * `analyze_cleanlog()` now only gives a warning if illegal values are found. 
 * Fixed bug when converting column names before STATA export
 
-# khfunctions 1.0.4
+# khfunctions 1.0.4 (2025-06-19)
 * Fixed bugs in setting SPVFLAGG
 * Fixed bugs in friskvik and write_cube_output
 * Fixed bug in year-filter when loading filegroups 
 * Ignore case in KUBER::REFVERDI, allowing both siste and SISTE
 
-# khfunctions 1.0.1
+# khfunctions 1.0.1 (2025-06-17)
 * Fixed predictionfilter to make sure last period is always used for moving averages, and GEOniv=='L' is added if missing in REFVERDI
 * Fix auto-update function
 
-# khfunctions 1.0.0
+# khfunctions 1.0.0 (2025-06-16)
 
 ## Summary of changes overall
 
