@@ -35,6 +35,6 @@ Suggests:
     testthat (>= 3.0.0),
     utils
 Remotes:
-    helseprofil/qualcontrol
+    helseprofil/qualcontrol,
     helseprofil/orgdata
 Config/testthat/edition: 3
