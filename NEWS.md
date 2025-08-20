@@ -1,3 +1,10 @@
+# khfunctions 1.0.13
+- `compute_new_value_from_row_sum()` replaces `LeggTilSumFraRader()`. Fixed bug when too many columns were added, causing problems when aggregating the file. 
+
+## Bugfix
+- NORM correctly renamed when MALTALL is not TELLER or RATE
+- Quality control of CUBE failed when all sumTELLER or sumNEVNER was missing
+
 # khfunctions 1.0.12 (2025-08-15)
 
 ## New features
