@@ -139,7 +139,14 @@ compare_kommune_bydel <- function(dt){
 control_meis_rate <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
   cat("\n\n* Sjekker forholdet mellom MEIS og RATE")
-  cols <- c("MEIS", "RATE")
-  d <- dt[, .SD, .SDcols = cols][, ratio := round(MEIS/RATE, 3)]
-  cat("\n** MEIS/RATE varierer fra", min(d$ratio, na.rm = T), "til", max(d$ratio, na.rm = T))
+  cols <- c("GEO", "AAR", "MEIS", "RATE")
+  d <- dt[!is.na(MEIS), .SD, .SDcols = cols]
+  d[, let(diff = round(MEIS - RATE, 2), `ratio, %` = round(100*MEIS/RATE, 2))]
+  cat("\n\n** Diff og ratio (%) på landsnivå per år:\n\n")
+  d_country <- d[GEO == 0]
+  print(d_country, nrows = nrow(d_country))
+  
+  cat("\n\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
+  d <- d[GEO != 0]
+  print(d[order(`ratio, %`, decreasing = T)][c(1:5, seq(nrow(d)-4, nrow(d)))])
 }

@@ -1,5 +1,8 @@
 # khfunctions 1.0.13
+
+## New features
 - `compute_new_value_from_row_sum()` replaces `LeggTilSumFraRader()`. Fixed bug when too many columns were added, causing problems when aggregating the file. 
+- `control_meis_rate()` now outputs all diffs on country level, as well as top 5 diffs in both directions.
 
 ## Bugfix
 - NORM correctly renamed when MALTALL is not TELLER or RATE
