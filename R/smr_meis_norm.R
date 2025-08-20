@@ -64,7 +64,7 @@ format_normsubset <- function(dt, parameters){
     data.table::setnames(dt, c(paste0(maltall, c("", ".f", ".a", ".n")), "SMRtmp"), c(paste0("NORM", c("", ".f", ".a", ".n")), "NORMSMR"))
     dt <- dt[, c(..outcols, paste0("NORM", c("", ".f", ".a", ".n")), "NORMSMR")]
   } else {
-    data.table::setnames(VF, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
+    data.table::setnames(dt, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
     dt <- dt[, c(..outcols, "NORM", "NORMSMR")]
   }
   return(dt)

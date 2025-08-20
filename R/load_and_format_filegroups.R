@@ -112,7 +112,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     }
     
     isnyekolrad <- grepl("\\S", filefilter$NYEKOL_RAD)
-    if(isnyekolrad) FIL <- LeggTilSumFraRader(dt = FIL, NYdscr = filefilter$NYEKOL_RAD, FGP = fileinfo, parameters = parameters)
+    if(isnyekolrad) FIL <- compute_new_value_from_row_sum(dt = FIL, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
     
     isnykolsmerge <- grepl("\\S", filefilter$NYKOLSmerge)
     if(isnykolsmerge){
