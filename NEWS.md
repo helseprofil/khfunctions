@@ -8,6 +8,9 @@
 - NORM correctly renamed when MALTALL is not TELLER or RATE
 - Quality control of CUBE failed when all sumTELLER or sumNEVNER was missing
 
+## Other changes
+- Added qualcontrol and orgdata to remotes in description
+
 # khfunctions 1.0.12 (2025-08-15)
 
 ## New features

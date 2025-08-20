@@ -27,10 +27,14 @@ Imports:
     data.table (>= 1.17.2),
     stringi (>= 1.8.7),
     beepr (>= 2.0),
-    arrow
+    arrow,
+    qualcontrol,
+    remotes
 Suggests: 
     methods,
-    remotes,
     testthat (>= 3.0.0),
     utils
+Remotes:
+    helseprofil/qualcontrol
+    helseprofil/orgdata
 Config/testthat/edition: 3

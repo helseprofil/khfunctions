@@ -139,8 +139,15 @@ compare_kommune_bydel <- function(dt){
 control_meis_rate <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
   cat("\n\n* Sjekker forholdet mellom MEIS og RATE")
-  cols <- c("GEO", "AAR", "MEIS", "RATE")
+  cols <- c(parameters$outdimensions, "MEIS", "RATE")
   d <- dt[!is.na(MEIS), .SD, .SDcols = cols]
+  
+  for(dim in setdiff(parameters$outdimensions, c("GEO", "AAR"))){
+    tot <- qualcontrol:::find_total(cube = d, dim = dim)
+    if(!is.na(tot)) d <- d[get(dim) == tot]
+    if(!is.na(tot) | length(unique(d[[dim]])) == 1) d[, names(.SD) := NULL, .SDcols = dim]
+  }
+
   d[, let(diff = round(MEIS - RATE, 2), `ratio, %` = round(100*MEIS/RATE, 2))]
   cat("\n\n** Diff og ratio (%) på landsnivå per år:\n\n")
   d_country <- d[GEO == 0]
