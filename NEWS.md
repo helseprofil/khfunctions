@@ -1,4 +1,4 @@
-# khfunctions 1.0.13
+# khfunctions 1.0.13 (2025-08-20)
 
 ## New features
 - `compute_new_value_from_row_sum()` replaces `LeggTilSumFraRader()`. Fixed bug when too many columns were added, causing problems when aggregating the file. 
