@@ -29,7 +29,8 @@ Imports:
     beepr (>= 2.0),
     arrow,
     qualcontrol,
-    remotes
+    remotes,
+    dplyr
 Suggests: 
     methods,
     testthat (>= 3.0.0),

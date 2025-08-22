@@ -6,14 +6,20 @@
 write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
   cat("\n\n* SAVING OUTPUT FILES:\n")
-  root <- getOption("khfunctions.root")
-  parquet <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
-  nyeste <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".rds"))
-  datert <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  do_write_parquet(dt = dt, filepath = parquet)
-  cat("\n", parquet)
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
+  datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
+  remove_attributes_for_parquet(dt = dt)
+  cat("\n", parquet,"\n", datert)
+  arrow::write_parquet(dt = dt, sink = parquet, compression = "lz4")
   file.copy(from = parquet, to = datert)
-  cat("\n", datert)
+  if(parameters$name == "BEF_GKny"){
+    cat("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv")
+    aargeo <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, "_aar_geo"))
+    geoaar <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, "_geo_aar"))
+    arrow::write_dataset(dt, path = aargeo, format = "parquet", partitioning = c("AARl", "GEOniv"), compression = "lz4")
+    arrow::write_dataset(dt, path = geoaar, format = "parquet", partitioning = c("AARl", "GEOniv"), compression = "lz4")
+  }
 }
 
 #' @title do_write_parquet
@@ -24,9 +30,13 @@ write_filegroup_output <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_write_parquet <- function(dt, filepath){
+  remove_attributes_for_parquet(dt)
+  arrow::write_parquet(dt, sink = filepath, compression = "lz4")
+}
+
+remove_attributes_for_parquet <- function(dt){
   attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
   for(att in attremove) data.table::setattr(dt, att, NULL)
-  arrow::write_parquet(dt, sink = filepath, compression = "snappy")
 }
 
 # do_write_parquet2 <- function(dt, filepath){

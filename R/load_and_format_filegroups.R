@@ -78,18 +78,20 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   filter <- paste0(c(filter, alderfilter, yearfilter), collapse = " & ")
   isfilter <- is_not_empty(filter)
   fileinfo <- parameters$fileinformation[[filegroup]]
-  orgfile <- ifelse(isfilefilter, filefilter$ORGFIL, filegroup)
   
-  FIL <- read_filegroup(orgfile)
-  if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
  
   if(!isfilefilter){
+    FIL <- read_filegroup(filegroup = filegroup)
+    if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
     FIL <- do_harmonize_geo(file = FIL, vals = fileinfo$vals, rectangularize = FALSE, parameters = parameters)
     .GlobalEnv$BUFFER[[filegroup]] <- FIL
     return(invisible(NULL))
   } 
   
   if(isfilefilter){
+    FIL <- read_filegroup_with_filefilter(filegroup = filegroup, filefilter = filefilter)
+    if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
+    
     iskollapsdel <- grepl("\\S", filefilter$KOLLAPSdeler)
     if(iskollapsdel) FIL <- do_filfiltre_kollapsdeler(file = FIL, parts = filefilter$KOLLAPSdeler, parameters = parameters)
     
@@ -186,6 +188,49 @@ read_filegroup <- function(filegroup){
   set_integer_columns(dt = dt)
   cat("\n** Lest inn fil: ", file)
   return(dt)
+}
+
+read_filegroup_with_filefilter <- function(filegroup, filefilter = NULL){
+  if(is.null(filefilter)){
+    con <- connect_khelsa()
+    on.exit(RODBC::odbcCloseAll())
+    filefilter <- data.table::setDT(RODBC::sqlQuery(con, paste0("SELECT * FROM FILFILTRE WHERE FILVERSJON='", filegroup, "'")))
+  }
+  orgfile <- filefilter$ORGFIL
+  filepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
+  is_parquet <- file.exists(filepath)
+  is_filter_geo <-  is_not_empty(filefilter$GEOniv)
+  is_filter_aar <- is_not_empty(filefilter$AAR_START) && filefilter$AAR_START != 0
+  if(!is_parquet || (!is_filter_aar && !is_filter_geo)){
+    dt <- read_filegroup(filegroup = orgfile)
+    return(dt)
+  }
+  
+  cat("\n** Filtrerer filen på AAR_START og GEOniv slik det er angitt i ACCESS::FILFILTRE")
+  filter <- set_filefilter_filter(filefilter = filefilter, aar = is_filter_aar, geo = is_filter_geo)
+  file <- arrow::open_dataset(filepath)
+  dt <- file |> dplyr::filter(!!rlang::parse_expr(filter)) |> dplyr::collect()
+  data.table::setDT(dt)
+  
+  delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
+  dt[, (delcols) := NULL]
+  set_integer_columns(dt = dt)
+  cat("\n** Lest inn fil: ", file)
+  return(dt)
+}
+
+set_filefilter_filter <- function(filefilter, aar, geo){
+  aarfilter <- geofilter <- NULL
+  if(aar) aarfilter <- paste("AARl >=", filefilter$AAR_START)
+  if(geo){
+    geos <- unlist(strsplit(filefilter$GEOniv, ","))
+    geofilter <- ifelse(length(geos) == 1,
+                        paste0("GEOniv == \"", geos, "\""),
+                        paste0("GEOniv %in% ", strsplit(filefilter$GEOniv, ",")))
+  }
+  
+  filterstr <- paste0(c(aarfilter, geofilter), collapse = " & ")  
+  return(filterstr)
 }
 
 #' @title fetch_filegroup_from_buffer

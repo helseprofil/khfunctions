@@ -1,5 +1,9 @@
 # khfunctions 1.0.14
 
+# New features
+* Filegroup BEF_GKny is stored in a partitioned format, both in terms of year and geoniv. This facilitates faster read times when using only part of the file, which can be set up in filfiltre.
+* load_filegroup_to_buffer will use a specific function to read files with filfiltre set (WIP)
+
 # Bugfix
 * Fixed code to delete org_geo_codes from Global Environment in `lagfilgruppe_cleanup()`
 
