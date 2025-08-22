@@ -53,16 +53,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
 lagfilgruppe_cleanup <- function(parameters){
   if(parameters$write) sink()
   RODBC::odbcCloseAll()
-  if(exists("org_geo_codes", envir = .GlobalEnv)) rm(.GlobalEnv$org_geo_codes)
-}
-
-#' @title delete_old_filegroup_log
-#' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
-#' @noRd
-delete_old_filegroup_log <- function(filegroup, parameters){
-  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
-  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
-  return(invisible(NULL))
+  if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
 }
 
 #' @title initiate_cleanlog

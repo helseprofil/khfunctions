@@ -4185,3 +4185,12 @@ LeggTilSumFraRader <- function(dt, NYdscr, FGP = list(amin = 0, amax = 120), par
   }
   return(dt)
 }
+
+#' @title delete_old_filegroup_log
+#' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
+#' @noRd
+delete_old_filegroup_log <- function(filegroup, parameters){
+  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
+  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
+  return(invisible(NULL))
+}

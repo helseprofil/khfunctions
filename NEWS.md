@@ -1,3 +1,8 @@
+# khfunctions 1.0.14
+
+# Bugfix
+* Fixed code to delete org_geo_codes from Global Environment in `lagfilgruppe_cleanup()`
+
 # khfunctions 1.0.13 (2025-08-20)
 
 ## New features
