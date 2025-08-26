@@ -5,11 +5,11 @@
 #' @param design Design list
 merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    cat("\n* Merger standardteller- og standardnevnerfil\n")
+    cat("\n\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    cat("\n* Merger teller- og nevnerfil\n")
+    cat("\n\n* Merger teller- og nevnerfil\n")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }

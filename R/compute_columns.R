@@ -13,6 +13,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
+    cat("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()

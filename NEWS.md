@@ -1,11 +1,15 @@
-# khfunctions 1.0.14
+# khfunctions 1.0.14 (2025-08-26)
 
 # New features
-* Filegroup BEF_GKny is stored in a partitioned format, both in terms of year and geoniv. This facilitates faster read times when using only part of the file, which can be set up in filfiltre.
-* load_filegroup_to_buffer will use a specific function to read files with filfiltre set (WIP)
+* `write_population_filegroup` saves BEF_GKny filegroups as a partitioned dataset on age, year, and geolevel. This facilitates faster read times when needing only part of the file.
+* A separate read function, `read_population_file()` which reads the partitioned BEF_GKny is added to `load_filegroup_to_buffer()`
+** Checks whether filters exists for age, year or geoniv (lks yes/no). Selects the correct dataset and reads the needed parts only.
+* In `do_write_parquet()`, switched from removing attributes to converting to arrow table before writing
+* `SetFilgruppeParameters()` and `SetKubeParameters()` automatically generate the parameters object in the global environment
 
 # Bugfix
 * Fixed code to delete org_geo_codes from Global Environment in `lagfilgruppe_cleanup()`
+* Fixed installation of pq package in generated stata .do-file, which crashed when new version was available
 
 # khfunctions 1.0.13 (2025-08-20)
 

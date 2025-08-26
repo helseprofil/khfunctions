@@ -78,20 +78,22 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   filter <- paste0(c(filter, alderfilter, yearfilter), collapse = " & ")
   isfilter <- is_not_empty(filter)
   fileinfo <- parameters$fileinformation[[filegroup]]
+  orgfile <- ifelse(isfilefilter, filefilter$ORGFIL, filegroup)
   
- 
+  if(grepl("^BEF_GKny$", orgfile, ignore.case = TRUE)){
+    FIL <- read_population_file(alderfilter = alderfilter, yearfilter = yearfilter, parameters = parameters)
+  } else {
+    FIL <- read_filegroup(filegroup = orgfile)
+  }
+  if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
+  
   if(!isfilefilter){
-    FIL <- read_filegroup(filegroup = filegroup)
-    if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
     FIL <- do_harmonize_geo(file = FIL, vals = fileinfo$vals, rectangularize = FALSE, parameters = parameters)
     .GlobalEnv$BUFFER[[filegroup]] <- FIL
     return(invisible(NULL))
   } 
   
   if(isfilefilter){
-    FIL <- read_filegroup_with_filefilter(filegroup = filegroup, filefilter = filefilter)
-    if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
-    
     iskollapsdel <- grepl("\\S", filefilter$KOLLAPSdeler)
     if(iskollapsdel) FIL <- do_filfiltre_kollapsdeler(file = FIL, parts = filefilter$KOLLAPSdeler, parameters = parameters)
     
@@ -118,6 +120,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     
     isnykolsmerge <- grepl("\\S", filefilter$NYKOLSmerge)
     if(isnykolsmerge){
+      cat("\n*** Merger inn ny kolonne: ", filefilter$NYKOLSmerge)
       NY <- eval(parse(text = filefilter$NYKOLSmerge))
       commoncols <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
       FIL <- collapse::join(FIL, NY, on = commoncols, how = "l", overid = 2, verbose = 0)
@@ -135,19 +138,24 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
 #' Sets age filter according to age groups set in ACCESS::KUBER, 
 #' @noRd
 set_filter_age <- function(parameters){
-  isalder <- !is.na(parameters$CUBEinformation$ALDER) && parameters$CUBEinformation$ALDER != ""
-  if(!isalder) return(NULL)
+  isalder <- is_not_empty(parameters$CUBEinformation$ALDER)
+  if(!isalder){
+    tellerfile <- parameters$files[["TELLER"]]
+    if(!tellerfile %in% names(.GlobalEnv$BUFFER)) return(NULL)
+    amin <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmin(ALDERl)]
+    amax <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmax(ALDERl)]
+  } else {
+    accessalder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
+    if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
   
-  accessalder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
-  if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
-  
-  aldersplit <- data.table::tstrsplit(accessalder, "_")
-  amin <- ifelse(sum(is.na(aldersplit[[1]])) == 0,
-                 min(as.numeric(aldersplit[[1]])),
-                 getOption("khfunctions.amin"))
-  amax <- ifelse(length(aldersplit) > 1 && sum(is.na(aldersplit[[2]])) == 0, 
-                 max(as.numeric(aldersplit[[2]])),
-                 getOption("khfunctions.amax"))
+    aldersplit <- data.table::tstrsplit(accessalder, "_")
+    amin <- ifelse(sum(is.na(aldersplit[[1]])) == 0,
+                   min(as.numeric(aldersplit[[1]])),
+                   getOption("khfunctions.amin"))
+    amax <- ifelse(length(aldersplit) > 1 && sum(is.na(aldersplit[[2]])) == 0, 
+                   max(as.numeric(aldersplit[[2]])),
+                   getOption("khfunctions.amax"))
+  }
   
   if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne må være tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
@@ -167,6 +175,62 @@ set_filter_year <- function(parameters){
   return(paste0("AARl >= ", aarstart))
 }
 
+#' @keywords internal
+#' @noRd
+read_population_file <- function(alderfilter, yearfilter, parameters){
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"))
+  isalderfilter <- is_not_empty(alderfilter)
+  isyearfilter <- is_not_empty(yearfilter)
+  islks <- "V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))
+  befcols <- grep("^BEF|^mBEF", unlist(parameters$TNPinformation[c("TELLERKOL", "NEVNERKOL")], use.names = F), value = T)
+  befcols <- paste0(rep(befcols, each = 3), c("", ".f", ".a"))
+  
+  use_dataset <- isalderfilter || isyearfilter || !islks
+  if(!use_dataset){
+    cat("\n** Leser inn full befolkningsfil (ingen filter angitt for ALDER, AAR eller GEOniv) ..... ")
+    file <- arrow::open_dataset(file.path(root, "BEF_GKny.parquet"))
+    readcols <- c(grep(paste0("^", getOption("khfunctions.standarddimensions"), collapse = "|"), names(file), value = T), befcols)
+    dt <- file |> 
+      dplyr::select(dplyr::all_of(readcols)) |> 
+      dplyr::collect() |> 
+      data.table::setDT()
+    cat("Ferdig")
+    return(dt)
+  }
+  
+  folder <- ifelse(isalderfilter, getOption("khfunctions.pop_alderaargeo"), getOption("khfunctions.pop_aargeo"))
+  file <- arrow::open_dataset(file.path(root, folder))
+  if(!is.null(alderfilter)){
+    available_age_groups <- gsub("alder=", "", list.dirs(file.path(root, folder), full.names = F, recursive = F))
+    agefilter <- translate_age_filter(alderfilter = alderfilter, all = available_age_groups)
+  }
+  
+  geofilter <- ifelse(islks, "lks %in% c(0, 1)", "lks == 0")
+  completefilter <- paste(c(agefilter, yearfilter, geofilter), collapse = " & ")
+  readcols <- c(grep(paste0("^", getOption("khfunctions.standarddimensions"), collapse = "|"), names(file), value = T), befcols)
+  cat("\n** Leser inn befolkningsfil med filter:", completefilter, " ..... ")
+  dt <- file |> 
+    dplyr::filter(!!rlang::parse_expr(completefilter)) |> 
+    dplyr::select(dplyr::all_of(readcols)) |> 
+    dplyr::collect() |> 
+    data.table::setDT()
+  cat("Ferdig")
+  return(dt)
+}
+
+#' @keywords internal
+#' @noRd
+translate_age_filter <- function(alderfilter, all){
+  aldermin <- as.integer(sub("ALDERl >= (\\d+) & .*", "\\1", alderfilter))
+  aldermax <- as.integer(sub(".* ALDERh <= (\\d+)", "\\1", alderfilter))
+  tab <- data.table::data.table(all = all)
+  tab[, c("l", "h") := data.table::tstrsplit(all, "_")]
+  tab[, included := 1L]
+  tab[h < aldermin | l > aldermax, included := 0L]
+  needed <- tab[included == 1, all]
+  filterstr <- paste0("alder %in% c(", paste0(shQuote(needed), collapse = ", "), ")")
+  return(filterstr)
+}
 
 #' @title read_filegroup
 #' @description Reads original filegroup. Will always read from "PARQUET" folder first. 
@@ -176,61 +240,24 @@ set_filter_year <- function(parameters){
 #' @export
 read_filegroup <- function(filegroup){
   file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".parquet"))
+  cat("\n** Leser inn fil: ", file, " ..... ")
   if(file.exists(file)){
-    dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(file)))
+    dt <- arrow::open_dataset(file)
+    readcols <- grep("^KOBLID$|^ROW$", names(dt), value = TRUE, invert = TRUE)
+    dt <- dt |> 
+      dplyr::select(all_of(readcols)) |> 
+      dplyr::collect() |> 
+      data.table::setDT()
   } else {
     file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".rds"))
     if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/NYESTE! Filgruppen må kjøres først.")
     dt <- collapse::qDT(readRDS(file))
+    delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
+    dt[, (delcols) := NULL]
   }
-  delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
-  dt[, (delcols) := NULL]
   set_integer_columns(dt = dt)
-  cat("\n** Lest inn fil: ", file)
+  cat("Ferdig")
   return(dt)
-}
-
-read_filegroup_with_filefilter <- function(filegroup, filefilter = NULL){
-  if(is.null(filefilter)){
-    con <- connect_khelsa()
-    on.exit(RODBC::odbcCloseAll())
-    filefilter <- data.table::setDT(RODBC::sqlQuery(con, paste0("SELECT * FROM FILFILTRE WHERE FILVERSJON='", filegroup, "'")))
-  }
-  orgfile <- filefilter$ORGFIL
-  filepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
-  is_parquet <- file.exists(filepath)
-  is_filter_geo <-  is_not_empty(filefilter$GEOniv)
-  is_filter_aar <- is_not_empty(filefilter$AAR_START) && filefilter$AAR_START != 0
-  if(!is_parquet || (!is_filter_aar && !is_filter_geo)){
-    dt <- read_filegroup(filegroup = orgfile)
-    return(dt)
-  }
-  
-  cat("\n** Filtrerer filen på AAR_START og GEOniv slik det er angitt i ACCESS::FILFILTRE")
-  filter <- set_filefilter_filter(filefilter = filefilter, aar = is_filter_aar, geo = is_filter_geo)
-  file <- arrow::open_dataset(filepath)
-  dt <- file |> dplyr::filter(!!rlang::parse_expr(filter)) |> dplyr::collect()
-  data.table::setDT(dt)
-  
-  delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
-  dt[, (delcols) := NULL]
-  set_integer_columns(dt = dt)
-  cat("\n** Lest inn fil: ", file)
-  return(dt)
-}
-
-set_filefilter_filter <- function(filefilter, aar, geo){
-  aarfilter <- geofilter <- NULL
-  if(aar) aarfilter <- paste("AARl >=", filefilter$AAR_START)
-  if(geo){
-    geos <- unlist(strsplit(filefilter$GEOniv, ","))
-    geofilter <- ifelse(length(geos) == 1,
-                        paste0("GEOniv == \"", geos, "\""),
-                        paste0("GEOniv %in% ", strsplit(filefilter$GEOniv, ",")))
-  }
-  
-  filterstr <- paste0(c(aarfilter, geofilter), collapse = " & ")  
-  return(filterstr)
 }
 
 #' @title fetch_filegroup_from_buffer
@@ -320,9 +347,8 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
   parts <- unlist(strsplit(parts, ","))
   columns <- as.character(parameters$DefDesign$DelKolsF[parts])
   file[, (columns) := parameters$TotalKoder[parts]]
-  cat(paste0("Kollapser kolonnene: ", paste0(columns, collapse = ", "), ". Før er dim "), dim(file))
+  cat(paste0("\n*** Kollapser kolonnene: ", paste0(columns, collapse = ", ")))
   file <- file[, collapse::fsum(collapse::gby(.SD, tabcols))]
-  cat(" og etter", dim(file), "\n")
   return(file)
 }  
 
