@@ -99,7 +99,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
-  cat("\n*** Fikser kolonnenavn før stata")
+  cat("\n*** Fikser kolonnenavn pre stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -181,7 +181,7 @@ do_write_stata_file <- function(dt, statafiles, use_parquet){
 #' @noRd
 do_read_stata_file <- function(statafiles, use_parquet){
   if(use_parquet){
-    dt <- data.table::copy(data.table::as.data.table(arrow::read_parquet(statafiles$parquet_in)))
+    dt <- data.table::copy(data.table::setDT(arrow::read_parquet(statafiles$parquet_in)))
   } else {
     dt <- data.table::setDT(haven::read_dta(statafiles$dta))
   }
@@ -192,7 +192,10 @@ do_read_stata_file <- function(statafiles, use_parquet){
 generate_stata_do_file <- function(script, statafiles, use_parquet){
   if(use_parquet){
     sink(statafiles$do)
-    cat("net install pq, from(http://fmwww.bc.edu/RePEc/bocode/p)\n") 
+    cat("capture which pq.ado\n")
+    cat("if _rc {\nssc install pq\n}\n")
+    cat("capture ado update pq\n")
+    cat("if _rc == 602 { \nssc install pq, replace\n}\n") 
     cat("pq use using ", statafiles$parquet_out, "\n", sep = "")
     cat(script, "\n")
     cat("pq save using ", statafiles$parquet_in, ", replace\n", sep = "")
@@ -208,7 +211,7 @@ generate_stata_do_file <- function(script, statafiles, use_parquet){
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
-  cat("\n*** Kjører STATA-script...")
+  cat("\n*** Running STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }

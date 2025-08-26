@@ -12,7 +12,7 @@ LagKUBE(
   year = getOption("khfunctions.year"),
   dumps = list(),
   removebuffer = TRUE,
-  qualcontrol = FALSE
+  qualcontrol = TRUE
 )
 }
 \arguments{

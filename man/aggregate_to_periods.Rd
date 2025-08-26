@@ -4,14 +4,14 @@
 \alias{aggregate_to_periods}
 \title{aggregate_to_moving_average}
 \usage{
-aggregate_to_periods(dt, reset_rate = TRUE, parameters)
+aggregate_to_periods(dt, parameters)
 }
 \arguments{
 \item{dt}{KUBE to be aggregated}
 
-\item{reset_rate}{Reset RATE after aggregating to periods?}
-
 \item{parameters}{cube parameters}
+
+\item{reset_rate}{Reset RATE after aggregating to periods?}
 }
 \description{
 Finn "snitt" for ma-aar.

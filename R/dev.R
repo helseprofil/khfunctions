@@ -6,6 +6,7 @@ SetKubeParameters <- function(cube){
                      geonaboprikk = TRUE,
                      removebuffer = FALSE, 
                      qualcontrol = TRUE)
+  parameters <<- get_cubeparameters(user_args = user_args)
 }
 
 SetFilgruppeParameters <- function(filgruppenavn){
@@ -13,6 +14,7 @@ SetFilgruppeParameters <- function(filgruppenavn){
                      write = FALSE,
                      dumps = list(), 
                      qualcontrol = TRUE)
+  parameters <<- get_filegroup_parameters(user_args = user_args)
 }
 
 fg_get_all_read_args <- function(globs = get_global_parameters()){

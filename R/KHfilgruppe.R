@@ -10,8 +10,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
-  # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   parameters <- get_filegroup_parameters(user_args = user_args)
+  # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
@@ -53,16 +53,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
 lagfilgruppe_cleanup <- function(parameters){
   if(parameters$write) sink()
   RODBC::odbcCloseAll()
-  if(exists("org_geo_codes", envir = .GlobalEnv)) rm(.GlobalEnv$org_geo_codes)
-}
-
-#' @title delete_old_filegroup_log
-#' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
-#' @noRd
-delete_old_filegroup_log <- function(filegroup, parameters){
-  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
-  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
-  return(invisible(NULL))
+  if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
 }
 
 #' @title initiate_cleanlog

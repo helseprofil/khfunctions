@@ -6,39 +6,87 @@
 write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
   cat("\n\n* SAVING OUTPUT FILES:\n")
-  root <- getOption("khfunctions.root")
-  parquet <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
-  nyeste <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(parameters$name, ".rds"))
-  datert <- file.path(root, getOption("khfunctions.fgdir"), getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  do_write_parquet(dt = dt, filepath = parquet)
-  cat("\n", parquet)
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
+  datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
+  cat("\n", parquet,"\n", datert)
+  table <- convert_dt_to_arrow_table(dt)
+  arrow::write_parquet(table, sink = parquet, compression = "snappy")
   file.copy(from = parquet, to = datert)
-  cat("\n", datert)
+  if(parameters$name == "BEF_GKny") write_population_filegroup(table = table, root = root)
+}
+
+#' @title convert_dt_to_arrow_table
+#' @description
+#' Removes attributes except column names before converting to an arrow table (for writing)
+#' @param dt data.table
+#' @noRd
+convert_dt_to_arrow_table <- function(dt){
+  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
+  table <- arrow::as_arrow_table(dt)
+  return(table)
 }
 
 #' @title do_write_parquet
 #' @description
-#' Wrapper around arrow::write_parquet which first strips away all unneccessary attributes
-#' @param dt data
+#' Wrapper around arrow::write_parquet, which first applies convert_dt_to_arrow_table() to generate a arrow table for writing.
+#' @param dt data.table
 #' @param filepath filepath to save file
 #' @keywords internal
 #' @noRd
 do_write_parquet <- function(dt, filepath){
-  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
-  for(att in attremove) data.table::setattr(dt, att, NULL)
-  arrow::write_parquet(dt, sink = filepath, compression = "snappy")
+  table <- convert_dt_to_arrow_table(dt)
+  arrow::write_parquet(table, sink = filepath, compression = "snappy")
 }
 
-# do_write_parquet2 <- function(dt, filepath){
-#   temppath <- tempfile(fileext = ".parquet")
-#   # Lagre filen som tempfil
-#   # les den inn igjen med ønsket skjema
-#   # lagre til ønsket sted
-#   
-#   
-#     chrschema <- arrow::schema(lapply(names(dt2), function(x) arrow::Field$create(name = x, type = arrow::string())))
-#   outtable <- arrow::Table$create(dt2, schema = chrschema)
-# }
+#' @title write_population_filegroup
+#' @description
+#' Writes a partitioned dataset for BEF_GKny, for quicker read times when used as nevner file
+#' Generates two helper columns to partition the data into age groups and with/without lks
+#' @noRd
+write_population_filegroup <- function(table, root){
+  table <- add_partition_columns(table = table)
+  cat("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  do_write_parquet_dataset(table = table, 
+                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo")),
+                           partitioncols = c("AARl", "lks"))
+  cat("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
+  do_write_parquet_dataset(table = table, 
+                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo")),
+                           partitioncols = c("alder", "AARl", "lks"))
+}
+
+#' @keywords internal
+#' @noRd
+add_partition_columns <- function(table){
+  table <- arrow::as_arrow_table(
+    table |>
+      dplyr::mutate(
+        lks = dplyr::if_else(GEOniv == "V", 1L, 0L),
+        alder = dplyr::case_when(
+          ALDERh <= 17 ~ "0_17",
+          ALDERh <= 29 ~ "18_29",
+          ALDERh <= 44 ~ "30_44",
+          ALDERh <= 67 ~ "45_67",
+          ALDERh <= 79 ~ "68_79",
+          .default = "80_120"
+          )
+        )
+  )
+  return(table)
+}
+
+#' @keywords internal
+#' @noRd
+do_write_parquet_dataset <- function(table, path, partitioncols){
+  dataset <- table |> 
+    dplyr::group_by(!!!rlang::syms(partitioncols)) |>
+    dplyr::arrange(!!!rlang::syms(partitioncols))
+  
+  arrow::write_dataset(dataset = dataset, path = path, format = "parquet", partitioning = partitioncols, compression = "snappy")
+  cat("Ferdig!")
+}
 
 #' @title write_codebooklog
 #' @keywords internal
