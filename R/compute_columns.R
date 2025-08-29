@@ -32,6 +32,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   }
 }
 
+#' @noRd
 add_crude_rate <- function(dt, parameters){
   if(!"NEVNER" %in% names(dt)){
     cat("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
@@ -76,8 +77,9 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     data.table::setnames(newdata, oldcols, newcols)
     newdims <- get_dimension_columns(names(newdata))
     dt <- collapse::join(dt, newdata[, .SD, .SDcols = c(newdims, newcols)], on = newdims, how = "l", overid = 2, verbose = 0)
-    valdef <- fileinfo$vals[fparts$old]
-    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = c(valdef, setNames(valdef, fparts$new)))
+    valdef <- fileinfo$vals
+    valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
+    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = valdef)
   }
   return(dt)
 }

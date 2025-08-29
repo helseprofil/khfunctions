@@ -62,7 +62,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   }
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
-  if(isNYEKOL_RAD) TNF <- compute_new_value_from_row_sum(dt = pre, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
+  if(isNYEKOL_RAD) TNF <- compute_new_value_from_row_sum(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
   if(isNYEKOL_KOL) compute_new_value_from_formula(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   

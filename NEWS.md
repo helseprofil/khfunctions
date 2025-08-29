@@ -1,3 +1,9 @@
+# khfunctions 1.0.15 (2025-08-29)
+
+# Bugfix
+* Critical fix where wrong name of dataset was provided when generating new columns after merging teller/nevner
+* Bugfix in selecting information for setting implicit null values when filegroup was BEF_GKa (due to different value names)
+
 # khfunctions 1.0.14 (2025-08-26)
 
 # New features
