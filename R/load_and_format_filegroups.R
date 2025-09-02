@@ -158,6 +158,7 @@ set_filter_age <- function(parameters){
   }
   
   if(is.na(amin) | is.na(amax)) stop("Feil i aldersfiltreringen, som leser fra ACCESS::KUBER::ALDER. Denne må være tom, 'ALLE', eller angi aldersgrupper separert med komma (X_Y, X_Y, X_Y).")
+  if(amin == getOption("khfunctions.amin") && amax == getOption("khfunctions.amax")) return(NULL)
   return(paste0("ALDERl >= ", amin, " & ALDERh <= ", amax))
 }
 
@@ -198,15 +199,16 @@ read_population_file <- function(alderfilter, yearfilter, parameters){
     return(dt)
   }
   
-  folder <- ifelse(isalderfilter, getOption("khfunctions.pop_alderaargeo"), getOption("khfunctions.pop_aargeo"))
-  file <- arrow::open_dataset(file.path(root, folder))
-  if(!is.null(alderfilter)){
+  if(isalderfilter){
     available_age_groups <- gsub("alder=", "", list.dirs(file.path(root, folder), full.names = F, recursive = F))
-    agefilter <- translate_age_filter(alderfilter = alderfilter, all = available_age_groups)
+    alderfilter <- translate_age_filter(alderfilter = alderfilter, all = available_age_groups)
   }
   
+  folder <- ifelse(isalderfilter, getOption("khfunctions.pop_alderaargeo"), getOption("khfunctions.pop_aargeo"))
+  file <- arrow::open_dataset(file.path(root, folder))
+  
   geofilter <- ifelse(islks, "lks %in% c(0, 1)", "lks == 0")
-  completefilter <- paste(c(agefilter, yearfilter, geofilter), collapse = " & ")
+  completefilter <- paste(c(alderfilter, yearfilter, geofilter), collapse = " & ")
   readcols <- c(grep(paste0("^", getOption("khfunctions.standarddimensions"), collapse = "|"), names(file), value = T), befcols)
   cat("\n** Leser inn befolkningsfil med filter:", completefilter, " ..... ")
   dt <- file |> 
@@ -224,9 +226,8 @@ translate_age_filter <- function(alderfilter, all){
   aldermin <- as.integer(sub("ALDERl >= (\\d+) & .*", "\\1", alderfilter))
   aldermax <- as.integer(sub(".* ALDERh <= (\\d+)", "\\1", alderfilter))
   tab <- data.table::data.table(all = all)
-  tab[, c("l", "h") := data.table::tstrsplit(all, "_")]
-  tab[, included := 1L]
-  tab[h < aldermin | l > aldermax, included := 0L]
+  tab[, c("l", "h") := data.table::tstrsplit(all, "_")][, included := 1L]
+  tab[as.numeric(h) < aldermin | as.numeric(l) > aldermax, included := 0L]
   needed <- tab[included == 1, all]
   filterstr <- paste0("alder %in% c(", paste0(shQuote(needed), collapse = ", "), ")")
   return(filterstr)

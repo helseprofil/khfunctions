@@ -1,3 +1,8 @@
+# khfunctions 1.0.16 (2025-09-02)
+
+# Bugfix
+* Critical fix in filtering of population file, where age filter was not correct. Now `alderfilter` will be NULL if amin/amax equals limits set in config file.
+
 # khfunctions 1.0.15 (2025-08-29)
 
 # Bugfix
