@@ -1,3 +1,9 @@
+# khfunctions 1.0.17 (2025-09-03)
+
+# Bugfix
+* KODEBOK_LOGG also outputs TYPE and OMK (new value) columns
+* crude RATE is set to NA if NaN (teller == 0 and nevner == 0) or Inf (nevner == 0).
+
 # khfunctions 1.0.16 (2025-09-02)
 
 # Bugfix

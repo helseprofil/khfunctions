@@ -93,7 +93,7 @@ do_write_parquet_dataset <- function(table, path, partitioncols){
 #' @noRd
 write_codebooklog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
-  log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "ORG", "KBOMK", "FREQ"))]
+  log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "TYPE", "ORG", "OMK", "FREQ"))]
   cat("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
