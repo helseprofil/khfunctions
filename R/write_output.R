@@ -137,7 +137,7 @@ write_cube_output <- function(outputlist, parameters){
   qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   
-  cat("SAVING OUTPUT FILES:\n")
+  cat("\nSAVING OUTPUT FILES:\n")
   data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
   do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
   cat("\n", datert_csv, "\n", datert_parquet)
