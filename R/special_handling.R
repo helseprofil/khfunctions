@@ -8,7 +8,8 @@
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
 #' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
-do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
+#' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
+do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
   
@@ -29,6 +30,11 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL){
   code_env <- new.env()
   dtname <- as.character(substitute(dt))
   assign(dtname, dt, envir = code_env)
+  assign("parameters", parameters, envir = code_env)
+  extra_args <- list(...)
+  for(argname in c(names(extra_args))){
+    assign(argname, extra_args[[argname]], envir = code_env)
+  }
   newdt <- get(dtname, envir = code_env)
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
   if ("try-error" %in% class(rsynterr)) {
