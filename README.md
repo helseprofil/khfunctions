@@ -5,11 +5,11 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/helseprofil/khfunctions)](https://github.com/helseprofil/khfunctions/commits)
 [![GitHub issues](https://img.shields.io/github/issues/helseprofil/khfunctions)](https://github.com/helseprofil/khfunctions/issues)
 [![GitHub repo size](https://img.shields.io/github/repo-size/helseprofil/khfunctions)](https://github.com/helseprofil/khfunctions)
+[![GitHub R package version(branch)](https://img.shields.io/github/r-package/v/helseprofil/khfunctions/master)](https://github.com/helseprofil/khfunctions)
 
+KHfunctions er hovedhjernen til dataprosessering for folkehelseprofilene. Koden er hovedsakelig utviklet og skrevet av [KÃ¥re BÃ¦vre](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/). Prosjektet ble videre utviklet og vedlikeholdt av [Yusman Bin Kamaleri](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/yusman-bin-kamaleri/) fra 2020 frem til hÃ¸sten 2022. 
 
-KHfunctions er hovedhjernen til dataprosessering for folkehelseprofilene. Koden er hovedsakelig utviklet og skrevet av [Kåre Bævre](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/kare-bavre/). Prosjektet ble videre utviklet og vedlikeholdt av [Yusman Bin Kamaleri](https://www.fhi.no/om/organisasjon/helse-og-ulikhet/yusman-bin-kamaleri/) fra 2020 frem til høsten 2022. 
-
-For at funksjonene skal fungere er man også avhengig av Access-databasen og flere STATA-filer. Disse er ikke inkludert i GitHub. 
+For at funksjonene skal fungere er man ogsÃ¥ avhengig av Access-databasen og flere STATA-filer. Disse er ikke inkludert i GitHub. 
 
 # Installasjon, oppdatering og brukerguider
 

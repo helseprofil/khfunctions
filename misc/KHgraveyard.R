@@ -4159,3 +4159,38 @@ OmkodFil <- function(FIL, RD, parameters) {
   }
   return(FIL)
 }
+
+#' @title LeggTilSumFraRader (kb)
+#' Helper function in KlargjorFil and LagTNtabell
+#' @keywords internal
+#' @noRd
+LeggTilSumFraRader <- function(dt, NYdscr, FGP = list(amin = 0, amax = 120), parameters) {
+  if(is_empty(NYdscr)) return(dt)
+  
+  for (sumfra in unlist(stringr::str_split(NYdscr, ";"))) {
+    sumfra <- trimws(sumfra)
+    if(!grepl("^(.+?) *= *(.+?)\\{(.*)\\}$", sumfra)) stop("FEIL!!!!!: FILFILTRE::NYEKOL_RAD har feil format:", NYdscr, "\n")
+    cat("\n*** Legger til kolonner som sum av rader: ", sumfra)
+    new <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\1", sumfra)
+    old <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\2", sumfra)
+    expr <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\3", sumfra)
+    NF <- EkstraherRadSummer(dt = dt, pstrorg = expr, FGP = FGP, parameters = parameters)
+    old <- paste0(old, c("", ".f", ".a"))
+    new <- paste0(new, c("", ".f", ".a"))
+    data.table::setnames(NF, old, new)
+    commontabs <- intersect(get_dimension_columns(names(dt)), get_dimension_columns(names(NF)))
+    
+    dt <- collapse::join(dt, NF[, .SD, .SDcols = c(commontabs, new)], on = commontabs, how = "l", overid = 2, verbose = 0)
+    dt <- set_implicit_null_after_merge(file = dt, list(old = FGP$vals, new = FGP$vals[old]))
+  }
+  return(dt)
+}
+
+#' @title delete_old_filegroup_log
+#' Bør implementeres i lagfilgruppe_cleanup for å rydde opp etter kjøring, men da må først all kodeboklogg med SV = 'S' fjernes først
+#' @noRd
+delete_old_filegroup_log <- function(filegroup, parameters){
+  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM KODEBOK_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
+  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE FILGRUPPE='", filegroup, "' AND SV='S'"))
+  return(invisible(NULL))
+}

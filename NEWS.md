@@ -1,3 +1,51 @@
+# khfunctions 1.0.18 (2025-09-05)
+
+## Bugfix
+* Fixed order of functions when selecting population data set. 
+
+# khfunctions 1.0.17 (2025-09-03)
+
+## Bugfix
+* KODEBOK_LOGG also outputs TYPE and OMK (new value) columns
+* crude RATE is set to NA if NaN (teller == 0 and nevner == 0) or Inf (nevner == 0).
+
+# khfunctions 1.0.16 (2025-09-02)
+
+## Bugfix
+* Critical fix in filtering of population file, where age filter was not correct. Now `alderfilter` will be NULL if amin/amax equals limits set in config file.
+
+# khfunctions 1.0.15 (2025-08-29)
+
+## Bugfix
+* Critical fix where wrong name of dataset was provided when generating new columns after merging teller/nevner
+* Bugfix in selecting information for setting implicit null values when filegroup was BEF_GKa (due to different value names)
+
+# khfunctions 1.0.14 (2025-08-26)
+
+## New features
+* `write_population_filegroup` saves BEF_GKny filegroups as a partitioned dataset on age, year, and geolevel. This facilitates faster read times when needing only part of the file.
+* A separate read function, `read_population_file()` which reads the partitioned BEF_GKny is added to `load_filegroup_to_buffer()`
+** Checks whether filters exists for age, year or geoniv (lks yes/no). Selects the correct dataset and reads the needed parts only.
+* In `do_write_parquet()`, switched from removing attributes to converting to arrow table before writing
+* `SetFilgruppeParameters()` and `SetKubeParameters()` automatically generate the parameters object in the global environment
+
+## Bugfix
+* Fixed code to delete org_geo_codes from Global Environment in `lagfilgruppe_cleanup()`
+* Fixed installation of pq package in generated stata .do-file, which crashed when new version was available
+
+# khfunctions 1.0.13 (2025-08-20)
+
+## New features
+- `compute_new_value_from_row_sum()` replaces `LeggTilSumFraRader()`. Fixed bug when too many columns were added, causing problems when aggregating the file. 
+- `control_meis_rate()` now outputs all diffs on country level, as well as top 5 diffs in both directions.
+
+## Bugfix
+- NORM correctly renamed when MALTALL is not TELLER or RATE
+- Quality control of CUBE failed when all sumTELLER or sumNEVNER was missing
+
+## Other changes
+- Added qualcontrol and orgdata to remotes in description
+
 # khfunctions 1.0.12 (2025-08-15)
 
 ## New features

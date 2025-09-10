@@ -1,6 +1,6 @@
 Package: khfunctions
 Title: Data processing for FHP/OVP
-Version: 1.0.12
+Version: 1.0.18
 Authors@R: 
     person("Vegard", "Lysne", , "vegard.lysne@helsedir.no", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
@@ -27,10 +27,15 @@ Imports:
     data.table (>= 1.17.2),
     stringi (>= 1.8.7),
     beepr (>= 2.0),
-    arrow
+    arrow,
+    qualcontrol,
+    remotes,
+    dplyr
 Suggests: 
     methods,
-    remotes,
     testthat (>= 3.0.0),
     utils
+Remotes:
+    helseprofil/qualcontrol,
+    helseprofil/orgdata
 Config/testthat/edition: 3

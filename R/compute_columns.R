@@ -13,6 +13,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
+    cat("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()
@@ -31,6 +32,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   }
 }
 
+#' @noRd
 add_crude_rate <- function(dt, parameters){
   if(!"NEVNER" %in% names(dt)){
     cat("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
@@ -41,77 +43,55 @@ add_crude_rate <- function(dt, parameters){
            RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
            RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
            RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  dt[is.nan(RATE) | is.infinite(RATE), RATE := NA]
   
   if(parameters$MOVAVparameters$is_movav){
     dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
   }
 }
 
-#' @title compute_new_value_from_strata_sum
+#' @title compute_new_value_from_row_sum
 #' @description
-#' WIP: replacement for LeggTilSumFraRader()
-#' 
 #' Used to compute columns described in ACCESS columns
 #' - FILFILTRE::NYEKOL_RAD
 #' - TNP_PROD::NYEKOL_RAD
 #' @param dt 
 #' @keywords internal
 #' @noRd
-compute_new_value_from_strata_sum <- function(dt, formulas, fileinfo, parameters){
-  formulas <- trimws(unlist(strsplit(formulas, ";")))
-  for(f in formulas){
-    # f <- gsub("\\s=|=\\s|\\s=\\s", "=", f)
-    if(!grepl("^(.+)=(.+)\\{(.+)\\}$", f)) stop('FEIL format i FILFILTRE::NYEKOL_RAD. Må være NY=sumkolonne{filter}, f.eks. TOTBEF=BEF{ALDER="ALLE"}, evt separert med ;')
-    fparts <- extract_formula_parts(formula = f, fileinfo = fileinfo, parameters = parameters)
-    newcol <- extract_strata_sums(dt = dt, fparts = fparts, parameters = parameters)
-    # commoncols <- intersect(get_dimension_columns(names(dt)), get_dimension_columns(names(newcol)))
-    # dt <- collapse::join(dt, newcol, on = commoncols, how = "l", overid = 2, verbose = 0)
-    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = fileinfo$vals[c(fparts$new, fparts$old)])
-  } 
-    
-    ###
-    # NF <- EkstraherRadSummer(dt = dt, pstrorg = formula, FGP = fileinfo, parameters = parameters)
-    # gmlcols <- paste0(gmlcol, c("", ".f", ".a"))
-    # nycols <- paste0(nycol, c("", ".f", ".a"))
-    # data.table::setnames(NF, gmlcols, nycols)
-    # commontabs <- intersect(get_dimension_columns(names(dt)), get_dimension_columns(names(NF)))
-    # 
-    # dt <- collapse::join(dt, NF, on = commontabs, how = "l", overid = 2, verbose = 0)
-    # dt <- set_implicit_null_after_merge(file = dt, list(gmlcol = FGP$vals, nycol = FGP$vals[gmlcol]))
-    
-  return(dt)
-}
-
-
-#' @description
-#' WIP: replace ekstraherradsummer, 
-#' Create the sum based on the formula including the strata defined. 
-#' @keywords internal
-#' @noRd  
-extract_strata_sums <- function(dt, fparts, parameters){
-  d <- data.table::copy(dt)
-  
-  if(length(fparts$filtercols) > 0){
-    
+compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
+  if(is_empty(formulas)) return(dt)
+  formulas <- unlist(strsplit(formulas, ";"))
+  if(any(!grepl("^\\S+?\\s*=\\s*\\S+?\\{(.*)\\}$", formulas))){
+    stop("FILFILTRE::NYEKOL_RAD har feil format: \n\n'", formulas, 
+         "'\n\nMå være 'NYTTNAVN=KOLONNESOMSKALSUMMERES{subset}', hvor subset er KOLONNE==VERDI eller KOLONNENAVN %in% c('verdi1', 'verdi2')",
+         "\n\nFlere nye kolonner kan angis semikolonseparart: V1=KOL1{subset};V2=KOL2{subset}")
   }
   
-  
-  
-  if(subsetstr != "") dt <- eval(parse(text = paste0("subset(dt,", subsetstr, ")"))) # BYTTE MED do_filter_columns????
-  dt <- do_aggregate_file(dt[, .SD, .SDcols = names(dt)[!names(dt) %in% alletabs]])
+  for(formula in formulas){
+    formula <- trimws(formula)
+    cat("\n*** Legger til kolonner som sum av rader: ", formula)
+    fparts <- extract_formula_parts(formula = formula, fileinfo = fileinfo, parameters = parameters)
+    
+    newdata <- EkstraherRadSummer(dt, pstrorg = fparts$filter, FGP = fileinfo, parameters = parameters)
+    oldcols <- paste0(fparts$old, c("", ".f", ".a"))
+    newcols <- paste0(fparts$new, c("", ".f", ".a"))
+    data.table::setnames(newdata, oldcols, newcols)
+    newdims <- get_dimension_columns(names(newdata))
+    dt <- collapse::join(dt, newdata[, .SD, .SDcols = c(newdims, newcols)], on = newdims, how = "l", overid = 2, verbose = 0)
+    valdef <- fileinfo$vals
+    valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
+    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = valdef)
+  }
   return(dt)
-  
-  return(d)
 }
-
+    
 #' @keywords internal
 #' @noRd
 extract_formula_parts <- function(formula, fileinfo, parameters){
   fparts <- list()
-  fparts[["new"]] <- sub("^(.*)=(.*)\\{(.*)\\}", "\\1", formula)
-  fparts[["old"]] <- sub("^(.*)=(.*)\\{(.*)\\}", "\\2", formula)
+  fparts[["new"]] <- sub("^(.+?)\\s*=.*", "\\1", formula)
+  fparts[["old"]] <- sub("^(.*)=(.*)\\{.*", "\\2", formula)
   fparts[["filter"]] <- format_filter(formula = formula, fileinfo = fileinfo)
-  fparts <- add_filtercols_and_recodecols(fparts = fparts, parameters = parameters)
   return(fparts)
 }
 
@@ -196,32 +176,6 @@ set_lead_value <- function(file, yearlag = -1, vals = NULL){
 
 # Existing functions to be replaced and removed ---- 
 
-#' @title LeggTilSumFraRader (kb)
-#' Helper function in KlargjorFil and LagTNtabell
-#' @keywords internal
-#' @noRd
-LeggTilSumFraRader <- function(dt, NYdscr, FGP = list(amin = 0, amax = 120), parameters) {
-  if(is_empty(NYdscr)) return(dt)
-  
-  for (sumfra in unlist(stringr::str_split(NYdscr, ";"))) {
-    sumfra <- trimws(sumfra)
-    if(!grepl("^(.+?) *= *(.+?)\\{(.*)\\}$", sumfra)) stop("FEIL!!!!!: FILFILTRE::NYEKOL_RAD har feil format:", NYdscr, "\n")
-    cat("\n*** Legger til kolonner som sum av rader: ", sumfra)
-    nycol <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\1", sumfra)
-    gmlcol <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\2", sumfra)
-    expr <- gsub("^ *(.+?) *= *(.+?)\\{(.*)\\} *$", "\\3", sumfra)
-    NF <- EkstraherRadSummer(dt = dt, pstrorg = expr, FGP = FGP, parameters = parameters)
-    gmlcols <- paste0(gmlcol, c("", ".f", ".a"))
-    nycols <- paste0(nycol, c("", ".f", ".a"))
-    data.table::setnames(NF, gmlcols, nycols)
-    commontabs <- intersect(get_dimension_columns(names(dt)), get_dimension_columns(names(NF)))
-    
-    dt <- collapse::join(dt, NF, on = commontabs, how = "l", overid = 2, verbose = 0)
-    dt <- set_implicit_null_after_merge(file = dt, list(gmlcol = FGP$vals, nycol = FGP$vals[gmlcol]))
-  }
-  return(dt)
-}
-
 #' @title EkstraherRadSummer (kb) 
 #' @keywords internal
 #' @noRd
@@ -274,7 +228,7 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
     redesign <- find_redesign(orgdesign = orgdesign, targetdesign = list(Parts = OmkParts), parameters = parameters)
     dt <- do_filter_and_recode_to_redesign(dt = dt, redesign = redesign, parameters = parameters)
   }
-  if(subsetstr != "") dt <- eval(parse(text = paste0("subset(dt,", subsetstr, ")"))) # BYTTE MED do_filter_columns????
+  if(subsetstr != "") dt <- do_filter_columns(dt, subsetstr)
   dt <- do_aggregate_file(dt[, .SD, .SDcols = names(dt)[!names(dt) %in% alletabs]])
   return(dt)
 }
