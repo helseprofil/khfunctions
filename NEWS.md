@@ -8,6 +8,7 @@
 * Added use.names to rbindlist for file groups, to ensure correct matching if rows are not in the same order
 * Explicitly set column order when making table from original file
 * `set_filter_age` now accepts when tellerfile do not have age columns
+* FILFILTRE is identified with case-insensitive matching to ensure match
 
 # khfunctions 1.0.18 (2025-09-05)
  
