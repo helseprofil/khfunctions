@@ -2,11 +2,12 @@
 
 ## New features
 * `do_special_handling` gains a `...` argument to pass e.g. filedescription for RSYNT1 into the code_env 
+* KnrHarm is added to parameters for filegroup, to be available for special handling
 
-## Changes
+## Changes and bugfixes
 * Added use.names to rbindlist for file groups, to ensure correct matching if rows are not in the same order
 * Explicitly set column order when making table from original file
-
+* `set_filter_age` now accepts when tellerfile do not have age columns
 
 # khfunctions 1.0.18 (2025-09-05)
  

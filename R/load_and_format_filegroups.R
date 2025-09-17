@@ -142,6 +142,7 @@ set_filter_age <- function(parameters){
   if(!isalder){
     tellerfile <- parameters$files[["TELLER"]]
     if(!tellerfile %in% names(.GlobalEnv$BUFFER)) return(NULL)
+    if(!"ALDERl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])) return(NULL)
     amin <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmin(ALDERl)]
     amax <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmax(ALDERl)]
   } else {
