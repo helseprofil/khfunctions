@@ -15,6 +15,7 @@ get_filegroup_parameters <- function(user_args){
   parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
+  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   return(c(parameters))
 }
 

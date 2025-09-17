@@ -86,7 +86,7 @@ do_stata_processing <- function(dt, script, parameters){
   return(dt)
 }
 
-#' @descriptio Delete temporary data files and reset working directory
+#' @description Delete temporary data files and reset working directory
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
