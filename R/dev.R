@@ -1,4 +1,5 @@
 SetKubeParameters <- function(cube){
+  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = cube,
                      year = getOption("khfunctions.year"),
                      dumps = list(),
@@ -10,6 +11,7 @@ SetKubeParameters <- function(cube){
 }
 
 SetFilgruppeParameters <- function(filgruppenavn){
+  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
                      dumps = list(), 
