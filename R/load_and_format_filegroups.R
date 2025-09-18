@@ -71,7 +71,7 @@ do_filter_columns <- function(file, filter){
 #' If filefilter is defined, the file is formatted accordingly
 #' @noRd
 load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
-  filefilter <- parameters$FILFILTRE[FILVERSJON == filegroup]
+  filefilter <- parameters$FILFILTRE[tolower(FILVERSJON) == tolower(filegroup)]
   isfilefilter <- nrow(filefilter) > 0
   alderfilter <- set_filter_age(parameters = parameters)
   yearfilter <- set_filter_year(parameters = parameters)
@@ -142,6 +142,7 @@ set_filter_age <- function(parameters){
   if(!isalder){
     tellerfile <- parameters$files[["TELLER"]]
     if(!tellerfile %in% names(.GlobalEnv$BUFFER)) return(NULL)
+    if(!"ALDERl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])) return(NULL)
     amin <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmin(ALDERl)]
     amax <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmax(ALDERl)]
   } else {
@@ -242,8 +243,8 @@ translate_age_filter <- function(alderfilter, all){
 #' @export
 read_filegroup <- function(filegroup){
   file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".parquet"))
-  cat("\n** Leser inn fil: ", file, " ..... ")
   if(file.exists(file)){
+    cat("\n** Leser inn fil: ", file, " ..... ")
     dt <- arrow::open_dataset(file)
     readcols <- grep("^KOBLID$|^ROW$", names(dt), value = TRUE, invert = TRUE)
     dt <- dt |> 
@@ -253,6 +254,7 @@ read_filegroup <- function(filegroup){
   } else {
     file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".rds"))
     if(!file.exists(file)) stop("Finner ikke filgruppe: ", filegroup, " i STABLAORG/R/NYESTE! Filgruppen må kjøres først.")
+    cat("\n** Leser inn fil: ", file, " ..... ")
     dt <- collapse::qDT(readRDS(file))
     delcols <- names(dt)[names(dt) %in% c("KOBLID", "ROW")]
     dt[, (delcols) := NULL]

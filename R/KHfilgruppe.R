@@ -22,7 +22,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   # For dev and debug: set file_number = the file you want to test
   for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
     new_file <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
-    Filgruppe <- data.table::rbindlist(list(Filgruppe, new_file), fill = T)
+    Filgruppe <- data.table::rbindlist(list(Filgruppe, new_file), fill = TRUE, use.names = TRUE)
     cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
   }
   cat("-----\n* Alle originalfiler lest og stablet")

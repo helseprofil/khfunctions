@@ -18,6 +18,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_set_default_values(dt = DF, filedescription = filedescription, defaultcolumns = filecolumns$default)
   check_if_all_columns_exist(dt = DF, filecolumns = filecolumns)
   DF[, names(.SD) := NULL, .SDcols = names(DF)[!names(DF) %in% c(getOption("khfunctions.kolorgs"), "LEVEL")]]
+  data.table::setcolorder(DF, intersect(getOption("khfunctions.kolorgs"), names(DF)))
   convert_all_columns_to_character(dt = DF)
   cat("\n* Innlesing OK!")
   do_aggregate_if_grunnkrets(dt = DF, filedescription = filedescription, parameters = parameters) # DEPRECATED?

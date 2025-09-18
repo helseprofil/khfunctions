@@ -4,7 +4,7 @@
 \alias{do_special_handling}
 \title{do_special_handling}
 \usage{
-do_special_handling(name, dt, code, parameters, koblid = NULL)
+do_special_handling(name, dt, code, parameters, koblid = NULL, ...)
 }
 \arguments{
 \item{name}{name of RSYNT point, refer to the column, to be used for filedump names}
@@ -16,6 +16,8 @@ do_special_handling(name, dt, code, parameters, koblid = NULL)
 \item{parameters}{global parameters}
 
 \item{koblid}{for RSYNT points applied to individual original files, koblid is needed for filedump names}
+
+\item{...}{additional objects passed to make them available for the evaluation environment (\code{code_env}) where the code is evaluated}
 }
 \description{
 Do special handling of data files, either in R or STATA.
