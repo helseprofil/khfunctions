@@ -1,3 +1,8 @@
+# khfunctions (development version)
+
+# New features
+* LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exists.
+
 # khfunctions 1.0.19 (2025-09-18)
 
 ## New features

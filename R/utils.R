@@ -43,3 +43,9 @@ get_tab_columns <- function(columnnames){
 fix_befgk_spelling <- function(x){
   return(sub("BEF_GK", "BEF_GK", x, ignore.case = T))
 }
+
+ensure_utf8_encoding <- function(){
+  old_ctype <- Sys.getlocale("LC_CTYPE")
+  if(old_ctype != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
+  return(old_ctype)
+}
