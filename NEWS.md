@@ -4,6 +4,9 @@
 * LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exists.
 * `do_harmonize_geo` sets year if not in parameters, making it available for LagFilgruppe and rsynt. 
 
+# Bugfixes and other changes
+* `LagQCKube` now uses collapse::join for merging.
+
 # khfunctions 1.0.19 (2025-09-18)
 
 ## New features

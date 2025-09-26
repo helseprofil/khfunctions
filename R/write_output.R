@@ -204,12 +204,10 @@ LagQCKube <- function(allvis,
                       allvistabs,
                       kube){
   qcvals <- getOption("khfunctions.qcvals")
-  QC <- data.table::copy(allvis)
   uprikk <- data.table::copy(kube)[, mget(c(allvistabs, qcvals))]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
-  QC <- QC[uprikk, on = allvistabs]
-  
+  QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
   return(QC[])
 }
 

@@ -7,7 +7,6 @@
 #' @param dumps list of intermediate files to save, used for debugging and development. 
 #' @export
 LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE) {
-  
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
