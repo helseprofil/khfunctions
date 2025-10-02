@@ -49,10 +49,10 @@ check_if_files_exists_and_are_readable <- function(files){
 check_if_format_is_ok <- function(read_parameters){
   read_parameters[, FORMAT := toupper(FORMAT)]
   not_valid_format <- read_parameters[FORMAT %notin% c(c("CSV", "XLS", "XLSX", "SPSS", "PARQUET"))]
-  mismatch_extension <- read_parameters[FORMAT == "CSV" & !grepl(".csv$", FILNAVN) |
-                                  FORMAT %in% c("XLS", "XSLX") & !grepl(".xls$|.xlsx$", FILNAVN)|
-                                  FORMAT == "SPSS" & !grepl(".sav$", FILNAVN) |
-                                  FORMAT == "PARQUET" & !grepl(".parquet$", FILNAVN)]
+  mismatch_extension <- read_parameters[toupper(FORMAT) == "CSV" & !grepl(".csv$", FILNAVN) |
+                                  toupper(FORMAT) %in% c("XLS", "XSLX") & !grepl(".xls$|.xlsx$", FILNAVN)|
+                                  toupper(FORMAT) == "SPSS" & !grepl(".sav$", FILNAVN) |
+                                  toupper(FORMAT) == "PARQUET" & !grepl(".parquet$", FILNAVN)]
   if(nrow(not_valid_format) == 0 | nrow(mismatch_extension) == 0){
     cat("\n** Alle filformater ok og korresponderer med filnavn")
     return(invisible(NULL))
