@@ -13,7 +13,7 @@ write_filegroup_output <- function(dt, parameters){
   table <- convert_dt_to_arrow_table(dt)
   arrow::write_parquet(table, sink = parquet, compression = "snappy")
   file.copy(from = parquet, to = datert)
-  if(parameters$name == "BEF_GKny") write_population_filegroup(table = table, root = root)
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) write_population_filegroup(table = table, root = root)
 }
 
 #' @title convert_dt_to_arrow_table

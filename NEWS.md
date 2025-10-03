@@ -9,6 +9,7 @@
 ## Bugfixes and other changes
 * `LagQCKube` now uses collapse::join for merging.
 * FORMAT for original files are now identified with case-insensitive matching
+* When saving partitioned population files, use case-insensitive matching with file name "BEF_GKny".
 
 # khfunctions 1.0.19 (2025-09-18)
 
