@@ -224,7 +224,8 @@ var_num <- function(x){
 get_geonaboprikk_triangles <- function(){
   data.table::data.table("Stata_naboprGeo_LF" = paste0("niva1", getOption("khfunctions.geoprikk")$LF),
                          "Stata_naboprGeo_FK" = paste0("niva2", getOption("khfunctions.geoprikk")$FK),
-                         "Stata_naboprGeo_KB" = paste0("niva3", getOption("khfunctions.geoprikk")$KB))
+                         "Stata_naboprGeo_KB" = paste0("niva3", getOption("khfunctions.geoprikk")$KB),
+                         "Stata_naboprGeo_KV" = paste0("niva4", getOption("khfunctions.geoprikk")$LKS))
 }
 
 #' @title save_kubespec_csv (ybk)

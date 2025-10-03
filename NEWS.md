@@ -3,6 +3,7 @@
 ## New features
 * LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exists.
 * `do_harmonize_geo` sets year if not in parameters, making it available for LagFilgruppe and rsynt. 
+* Added secondary censoring triangles for levekaarsone
 
 ## Bugfixes and other changes
 * `LagQCKube` now uses collapse::join for merging.
