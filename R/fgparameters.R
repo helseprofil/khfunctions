@@ -22,7 +22,7 @@ get_filegroup_parameters <- function(user_args){
 #' @noRd
 read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
   if(is.null(filegroup)) filegroup <- parameters$name
-  if(filegroup == "BEF_Gkny") filegroup <- "BEF_GKny"
+  if(grepl("BEF_Gkny", filegroup, ignore.case = TRUE)) filegroup <- "BEF_GKny"
   FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup, "' AND ", parameters$validdates), as.is = TRUE))
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
