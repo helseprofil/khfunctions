@@ -200,15 +200,14 @@ melt_access_spec <- function(dscr, name = NULL){
 #' @param allvisvals All columns 
 #' @keywords internal
 #' @noRd
-LagQCKube <- function(allvis,
-                      allvistabs,
-                      kube){
+LagQCKube <- function(allvis, allvistabs, kube){
   qcvals <- getOption("khfunctions.qcvals")
-  uprikk <- data.table::copy(kube)[, mget(c(allvistabs, qcvals))]
+  stataprikkvals <- grep("^pvern$|^serieprikket$|^naboprikketIomg*", names(kube), value = T)
+  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, stataprikkvals, test)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
   QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
-  return(QC[])
+  return(QC)
 }
 
 #' @title save_filedump_if_requested
@@ -250,7 +249,7 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
   if("R" %in% format){
     if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
     .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
-    # saveRDS(dt, file = file.path(dumpdir, paste0(filename, ".rds")))
+    do_write_parquet(dt = dt, filepath = file.path(dumpdir, paste0(filename, ".parquet")))
   } 
   if("STATA" %in% format){
     dtout <- fix_column_names_pre_stata(dt)

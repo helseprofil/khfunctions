@@ -5,6 +5,8 @@
 * `do_harmonize_geo` sets year if not in parameters, making it available for LagFilgruppe and rsynt. 
 * Added secondary censoring triangles for levekaarsone
 * For rsynt-scripts read from github, case-insensitive matching has been enabled in case of autocorrect in access. A warning will be given if any url is not exact matching. 
+* Requested dumps in R format are saved as `.parquet`
+* Further information on censoring included in QC-file
 
 ## Bugfixes and other changes
 * `LagQCKube` now uses collapse::join for merging.
