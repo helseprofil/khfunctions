@@ -1,8 +1,8 @@
 #' @keywords internal
 #' @noRd
 do_censor_cube <- function(dt, parameters){
-  save_filedump_if_requested(dumpname = "PRIKKpre", dt = KUBE, parameters = parameters)
-  on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = KUBE, parameters = parameters)}, add = TRUE)
+  save_filedump_if_requested(dumpname = "PRIKKpre", dt = dt, parameters = parameters)
+  on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
   if(is_empty(parameters$Censor_type)) return(dt)
   
   if(parameters$Censor_type == "R"){
