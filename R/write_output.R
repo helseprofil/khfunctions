@@ -13,7 +13,7 @@ write_filegroup_output <- function(dt, parameters){
   table <- convert_dt_to_arrow_table(dt)
   arrow::write_parquet(table, sink = parquet, compression = "snappy")
   file.copy(from = parquet, to = datert)
-  if(parameters$name == "BEF_GKny") write_population_filegroup(table = table, root = root)
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) write_population_filegroup(table = table, root = root)
 }
 
 #' @title convert_dt_to_arrow_table
@@ -200,17 +200,14 @@ melt_access_spec <- function(dscr, name = NULL){
 #' @param allvisvals All columns 
 #' @keywords internal
 #' @noRd
-LagQCKube <- function(allvis,
-                      allvistabs,
-                      kube){
+LagQCKube <- function(allvis, allvistabs, kube){
   qcvals <- getOption("khfunctions.qcvals")
-  QC <- data.table::copy(allvis)
-  uprikk <- data.table::copy(kube)[, mget(c(allvistabs, qcvals))]
+  stataprikkvals <- grep("^pvern$|^serieprikket$|^naboprikketIomg*", names(kube), value = T)
+  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, stataprikkvals, test)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
-  QC <- QC[uprikk, on = allvistabs]
-  
-  return(QC[])
+  QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
+  return(QC)
 }
 
 #' @title save_filedump_if_requested
@@ -252,7 +249,7 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
   if("R" %in% format){
     if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
     .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
-    # saveRDS(dt, file = file.path(dumpdir, paste0(filename, ".rds")))
+    do_write_parquet(dt = dt, filepath = file.path(dumpdir, paste0(filename, ".parquet")))
   } 
   if("STATA" %in% format){
     dtout <- fix_column_names_pre_stata(dt)

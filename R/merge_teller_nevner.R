@@ -216,7 +216,6 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @keywords internal
 #' @noRd
 do_redesign_file <- function(filename, filedesign, tndesign, parameters){
-  # redesign <- FinnRedesign(fradesign = filedesign, tildesign = tndesign, parameters = parameters)
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
   if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   file <- fetch_filegroup_from_buffer(filegroup = filename, parameters = parameters)

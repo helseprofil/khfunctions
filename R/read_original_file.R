@@ -12,7 +12,7 @@
 read_original_file <- function(filedescription, parameters, dumps = list()){
   cat("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
-  DF <- switch(filedescription$FORMAT,
+  DF <- switch(toupper(filedescription$FORMAT),
                "PARQUET" = do_read_org_parquet(filedescription = filedescription),
                "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),
                "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),

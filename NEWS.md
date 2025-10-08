@@ -1,3 +1,18 @@
+# khfunctions 1.0.20 (2025-10-07)
+
+## New features
+* LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exists.
+* `do_harmonize_geo` sets year if not in parameters, making it available for LagFilgruppe and rsynt. 
+* Added secondary censoring triangles for levekaarsone
+* For rsynt-scripts read from github, case-insensitive matching has been enabled in case of autocorrect in access. A warning will be given if any url is not exact matching. 
+* Requested dumps in R format are saved as `.parquet`
+* Further information on censoring included in QC-file
+
+## Bugfixes and other changes
+* `LagQCKube` now uses collapse::join for merging.
+* FORMAT for original files are now identified with case-insensitive matching
+* When saving partitioned population files, use case-insensitive matching with file name "BEF_GKny".
+
 # khfunctions 1.0.19 (2025-09-18)
 
 ## New features
