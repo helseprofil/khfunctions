@@ -1,3 +1,8 @@
+# khfunctions 1.0.21 (2025-10-10)
+
+## Bugfix
+* Remove object `test` from LagQCKube, which was only meant for testing.
+
 # khfunctions 1.0.20 (2025-10-07)
 
 ## New features
