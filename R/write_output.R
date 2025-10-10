@@ -203,7 +203,7 @@ melt_access_spec <- function(dscr, name = NULL){
 LagQCKube <- function(allvis, allvistabs, kube){
   qcvals <- getOption("khfunctions.qcvals")
   stataprikkvals <- grep("^pvern$|^serieprikket$|^naboprikketIomg*", names(kube), value = T)
-  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, stataprikkvals, test)]
+  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, stataprikkvals)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
   QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
