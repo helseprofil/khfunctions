@@ -42,7 +42,7 @@ check_if_files_exists_and_are_readable <- function(files){
   } 
   msg <- character()
   if(length(not_exist) > 0) msg <- paste0(msg, "\n** Følgende fil(er) eksisterer ikke:\n", paste(" - ", not_exist, collapse = "\n"))
-  if(length(not_readable) > 0) msg <- paste0(msg,"\n\n** Følgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
+  if(length(not_readable) > 0) msg <- paste0(msg,"\n** Følgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
   return(msg)
 }
 
@@ -53,13 +53,13 @@ check_if_format_is_ok <- function(read_parameters){
                                   toupper(FORMAT) %in% c("XLS", "XSLX") & !grepl(".xls$|.xlsx$", FILNAVN)|
                                   toupper(FORMAT) == "SPSS" & !grepl(".sav$", FILNAVN) |
                                   toupper(FORMAT) == "PARQUET" & !grepl(".parquet$", FILNAVN)]
-  if(nrow(not_valid_format) == 0 | nrow(mismatch_extension) == 0){
+  if(nrow(not_valid_format) == 0 & nrow(mismatch_extension) == 0){
     cat("\n** Alle filformater ok og korresponderer med filnavn")
     return(invisible(NULL))
   }
   
   msg <- character()
-  if(nrow(not_valid_format)) msg <- paste0(msg, "\n** Følgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN))
-  if(nrow(mismatch_extension)) msg <- paste0(msg, "\n\n** Følgende fil(er) har mismatch mellom FORMAT og filtype", paste(" - ", mismatch_extension$FILNAVN))
+  if(nrow(not_valid_format) > 0) msg <- paste0(msg, "\n** Følgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN, "\n"))
+  if(nrow(mismatch_extension) > 0) msg <- paste0(msg, "\n** Følgende fil(er) har mismatch mellom FORMAT og filtype\n", paste(" - ", mismatch_extension$FILNAVN, "\n"))
   return(msg)
 }
