@@ -1,12 +1,13 @@
 # khfunctions (development version)
 
+## New features
+* New censoring routine to replace STATA censoring
+
 ## Bugfix
 * `check_if_format_is_ok` did not report correctly when there were problems. 
-
-# khfunctions 1.0.21 (2025-10-10)
+* Remove object `test` from LagQCKube, which was only meant for testing.
 
 ## Bugfix
-* Remove object `test` from LagQCKube, which was only meant for testing.
 
 # khfunctions 1.0.20 (2025-10-07)
 

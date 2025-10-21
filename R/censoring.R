@@ -205,22 +205,6 @@ do_censor_kube_stata <- function(dt, parameters){
 
 #' @keywords internal
 #' @noRd
-get_col <- function(var, num = TRUE){
-  if(is.na(var) || var == "") var <- NA
-  if(num) var <- var_num(var)
-  if(!is.na(var) && num) var <- 1
-  return(var)
-}
-
-#' @keywords internal
-#' @noRd
-var_num <- function(x){
-  if(!is.numeric(x)) x <- NA
-  return(x)
-}
-
-#' @keywords internal
-#' @noRd
 get_geonaboprikk_triangles <- function(){
   data.table::data.table("Stata_naboprGeo_LF" = paste0("niva1", getOption("khfunctions.geoprikk")$LF),
                          "Stata_naboprGeo_FK" = paste0("niva2", getOption("khfunctions.geoprikk")$FK),
