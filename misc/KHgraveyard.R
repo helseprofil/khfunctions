@@ -4195,18 +4195,3 @@ delete_old_filegroup_log <- function(filegroup, parameters){
   return(invisible(NULL))
 }
 
-#' @keywords internal
-#' @noRd
-get_col <- function(var, num = TRUE){
-  if(is.na(var) || var == "") var <- NA
-  if(num) var <- var_num(var)
-  if(!is.na(var) && num) var <- 1
-  return(var)
-}
-
-#' @keywords internal
-#' @noRd
-var_num <- function(x){
-  if(!is.numeric(x)) x <- NA
-  return(x)
-}
