@@ -21,12 +21,13 @@ do_censor_cube_stata_r <- function(dt, parameters){
   alltriangles <- get_censor_triangles(parameters = parameters)
   dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
   data.table::setkeyv(dt, c(dims))
+  warn_if_special_triangles(alltriangles = alltriangles)
   
   cat("\n* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   
-  cat("\n* NABOPRIKKING på:", names(alltriangles))
+  cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
   do_naboprikk(dt = dt, alltriangles = alltriangles, limit = limits$TELLER, dims = dims)
   if(istellerf9) dt <- data.table::rbindlist(list(dt, dt_spv9), use.names = T, fill = T)
   return(dt)
@@ -58,13 +59,19 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
       cd <- censordim
       
       for(i in seq_along(triangles)){
-        tri_levels <- triangles[[i]]
-        if (length(tri_levels) == 0L) next
+        tri <- triangles[[i]]
+        tri_levels_base <- if(is.atomic(tri)){
+          tri
+        } else {
+          tri$base
+        }
+        
+        if (length(tri_levels_base) == 0L) next
         
         in_triangle <- if(is.character(dt[[cd]])){
-          dt[[cd]] %chin% tri_levels
+          dt[[cd]] %chin% tri_levels_base
         } else {
-          dt[[cd]] %in% tri_levels
+          dt[[cd]] %in% tri_levels_base
         } 
         
         # 1) Problemstrata:
@@ -77,19 +84,19 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
         ), by = sc]
         
         prob <- stats[((antpvern == 1L) | (antpvern > 1L & sumtellerprikk <= limit)) & ant_available >= 2L, get(sc)]
-        prob <- setdiff(prob, resolved_sid)
-        if (!length(prob)) next
+        if (length(prob) == 0L) next
         
         # 2) Prioritetskart for trekanten: NAVN-basert oppslag (kritisk når nivåene er numeric)
         #    Lavest prioritet = sist i tri_levels => høyest rank-verdi
-        rank_map <- setNames(seq_along(tri_levels), as.character(tri_levels))
-        pri_vec  <- unname(rank_map[as.character(dt[[cd]])])
+        # rank_map <- setNames(seq_along(tri_levels), as.character(tri_levels))
+        # pri_vec  <- unname(rank_map[as.character(dt[[cd]])])
         
         # 3) Serie-kandidat (pvern==0 & serieprikket==1): velg ÉN per strata, lavest prioritet
-        serierowids <- integer()
         ser <- dt[in_triangle & get(sc) %in% prob & pvern == 0L & serieprikket == 1L,
                   {
-                    pri <- pri_vec[rid__]                   # ta ut prioritet for disse radene
+                    tri_levels_sc <- order_for_sc(tri, .SD)
+                    rank_map_sc <- setNames(seq_along(tri_levels_sc), as.character(tri_levels_sc))
+                    pri <- unname(rank_map_sc[as.character(get(cd))]) # ta ut prioritet for disse radene
                     if (all(is.na(pri))) {
                       .(rowid = integer())
                     } else {
@@ -100,7 +107,11 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
                   by = sc
         ]
         
-        if(nrow(ser) > 0) serierowids <- unique(ser$rowid)
+        serierowids <- if(nrow(ser) > 0L){
+          unique(ser$rowid)
+        } else {
+          integer()
+        }
         
         noncensoredrowids <- integer()
         # Strata som fortsatt trenger kandidat (ingen serie funnet, etter runder som bare får bruke serieprikker)
@@ -114,8 +125,9 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
          if(length(target) > 0L){
            nonc_dt <- dt[in_triangle & get(sc) %in% target & pvern == 0L & (is.na(serieprikket) | serieprikket == 0L),
                         {
-                          pri <- pri_vec[rid__]
-                          .(rowid = rid__, pri = pri)
+                          tri_levels_sc <- order_for_sc(tri, .SD)
+                          rank_map_sc <- setNames(seq_along(tri_levels_sc), as.character(tri_levels_sc))
+                          .(rowid = rid__, pri = unname(rank_map_sc[as.character(get(cd))]))
                         },
                         by = sc
           ][order(get(sc), -pri)]
@@ -134,107 +146,19 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
           
           
         newly_resolved <- unique(dt[rows_to_censor, get(sc)])
-        resolved_sid <- union(resolved_sid, newly_resolved)
+        # resolved_sid <- union(resolved_sid, newly_resolved)
         }
       }
     }
     nyeprikker <- dt[, sum(get(itcol))]
     onlyserie <- ifelse(iteration <= max_serie_rounds, " (bare serieprikker brukt)", "")
-    cat(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie))
+    cat(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie, "\n"))
     force_runde <- iteration <= max_serie_rounds
     iteration <- iteration + 1L
   }
   dt[, (unname(strata_cols)) := NULL]
   dt[, rid__ := NULL]
 }
-
-# do_naboprikk_old <- function(dt, alltriangles, limit, dims){
-#   nyeprikker <- 1L
-#   iteration <- 1L
-#   strata_cols <- setNames(paste0("strata__", names(alltriangles)), names(alltriangles))
-#   
-#   for(censordim in names(alltriangles)){
-#     otherdims <- setdiff(dims, censordim)
-#     sc <- strata_cols[[censordim]]
-#     dt[, (sc) := .GRP, by = otherdims]
-#     data.table::setindexv(dt, c(sc, censordim))
-#   }
-#   
-#   while(nyeprikker > 0L){
-#     itcol <- paste0("naboprikketIomg", iteration)
-#     dt[, (itcol) := 0]
-# 
-#     for(censordim in names(alltriangles)){
-#       triangles <- alltriangles[[censordim]]
-#       args <- list(censordim = censordim,  limit = limit, itcol = itcol, strata_col = strata_cols[[censordim]])
-#       do_naboprikk_dim(dt = dt, triangles = triangles, args = args)
-#     }
-#     
-#     nyeprikker <- dt[, sum(.SD), .SDcol = itcol]
-#     cat(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker))
-#     iteration <- iteration + 1L
-#   }
-#   dt[, unname(strata_cols) := NULL]
-# }
-# 
-# do_naboprikk_dim <- function(dt, triangles, args){
-#   sc <- args$strata_col
-#   cd <- args$censordim
-#   
-#   for(i in seq_along(triangles)){
-#     tri_levels <- triangles[[i]]
-#     trianglestrata <- dt[get(cd) %in% tri_levels, .(
-#         strata = get(sc),
-#         dimval = get(cd),
-#         pvern  = pvern,
-#         serieprikket = serieprikket,
-#         sumTELLER = sumTELLER,
-#         spv_tmp = spv_tmp
-#       )][, let(nabocensor = 0L)]
-#     problemstrata <- get_problemstrata(trianglestrata = trianglestrata, args = args)
-#     triangleprikkepri <- rev(tri_levels)
-#     
-#     while(length(problemstrata) > 0){
-#       for(sid in problemstrata){
-#         strata <- trianglestrata[strata == sid]
-#         nabo <- find_best_candidates(strata = strata, pri = triangleprikkepri, args = args)
-#         trianglestrata[dimval %in% nabo & strata == sid, let(nabocensor = 1L)]
-#       }
-#       problemstrata <- get_problemstrata(trianglestrata = trianglestrata, args = args)
-#     }
-#     
-#     nabocols_dt <- c(cd, sc)
-#     
-#     updates <- trianglestrata[nabocensor == 1L, .(dimval, strata)]
-#     data.table::setnames(updates, c("dimval","strata"), nabocols_dt)
-#     dt[updates, on = setNames(nabocols_dt, nabocols_dt), c("pvern", args$itcol, "spv_tmp") := list(1L, 1L, 3L)]
-#   }
-# }
-# 
-# find_best_candidates <- function(strata, pri, args){
-#   # 1. Bruk lavest prioriterte serieprikk, denne er > prikkegrensen og tilstrekkelig
-#   candidates_serie <- strata[pvern == 0L & serieprikket == 1L, unique(dimval)]
-#   if(length(candidates_serie) > 0L) return(intersect(pri, candidates_serie)[1L])
-#   
-#   # 2. Bruk lavest prioriterte ikke-prikkede verdier. Må sjekke at summen av sumTELLER for disse > prikkegrense
-#   noncensored <- strata[pvern == 0L, unique(dimval)]
-#   candidates <- intersect(pri, noncensored)
-#   sumtellerprikk <- 0
-#   newprikkvalues <- character()
-#   for(candidate in candidates){
-#     newprikkvalues <- c(newprikkvalues, candidate)
-#     sumtellerprikk <- strata[pvern == 1 | dimval %in% newprikkvalues, sum(sumTELLER)]
-#     if(sumtellerprikk > args$limit) break
-#   }
-#   return(newprikkvalues)
-# }
-# 
-# get_problemstrata <- function(trianglestrata, args){
-#   censorcheck <- trianglestrata[, let(antpvern = sum(pvern) + sum(nabocensor), 
-#                                       sumtellerprikk = sum(sumTELLER[pvern == 1 | nabocensor == 1]),
-#                                       antnotcensored = sum(!spv_tmp %in% c(3,4))), by = strata]
-#   return(censorcheck[(antpvern == 1 | (antpvern > 1 & sumtellerprikk <= args$limit)) & antnotcensored > 0, unique(strata)])
-# }
 
 #' @title do_censor_serie
 #' @description
@@ -352,11 +276,94 @@ clean_triangles <- function(list){
   if(length(list) == 0) return(invisible(NULL))
   for(dim in names(list)){
     content <- list[[dim]]
-    content <- regmatches(content, gregexpr("\\{[^}]*\\}", content))[[1]]
-    content <- strsplit(gsub("^\\{|\\}$", "", content), ",")
-    list[[dim]] <- content
+    tokens <- regmatches(content, gregexpr("\\{[^}]*\\}", content))[[1]]
+    tokens <- gsub("^\\{|\\}$", "", tokens)
+    
+    out_dim <- vector("list", length(tokens))
+    for (i in seq_along(tokens)) {
+      x <- trimws(tokens[i])
+      
+      # Finn om vi har varianter i parenteser
+      parens <- regmatches(x, gregexpr("\\([^)]*\\)", x))[[1]]
+      if (length(parens) == 0L) {
+        base_vec <- strsplit(x, ",")[[1]]
+        out_dim[[i]] <- trimws(base_vec)
+      } else {
+        first_paren_pos <- regexpr("\\(", x)
+        base_part <- substr(x, 1L, first_paren_pos - 1L)
+        base_vec <- if(nchar(trimws(base_part))>0L) {
+          trimws(strsplit(base_part, ",")[[1]])
+        } else character(0)
+        
+        variants <- lapply(parens, function(p){
+          s <- gsub("^\\(|\\)$", "", p)
+          # Tillat både "_if_" og " if " i teksten
+          s <- sub("\\s+if\\s+", "_if_", s, ignore.case = TRUE)
+          parts <- strsplit(s, "_if_")[[1]]
+          
+          ord_vec <- if(length(parts) >= 1L) trimws(strsplit(parts[1], ",")[[1]]) else character(0)
+          cond_str <- if(length(parts) >= 2L) trimws(parts[2]) else stop("Variant mangler _if_-betingelse")
+          cond_str <- normalize_cond(cond_str)
+          
+          list(
+            order   = ord_vec,
+            cond    = parse(text = cond_str)[[1]],  # lagre som uttrykk (R AST)
+            cond_raw = cond_str
+          )
+        })
+        
+        out_dim[[i]] <- list(base = base_vec, variants = variants)
+      }
+    }
+    
+    
+    list[[dim]] <- out_dim
   }
   return(list)
+}
+
+normalize_cond <- function(s){
+  # Eksempel: AARSAK==BRYSTKREFT  ->  AARSAK=="BRYSTKREFT"
+  s <- gsub("==\\s*([A-Za-zÆØÅæøå_][A-Za-z0-9_ÆØÅæøå]*)", '=="\\1"', s, perl = TRUE)
+  s
+}
+
+
+order_for_sc <- function(tri, subdt){
+  # Bakoverkompatibelt: ren vektor => bruk direkte
+  if (is.atomic(tri)) return(as.character(tri))
+  
+  # Hvis varianter er angitt, bruk første som treffer
+  if (!is.null(tri$variants) && length(tri$variants)) {
+    # Evaluer på første rad i strata (forutsatt at betingelsesvariabler er konstante i strata)
+    env <- as.list(subdt[1L])
+    for (v in tri$variants){
+      ok <- tryCatch(isTRUE(eval(v$cond, envir = env, enclos = parent.frame())),
+                     error = function(e) FALSE)
+      if (ok) return(as.character(v$order))
+    }
+  }
+  
+  # Fallback: base
+  return(as.character(tri$base))
+}
+
+
+warn_if_special_triangles <- function(alltriangles) {
+  # Finn dimensjoner med minst én trekant som har variants
+  special_dims <- names(alltriangles)[vapply(alltriangles, function(tris) {
+    any(vapply(tris, function(tri) {
+      is.list(tri) && !is.null(tri$variants) && length(tri$variants) > 0L
+    }, logical(1L)))
+  }, logical(1L))]
+  
+  if (length(special_dims) > 0L) {
+    cat("\n**** Spesialstrata oppdaget for dimensjonene: ",
+            paste(special_dims, collapse = ", "),
+            "\n**** Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
+  } else {
+    cat("\n**** ingen spesialstrata test \n")
+  }
 }
 
 # Opprinnelig STATA-script STATAprikking_master.do
