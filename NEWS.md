@@ -3,11 +3,14 @@
 ## New features
 * New censoring routine to replace STATA censoring
 
-## Bugfix
-* `check_if_format_is_ok` did not report correctly when there were problems. 
-* Remove object `test` from LagQCKube, which was only meant for testing.
+# khfunctions 1.0.21 (2015-10-28)
 
-## Bugfix
+## Bugfix and other changes
+* `check_if_format_is_ok` did not report correctly when there were problems. 
+* Fixed SPVFLAGG when RATE is NA due to TELLER & NEVNER == 0. Correct SPVFLAGG is 2, but became 3 due to TELLER < limit. Now RATE/TELLER/NEVNER.f is set to 2 for these rows.
+* Added more informative message when strata missing from standard files, causing problems with standardization. 
+* `do_balance_teller_nevner` now only handles TELLER/NEVNER, as crude RATE is calculated after. 
+* Primary censoring is only done when flag variable == 0
 
 # khfunctions 1.0.20 (2025-10-07)
 
@@ -23,6 +26,7 @@
 * `LagQCKube` now uses collapse::join for merging.
 * FORMAT for original files are now identified with case-insensitive matching
 * When saving partitioned population files, use case-insensitive matching with file name "BEF_GKny".
+* Remove object `test` from LagQCKube, which was only meant for testing.
 
 # khfunctions 1.0.19 (2025-09-18)
 
