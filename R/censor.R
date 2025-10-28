@@ -10,12 +10,13 @@
 #' @param parameters parameters
 do_censor_cube_stata_r <- function(dt, parameters){
   dt[, let(pvern = 0L, serieprikket = 0L, spv_tmp = 0L)]
-  istellerf9 <- any(dt$TELLER.f == 9 | grepl("99$", dt$GEO))
+  istellerf29_geo99 <- any(dt$TELLER.f %in% c(2,9) | grepl("99$", dt$GEO))
   
-  if(istellerf9){
+  if(istellerf29_geo99){
     dt[TELLER.f == 9, let(spv_tmp = 9)]
-    dt_spv9 <- dt[spv_tmp == 9 & grepl("99$", GEO)]
-    dt <- dt[spv_tmp < 9 & !grepl("99$", GEO)]
+    dt[TELLER.f == 2, let(spv_tmp = 2)]
+    dt_spv29_geo99 <- dt[spv_tmp %in% c(2,9) | grepl("99$", GEO)]
+    dt <- dt[!spv_tmp %in% c(2,9) & !grepl("99$", GEO)]
   }
   limits <- get_censor_limits(spec = parameters$CUBEinformation)
   alltriangles <- get_censor_triangles(parameters = parameters)
@@ -29,7 +30,7 @@ do_censor_cube_stata_r <- function(dt, parameters){
   
   cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
   do_naboprikk(dt = dt, alltriangles = alltriangles, limit = limits$TELLER, dims = dims)
-  if(istellerf9) dt <- data.table::rbindlist(list(dt, dt_spv9), use.names = T, fill = T)
+  if(istellerf29_geo99) dt <- data.table::rbindlist(list(dt, dt_spv29_geo99), use.names = T, fill = T)
   return(dt)
 }
 
@@ -361,9 +362,7 @@ warn_if_special_triangles <- function(alltriangles) {
     cat("\n**** Spesialstrata oppdaget for dimensjonene: ",
             paste(special_dims, collapse = ", "),
             "\n**** Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
-  } else {
-    cat("\n**** ingen spesialstrata test \n")
-  }
+  } 
 }
 
 # Opprinnelig STATA-script STATAprikking_master.do
