@@ -1,4 +1,4 @@
-# khfunctions 1.0.22 (2015-10-28)
+# khfunctions 1.0.21 (2015-10-28)
 
 ## Bugfix and other changes
 * `check_if_format_is_ok` did not report correctly when there were problems. 
@@ -6,11 +6,6 @@
 * Added more informative message when strata missing from standard files, causing problems with standardization. 
 * `do_balance_teller_nevner` now only handles TELLER/NEVNER, as crude RATE is calculated after. 
 * Primary censoring is only done when flag variable == 0
-
-# khfunctions 1.0.21 (2025-10-10)
-
-## Bugfix
-* Remove object `test` from LagQCKube, which was only meant for testing.
 
 # khfunctions 1.0.20 (2025-10-07)
 
@@ -26,6 +21,7 @@
 * `LagQCKube` now uses collapse::join for merging.
 * FORMAT for original files are now identified with case-insensitive matching
 * When saving partitioned population files, use case-insensitive matching with file name "BEF_GKny".
+* Remove object `test` from LagQCKube, which was only meant for testing.
 
 # khfunctions 1.0.19 (2025-09-18)
 
