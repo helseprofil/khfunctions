@@ -1,4 +1,4 @@
-# khfunctions 1.0.21 (2015-10-28)
+# khfunctions 1.0.22 (2015-10-28)
 
 ## Bugfix and other changes
 * `check_if_format_is_ok` did not report correctly when there were problems. 

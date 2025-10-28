@@ -273,7 +273,7 @@ do_remove_censored_observations <- function(dt, outvalues){
   valF <- intersect(names(dt), valF)
   if(length(valF) > 0){
     dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-    dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, NA_real_, x))], 
+    dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
                                        list(na.rm = TRUE))), .SDcols = valF] 
     dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
     dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
