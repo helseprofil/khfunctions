@@ -10,12 +10,12 @@
 #' @param parameters parameters
 do_censor_cube_stata_r <- function(dt, parameters){
   dt[, let(pvern = 0L, serieprikket = 0L, spv_tmp = 0L)]
-  istellerf9 <- any(dt$TELLER.f == 9)
+  istellerf9 <- any(dt$TELLER.f == 9 | grepl("99$", dt$GEO))
   
   if(istellerf9){
     dt[TELLER.f == 9, let(spv_tmp = 9)]
-    dt_spv9 <- dt[spv_tmp == 9]
-    dt <- dt[spv_tmp < 9]
+    dt_spv9 <- dt[spv_tmp == 9 & grepl("99$", GEO)]
+    dt <- dt[spv_tmp < 9 & !grepl("99$", GEO)]
   }
   limits <- get_censor_limits(spec = parameters$CUBEinformation)
   alltriangles <- get_censor_triangles(parameters = parameters)
