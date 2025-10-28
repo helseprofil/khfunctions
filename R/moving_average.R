@@ -29,7 +29,7 @@ get_movav_information <- function(dt, parameters){
 aggregate_to_periods <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "MOVAVpre", dt = dt, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = dt, parameters = parameters)}, add = TRUE)
-  dt <- do_balance_missing_teller_nevner(dt = dt)
+  do_balance_missing_teller_nevner(dt = dt)
   
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods(dt = dt, parameters = parameters)
@@ -55,19 +55,29 @@ aggregate_to_periods <- function(dt, parameters){
 #' 
 #' @param dt data
 do_balance_missing_teller_nevner <- function(dt){
-  vals <- intersect(c("TELLER", "NEVNER", "RATE"), names(dt))
+  vals <- intersect(c("TELLER", "NEVNER"), names(dt))
   valsF <- paste0(vals, ".f")
   if(length(vals) == 0) return(dt)
   dt[, maxF := do.call(pmax, .SD), .SDcols = valsF]
-  if (length(vals) > 0) {
-    dt[maxF > 0, (vals) := NA]
-    dt[maxF > 0, (valsF) := maxF]
-    dt[maxF == -1, (vals) := NA]
-    dt[maxF == -1, (valsF) := maxF]
-  }
+  dt[maxF != 0, (valsF) := maxF]
+  dt[maxF != 0, (vals) := NA]
   dt[, maxF := NULL]
-  return(dt)
 }
+# do_balance_missing_teller_nevner <- function(dt){
+#   vals <- intersect(c("TELLER", "NEVNER", "RATE"), names(dt))
+#   valsF <- paste0(vals, ".f")
+#   if(length(vals) == 0) return(dt)
+#   dt[, maxF := do.call(pmax, .SD), .SDcols = valsF]
+#   if (length(vals) > 0) {
+#     dt[maxF > 0, (vals) := NA]
+#     dt[maxF > 0, (valsF) := maxF]
+#     dt[maxF == -1, (vals) := NA]
+#     dt[maxF == -1, (valsF) := maxF]
+#   }
+#   dt[, maxF := NULL]
+#   return(dt)
+# }
+
 
 #' @title do_aggregate_periods
 #' @description

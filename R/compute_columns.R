@@ -43,7 +43,9 @@ add_crude_rate <- function(dt, parameters){
            RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
            RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
            RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
-  dt[is.nan(RATE) | is.infinite(RATE), RATE := NA]
+  
+  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
+  dt[is.na(RATE) & RATE.f == 0, let(RATE.f = 2, TELLER.f = 2, NEVNER.f = 2)]
   
   if(parameters$MOVAVparameters$is_movav){
     dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]

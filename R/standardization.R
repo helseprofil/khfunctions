@@ -83,8 +83,6 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
   for (del in setdiff(names(ORGd$Part), names(Filter))) {
     MODd[[del]] <- data.table::copy(ORGd$Part[[del]])
   }
-  # return(FinnRedesign(fradesign = ORGd, tildesign = list(Part = MODd), parameters = parameters))
-  
   return(find_redesign(orgdesign = ORGd, targetdesign = list(Part = MODd), parameters = parameters))
 }
 
@@ -109,8 +107,16 @@ estimate_predrate <- function(design, parameters){
   predrate[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = 0)]
   predrate[, let(PREDRATE.a = pmax(TELLER.a, NEVNER.a))]
   
-  ukurante <- predrate[is.na(TELLER) | is.na(NEVNER), .N]
-  if (ukurante > 0) cat("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante, "), dette vil gi problemer i PREDTELLER\n")
+  ukurante <- predrate[is.na(TELLER) | is.na(NEVNER)]
+  if (ukurante[, .N] > 0){
+    cat(paste0("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
+    cat("\nDette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
+    cat("\nDersom det faktisk mangler tall kan det være behov for å justere startår")
+    cat("\nFølgende unike verdier for ulike dimensjonene er påvirket: ")
+    for(dim in get_dimension_columns(names(predrate))){
+      cat(paste0("\n- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))
+    }
+  }
   predrate <- predrate[, .SD, .SDcols = c(get_dimension_columns(names(predrate)), paste0("PREDRATE", c("", ".f", ".a")))]
   return(predrate)
 }
@@ -120,7 +126,7 @@ estimate_predrate <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_prednevner <- function(design, parameters){
-  cat("\n* Estimerer PREDNEVNER...")
+  cat("\n\n* Estimerer PREDNEVNER...")
   missyears <- parameters$MOVAVparameters$missyears
   redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
   prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
