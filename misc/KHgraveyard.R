@@ -4195,3 +4195,8 @@ delete_old_filegroup_log <- function(filegroup, parameters){
   return(invisible(NULL))
 }
 
+#' @keywords internal
+#' @noRd
+get_tab_columns <- function(columnnames){
+  grep("^TAB\\d+$", columnnames, value = T)
+}

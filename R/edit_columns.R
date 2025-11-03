@@ -116,7 +116,7 @@ filter_invalid_geo_alder_kjonn <- function(dt, parameters){
 #' @noRd
 get_etabs <- function(columnnames, parameters){
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  tabcols <- get_tab_columns(columnnames)
+  tabcols <- grep("^TAB\\d+$", columnnames, value = T)
   tabnames <- character(0)
   for(tab in tabcols){
     tabnames <- c(tabnames, spec[[tab]])

@@ -9,15 +9,10 @@
 #' @param dt cube
 #' @param parameters parameters
 do_censor_cube_stata_r <- function(dt, parameters){
-  dt[, let(pvern = 0L, serieprikket = 0L, spv_tmp = 0L)]
-  istellerf29_geo99 <- any(dt$TELLER.f %in% c(2,9) | grepl("99$", dt$GEO))
+  dt[, let(pvern = 0L, serieprikket = 0L)]
+  # dt[TELLER.f == 9, let(spv_tmp = 9L)] #Håndtert i merge_teller_nevner/add_spv_tmp
+  # dt[TELLER.f == 2, let(spv_tmp = 2L)] # Håndtert i add_crude_rate
   
-  if(istellerf29_geo99){
-    dt[TELLER.f == 9, let(spv_tmp = 9)]
-    dt[TELLER.f == 2, let(spv_tmp = 2)]
-    dt_spv29_geo99 <- dt[spv_tmp %in% c(2,9) | grepl("99$", GEO)]
-    dt <- dt[!spv_tmp %in% c(2,9) & !grepl("99$", GEO)]
-  }
   limits <- get_censor_limits(spec = parameters$CUBEinformation)
   alltriangles <- get_censor_triangles(parameters = parameters)
   dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
@@ -29,24 +24,29 @@ do_censor_cube_stata_r <- function(dt, parameters){
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   
   cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
-  do_naboprikk(dt = dt, alltriangles = alltriangles, limit = limits$TELLER, dims = dims)
-  if(istellerf29_geo99) dt <- data.table::rbindlist(list(dt, dt_spv29_geo99), use.names = T, fill = T)
+  do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
+  # if(istellerf29_geo99) dt <- data.table::rbindlist(list(dt, dt_spv29_geo99), use.names = T, fill = T)
+  valuesF <- paste0(get_value_columns(names(dt)), ".f")
+  dt[spv_tmp %in% c(3,4), (valuesF) := 3]
   return(dt)
 }
 
-do_naboprikk <- function(dt, alltriangles, limit, dims){
+do_naboprikk <- function(dt, alltriangles, limits, dims){
+  dt[, skal_naboprikkes := !(spv_tmp %in% c(2,9))]
   nyeprikker <- 1L
   iteration  <- 1L
   max_serie_rounds <- 3L
   force_runde <- TRUE
   dt[, rid__ := .I]
+  if(is_empty(limits$TELLER)) limits[["TELLER"]] <- -1
+  if(is_empty(limits$NEVNER)) limits[["TELLER"]] <- -1
   
   # Forhåndsberegn strata per dimensjon (inkluderer AAR automatisk fordi dims inneholder AAR)
   strata_cols <- setNames(paste0("strata__", names(alltriangles)), names(alltriangles))
   for (censordim in names(alltriangles)){
     otherdims <- setdiff(dims, censordim)     # AAR er med her dersom det ligger i dims
     sc <- strata_cols[[censordim]]
-    dt[, (sc) := .GRP, by = otherdims]
+    dt[skal_naboprikkes == TRUE, (sc) := .GRP, by = otherdims]
     data.table::setindexv(dt, c(sc, censordim))  # indeks, ikke key
   }
   
@@ -78,13 +78,14 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
         # 1) Problemstrata:
         #    - antpvern og sumtellerprikk teller KUN pvern==1 (serieprikk teller ikke her)
         #    - minst to tilgjengelige kandidater (pvern==0) må finnes
-        stats <- dt[in_triangle, .(
+        stats <- dt[skal_naboprikkes == TRUE & in_triangle, .(
           antpvern       = sum(pvern == 1L, na.rm = TRUE),
           sumtellerprikk = sum(sumTELLER[pvern == 1L], na.rm = TRUE),
+          sumnevnerprikk = sum(sumNEVNER[pvern == 1L], na.rm = TRUE),
           ant_available  = sum(pvern == 0L, na.rm = TRUE)
         ), by = sc]
         
-        prob <- stats[((antpvern == 1L) | (antpvern > 1L & sumtellerprikk <= limit)) & ant_available >= 2L, get(sc)]
+        prob <- stats[antpvern == 1L | (antpvern > 1L & (sumtellerprikk <= limist$TELLER | sumnevnerprikk <= limits$NEVNER) & ant_available >= 2L), get(sc)]
         if (length(prob) == 0L) next
         
         # 2) Prioritetskart for trekanten: NAVN-basert oppslag (kritisk når nivåene er numeric)
@@ -169,16 +170,18 @@ do_naboprikk <- function(dt, alltriangles, limit, dims){
 #' Må håndtere evt spesialverdier som skal aksepteres, de kan ikke regnes som prikket her heller.
 do_censor_serie <- function(dt, limits, dims){
   seriedims <- setdiff(dims, "AAR")
-  n_year <- length(unique(dt$AAR))
+  # n_year <- length(unique(dt$AAR)) # år totalt i filen, noen strata kan ha langt færre årganger
   primary_limit <- getOption("khfunctions.anon_hullandel")
   weak_limit <- getOption("khfunctions.anon_svakandel")
-  helper_columns <- c("weak", "propweak", "propprimary")
+  helper_columns <- c("weak", "propweak", "propprimary", "n_year")
   dt[, (helper_columns) := NA_real_]
   
-  dt[TELLER.f < 9, let(weak = ifelse(sumTELLER <= limits$STATTOL, 1, 0))]
-  dt[, let(propweak = mean(weak, na.rm = T), propprimary = sum(pvern, na.rm = T)/n_year), by = seriedims]
+  # SPØRSMÅL: Skal antall år beregnes per strata for å ta hensyn til spv_tmp = 2 og 9?
+  # dt[, n_year := .N, by = seriedims] 
+  dt[spv_tmp == 0, let(weak = ifelse(sumTELLER <= limits$STATTOL, 1, 0))]
+  dt[, let(propweak = mean(weak, na.rm = T), propprimary = sum(pvern, na.rm = T)/.N), by = seriedims]
   
-  dt[pvern != 1 & (propweak > weak_limit | propprimary > primary_limit), let(serieprikket = 1, spv_tmp = 4)]
+  dt[spv_tmp == 0 & (propweak > weak_limit | propprimary > primary_limit), let(serieprikket = 1, spv_tmp = 4)]
   cat(paste0("\n** Serieprikker ", dt[serieprikket == 1, .N], " rader fordi tidsserien har en andel personvernprikker > ", primary_limit, 
              " eller at andelen sumTELLER <= ", limits$STATTOL, " > ", weak_limit))
   dt[, (helper_columns) := NULL]
@@ -197,12 +200,12 @@ do_censor_serie <- function(dt, limits, dims){
 do_censor_primary <- function(dt, limits){
   if(is_not_empty(limits$TELLER)){
     cat("\n*** Prikker på liten teller og teller-nevner")
-    dt[sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)]
-    dt[sumNEVNER - sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)] 
+    dt[spv_tmp == 0 & sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)]
+    dt[spv_tmp == 0 & sumNEVNER - sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)] 
   }
   if(is_not_empty(limits$NEVNER)){
     cat("\n*** Prikker på liten nevner")
-    dt[sumNEVNER <= limits$NEVNER, let(pvern = 1, spv_tmp = 3)]
+    dt[spv_tmp == 0 & sumNEVNER <= limits$NEVNER, let(pvern = 1, spv_tmp = 3)]
   }
   cat("\n** Antall primærprikker i filen: ", dt[pvern == 1, .N])
 }
@@ -213,9 +216,9 @@ do_censor_primary <- function(dt, limits){
 #' @noRD
 get_censor_limits <- function(spec){
   limits <- list()
-  limits[["TELLER"]] <- spec$Stata_PRIKK_T
-  limits[["NEVNER"]] <- spec$Stata_PRIKK_N 
-  limits[["STATTOL"]] <- spec$Stata_STATTOL_T  
+  limits[["TELLER"]] <- ifelse(is_not_empty(spec$Stata_PRIKK_T), spec$Stata_PRIKK_T, spec$PRIKK_T)
+  limits[["NEVNER"]] <- ifelse(is_not_empty(spec$Stata_PRIKK_N), spec$Stata_PRIKK_N, spec$PRIKK_N)
+  limits[["STATTOL"]] <-ifelse(is_not_empty(spec$Stata_STATTOL_T), spec$Stata_STATTOL_T, spec$STATTOL_T)
   return(limits)
 }
 

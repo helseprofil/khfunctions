@@ -10,10 +10,11 @@ do_censor_cube <- function(dt, parameters){
     dt <- do_censor_kube_r(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
-    cat("\n* Prikker data (STATA-prikking)")
-    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
-    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
-    dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
+    cat("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
+    # dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
+    # save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+    dt <- do_censor_cube_stata_r(dt = dt, parameters = parameters)
+    # dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
   return(dt)
 }
