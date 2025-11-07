@@ -1,14 +1,14 @@
 # Oversetting av stataprikking til R
-# - 1. Primærprikking på prikkegrenser
-# - 2. Serieprikking av svake tidsserier
-# - 3. Naboprikking
+
 
 #' @title do_censor_cube_stata_r (temporary name)
-#' @description
-#' Replace STATA censor routines, and eventually take over all censoring.
+#' @description 
+#' - 1. Primary censoring 
+#' - 2. Serie censoring (weak or high proportion of primary censoring)
+#' - 3. Secondary censoring
 #' @param dt cube
 #' @param parameters parameters
-do_censor_cube_stata_r <- function(dt, parameters){
+do_censor_primary_secondary <- function(dt, parameters){
   dt[, let(pvern = 0L, serieprikket = 0L)]
   # dt[TELLER.f == 9, let(spv_tmp = 9L)] #Håndtert i merge_teller_nevner/add_spv_tmp
   # dt[TELLER.f == 2, let(spv_tmp = 2L)] # Håndtert i add_crude_rate
@@ -25,10 +25,9 @@ do_censor_cube_stata_r <- function(dt, parameters){
   
   cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
   do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
-  # if(istellerf29_geo99) dt <- data.table::rbindlist(list(dt, dt_spv29_geo99), use.names = T, fill = T)
   valuesF <- paste0(get_value_columns(names(dt)), ".f")
-  dt[spv_tmp %in% c(3,4), (valuesF) := 3]
-  return(dt)
+  dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess.
+  # return(dt)
 }
 
 do_naboprikk <- function(dt, alltriangles, limits, dims){
@@ -85,7 +84,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
           ant_available  = sum(pvern == 0L, na.rm = TRUE)
         ), by = sc]
         
-        prob <- stats[antpvern == 1L | (antpvern > 1L & (sumtellerprikk <= limist$TELLER | sumnevnerprikk <= limits$NEVNER) & ant_available >= 2L), get(sc)]
+        prob <- stats[antpvern == 1L | (antpvern > 1L & (sumtellerprikk <= limits$TELLER | sumnevnerprikk <= limits$NEVNER) & ant_available >= 2L), get(sc)]
         if (length(prob) == 0L) next
         
         # 2) Prioritetskart for trekanten: NAVN-basert oppslag (kritisk når nivåene er numeric)
@@ -174,11 +173,11 @@ do_censor_serie <- function(dt, limits, dims){
   primary_limit <- getOption("khfunctions.anon_hullandel")
   weak_limit <- getOption("khfunctions.anon_svakandel")
   helper_columns <- c("weak", "propweak", "propprimary", "n_year")
-  dt[, (helper_columns) := NA_real_]
+  dt[, (helper_columns) := 0]
   
   # SPØRSMÅL: Skal antall år beregnes per strata for å ta hensyn til spv_tmp = 2 og 9?
   # dt[, n_year := .N, by = seriedims] 
-  dt[spv_tmp == 0, let(weak = ifelse(sumTELLER <= limits$STATTOL, 1, 0))]
+  dt[sumTELLER <= limits$STATTOL, let(weak = 1L)]
   dt[, let(propweak = mean(weak, na.rm = T), propprimary = sum(pvern, na.rm = T)/.N), by = seriedims]
   
   dt[spv_tmp == 0 & (propweak > weak_limit | propprimary > primary_limit), let(serieprikket = 1, spv_tmp = 4)]
@@ -248,7 +247,7 @@ get_censor_triangles <- function(parameters){
     names(out)[names(out) == "SPES"] <- correctname
   }
   
-  if(parameters$geonaboprikk){
+  if(parameters$CUBEinformation$GEO_NABOPRIKK == "1"){
     out[["GEO"]] <- get_geonabotriangles(parameters = parameters)
   }
   
