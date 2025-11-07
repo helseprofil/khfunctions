@@ -1,4 +1,12 @@
-# khfunctions 1.0.21 (2015-10-28)
+# khfunctions (development version)
+
+## New features
+* Implementing `do_censor_primary_secondary()` to replace R and STATA censoring, handling both primary and secondary censoring.
+** In ACCESS, limits are fetched from either PRIKK_T/N/STATTOL, or Stata_PRIKK_T/N/STATTOL. Triangles are always fetched from Stata_nabopr*-columns. 
+** Secondary censoring 
+* spv_tmp is now set throughout the data processing, and can be used to set SPVFLAGG. However, flag variables are often changed in postprocess code, currently hindering this implementation.
+
+# khfunctions 1.0.22 (2015-10-28)
 
 ## Bugfix and other changes
 * `check_if_format_is_ok` did not report correctly when there were problems. 
@@ -10,7 +18,7 @@
 # khfunctions 1.0.20 (2025-10-07)
 
 ## New features
-* LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exists.
+* LagKUBE and LagFilgruppe now ensures nb-NO.UTF-8 locale, and resets the original locale when the function exits.
 * `do_harmonize_geo` sets year if not in parameters, making it available for LagFilgruppe and rsynt. 
 * Added secondary censoring triangles for levekaarsone
 * For rsynt-scripts read from github, case-insensitive matching has been enabled in case of autocorrect in access. A warning will be given if any url is not exact matching. 
@@ -199,7 +207,7 @@
 * Changed default for write to TRUE
 * All filegroups are now consistently filtered to only use relevant TAB1/2/3, AAR, and ALDER based on ACCESS input. This reduces data size, and avoids unnecessary memory use. 
 ** AAR prior to AAR_START is removed
-** ALDER < min and > max ALDER provided is removed
+** ALDER < min and > max ALDER required is removed
 ** TABs are filtered to only keep what is provided in TABX(_0)
 * Implemented standardization to multiyear-periods. 
 ** In ACCESS, the last year of the period must be provided. It could be given as AARl=='XXXX', but it is more intuitive to use AARh =='XXXX'

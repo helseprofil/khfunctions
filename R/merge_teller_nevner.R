@@ -71,7 +71,16 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   if (!identical(dimorg, dim(TNF))) cat("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
+  add_spvtmp(file = TNF)
   return(list(TNF = TNF, KUBEd = KUBEdesign))
+}
+
+add_spvtmp <- function(file){
+  file[, let(spv_tmp = 0L)]
+  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(file))
+  if (length(tncols) > 0L) {
+    file[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
+  }
 }
 
 #' @title get_initialdesign
