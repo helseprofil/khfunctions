@@ -5,7 +5,8 @@
 ** In ACCESS, limits are fetched from either PRIKK_T/N/STATTOL, or Stata_PRIKK_T/N/STATTOL. Triangles are always fetched from Stata_nabopr*-columns. 
 ** Secondary censoring is performed by new function `do_naboprikk()`
 * spv_tmp is now set throughout the data processing, and can be used to set SPVFLAGG. However, flag variables are often changed in postprocess code, currently hindering this implementation.
-* Stacking of original files to filegroup is more effective by using list and only rbindlist at the end. 
+* Stacking of original files to filegroup is more effective by using list and only data.table::rbindlist() at the end
+* Implementing ALLVISFILTER, providing the functionality to filter ALLVIS files before writing, to e.g. remove rows/columns (but keep them in the QC-file)
 
 # khfunctions 1.0.22 (2015-10-28)
 
