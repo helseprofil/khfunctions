@@ -180,7 +180,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
     iteration <- iteration + 1L
   }
   dt[, (unname(strata_cols)) := NULL]
-  dt[, rid__ := NULL]
+  dt[, let(rid__ = NULL, skal_naboprikkes = NULL)]
 }
 
 #' @title do_censor_serie

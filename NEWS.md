@@ -3,8 +3,9 @@
 ## New features
 * Implementing `do_censor_primary_secondary()` to replace R and STATA censoring, handling both primary and secondary censoring.
 ** In ACCESS, limits are fetched from either PRIKK_T/N/STATTOL, or Stata_PRIKK_T/N/STATTOL. Triangles are always fetched from Stata_nabopr*-columns. 
-** Secondary censoring 
+** Secondary censoring is performed by new function `do_naboprikk()`
 * spv_tmp is now set throughout the data processing, and can be used to set SPVFLAGG. However, flag variables are often changed in postprocess code, currently hindering this implementation.
+* Stacking of original files to filegroup is more effective by using list and only rbindlist at the end. 
 
 # khfunctions 1.0.22 (2015-10-28)
 
