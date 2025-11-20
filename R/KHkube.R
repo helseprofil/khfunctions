@@ -19,8 +19,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
-  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   load_and_format_files(parameters = parameters)
@@ -61,6 +61,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues)
   generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
   ALLVIS <- ALLVIS[, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
+  ALLVIS <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = parameters$outdimensions, kube = KUBE)
   
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)

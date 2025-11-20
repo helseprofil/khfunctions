@@ -116,7 +116,7 @@ filter_invalid_geo_alder_kjonn <- function(dt, parameters){
 #' @noRd
 get_etabs <- function(columnnames, parameters){
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  tabcols <- get_tab_columns(columnnames)
+  tabcols <- grep("^TAB\\d+$", columnnames, value = T)
   tabnames <- character(0)
   for(tab in tabcols){
     tabnames <- c(tabnames, spec[[tab]])
@@ -188,13 +188,13 @@ fix_geo_special <- function(dt, parameters){
   if (isbydelstart) {
     cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")
     dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (paste0(valK, ".f")) := 9]
+    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
   }
   
   if (isdk2020) {
     cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
     dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (paste0(valK, ".f")) := 9]
+    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
@@ -202,7 +202,7 @@ fix_geo_special <- function(dt, parameters){
     .years <- seq(ystart, ystart+3)
     .geos <- c("1508", "1580")
     dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (paste0(valK, ".f")) := 9]
+    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (c(paste0(valK, ".f"), "spv_tmp")) := 9]
   }
   return(invisible(dt))
 }

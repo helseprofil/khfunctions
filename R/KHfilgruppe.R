@@ -17,14 +17,16 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
-  Filgruppe <- data.table::data.table()
   codebooklog <- initiate_codebooklog(nrow = 0)
   cat("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
-  # For dev and debug: set file_number = the file you want to test
-  for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
-    new_file <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
-    Filgruppe <- data.table::rbindlist(list(Filgruppe, new_file), fill = TRUE, use.names = TRUE)
-    cat("\n* Fil stablet, antall rader nå: ", nrow(Filgruppe), "\n")
+  if(parameters$n_files == 1){
+    Filgruppe <- make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
+  } else {
+    Filgruppe <- vector("list", parameters$n_files)
+    for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
+      Filgruppe[[file_number]] <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
+    }
+    Filgruppe <- data.table::rbindlist(Filgruppe, fill = TRUE, use.names = TRUE)
   }
   cat("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
