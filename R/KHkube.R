@@ -59,9 +59,9 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   ALLVIS <- data.table::copy(KUBE)
   ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues)
-  ALLVIS <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
   generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
   ALLVIS <- ALLVIS[, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
+  ALLVIS <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = parameters$outdimensions, kube = KUBE)
   
   RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)

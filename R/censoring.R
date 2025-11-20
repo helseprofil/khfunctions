@@ -8,15 +8,15 @@ do_censor_cube <- function(dt, parameters){
   if(parameters$Censor_type == "R"){
     cat("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
-    # do_censor_kube_r(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
-    cat("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
-    # dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
-    # save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
-    dt <- do_censor_primary_secondary(dt = dt, parameters = parameters)
-    # if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
-    # dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
+    # cat("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
+    # do_censor_primary_secondary(dt = dt, parameters = parameters)
+    # Ready to replace the rows below
+    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
+    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+    if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
+    dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
   return(dt)
 }
@@ -46,7 +46,7 @@ do_censor_primary_secondary <- function(dt, parameters){
   cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
   do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
   valuesF <- paste0(get_value_columns(names(dt)), ".f")
-  dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess.
+  dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
 }
 
 #' @description Written with assistance from copilot
