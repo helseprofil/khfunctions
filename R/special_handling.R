@@ -26,7 +26,7 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
     return(dt)
   }
   
-  code <- ensure_correct_url(code)
+  code <- ensure_correct_url(code, name)
   cat("\n** Starter R-snutt:", name)
   code_env <- new.env()
   dtname <- as.character(substitute(dt))
@@ -73,18 +73,15 @@ clean_rsynt_code <- function(code, name){
 ensure_correct_url <- function(code, name){
   urls <- regmatches(code, gregexpr('https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/snutter[^"]+', code))[[1]]
   if(length(urls) == 0) return(code)
-  folder <- sub(".*(snutter/.*)$", "\\1", dirname(urls[[1]]))
-  allfiles <- list_snutter(folder = folder)
-  if(length(allfiles) == 0) stop("URL til R-snutt ikke korrekt, finner ingen snutter på denne adressen:\n", code)
-  allfiles <- paste0("https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/", allfiles)
+  available_scripts <- paste0("https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/",
+                              readLines("https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/snutter/snutter_index.txt"))
   
   replacementurls <- character()
   for(i in seq_along(urls)){
-    iscorrect <- urls[i] %in% allfiles
+    iscorrect <- urls[i] %in% available_scripts
     if(!iscorrect){
-      filename <- basename(urls[i])
-      caseinsensitivematch <- grep(paste0("/", filename, "$"), allfiles, ignore.case = T, value = T)
-      if(length(caseinsensitivematch) != 1) stop("FEIL i Rsynt!\nURL til R-snutt ikke korrekt. Ingen fil ble funnet eller matchet case-insensitivt med eksisterende filer på github:\n", code)
+      caseinsensitivematch <- grep(urls[i], available_scripts, ignore.case = T, value = T)
+      if(length(caseinsensitivematch) != 1) stop("FEIL i Rsynt!\nURL til R-snutt ikke korrekt. Ingen fil ble funnet eller matchet case-insensitivt med eksisterende filer på github:\n", urls[i])
       replacementurls[i] <- caseinsensitivematch
     } else {
       replacementurls[i] <- urls[i]
@@ -102,21 +99,6 @@ ensure_correct_url <- function(code, name){
   }
   return(code)
 }
-
-#' @title list_snutter
-#' @description
-#' Lists all available rsynt-scripts in the relevant folder
-#' @param folder folder defined by 
-#' @keywords internal
-#' @noRd
-list_snutter <- function(folder){
-  req <- httr2::request("https://api.github.com/repos/helseprofil/backend/git/trees/main?recursive=1")
-  resp <- httr2::req_perform(req)
-  tree <- httr2::resp_body_json(resp, simplifyDataFrame = TRUE)$tree$path
-  files <- grep(paste0("^", folder, "/.*\\.R$"), tree, value = T, ignore.case = T)
-  return(files)
-}
-
 
 #' @title do_stata_processing
 #' @description
