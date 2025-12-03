@@ -11,8 +11,8 @@ load_and_format_files <- function(parameters){
   if(!exists("BUFFER", envir = .GlobalEnv)) .GlobalEnv$BUFFER <- list()
   tabfilter_tellerfile <- set_filter_tab(cubeinformation = parameters$CUBEinformation)
   tellerfile <- parameters$files$TELLER
-  isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
-  if(isbuffer) BUFFER[[tellerfile]] <- NULL
+  # isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
+  # if(isbuffer) BUFFER[[tellerfile]] <- NULL
   load_filegroup_to_buffer(filegroup = tellerfile, filter = tabfilter_tellerfile, parameters = parameters)
   
   nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
@@ -21,7 +21,7 @@ load_and_format_files <- function(parameters){
     if(isbuffer) BUFFER[[file]] <- NULL
     load_filegroup_to_buffer(filegroup = file, filter = NULL, parameters = parameters)
   }
-  invisible(gc())
+  cat("\n* Alle filer lest, formattert og skrevet til duckdb!")
 }
 
 #' @title set_filter_tab
@@ -89,8 +89,8 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   
   if(!isfilefilter){
     FIL <- do_harmonize_geo(file = FIL, vals = fileinfo$vals, rectangularize = FALSE, parameters = parameters)
-    .GlobalEnv$BUFFER[[filegroup]] <- FIL
-    return(invisible(NULL))
+    # .GlobalEnv$BUFFER[[filegroup]] <- FIL
+    # return(invisible(NULL))
   } 
   
   if(isfilefilter){
@@ -130,7 +130,9 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     if(isffrsynt) FIL <- do_special_handling(name = "FF_RSYNT1", dt = FIL, code = filefilter$FF_RSYNT1, parameters = parameters)
   }
   .GlobalEnv$BUFFER[[filegroup]] <- FIL
-  return(invisible(NULL))
+  cat("\n*** Skriver til duckdb...\n")
+  DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
+  invisible(gc())
 }
 
 #' @title set_filter_year
@@ -189,14 +191,13 @@ read_population_file <- function(alderfilter = NULL, yearfilter = NULL, paramete
   
   use_dataset <- isalderfilter || isyearfilter || !islks
   if(!use_dataset){
-    cat("\n** Leser inn full befolkningsfil (ingen filter angitt for ALDER, AAR eller GEOniv) ..... ")
+    cat("\n** Leser inn full befolkningsfil (ingen filter angitt for ALDER, AAR eller GEOniv).....")
     file <- arrow::open_dataset(file.path(root, "BEF_GKny.parquet"))
     readcols <- c(grep(paste0("^", getOption("khfunctions.standarddimensions"), collapse = "|"), names(file), value = T), befcols)
     dt <- file |> 
       dplyr::select(dplyr::all_of(readcols)) |> 
       dplyr::collect() |> 
       data.table::setDT()
-    cat("Ferdig")
     return(dt)
   }
   
@@ -212,7 +213,7 @@ read_population_file <- function(alderfilter = NULL, yearfilter = NULL, paramete
   geofilter <- ifelse(islks, "lks %in% c(0, 1)", "lks == 0")
   completefilter <- paste(c(alderfilter, yearfilter, geofilter), collapse = " & ")
   readcols <- c(grep(paste0("^", getOption("khfunctions.standarddimensions"), collapse = "|"), names(file), value = T), befcols)
-  cat("\n** Leser inn befolkningsfil med filter:", completefilter, " ..... ")
+  cat(paste0("\n** Leser inn befolkningsfil med filter: ", completefilter, "....."))
   dt <- file |> 
     dplyr::filter(!!rlang::parse_expr(completefilter)) |> 
     dplyr::select(dplyr::all_of(readcols)) |> 
@@ -244,7 +245,7 @@ translate_age_filter <- function(alderfilter, all){
 read_filegroup <- function(filegroup){
   file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(filegroup, ".parquet"))
   if(file.exists(file)){
-    cat("\n** Leser inn fil: ", file, " ..... ")
+    cat(paste0("\n** Leser inn fil: ", file, "....."))
     dt <- arrow::open_dataset(file)
     readcols <- grep("^KOBLID$|^ROW$", names(dt), value = TRUE, invert = TRUE)
     dt <- dt |> 
@@ -260,7 +261,6 @@ read_filegroup <- function(filegroup){
     dt[, (delcols) := NULL]
   }
   set_integer_columns(dt = dt)
-  cat("Ferdig")
   return(dt)
 }
 
