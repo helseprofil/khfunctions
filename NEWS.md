@@ -2,6 +2,7 @@
 
 ## Other changes
 * Special_handling no longer use api to fetch available scripts for rsynt-points, but read a compiled list on github. This avoids issues with github api-limit when running many files.
+* Updated dependencies and package versions
 
 # khfunctions 1.1.0 (2025-11-20)
 
