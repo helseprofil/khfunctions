@@ -124,12 +124,18 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   user_args <- as.list(environment())
   user_args[["name"]] <- cubename
   capture.output(parameters <- get_cubeparameters(user_args = user_args))
+  
   valid_cube <- read_kubestatus(parameters$dbh, year)[KUBE_NAVN == cubename]
   if(nrow(valid_cube) == 0){
     cat("\n*Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
     return(invisible(NULL))
   }
- 
+  if(nrow(valid_cube) > 1){
+    cat("\n*>1 godkjent kube funnet i KUBESTATUS som matchet cubename, kan ikke lage friskvikfiler")
+    return(invisible(NULL))
+  }
+  
+  parameters[["batchdate"]] <- valid_cube$DATOTAG_KUBE
   indicators <- parameters$friskvik[, .SD, .SDcols = c("INDIKATOR", "ID")]
   if(is.null(friskvik_id)){
     cat("\n* Generating all friskvik files as 'friskvik_id = NULL', ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
@@ -139,16 +145,13 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
     cat("\n* Generating requested friskvik ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
   }
   
-  continue <- utils::menu(c("Yes, continue!", "No, stop!"), title = "\n\nIs it ok to generate (AND REPLACE) the requested friskvik indicator(s)?")
-  if(continue == 2) return(invisible(NULL))
-  
-  cube_name <- paste0(valid_cube$KUBE_NAVN, "_", valid_cube$DATOTAG_KUBE, ".rds")
+  cube_name <- paste0(valid_cube$KUBE_NAVN, "_", valid_cube$DATOTAG_KUBE, ".parquet")
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.dat"), "R", cube_name)
   if(!file.exists(path)) stop("Can't find cube file ", path, "\n Check if date tag in KUBESTATUS is correct!!")
-  cube <- data.table::setDT(readRDS(path))
+  cube <- data.table::setDT(arrow::read_parquet(path))
   do_remove_censored_observations(dt = cube, outvalues = get_outvalues_allvis(parameters = parameters))
   
   for(i in 1:nrow(indicators)){
     generate_friskvik_indicator(dt = cube, id = indicators[i, ID], parameters = parameters)
   }
-}
+} 

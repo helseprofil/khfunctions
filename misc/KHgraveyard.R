@@ -4370,3 +4370,17 @@ SettNaboAnoSpec <- function(parameters) {
   }
   return(Foverkat)
 }
+
+#' @title list_snutter
+#' @description
+#' Lists all available rsynt-scripts in the relevant folder
+#' @param folder folder defined by 
+#' @keywords internal
+#' @noRd
+list_snutter <- function(folder){
+  req <- httr2::request("https://api.github.com/repos/helseprofil/backend/git/trees/main?recursive=1")
+  resp <- httr2::req_perform(req)
+  tree <- httr2::resp_body_json(resp, simplifyDataFrame = TRUE)$tree$path
+  files <- grep(paste0("^", folder, "/.*\\.R$"), tree, value = T, ignore.case = T)
+  return(files)
+}

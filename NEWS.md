@@ -1,3 +1,13 @@
+# khfunctions 1.1.1
+
+New features
+* Started working on implementing duckdb to reduce memory requirement
+
+## Bugfix Other changes
+* Special_handling no longer use api to fetch available scripts for rsynt-points, but read a compiled list on github. This avoids issues with github api-limit when running many files.
+* Updated `generate_specific_friskvik_indicators()` to read parquet files and use correct date tag. 
+* Updated dependencies and package versions
+
 # khfunctions 1.1.0 (2025-11-20)
 
 ## New features
