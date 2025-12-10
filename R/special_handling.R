@@ -73,8 +73,7 @@ clean_rsynt_code <- function(code, name){
 ensure_correct_url <- function(code, name){
   urls <- regmatches(code, gregexpr('https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/snutter[^"]+', code))[[1]]
   if(length(urls) == 0) return(code)
-  available_scripts <- paste0("https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/",
-                              readLines("https://raw.githubusercontent.com/helseprofil/backend/refs/heads/main/snutter/snutter_index.txt"))
+  available_scripts <- getOption("khfunctions.snutter")
   
   replacementurls <- character()
   for(i in seq_along(urls)){
