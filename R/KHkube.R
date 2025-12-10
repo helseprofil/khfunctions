@@ -20,9 +20,10 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
-  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
-  
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
+  # For dev and debug: use SetKubeParameters("NAME") and run step by step below
+
+  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck")
   load_and_format_files(parameters = parameters)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
@@ -111,6 +112,8 @@ lagkube_cleanup <- function(parameters){
   fs::file_delete(get_lagkube_guardfile_path())
   if(parameters$write) sink()
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
+  DBI::dbDisconnect(parameters$duck)
+  fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
   RODBC::odbcCloseAll()
 }
 
