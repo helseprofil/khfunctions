@@ -1,6 +1,11 @@
+# khfunctions 1.1.2 (2025-12-16)
+
+## Bugfix
+- Critical bugfix in `format_excel_and_csv_files()` misinterpreting TomRadSlutt. 
+
 # khfunctions 1.1.1
 
-New features
+## New features
 * Started working on implementing duckdb to reduce memory requirement
 
 ## Bugfix Other changes

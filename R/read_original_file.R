@@ -140,8 +140,8 @@ format_excel_and_csv_files <- function(file, filedescription, ...){
   if(is_not_empty(filedescription$UNDERTABLOK)) file <- handle_undertablok(file = file, filedescription = filedescription)
   if(length(args$slettRader) > 0) file <- file[-args$slettRader]
   if(args$skip > 0) file <- file[-(1:args$skip)]
-  if(length(args$sisteRad) > 0) file <- file[1:(args$sisteRad - args$skip - length(args$slettRader)), ]
-  empty_rows <- file[rowSums(is.na(file[, .SD]) | file[, .SD] == "") == ncol(file), .I]
+  if(length(args$sisteRad) > 0) file <- file[1:(args$sisteRad - args$skip - length(args$slettRader))]
+  empty_rows <- file[rowSums(is.na(file[, .SD]) | file[, .SD] == "") == ncol(file), which = TRUE]
   if(args$TomRadSlutt && length(empty_rows) > 0) file <- file[1:empty_rows[1]-1]
   if(args$FjernTommeRader && length(empty_rows) > 0) file <- file[-empty_rows]
   empty_cols <- names(file)[sapply(file, function(col) all(is.na(col) | col == ""))]
