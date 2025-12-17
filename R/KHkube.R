@@ -109,7 +109,8 @@ get_lagkube_guardfile_path <- function(){
 #' @keywords internal
 #' @noRd
 lagkube_cleanup <- function(parameters){
-  fs::file_delete(get_lagkube_guardfile_path())
+  guardfile <- get_lagkube_guardfile_path()
+  if(file.exists(guardfile)) fs::file_delete(guardfile)
   if(parameters$write) sink()
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   DBI::dbDisconnect(parameters$duck)

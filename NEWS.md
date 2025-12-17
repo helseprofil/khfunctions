@@ -1,9 +1,14 @@
+# khfunctions (development version)
+
+## Bugfix and other changes
+- `lagkube_cleanup()` checks if guardfile exists before trying to delete it
+
 # khfunctions 1.1.2 (2025-12-16)
 
 ## Bugfix
 - Critical bugfix in `format_excel_and_csv_files()` misinterpreting TomRadSlutt. 
 
-# khfunctions 1.1.1
+# khfunctions 1.1.1 (2025-12-10)
 
 ## New features
 * Started working on implementing duckdb to reduce memory requirement
