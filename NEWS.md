@@ -2,6 +2,7 @@
 
 ## Bugfix and other changes
 - `lagkube_cleanup()` checks if guardfile exists before trying to delete it
+- Deprecated csv-output for QC-file
 
 # khfunctions 1.1.2 (2025-12-16)
 
