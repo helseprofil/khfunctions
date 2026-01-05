@@ -134,14 +134,12 @@ write_cube_output <- function(outputlist, parameters){
   name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
   datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
-  qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   
   cat("\nSAVING OUTPUT FILES:\n")
   data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
   do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
   cat("\n", datert_csv, "\n", datert_parquet)
-  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";") # QC csv format (to be deprecated)
   do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
   cat("\n", qc_csv, "\n", qc_parquet)
 }

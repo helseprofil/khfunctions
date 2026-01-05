@@ -1,9 +1,16 @@
+# khfunctions 1.1.3 (2026-01-05)
+
+## Bugfix and other changes
+- `lagkube_cleanup()` checks if guardfile exists before trying to delete it
+- Deprecated csv-output for QC-file
+- Removed circular dependencies
+
 # khfunctions 1.1.2 (2025-12-16)
 
 ## Bugfix
 - Critical bugfix in `format_excel_and_csv_files()` misinterpreting TomRadSlutt. 
 
-# khfunctions 1.1.1
+# khfunctions 1.1.1 (2025-12-10)
 
 ## New features
 * Started working on implementing duckdb to reduce memory requirement
