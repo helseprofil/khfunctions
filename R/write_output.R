@@ -141,7 +141,6 @@ write_cube_output <- function(outputlist, parameters){
   do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
   cat("\n", datert_csv, "\n", datert_parquet)
   do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
-  cat("\n", qc_csv, "\n", qc_parquet)
 }
 
 #' @title write_access_specs
