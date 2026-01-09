@@ -1,3 +1,13 @@
+# khfunctions (development version)
+
+## New features
+- ALLVIS output is also saved as .parquet, with appropriate schema to ensure column types
+- 
+
+## Other changes
+- Some code changes to ensure functionality in chained operations due to interactions between data.table v1.18 and collapse. 
+- reintroduced csv-output for QC-files by request. 
+
 # khfunctions 1.1.3 (2026-01-05)
 
 ## Bugfix and other changes
