@@ -20,8 +20,8 @@ add_predteller <- function(dt, parameters){
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters)
   
   cat("\n* Merger PREDTELLER med KUBE\n** Før merge dim:", dim(dt))
-  tabcols <- get_dimension_columns(names(dt))
-  dt <- collapse::join(dt, predteller, how = "l", on = tabcols, overid = 2, verbose = 0)
+  commontabs <- intersect(get_dimension_columns(names(dt)), names(predteller))
+  dt <- collapse::join(dt, predteller, how = "l", on = commontabs, overid = 2, verbose = 0)
   dt[, PREDTELLER.n := TELLER.n]
   cat("\n** Etter merge dim:", dim(dt))
   

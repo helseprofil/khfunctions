@@ -151,7 +151,8 @@ convert_all_columns_to_character <- function(dt){
   non_char_cols <- names(dt)[!sapply(dt, is.character)]
   if(length(non_char_cols) > 0){
     for(col in non_char_cols){
-      dt[, tempvar := as.character(get(col)), by = col][, (col) := NULL]
+      dt[, tempvar := as.character(get(col)), by = col]
+      dt[, (col) := NULL]
       data.table::setnames(dt, "tempvar", col)
     }
   }

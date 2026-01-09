@@ -43,7 +43,8 @@ do_recode_and_aggregate_dimensions <- function(dt, recode, cols, parameters){
     # replicate_4 <- recodebook[, .(N=.N), by = c(partinfo$cols)][, mean(N)] < 4
     dt <- collapse::join(dt, recodebook, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
     if(part == "Gn") dt <- fix_recode_geo(dt = dt, parameters = parameters)
-    dt[, (partinfo$cols) := mget(partinfo$colsomk)][, partinfo$colsomk := NULL]
+    dt[, (partinfo$cols) := mget(partinfo$colsomk)]
+    dt[, names(.SD) := NULL, .SDcols = partinfo$colsomk]
     dt <- do_aggregate_file(file = dt)
     cat(paste0("\n** Omkoder og aggregerer ", partinfo$name, ", rader nå: ", nrow(dt)))
   }

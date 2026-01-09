@@ -24,8 +24,10 @@ get_value_columns <- function(columnnames, full = FALSE) {
 #' @keywords internal
 #' @noRd
 get_dimension_columns <- function(columnnames) {
-  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear")
+  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear", "spv_tmp")
   return(setdiff(columnnames, nodim))
+  # dims <- c(getOption("khfunctions.alldimensions"), "TAB1", "TAB2", "TAB3")
+  # return(intersect(columnnames, dims))
 }
 
 #' @title fix_befgk_spelling
