@@ -2,11 +2,11 @@
 
 ## New features
 - ALLVIS output is also saved as .parquet, with appropriate schema to ensure column types
-- 
 
 ## Other changes
 - Some code changes to ensure functionality in chained operations due to interactions between data.table v1.18 and collapse. 
 - reintroduced csv-output for QC-files by request. 
+- `find_periods()` gains a check that unique years must be >= period, to avoid generating e.g. 3-year moving averages when only 2 years exist in the file. 
 
 # khfunctions 1.1.3 (2026-01-05)
 
