@@ -36,6 +36,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
   KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
   add_crude_rate(dt = KUBE, parameters = parameters)
+  set_initial_spvtmp(file = KUBE)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
   KUBE <- add_predteller(dt = KUBE, parameters = parameters)
