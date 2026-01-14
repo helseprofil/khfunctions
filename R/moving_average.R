@@ -146,7 +146,10 @@ calculate_period_sums <- function(dt, period, missing_year){
 }
 
 find_periods <- function(aarh, period){
-  max_aar <- (min(aarh) + period - 1):max(aarh)
+  start_max <- min(aarh) + period - 1
+  end_max <- max(aarh)
+  if(start_max > end_max) stop("Aggregering til ", period, "-årige tall feilet pga utilstrekkelig antall årganger")
+  max_aar <- start_max:end_max
   min_aar <- max_aar - period + 1
   return(data.table::data.table(aarl = min_aar, aarh = max_aar))
 }

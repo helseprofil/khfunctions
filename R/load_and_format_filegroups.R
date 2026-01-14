@@ -285,7 +285,8 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
   if(georecode > 0){
     cat("\n*** Recoding", georecode, "geo-codes")
     file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
-    file[!is.na(GEO_omk), let(GEO = GEO_omk)][, let(GEO_omk = NULL, HARMstd = NULL)]
+    file[!is.na(GEO_omk), let(GEO = GEO_omk)]
+    file[, let(GEO_omk = NULL, HARMstd = NULL)]
   }
   if("FYLKE" %in% names(file)) file[, FYLKE := NULL]
   file <- do_aggregate_file(file = file, valsumbardef = vals)

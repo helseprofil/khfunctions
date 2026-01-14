@@ -132,16 +132,56 @@ write_cube_output <- function(outputlist, parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
   name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
-  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
+  datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
   datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
+  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
+  qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   
   cat("\nSAVING OUTPUT FILES:\n")
-  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";") # Main output file for stat bank
-  do_write_parquet(outputlist$KUBE, filepath = datert_parquet) # Full cube .parquet format
+  # Full cube .parquet format
+  do_write_parquet(outputlist$KUBE, filepath = datert_parquet_full)
+  cat("\n", datert_parquet_full)
+  # Main output file for stat bank (csv and parquet)
+  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
+  do_write_parquet_allvis(dt = outputlist$ALLVIS, filepath = datert_parquet, parameters = parameters)
   cat("\n", datert_csv, "\n", datert_parquet)
+  
+  # QC files (parquet and csv)
+  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";")
   do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
 }
+
+#' @title do_write_parquet_allvis
+#' @description Saves allvis file with correct column types for statbank
+#' @param dt data.table
+#' @param filepath filepath
+#' @keywords internal
+#' @noRd
+do_write_parquet_allvis <- function(dt, filepath, parameters){
+  table <- convert_dt_to_arrow_table(dt)
+  schema <- generate_allvis_schema(table = table, parameters = parameters)
+  arrow::write_parquet(table$cast(schema), sink = filepath, compression = "snappy")
+}
+
+
+generate_allvis_schema <- function(table, parameters) {
+  tmp_sch <- table$schema
+  
+  fields <- lapply(names(table), function(name){
+    if (name %in% parameters$outdimensions) {
+    arrow::field(name, arrow::utf8())
+      } else if (name %in% parameters$outvalues) {
+        arrow::field(name, arrow::float64())
+        } else {
+          f <- tmp_sch$GetFieldByName(name)
+          arrow::field(name, f$type)
+        }
+    }
+  ) 
+  do.call(arrow::schema, fields)
+}
+
 
 #' @title write_access_specs
 #' @param parameters global parameters

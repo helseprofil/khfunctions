@@ -98,7 +98,8 @@ set_redesign_parts <- function(orgdesign, targetdesign, parameters){
     
     cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), keyby = c(partinfo$colsomk, partinfo$pri)]
     data.table::setkeyv(cb_part, partinfo$cols) # KUTT? 
-    cb_part <- cb_part[keep == 1][, keep := NULL]
+    cb_part <- cb_part[keep == 1]
+    cb_part[, keep := NULL]
     out[[part]] <- cb_part
   }
   return(out)
