@@ -1,37 +1,37 @@
 # PRODUCTION ----
-
-update_production_folder <- function(year = getOption("khfunctions.year"), prodfolder = getOption("khfunctions.kube.prod")){
-  prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
-  if(!dir.exists(prod)) dir.create(prod)
-  arkiv <- file.path(prod, "arkiv")
-  if(!dir.exists(arkiv)) dir.create(arkiv)
-  orgprodfiles <- list.files(prod, pattern = ".csv")
-
-  con <- connect_khelsa()
-  on.exit(RODBC::odbcCloseAll())
-  kubestatus_ok <- read_kubestatus(con, year = year)[, filenames := paste0(KUBE_NAVN, "_", DATOTAG_KUBE, ".csv")]
-  alltargetfiles <- kubestatus_ok[, filenames]
-  notwanted <- setdiff(orgprodfiles, alltargetfiles)
-  if(length(notwanted) > 0){
-    cat("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
-        paste("\n -", notwanted))
-    cat("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
-    x <- utils::menu(title = "\n\nVil du flytte disse filene til arkivet og fortsette?",
-                     choices = c("Ja, flytt filene", "Nei, avbryt"))
-    if(x == 2){
-      cat("\nAvbryter oppdatering av mappe...")
-      return(invisible(NULL))
-    } else {
-      cat("\nFlytter filer til arkiv")
-      from <- file.path(prod, notwanted)
-      to <- file.path(arkiv, notwanted)
-      fs::file_move(from, to)
-    }
-  }
-  missing <- setdiff(alltargetfiles, orgprodfiles)
-  # Move all notwanted into arkiv
-  # Find all missing in DATERT folder
-}
+# 
+# update_production_folder <- function(year = getOption("khfunctions.year"), prodfolder = getOption("khfunctions.kube.prod")){
+#   prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
+#   if(!dir.exists(prod)) dir.create(prod)
+#   arkiv <- file.path(prod, "arkiv")
+#   if(!dir.exists(arkiv)) dir.create(arkiv)
+#   orgprodfiles <- list.files(prod, pattern = ".csv")
+# 
+#   con <- connect_khelsa()
+#   on.exit(RODBC::odbcCloseAll())
+#   kubestatus_ok <- read_kubestatus(con, year = year)[, filenames := paste0(KUBE_NAVN, "_", DATOTAG_KUBE, ".csv")]
+#   alltargetfiles <- kubestatus_ok[, filenames]
+#   notwanted <- setdiff(orgprodfiles, alltargetfiles)
+#   if(length(notwanted) > 0){
+#     cat("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
+#         paste("\n -", notwanted))
+#     cat("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
+#     x <- utils::menu(title = "\n\nVil du flytte disse filene til arkivet og fortsette?",
+#                      choices = c("Ja, flytt filene", "Nei, avbryt"))
+#     if(x == 2){
+#       cat("\nAvbryter oppdatering av mappe...")
+#       return(invisible(NULL))
+#     } else {
+#       cat("\nFlytter filer til arkiv")
+#       from <- file.path(prod, notwanted)
+#       to <- file.path(arkiv, notwanted)
+#       fs::file_move(from, to)
+#     }
+#   }
+#   missing <- setdiff(alltargetfiles, orgprodfiles)
+#   # Move all notwanted into arkiv
+#   # Find all missing in DATERT folder
+# }
 
 # GODKJENT ----
 
