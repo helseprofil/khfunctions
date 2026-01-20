@@ -1,3 +1,11 @@
+# khfunctions (development version)
+
+## New features
+- `make_godkjent_folder()` now also runs qualcontrol::check_friskvik and warns if errors are detected. Need qualcontrol > v1.3.8
+
+## Other changes
+- Removed unneccessary columns NORM.n/.a/.f which were generated when MALTALL == TELLER/RATE
+
 # khfunctions 1.1.4 (2026-01-14)
 
 ## New features
@@ -7,6 +15,7 @@
 - Some code changes to ensure functionality in chained operations (now written on separate lines) due to interactions between data.table v1.18 and collapse. 
 - reintroduced csv-output for QC-files by request. 
 - `find_periods()` gains a check that unique years must be >= period, to avoid generating e.g. 3-year moving averages when only 2 years exist in the file. 
+- setting of initial spv_tmp moved to after aggregation to periods, else it was removed which caused problems with censoring. 
 
 # khfunctions 1.1.3 (2026-01-05)
 
