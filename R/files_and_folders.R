@@ -62,6 +62,30 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   
   do_godkjent_copy_files(filelist$found, paths)
   if(length(filelist$notfound) > 0) report_godkjent_files_notfound(filelist$notfound, year)
+  
+  if(utils::packageVersion("qualcontrol") < base::package_version("1.3.8")){
+    cat("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
+    return(invisible(NULL))
+  } 
+  cat("\n* SJEKKER FRISKVIKFILER\n\n")
+  qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = F)
+  tabname <- paste0("FRISKVIKSJEKK_", profil,"_", geoniv)
+  if(nrow(.GlobalEnv[[tabname]]) > 0) evaluate_friskviksjekk(tabname = tabname)
+}
+
+#' @noRd
+evaluate_friskviksjekk <- function(tabname){
+  d <- data.table::copy(.GlobalEnv[[tabname]])
+  miss_kube <- d[is.na(Kube), .N]
+  if(miss_kube > 0) cat("\n** Ikke alle kubefiler ble lest inn, feil i funksjonen eller manglende kuber")
+  problem <- d[ALT_OK != "Ja", .N]
+  if(problem > 0){
+    cat(paste0("\n** Noen av filene har potensielle problemer, se tabell med View(", tabname, ") for detaljer"))
+    problem_indikatorer <- d[ALT_OK != "Ja", unique(Friskvik)]
+    cat("\n** Sjekk spesielt følgende indikatorer: ", paste0("\n - ", problem_indikatorer))
+  } else {
+    cat("\n** Ingen problemer avdekket")
+  }
 }
 
 #' @noRd
@@ -138,5 +162,5 @@ report_godkjent_files_notfound <- function(notfoundfiles, year){
           length(notfoundfiles), " friskvikfiler ikke funnet i csv\n",
           "Sjekk at riktig datotag er lagt inn i KUBESTATUS_", year, "\n",
           "Eventuelt sjekk om friskvikfil er produsert\n",
-          paste0(" - ", notfoundfiles, collapse = "\n"))
+          paste0(" - ", notfoundfiles, collapse = "\n"), "\n")
 }

@@ -1,5 +1,11 @@
 # khfunctions (development version)
 
+## New features
+- `make_godkjent_folder()` now also runs qualcontrol::check_friskvik and warns if errors are detected. Need qualcontrol > v1.3.8
+
+## Other changes
+- Removed unneccessary columns NORM.n/.a/.f which were generated when MALTALL == TELLER/RATE
+
 # khfunctions 1.1.4 (2026-01-14)
 
 ## New features
