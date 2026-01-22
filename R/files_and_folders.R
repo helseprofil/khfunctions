@@ -68,7 +68,7 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
     return(invisible(NULL))
   } 
   cat("\n* SJEKKER FRISKVIKFILER\n\n")
-  qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = F)
+  qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = T)
   tabname <- paste0("FRISKVIKSJEKK_", profil,"_", geoniv)
   if(nrow(.GlobalEnv[[tabname]]) > 0) evaluate_friskviksjekk(tabname = tabname)
 }
