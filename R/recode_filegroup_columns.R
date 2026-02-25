@@ -32,7 +32,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
     recodelog <- do_list_unchanged_values(col = col, orgvalues = orgvalues, log = recodelog)
   }
   recodelog[, KOBLID := filedescription$KOBLID]
-  n_recoded <- collapse::fsum(as.numeric(recodelog$FREQ))
+  n_recoded <- sum(as.numeric(recodelog$FREQ), na.rm = T)
   cat("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   

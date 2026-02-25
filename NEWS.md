@@ -1,3 +1,9 @@
+# khfunctions 1.1.6 (2026-02-25)
+
+# Bugfix
+- Fixed message on recoding when no values recoded
+- In read_org_excel, sheet name is now forced as character
+
 # khfunctions 1.1.5 (2026-01-20)
 
 ## New features
