@@ -102,9 +102,8 @@ do_read_org_excel <- function(filedescription, read_arg_list){
   sheets <- gsub("\'|\\$", "", readxl::excel_sheets(filedescription$filepath))
   sheet <- sheets[1]
   if(is_not_empty(read_arg_list$ark)){
-    sheet <- find_correct_excel_sheet(sheet = read_arg_list$ark, sheets = sheets, filename = filedescription$FILNAVN)
+    sheet <- find_correct_excel_sheet(sheet = as.character(read_arg_list$ark), sheets = sheets, filename = filedescription$FILNAVN)
   }
-  
   file <- suppressMessages(try(readxl::read_excel(filedescription$filepath, sheet = sheet, col_names = FALSE, col_types = "text", skip = 0, na = "NA")))
   if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
