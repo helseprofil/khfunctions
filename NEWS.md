@@ -1,3 +1,8 @@
+# khfunctions (development version)
+
+## Changes
+- Information on secondary censoring is collected in one column ([issue144](https://github.com/helseprofil/khfunctions/issues/144))
+
 # khfunctions 1.1.6 (2026-02-25)
 
 # Bugfix

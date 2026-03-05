@@ -18,7 +18,20 @@ do_censor_cube <- function(dt, parameters){
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
+  do_collect_naboprikk(dt = dt)
   return(dt)
+}
+
+#' @title do_collect_naboprikk
+#' @description
+#' Add column "naboprikket", indicating secondary censoring
+#' Collects information from columns "naboprikketIomgX"
+#' @keywords internal
+#' @noRd
+do_collect_naboprikk <- function(dt){
+  dt[, naboprikket := 0L]
+  naboprikkcols <- grep("^naboprikketIomg", names(dt), value = T)
+  if(length(naboprikkcols) > 0) dt[rowSums(dt[, ..naboprikkcols]) > 0, let(naboprikket = 1L)]
 }
 
 #' @title do_censor_primary_secondary
