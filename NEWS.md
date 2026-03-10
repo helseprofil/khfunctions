@@ -2,6 +2,8 @@
 
 ## Changes
 - Information on secondary censoring is collected in one column ([issue144](https://github.com/helseprofil/khfunctions/issues/144))
+- `control_standardization()` no longer warns that standardization is not towards last year for UNGDATA files. 
+- `control_meis_rate()` filters out rows with diff = 0, and prints full table if nrow <= 10
 
 # khfunctions 1.1.6 (2026-02-25)
 

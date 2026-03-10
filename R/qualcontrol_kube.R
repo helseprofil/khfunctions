@@ -59,9 +59,12 @@ control_standardization <- function(dt, parameters){
     cat("\n** Kube ikke standardisert")
     return(0)
   }
+  if(parameters$CUBEinformation$REFVERDI_VP == "P" & grepl("UNGDATA", parameters$name)){
+    cat("\n** UNGDATA-kube, standardiseres ikke mot siste år, OK!")
+    return(0)
+  }
   refverdi <- parameters$CUBEinformation$REFVERDI
   aarh <- as.numeric(sub("\\d{4}_(\\d{4})", "\\1", max(dt$AAR)))
-  aarl <- as.numeric(sub("(\\d{4})_\\d{4}", "\\1", max(dt$AAR)))
   if(grepl("SISTE", refverdi, ignore.case = TRUE) || grepl(aarh, refverdi)){
     cat("\n** Standardisert mot siste år/periode, OK!")
     return(0)
@@ -154,6 +157,10 @@ control_meis_rate <- function(dt, parameters){
   print(d_country, nrows = nrow(d_country))
   
   cat("\n\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
-  d <- d[GEO != 0]
-  print(d[order(`ratio, %`, decreasing = T)][c(1:5, seq(nrow(d)-4, nrow(d)))])
+  d <- d[GEO != 0 & !is.nan(`ratio, %`)][order(`ratio, %`, decreasing = T)]
+  if(nrow(d) <= 10){
+    print(d)
+  } else {
+    print(d[c(1:5, seq(.N-4, .N))])
+  }
 }
