@@ -8,7 +8,7 @@ opt.khfunctions <- orgdata:::is_globs("khfunctions")
 
 .onAttach <- function(libname, pkgname){
   newversion <- orgdata:::is_latest_version("khfunctions", "master")
-  if(interactive & newversion){
+  if(interactive() & newversion){
     x <- utils::menu(title = "Update khfunctions now?", choices = c("Yes", "No"))
     if(x == 1){
         packageStartupMessage("Please restart your R session and then run:")
