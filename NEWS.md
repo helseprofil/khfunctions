@@ -5,6 +5,8 @@
 - `control_standardization()` no longer warns that standardization is not towards last year for UNGDATA files. 
 - `control_meis_rate()` filters out rows with diff = 0, and prints full table if nrow <= 10
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
+- Fixed error message when original file not found ([issue151](https://github.com/helseprofil/khfunctions/issues/151), @raniets)
+
 
 # khfunctions 1.1.6 (2026-02-25)
 
