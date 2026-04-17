@@ -275,39 +275,6 @@ fetch_filegroup_from_buffer <- function(filegroup, parameters){
   stop("Filgruppe ", filegroup, " ikke funnet i BUFFER")
 }
 
-#' @title do_harmonize_geo
-#' @description
-#' Harmonizes geographical codes
-#' @noRd 
-do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, parameters) {
-  geoomk <- parameters$KnrHarm
-  georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
-  if(georecode > 0){
-    cat("\n*** Recoding", georecode, "geo-codes")
-    file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
-    file[!is.na(GEO_omk), let(GEO = GEO_omk)]
-    file[, let(GEO_omk = NULL, HARMstd = NULL)]
-  }
-  if("FYLKE" %in% names(file)) file[, FYLKE := NULL]
-  file <- do_aggregate_file(file = file, valsumbardef = vals)
-
-  if(rectangularize){
-    rectangularized <- data.table::data.table()
-    design <- find_filedesign(file, parameters = parameters)
-    year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
-    for (Gn in design$Part[["Gn"]][["GEOniv"]]) {
-      validgeo <- data.table::data.table(GEO = parameters$GeoKoder[GEOniv == Gn & FRA <= year & TIL > year]$GEO)
-      designgeo <- design$Design[HAR == 1 & GEOniv == Gn, mget(intersect(names(file), names(design$Design)))]
-      rectangularized <- data.table::rbindlist(list(expand.grid.dt(designgeo, validgeo), rectangularized))
-    }
-    file <- collapse::join(rectangularized, file, how = "l", overid = 0, verbose = 0)
-    file <- set_implicit_null_after_merge(file, implicitnull_defs = vals)
-  }
-  
-  file[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]
-  return(file)
-}
-
 #' @title do_aggregate_file
 #' @description Aggregates file
 #' @param file file to aggregate
