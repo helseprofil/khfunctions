@@ -70,3 +70,63 @@ fix_geo_special <- function(dt, parameters){
   }
   return(invisible(dt))
 }
+
+#' @title get_deletestrata
+#' @keywords internal
+#' @noRd
+do_censor_coverage <- function(dt, geolevel = c("B", "V"), parameters){
+  if("dekningprikket" %notin% names(dt)) dt[, dekningprikket := 0L]
+  geolevel <- match.arg(geolevel)
+  if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))
+  cat(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
+  cat("\n*** Originalt", dt[GEOniv == geolevel, .N], "rader")
+  # Sette inn kommentar om kriteriene?
+  dims <- parameters$outdimensions
+  flags <- c(grep("\\.f$", names(dt), value = T))
+  skjul <- get_deletestrata(dt, dims, geolevel)
+  if(skjul[, .N] > 0){
+    dt[skjul, dekningprikket := 1L, on = dims]
+    n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
+    dt[spv_tmp == 0 & dekningprikket == 1L, (c(flags, "spv_tmp")) := 1L]
+    cat("\n***", n_new, "rader skjules")
+  } else {
+    cat("\n*** Ingen rader skjules")
+  }
+}
+
+
+#' @title get_deletestrata
+#' @keywords internal
+#' @noRd
+get_deletestrata <- function(dt, dims, level){
+  overcat <- switch(level,
+                    "B" = collapse::funique(substr(dt[GEOniv == "B", GEO], 1, 4)),
+                    "V" = sub("00$", "", collapse::funique(substr(dt[GEOniv == "V", GEO], 1, 6))))
+  deletestrata <- data.table::copy(dt)[(GEOniv == level | GEO %in% overcat), .SD, .SDcols = c("GEOniv", dims, "sumTELLER", "sumNEVNER")]
+  overlevels <- switch(level, 
+                       "B" = "K", 
+                       "V" = c("K", "B"))
+  length_overniv <- ifelse(level == "B", 4, 6)
+  deletestrata[, let(GEOniv = data.table::fifelse(GEOniv %in% overlevels, "Over", "Under"),
+                     overniv = sub("00$", "", substr(GEO, 1, length_overniv)))]
+
+  deletecodes <- unique(deletestrata[GEOniv == "Under", .SD, .SDcols = c("overniv", "GEO")])
+  
+  bycols <- c("overniv", "GEOniv", setdiff(dims, "GEO"))
+  g <- collapse::GRP(deletestrata, bycols)
+  deletestrata <- collapse::add_vars(g[["groups"]],
+                                     keep = collapse::fsum(is.na(deletestrata[["sumTELLER"]]), g = g) == 0,
+                                     collapse::fsum(collapse::get_vars(deletestrata, c("sumTELLER", "sumNEVNER")), g = g))[keep == TRUE][, keep := NULL]
+  deletestrata <- data.table::melt(deletestrata, measure.vars = c("sumTELLER", "sumNEVNER"), variable.name = "col", value.name = "val")
+  deletestrata <- data.table::dcast(deletestrata, ... ~ GEOniv, value.var = "val")
+  deletestrata[, ukjent := 1 - (Under/Over)] 
+  deletestrata[is.nan(ukjent) & Over == 0 & Under == 0, ukjent := 0]
+  bycols <- setdiff(bycols, "GEOniv")
+  f <- as.formula(paste(paste(bycols, collapse = " + "), "~ col"))
+  deletestrata <- data.table::dcast(deletestrata, formula = f, value.var = "ukjent")
+  deletestrata[, diff := sumTELLER - sumNEVNER]
+  deletestrata <- deletestrata[sumTELLER > 0.08 | abs(diff) > 0.05, .SD, .SDcols = bycols]
+  
+  delete <- collapse::join(deletestrata, deletecodes, on = "overniv", multiple = TRUE, verbose = FALSE, overid = 2)[, .SD, .SDcols = dims]
+  return(delete)
+}

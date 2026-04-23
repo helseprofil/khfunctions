@@ -6,7 +6,7 @@
 - `control_meis_rate()` filters out rows with diff = 0, and prints full table if nrow <= 10
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
 - Fixed error message when original file not found ([issue151](https://github.com/helseprofil/khfunctions/issues/151), @raniets)
-
+- Implemented `do_censor_coverage`, which censor strata on bydel/levekaar based on coverage. 
 
 # khfunctions 1.1.6 (2026-02-25)
 

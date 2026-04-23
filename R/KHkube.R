@@ -56,6 +56,10 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   parameters[["outdimensions"]] <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
   
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
+  
+  do_censor_coverage(dt = KUBE, geolevel = "B", parameters = parameters)
+  do_censor_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
+  
   KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
