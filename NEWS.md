@@ -1,12 +1,14 @@
 # khfunctions (development version)
 
 ## Changes
-- Information on secondary censoring is collected in one column ([issue144](https://github.com/helseprofil/khfunctions/issues/144))
 - `control_standardization()` no longer warns that standardization is not towards last year for UNGDATA files. 
 - `control_meis_rate()` filters out rows with diff = 0, and prints full table if nrow <= 10
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
+- Information on secondary censoring is collected in one column ([issue144](https://github.com/helseprofil/khfunctions/issues/144))
+- Added more columns with information on censoring (orgprikket, dekningprikket) ([issue149](https://github.com/helseprofil/khfunctions/issues/149))
+- Implemented `do_handle_coverage`, which censor strata on bydel/levekaar based on coverage. ([issue150](https://github.com/helseprofil/khfunctions/issues/150))
 - Fixed error message when original file not found ([issue151](https://github.com/helseprofil/khfunctions/issues/151), @raniets)
-- Implemented `do_censor_coverage`, which censor strata on bydel/levekaar based on coverage. 
+- Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))
 
 # khfunctions 1.1.6 (2026-02-25)
 
