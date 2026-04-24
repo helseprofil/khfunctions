@@ -167,25 +167,24 @@ control_meis_rate <- function(dt, parameters){
 
 control_rate_lks <- function(dt, parameters){
   if(!grepl("V", parameters$CUBEinformation$GEOniv)) return(invisible(NULL))
-  cat("\n\n* Sjekker MEIS(RATE)-nivå for levekårssoner")
   
   overcat <- sub("00$", "", collapse::funique(substr(dt[GEOniv == "V", GEO], 1, 6)))
-  
   val <- data.table::fcase("MEIS" %in% parameters$outvalues, "MEIS",
                            "RATE" %in% parameters$outvalues, "RATE",
                            default = NA_character_)
   if(is.na(val)){
-    cat("\n** Kuben inneholder ikke MEIS eller RATE, sjekk skippet")
+    cat("\n* Kuben inneholder ikke MEIS eller RATE, sjekk av levekårssoner skippet")
     return(invisible(NULL))
   } else {
-    
+    cat(paste0("\n\n* Sjekker ", val, "-nivå for levekårssoner mot sitt overnivå"))
   }
   
   dims <- parameters$outdimensions
-  d <- data.table::copy(dt)[(GEOniv == "V" | GEO %in% overcat), .SD, .SDcols = c("GEOniv", dims, val, "sumTELLER", "sumNEVNER", "spv_tmp")]
-  d[, overcat := sub("00$", "", substr(GEO, 1, 6))]
+  tncols <- intersect(names(dt), c("sumTELLER", "sumNEVNER"))
+  d <- data.table::copy(dt)[(GEOniv == "V" | GEO %in% overcat), .SD, .SDcols = c("GEOniv", dims, val, tncols, "spv_tmp")]
+  d[, kommune := sub("00$", "", substr(GEO, 1, 6))]
   d[, x := round(x, 1), env = list(x = val)]
-  bycols <- c("overcat", setdiff(dims, "GEO"))
+  bycols <- c("kommune", setdiff(dims, "GEO"))
   
   d <- d[, N := .N, by = bycols][N > 2][, N := NULL]
   
@@ -195,25 +194,32 @@ control_rate_lks <- function(dt, parameters){
                      lks_min = collapse::fmin(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
                      lks_max = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
                      overniv_sumteller = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[["sumTELLER"]]), g = g),
-                     lks_sumteller = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumTELLER"]], NA_real_), g = g),
-                     overniv_sumnevner = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[["sumNEVNER"]]), g = g),
-                     lks_sumnevner = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumNEVNER"]], NA_real_), g = g))
-  
-  res[, let(teller = overniv_sumteller - lks_sumteller, nevner = overniv_sumnevner - lks_sumnevner)]
-  res[, names(.SD) := NULL, .SDcols = c("overniv_sumteller", "overniv_sumnevner", "lks_sumteller", "lks_sumnevner")]
-  
+                     lks_sumteller = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumTELLER"]], NA_real_), g = g))
+  res[, let(teller_diff = overniv_sumteller - lks_sumteller)][, names(.SD) := NULL, .SDcols = c("overniv_sumteller", "lks_sumteller")]
+  if("sumNEVNER" %in% tncols){
+    res <- collapse::add_vars(res,
+                              overniv_sumnevner = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[["sumNEVNER"]]), g = g),
+                              lks_sumnevner = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumNEVNER"]], NA_real_), g = g))
+    
+    res[, let(nevner_diff = overniv_sumnevner - lks_sumnevner)][, names(.SD) := NULL, .SDcols = c("overniv_sumnevner", "lks_sumnevner")]
+  } else {
+    res[, let(nevner_diff = NA_real_)]
+  }
+ 
   out <- res[overniv < lks_min | overniv > lks_max]
   out[, retning := data.table::fifelse(overniv < lks_min, "under", "over")]
   out[retning == "under", diff := overniv - lks_min]
   out[retning == "over", diff := overniv - lks_max]
+  colsrename <- c("overniv", "lks_min", "lks_max")
+  data.table::setnames(out, colsrename, paste0(colsrename, "_", val))
   
   n <- collapse::join(out[, .SD, .SDcols = bycols], d[GEOniv == "V", .SD, .SDcols = c(bycols, "spv_tmp")], multiple = T, on = bycols, , verbose = 0, overid = 2)
-  n <- unique(n[, lks_med_tall := sum(spv_tmp == 0), by = bycols])[, .SD, .SDcols = c(bycols, "lks_med_tall")]
-  out <- collapse::join(out, n, on = bycols, how = "l", verbose = 0, overid = 2)
+  n <- unique(n[, n_lks_med_tall := sum(spv_tmp == 0), by = bycols])[, .SD, .SDcols = c(bycols, "n_lks_med_tall")]
+  out <- collapse::join(out, n, on = bycols, how = "l", verbose = 0, overid = 2)[n_lks_med_tall > 0]
   
   if(nrow(out) > 0){
     cat("\n** Se tabell for radene som har gitt utslag")
-    View(out[lks_med_tall != 0])
+    View(out)
   } else {
     cat("\n** Ingen utslag, kommunetallet ligger mellom minste og største LKS")
   }
