@@ -133,8 +133,6 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   return(list(Dekk = Dekk12, FDes = FDes))
 }
 
-
-
 #' FinnKubeDesignB (kb)
 #'
 #' @param ORGd 

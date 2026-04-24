@@ -6,6 +6,7 @@ do_censor_cube <- function(dt, parameters){
   if(is_empty(parameters$Censor_type)) return(dt)
   
   if(parameters$Censor_type == "R"){
+    dt[, (getOption("khfunctions.prikkeinfo")) := 0L]
     cat("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
@@ -29,9 +30,9 @@ do_censor_cube <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_collect_naboprikk <- function(dt){
-  dt[, naboprikket := 0L]
+  if(!"^naboprikket$" %in% names(dt)) dt[, naboprikket := 0L]
   naboprikkcols <- grep("^naboprikketIomg", names(dt), value = T)
-  if(length(naboprikkcols) > 0) dt[rowSums(dt[, ..naboprikkcols]) > 0, let(naboprikket = 1L)]
+  if(length(naboprikkcols) > 0) dt[rowSums(dt[, ..naboprikkcols]) > 0, naboprikket := 1L]
 }
 
 #' @title do_censor_primary_secondary
@@ -44,8 +45,6 @@ do_collect_naboprikk <- function(dt){
 #' @keywords internal
 #' @noRd
 do_censor_primary_secondary <- function(dt, parameters){
-  dt[, let(pvern = 0L, serieprikket = 0L)]
-  
   limits <- get_censor_limits(spec = parameters$CUBEinformation)
   alltriangles <- get_censor_triangles(parameters = parameters)
   dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
@@ -180,9 +179,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
           dt[rows_to_censor, let(pvern = 1L, spv_tmp = 3L)]
           dt[rows_to_censor, (itcol) := 1L]
           
-          
           newly_resolved <- unique(dt[rows_to_censor, get(sc)])
-          # resolved_sid <- union(resolved_sid, newly_resolved)
         }
       }
     }
@@ -233,14 +230,14 @@ do_censor_serie <- function(dt, limits, dims){
 do_censor_primary <- function(dt, limits){
   if(is_not_empty(limits$TELLER)){
     cat("\n*** Prikker på liten teller og teller-nevner")
-    dt[spv_tmp == 0 & sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)]
-    dt[spv_tmp == 0 & sumNEVNER - sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)] 
+    dt[spv_tmp == 0 & sumTELLER <= limits$TELLER, let(pvern = 1L, orgprikket = 1L, spv_tmp = 3L)]
+    dt[spv_tmp == 0 & sumNEVNER - sumTELLER <= limits$TELLER, let(pvern = 1L, orgprikket = 1L, spv_tmp = 3L)] 
   }
   if(is_not_empty(limits$NEVNER)){
     cat("\n*** Prikker på liten nevner")
-    dt[spv_tmp == 0 & sumNEVNER <= limits$NEVNER, let(pvern = 1, spv_tmp = 3)]
+    dt[spv_tmp == 0 & sumNEVNER <= limits$NEVNER, let(pvern = 1L, orgprikket = 1L, spv_tmp = 3L)]
   }
-  cat("\n** Antall primærprikker i filen: ", dt[pvern == 1, .N])
+  cat("\n** Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
 }
 
 #' @title get_censor_limits
@@ -409,7 +406,15 @@ warn_if_special_triangles <- function(alltriangles) {
 #' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
 #' @keywords internal
 #' @noRd
-do_remove_censored_observations <- function(dt, outvalues){
+do_remove_censored_observations <- function(dt, outvalues, parameters){
+  if(parameters$Censor_type == "R"){
+    check_if_spv_tmp_correct(dt, parameters)
+    dt[, SPVFLAGG := spv_tmp]
+    dt[SPVFLAGG == 9, SPVFLAGG := 1]
+    dt[SPVFLAGG %in% c(-1, 4), SPVFLAGG := 3]
+    return(dt)
+  } 
+  
   valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
   valF <- intersect(names(dt), valF)
   if(length(valF) > 0){
@@ -424,6 +429,17 @@ do_remove_censored_observations <- function(dt, outvalues){
   dt[SPVFLAGG %in% c(-1, 4), SPVFLAGG := 3]
   dt[SPVFLAGG == 9, SPVFLAGG := 1]
   return(dt)
+}
+
+#' @title check_if_spv_tmp_correct
+#' @description
+#' If spv_tmp is 0, but a .f-column is > 0, spv_tmp is corrected before being used to set SPVFLAGG. 
+#' @keywords internal
+#' @noRd
+check_if_spv_tmp_correct <- function(dt, parameters){
+  valF <- paste0(union(getOption("khfunctions.valcols"), parameters$outvalues), ".f")
+  valF <- intersect(names(dt), valF)
+  dt[spv_tmp == 0 & rowSums(dt[, .SD, .SDcols = valF]) > 0, spv_tmp := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
 }
 
 #' @title do_censor_kube_stata

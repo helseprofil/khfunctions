@@ -71,10 +71,10 @@ fix_geo_special <- function(dt, parameters){
   return(invisible(dt))
 }
 
-#' @title get_deletestrata
+#' @title do_handle_coverage
 #' @keywords internal
 #' @noRd
-do_censor_coverage <- function(dt, geolevel = c("B", "V"), parameters){
+do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
   if("dekningprikket" %notin% names(dt)) dt[, dekningprikket := 0L]
   geolevel <- match.arg(geolevel)
   if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))

@@ -16,22 +16,28 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
+  
+  # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
-
-  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck")
+  # parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") # For fremtiden
+  
+  # 1. Laste inn filer
   load_and_format_files(parameters = parameters)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
+  # 2. Koble teller og nevner, 
   TNF <- merge_teller_nevner(parameters = parameters)
   KUBE <- TNF$TNF
+  
+  # 3. Aggregering til flerårige tall
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
   KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
@@ -39,12 +45,14 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   set_initial_spvtmp(file = KUBE)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
   
+  # 4. Standardisering 
   KUBE <- add_predteller(dt = KUBE, parameters = parameters)
   KUBE <- add_meisskala(dt = KUBE, parameters = parameters)
   if(parameters$removebuffer) remove_original_files_from_buffer()
   KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
-  KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
 
+  # 5. Redigere kolonner og filtrere ugyldige rader
+  KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
   KUBE <- add_smr_and_meis(dt = KUBE, parameters = parameters)
@@ -55,16 +63,18 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
   parameters[["outdimensions"]] <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
   
+  # 6. Prikking og dekningsgrad bydel/lks
   KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
+  do_handle_coverage(dt = KUBE, geolevel = "B", parameters = parameters)
+  do_handle_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
   
-  do_censor_coverage(dt = KUBE, geolevel = "B", parameters = parameters)
-  do_censor_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
-  
+  # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
   KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
+  # 8. Slicing av outputfiler
   ALLVIS <- data.table::copy(KUBE)
-  ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues)
+  ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues, parameters = parameters)
   generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
   ALLVIS <- ALLVIS[, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
   QC <- LagQCKube(allvis = ALLVIS, allvistabs = parameters$outdimensions, kube = KUBE)
