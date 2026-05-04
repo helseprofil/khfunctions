@@ -128,8 +128,10 @@ lagkube_cleanup <- function(parameters){
   if(file.exists(guardfile)) fs::file_delete(guardfile)
   if(parameters$write) sink()
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  DBI::dbDisconnect(parameters$duck)
-  fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
+  if(!is.null(parameters$duck)){
+    DBI::dbDisconnect(parameters$duck)
+    fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
+  }
   RODBC::odbcCloseAll()
 }
 
