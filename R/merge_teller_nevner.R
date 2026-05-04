@@ -1,9 +1,13 @@
-#' merge_teller_nevner
+#' @title merge_teller_nevner
+#' @description
+#' Merge TELLER/NEVNER files, create initial KUBE and update the empty data.table by reference. 
+#' Return the initial design, to be used later. 
 #' 
+#' @param outdata empty data.table, to be updated by reference
 #' @param parameters parameters generated with get_cubeparameters()
 #' @param standardfiles Should standard teller and nevner files be used? default = FALSE
 #' @param design Design list
-merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
+merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
     cat("\n\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
@@ -71,17 +75,15 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   if (!identical(dimorg, dim(TNF))) cat("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
-  # TNF[, let(spv_tmp = 0)]
-  # set_initial_spvtmp(file = TNF)
-  return(list(TNF = TNF, KUBEd = KUBEdesign))
+  outdata[, names(TNF) := TNF]
+  return(KUBEdesign$MAIN)
 }
 
-set_initial_spvtmp <- function(file){
-  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(file))
+set_initial_spvtmp <- function(dt){
+  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(dt))
   if (length(tncols) > 0L) {
-    file[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
+    dt[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
   }
-  return(file)
 }
 
 #' @title get_initialdesign

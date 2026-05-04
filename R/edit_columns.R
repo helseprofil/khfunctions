@@ -4,13 +4,12 @@
 #' @noRd
 scale_rate_and_meisskala <- function(dt, parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
-  scale <- as.numeric(parameters$CUBEinformation$RATESKALA)
-  if(!is_rateskala) return(dt)
-  cat("\n* Skalerer RATE til per", scale, "\n")
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  if(!is_rateskala) return(invisible(NULL))
+  cat("\n* Skalerer RATE til per", scalevalue, "\n")
   
-  if("RATE" %in% names(dt)) dt[, RATE := RATE * scale]
-  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scale]
-  return(dt)
+  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
+  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
 }
 
 #' @title get_maltall_column

@@ -33,23 +33,23 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
-  # 2. Koble teller og nevner, 
-  TNF <- merge_teller_nevner(parameters = parameters)
-  KUBE <- TNF$TNF
+  # 2. Koble teller og nevner
+  KUBE <- data.table::data.table()
+  CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
   
   # 3. Aggregering til flerårige tall
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
   KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
   add_crude_rate(dt = KUBE, parameters = parameters)
-  set_initial_spvtmp(file = KUBE)
-  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = TNF$KUBEd$MAIN, parameters = parameters)
+  set_initial_spvtmp(dt = KUBE)
+  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = CUBEdesign, parameters = parameters)
   
   # 4. Standardisering 
-  KUBE <- add_predteller(dt = KUBE, parameters = parameters)
-  KUBE <- add_meisskala(dt = KUBE, parameters = parameters)
+  add_predteller(dt = KUBE, parameters = parameters)
+  add_meisskala(dt = KUBE, parameters = parameters)
   if(parameters$removebuffer) remove_original_files_from_buffer()
-  KUBE <- scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
+  scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
 
   # 5. Redigere kolonner og filtrere ugyldige rader
   KUBE <- fix_geo_special(dt = KUBE, parameters = parameters)

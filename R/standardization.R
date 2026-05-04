@@ -12,22 +12,21 @@
 #' @keywords internal
 #' @noRd
 add_predteller <- function(dt, parameters){
-  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(dt)
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
   cat("\n* Skal estimere PREDTELLER for standardisering")
   designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
   predrate <- estimate_predrate(design = designlist$STNdesign, parameters = parameters)
   prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters)
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters)
   
-  cat("\n* Merger PREDTELLER med KUBE\n** Før merge dim:", dim(dt))
+  cat("\n* Merger PREDTELLER med KUBE")
   commontabs <- intersect(get_dimension_columns(names(dt)), names(predteller))
-  dt <- collapse::join(dt, predteller, how = "l", on = commontabs, overid = 2, verbose = 0)
-  dt[, PREDTELLER.n := TELLER.n]
-  cat("\n** Etter merge dim:", dim(dt))
-  
+  dt[predteller, on = commontabs, let(PREDTELLER = i.PREDTELLER, 
+                                      PREDTELLER.f = i.PREDTELLER.f, 
+                                      PREDTELLER.a = i.PREDTELLER.a,
+                                      PREDTELLER.n = TELLER.n)]
   set_implicit_null_after_merge(dt = dt, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
   cat("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
-  return(dt)
 }
 
 #' @title find_common_standard_teller_nevner_prednevner_design
@@ -93,7 +92,8 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 estimate_predrate <- function(design, parameters){
   cat("\n* Estimerer PREDRATE...")
   missyears <- parameters$MOVAVparameters$missyears
-  predrate <- merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)$TNF
+  predrate <- data.table::data.table()
+  merge_teller_nevner(outdata = predrate, parameters = parameters, standardfiles = TRUE, design = design)$TNF
   if(missyears$n > 0 && any(missyears$years %in% unique(predrate$AARl))){
     problem <- intersect(missyears$years, unique(predrate$AARl))
     warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 
@@ -162,7 +162,6 @@ estimate_predteller <- function(predrate, prednevner, parameters){
   cubedesign <- list(Part = parameters$CUBEdesign)
   redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
   predteller <- do_filter_and_recode_to_redesign(dt = predteller, redesign = redesign, parameters = parameters)
-  # predteller[, PREDTELLER.n := TELLER.n]
   return(predteller)
 }
 
@@ -172,18 +171,16 @@ estimate_predteller <- function(predrate, prednevner, parameters){
 #' @keywords internal
 #' @noRd
 add_meisskala <- function(dt, parameters){
-  if(parameters$PredFilter$ref_year_type != "Specific") return(dt)
+  if(parameters$PredFilter$ref_year_type != "Specific") return(invisible(NULL))
   cat("\n* Legger til MEISskala for standardisering\n")
 
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
-    dt[, MEISskala := NA_real_]
-    return(dt)
+    data.table::set(dt, j = "MEISskala", value = NA_real_)
+    return(invisible(NULL))
   }
-  
-  subset_meisskala <- dt[eval(rlang::parse_expr(parameters$PredFilter$meisskalafilter))]
+  subset_meisskala <- dt[x, env = list(x = str2lang(parameters$PredFilter$meisskalafilter))]
   if (nrow(subset_meisskala) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   subset_meisskala[, MEISskala := RATE]
   joincolumns <- setdiff(intersect(names(subset_meisskala), parameters$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
-  dt <- collapse::join(dt, subset_meisskala[, .SD, .SDcols = c(joincolumns, "MEISskala")], how = "l", on = joincolumns, overid = 2, verbose = 0)
-  return(dt) 
+  dt[subset_meisskala, on = joincolumns, MEISskala := i.MEISskala]
 }
