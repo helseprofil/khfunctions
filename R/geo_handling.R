@@ -25,7 +25,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
       rectangularized <- data.table::rbindlist(list(expand.grid.dt(designgeo, validgeo), rectangularized))
     }
     file <- collapse::join(rectangularized, file, how = "l", overid = 0, verbose = 0)
-    file <- set_implicit_null_after_merge(file, implicitnull_defs = vals)
+    set_implicit_null_after_merge(dt = file, implicitnull_defs = vals)
   }
   
   file[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]

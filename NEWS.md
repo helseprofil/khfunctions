@@ -13,6 +13,7 @@
 ## Code cleaning
 - Remove get(col)/mget(col), replace with dt[[col]] or .SDcols, whichever is most relevant
 - Implemented data.table::set() several places replacing := or let()
+- More functions operating by reference, avoiding unneccessary copies
 
 # khfunctions 1.1.6 (2026-02-25)
 

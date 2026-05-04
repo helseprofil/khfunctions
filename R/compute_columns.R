@@ -83,7 +83,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     dt <- collapse::join(dt, newdata[, .SD, .SDcols = c(newdims, newcols)], on = newdims, how = "l", overid = 2, verbose = 0)
     valdef <- fileinfo$vals
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
-    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = valdef)
+    set_implicit_null_after_merge(dt = dt, implicitnull_defs = valdef)
   }
   return(dt)
 }

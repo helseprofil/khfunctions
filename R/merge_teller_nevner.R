@@ -50,11 +50,11 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     report_removed_codes(file = tellerfil, cube = rectangularizedcube)
     TNF <- collapse::join(rectangularizedcube, tellerfil, how = "l", overid = 0, verbose = 0)
     if(isnevnerfil) TNF <- collapse::join(TNF, nevnerfil, how = "l", overid = 0, verbose = 0)
-    TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
+    set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
     cat("\n*** Ferdig rektangularisert og merget teller-nevner-fil, dim:", dim(TNF))
   } else if (isnevnerfil) {
     TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
-    TNF <- set_implicit_null_after_merge(file = TNF, implicitnull_defs = implicitnull_defs)
+    set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
     cat("\n*** Ferdig merget teller-nevner-fil, dim:", dim(TNF))
   } else {
     TNF <- tellerfil

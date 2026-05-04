@@ -25,7 +25,7 @@ add_predteller <- function(dt, parameters){
   dt[, PREDTELLER.n := TELLER.n]
   cat("\n** Etter merge dim:", dim(dt))
   
-  dt <- set_implicit_null_after_merge(dt, parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
+  set_implicit_null_after_merge(dt = dt, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
   cat("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
   return(dt)
 }
