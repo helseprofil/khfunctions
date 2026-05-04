@@ -4384,3 +4384,14 @@ list_snutter <- function(folder){
   files <- grep(paste0("^", folder, "/.*\\.R$"), tree, value = T, ignore.case = T)
   return(files)
 }
+
+#' @title add_maltall
+#' @description sets maltall column
+#' @param dt dataset
+#' @param maltallcolumn the column containing maltall, identified with get_maltall_column()
+#' @keywords internal
+#' @noRd
+add_maltall <- function(dt, maltallcolumn){
+  data.table::set(dt, j = "MALTALL", value = dt[[maltallcolumn]])
+  return(dt)
+}

@@ -147,34 +147,15 @@ check_if_all_columns_exist <- function(dt, filecolumns){
 #' @param dt data
 #' @noRd
 convert_all_columns_to_character <- function(dt){
-  orgcolorder <- data.table::copy(names(dt))
-  non_char_cols <- names(dt)[!sapply(dt, is.character)]
+  non_char_cols <- names(dt)[!vapply(dt, is.character, FUN.VALUE = logical(1))]
   if(length(non_char_cols) > 0){
-    for(col in non_char_cols){
-      dt[, tempvar := as.character(get(col)), by = col]
-      dt[, (col) := NULL]
-      data.table::setnames(dt, "tempvar", col)
-    }
+    data.table::set(dt, 
+                    j = non_char_cols, 
+                    value = lapply(dt[, ..non_char_cols], as.character))
   }
-  data.table::setcolorder(dt, orgcolorder)
 }
 
-# convert_to_integer_if_possible <- function(dt, cols){
-#   orgcolorder <- data.table::copy(names(dt))
-#   convert <- character()
-#   for(col in cols){
-#     if(all.equal(dt[[col]], as.integer(dt[[col]]))) convert <- c(convert, col)
-#   }
-#   if(length(convert) > 0){
-#     for(col in convert){
-#       dt[, tempvar := as.integer(get(col)), by = col]
-#       dt[, (col) := NULL]
-#       data.table::setnames(dt, "tempvar", col)
-#     }
-#   }
-#   data.table::setcolorder(dt, orgcolorder)
-# }
-
+#' @noRd
 do_convert_na_to_empty <- function(dt){
   dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
 }
@@ -221,7 +202,7 @@ do_handle_fylltab <- function(dt, filedescription){
   if(!all(cols %in% names(dt))) stop("Feil i FYLLTAB: ", paste0("Kolonner ", paste(cols[!cols %in% names(dt)], collapse = ","), " finnes ikke"))
   
   for(col in cols){
-    dt[get(col) == "", col := NA]
+    dt[dt[[col]] == "", (col) := NA]
     dt[, names(.SD) := zoo::na.locf(.SD, na.rm = FALSE), .SDcols = col]
   }
 }

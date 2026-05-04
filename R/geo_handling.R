@@ -21,7 +21,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
     year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
     for (Gn in design$Part[["Gn"]][["GEOniv"]]) {
       validgeo <- data.table::data.table(GEO = parameters$GeoKoder[GEOniv == Gn & FRA <= year & TIL > year]$GEO)
-      designgeo <- design$Design[HAR == 1 & GEOniv == Gn, mget(intersect(names(file), names(design$Design)))]
+      designgeo <- design$Design[HAR == 1 & GEOniv == Gn, .SD, .SDcols = intersect(names(file), names(design$Design))]
       rectangularized <- data.table::rbindlist(list(expand.grid.dt(designgeo, validgeo), rectangularized))
     }
     file <- collapse::join(rectangularized, file, how = "l", overid = 0, verbose = 0)

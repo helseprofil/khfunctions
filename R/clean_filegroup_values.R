@@ -20,13 +20,17 @@ clean_filegroup_values <- function(dt, parameters, cleanlog){
 do_set_val_flag <- function(dt, val){
   cat("\n*** Setter flagg for ", val, sep = "")
   valF <- paste0(val, ".f")
-  dt[, (valF) := 0]
-  dt[get(val) == "..", (valF) := 1]
-  dt[get(val) == ".", (valF) := 2]
-  dt[get(val) == ":", (valF) := 3]
-  dt[is.na(suppressWarnings(as.numeric(get(val)))) & get(valF) == 0, (valF) := 8]
-  dt[get(valF) > 0, (val) := NA_character_]
-  dt[, (val) := as.numeric(get(val))]
+  data.table::set(dt, j = valF, 
+                  value = data.table::fcase(dt[[val]] == "..", 1L,
+                                            dt[[val]] == ".", 2L,
+                                            dt[[val]] == ":", 3L,
+                                            default = 0L))
+  na_idx <- which(is.na(suppressWarnings(as.numeric(dt[[val]]))) & dt[[valF]] == 0)
+  data.table::set(dt, i = na_idx, j = valF, value = 8L)
+  
+  flag_idx <- which(dt[[valF]] > 0)
+  data.table::set(dt, i = flag_idx, j = val, value = NA_character_)
+  data.table::set(dt, j = val, value = as.numeric(dt[[val]]))
 }
 
 #' @title do_scale_val
@@ -41,13 +45,15 @@ do_scale_val <- function(dt, val, parameters){
   
   cat("\n*** Skalerer ", val, " med ", scalecol, sep = "")
   dt[scales, on = "KOBLID", scale := i.scale]
-  dt[!is.na(scale), (val) := get(val) * scale][, let(scale = NULL)]
+  idx <- which(!is.na(dt[["scale"]]))
+  data.table::set(dt, i = idx, j = val, value = dt[[val]][idx] * dt[["scale"]][idx])
+  data.table::set(dt, j = "scale", value = NULL)
 }
 
 check_if_value_ok <- function(dt, val, cleanlog){
   valF <- paste0(val, ".f")
   val_ok <- dt[, .SD, .SDcols = c(valF, "KOBLID")][,let(ok = 1)]
-  val_ok[get(valF) == 8, let(ok = 0)]
+  data.table::set(val_ok, i = which(val_ok[[valF]] == 8), j = "ok", value = 0)
   n_not_ok <- sum(val_ok$ok == 0)
   val_ok_log <- val_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
   rawfiles_not_ok <- val_ok_log[ok == 0, unique(KOBLID)]

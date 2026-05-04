@@ -243,7 +243,7 @@ do_clean_LANDBAK <- function(dt, cleanlog){
 #' @noRd
 check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
   dim_ok <- dt[, .SD, .SDcols = c(col, "KOBLID")][, let(ok = 1)]
-  dim_ok[get(col) %in% illegal, let(ok = 0)]
+  dim_ok[dim_ok[[col]] %in% illegal, let(ok = 0)]
   n_not_ok <- sum(dim_ok$ok == 0)
   dim_ok_log <- dim_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
   rawfiles_not_ok <- dim_ok_log[ok == 0, unique(KOBLID)]

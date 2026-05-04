@@ -17,7 +17,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters){
   }
   designs <- list()
   args <- get_filedesign_args(parameters = parameters, columns_in_file = names(file))
-  designs[["observed"]] <- unique(file[, mget(args$design_columns)])
+  designs[["observed"]] <- unique(file[, .SD, .SDcols = args$design_columns])
   output <- get_filedesign_initial_list(observeddesign = designs$observed, fileparameters = fileparameters, args = args)
   args[["unconditional"]] <- output$UBeting
   args[["conditional"]] <- c(output$BetingOmk, output$BetingF)

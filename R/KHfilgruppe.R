@@ -114,7 +114,7 @@ check_encoding <- function(dt) {
     if (any(grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE))) {
       # If an error is found, store the column name and unique values
       values <- unique(dt[[col]][grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE)])
-      koblid <- dt[get(col) %in% values, unique(KOBLID)]
+      koblid <- dt[dt[[col]] %in% values, unique(KOBLID)]
       errors[[col]] <- list(values = values, koblid = koblid)
     }
   }

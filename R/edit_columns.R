@@ -35,7 +35,7 @@ do_format_cube_columns <- function(dt, parameters){
   dt <- set_nonsumvalues(dt = dt)
   dt <- set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
-  dt <- add_maltall(dt = dt, maltallcolumn = parameters$MALTALL)
+  data.table::set(dt, j = "MALTALL", value = dt[[parameters$MALTALL]])
   return(dt)
 }
 
@@ -74,7 +74,7 @@ set_nonsumvalues <- function(dt){
   if(length(values) == 0) return(dt)
   for(val in values){
     valN = paste0(val, ".n")
-    dt[, (val) := get(val)/get(valN)]
+    data.table::set(dt, j = val, value = dt[[val]] / dt[[valN]])
   }
   return(dt)
 }
@@ -84,17 +84,6 @@ set_nonsumvalues <- function(dt){
 set_alder_aar <- function(dt){
   dt[, AAR := paste0(AARl, "_", AARh)]
   if (all(c("ALDERl", "ALDERh") %in% names(dt))) dt[, ALDER := paste0(ALDERl, "_", ALDERh)]
-  return(dt)
-}
-
-#' @title add_maltall
-#' @description sets maltall column
-#' @param dt dataset
-#' @param maltallcolumn the column containing maltall, identified with get_maltall_column()
-#' @keywords internal
-#' @noRd
-add_maltall <- function(dt, maltallcolumn){
-  dt[, MALTALL := get(maltallcolumn)]
   return(dt)
 }
 

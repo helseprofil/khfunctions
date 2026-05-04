@@ -1,6 +1,6 @@
 get_movav_information <- function(dt, parameters){
   mapar <- list()
-  mapar[["aar"]] <- unique(dt[, mget(c("AARl", "AARh"))])
+  mapar[["aar"]] <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
   mapar[["int_lengde"]] <- unique(mapar$aar[, AARh - AARl + 1])
   if(length(mapar$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
   mapar[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
@@ -11,6 +11,15 @@ get_movav_information <- function(dt, parameters){
   mapar[["orgintMult"]] <- ifelse(mapar$is_movav, 1, snitt_orgintmult)
   mapar[["missyears"]] <- find_missing_year(unique(dt$AARl))
   return(mapar)
+}
+
+#' @title find_missing_year
+#' @noRd
+find_missing_year <- function(aarl){
+  aarl_min_max <- min(aarl):max(aarl)
+  aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
+  if(length(aarl_missing) > 0) cat("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
+  return(list(n = length(aarl_missing), years = aarl_missing))
 }
 
 #' @title aggregate_to_moving_average
@@ -63,21 +72,6 @@ do_balance_missing_teller_nevner <- function(dt){
   dt[maxF != 0, (vals) := NA]
   dt[, maxF := NULL]
 }
-# do_balance_missing_teller_nevner <- function(dt){
-#   vals <- intersect(c("TELLER", "NEVNER", "RATE"), names(dt))
-#   valsF <- paste0(vals, ".f")
-#   if(length(vals) == 0) return(dt)
-#   dt[, maxF := do.call(pmax, .SD), .SDcols = valsF]
-#   if (length(vals) > 0) {
-#     dt[maxF > 0, (vals) := NA]
-#     dt[maxF > 0, (valsF) := maxF]
-#     dt[maxF == -1, (vals) := NA]
-#     dt[maxF == -1, (valsF) := maxF]
-#   }
-#   dt[, maxF := NULL]
-#   return(dt)
-# }
-
 
 #' @title do_aggregate_periods
 #' @description
@@ -86,19 +80,10 @@ do_balance_missing_teller_nevner <- function(dt){
 #' @param dt data
 #' @param parameters cube parameters
 do_aggregate_periods <- function(dt, parameters){
-  period = parameters$MOVAVparameters$movav
+  period <- parameters$MOVAVparameters$movav
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
   aggregated_dt <- calculate_period_sums(dt = dt, period = period, missing_year = parameters$MOVAVparameters$missyears)
   return(aggregated_dt)
-}
-
-#' @title find_missing_year
-#' @noRd
-find_missing_year <- function(aarl){
-  aarl_min_max <- min(aarl):max(aarl)
-  aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
-  if(length(aarl_missing) > 0) cat("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
-  return(list(n = length(aarl_missing), years = aarl_missing))
 }
 
 #' @title calculate_period_sums
@@ -114,11 +99,11 @@ calculate_period_sums <- function(dt, period, missing_year){
   dims <- get_dimension_columns(names(dt))
   colorder <- dims
   for(val in values){
-    dt[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
-    dt[get(paste0(val, ".f")) %in% c(1,2), paste0(val, ".fn1") := 1]
-    dt[get(paste0(val, ".f")) == 3, paste0(val, ".fn3") := 1]
-    dt[get(paste0(val, ".f")) == 9, paste0(val, ".fn9") := 1]
-    dt[get(paste0(val, ".f")) == 0, paste0(val, ".n") := 1]
+    dt[is.na(dt[[val]]) | dt[[val]] == 0, paste0(val, ".a") := 0]
+    dt[dt[[paste0(val, ".f")]] %in% c(1,2), paste0(val, ".fn1") := 1]
+    dt[dt[[paste0(val, ".f")]] == 3, paste0(val, ".fn3") := 1]
+    dt[dt[[paste0(val, ".f")]] == 9, paste0(val, ".fn9") := 1]
+    dt[dt[[paste0(val, ".f")]] == 0, paste0(val, ".n") := 1]
     colorder <- c(colorder, paste0(val, c("", ".f", ".a", ".fn1",".fn3", ".fn9", ".n")))
   }
   g <- collapse::GRP(dt, dims)
@@ -202,7 +187,7 @@ do_filter_periods_with_missing_original <- function(dt){
       val.f <- paste0(val, ".f")
       val.n <- paste0(val, ".n")
       val.fn3 <- paste0(val, ".fn3")
-      if(val.n %in% names(dt)) dt[get(val.n) > 0 & get(val.fn3)/get(val.n) >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
+      if(val.n %in% names(dt)) dt[dt[[val.n]] > 0 & dt[[val.fn3]]/dt[[val.n]] >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
   }
   return(dt)
 }

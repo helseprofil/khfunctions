@@ -184,6 +184,6 @@ add_meisskala <- function(dt, parameters){
   if (nrow(subset_meisskala) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   subset_meisskala[, MEISskala := RATE]
   joincolumns <- setdiff(intersect(names(subset_meisskala), parameters$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
-  dt <- collapse::join(dt, subset_meisskala[, mget(c(joincolumns, "MEISskala"))], how = "l", on = joincolumns, overid = 2, verbose = 0)
+  dt <- collapse::join(dt, subset_meisskala[, .SD, .SDcols = c(joincolumns, "MEISskala")], how = "l", on = joincolumns, overid = 2, verbose = 0)
   return(dt) 
 }

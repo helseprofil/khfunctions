@@ -115,11 +115,8 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
-  # RD1 <- FinnRedesign(DF1, list(Part = FTabs), parameters = parameters)
   RD1 <- find_redesign(orgdesign = DF1, targetdesign = list(Part = FTabs), parameters = parameters)
-  # RD2 <- FinnRedesign(DF2, list(Part = FTabs), parameters = parameters)
   RD2 <- find_redesign(orgdesign = DF2, targetdesign = list(Part = FTabs), parameters = parameters)
-  ### kommet hit ---
   omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
   data.table::setkeyv(RD1$FULL, omktabs)
   data.table::setkeyv(RD2$FULL, omktabs)
@@ -203,7 +200,8 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
           if(start > stopp) stop(paste0("Kan ikke ha ACCESS::KUBER::", delN, "start (", start, ") > ", delN, "stopp (", stopp, ")"))
           delL <- paste0(delN, "l")
           delH <- paste0(delN, "h")
-          Deler[[del]] <- ORGd$Part[[del]][get(delL) >= start & get(delH) <= stopp, mget(c(delL, delH))]
+          DT <- data.table::copy(ORGd$Part[[del]])
+          Deler[[del]] <- DT[DT[[delL]] >= start & DT[[delH]] <= stopp, .SD, .SDcols = c(delL, delH)]
         } else {
           Deler[[del]] <- ORGd$Part[[del]]  
         }

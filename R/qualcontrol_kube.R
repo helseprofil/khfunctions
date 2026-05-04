@@ -147,7 +147,7 @@ control_meis_rate <- function(dt, parameters){
   
   for(dim in setdiff(parameters$outdimensions, c("GEO", "AAR"))){
     tot <- qualcontrol:::find_total(cube = d, dim = dim)
-    if(!is.na(tot)) d <- d[get(dim) == tot]
+    if(!is.na(tot)) d <- d[d[[dim]] == tot]
     if(!is.na(tot) | length(unique(d[[dim]])) == 1) d[, names(.SD) := NULL, .SDcols = dim]
   }
 
@@ -183,7 +183,7 @@ control_rate_lks <- function(dt, parameters){
   tncols <- intersect(names(dt), c("sumTELLER", "sumNEVNER"))
   d <- data.table::copy(dt)[(GEOniv == "V" | GEO %in% overcat), .SD, .SDcols = c("GEOniv", dims, val, tncols, "spv_tmp")]
   d[, kommune := sub("00$", "", substr(GEO, 1, 6))]
-  d[, x := round(x, 1), env = list(x = val)]
+  data.table::set(d, j = val, value = round(d[[val]], 1))
   bycols <- c("kommune", setdiff(dims, "GEO"))
   
   d <- d[, N := .N, by = bycols][N > 2][, N := NULL]

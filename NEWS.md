@@ -10,6 +10,10 @@
 - Fixed error message when original file not found ([issue151](https://github.com/helseprofil/khfunctions/issues/151), @raniets)
 - Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))
 
+## Code cleaning
+- Remove get(col)/mget(col), replace with dt[[col]] or .SDcols, whichever is most relevant
+- Implemented data.table::set() several places replacing := or let()
+
 # khfunctions 1.1.6 (2026-02-25)
 
 # Bugfix

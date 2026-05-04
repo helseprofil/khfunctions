@@ -286,7 +286,7 @@ do_aggregate_file <- function(file, valsumbardef = list()){
   valcols <- get_value_columns(names(file))
   colorder <- tabcols 
   for(val in valcols){
-    file[is.na(get(val)) | get(val) == 0, paste0(val, ".a") := 0]
+    file[is.na(file[[val]]) | file[[val]] == 0, paste0(val, ".a") := 0]
     colorder <- c(colorder, paste0(val, c("", ".f", ".a")))
   }
   if(!identical(data.table::key(file), tabcols)) data.table::setkeyv(file, tabcols)
@@ -301,7 +301,7 @@ do_aggregate_file <- function(file, valsumbardef = list()){
     if(val %in% names(valsumbardef) && valsumbardef[[val]]$sumbar == 0){
       valA <- paste0(val, ".a")
       valF <- paste0(val, ".f")
-      aggfile[get(valA) > 1, c(val, valF) := list(NA, 2)]
+      aggfile[file[[valA]] > 1, c(val, valF) := list(NA, 2)]
     }
   }
   data.table::setcolorder(aggfile, colorder)

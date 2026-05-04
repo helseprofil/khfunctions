@@ -252,7 +252,7 @@ set_predictionfilter <- function(parameters) {
 #' @param origdesign Cubedesign after merging teller and nevner. 
 update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
   if(!parameters$MOVAVparameters$is_movav) return(origdesign)
-  aar <- unique(dt[, mget(c("AARl", "AARh"))])
+  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
   origdesign$Y <- aar
   return(origdesign)
 }

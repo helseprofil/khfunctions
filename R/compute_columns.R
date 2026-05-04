@@ -28,7 +28,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
       dt[, paste0(name, ".n") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".n")]
       dt[, (paste0(name, c(".fn1", ".fn3", ".fn9"))) := list(0,0,0)]
     }  
-    dt[is.na(get(name)) | is.infinite(get(name)) | is.nan(get(name)), (paste0(name, c("", ".f"))) := list(NA, 2)]
+    dt[is.na(dt[[name]]) | is.infinite(dt[[name]]) | is.nan(dt[[name]]), (paste0(name, c("", ".f"))) := list(NA, 2)]
   }
 }
 
@@ -172,7 +172,7 @@ set_lead_value <- function(file, yearlag = -1, vals = NULL){
   oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
   newvals <- paste0(lagprefix, allvals)
   data.table::setnames(d, old = allvals, new = newvals)
-  d <- d[, mget(c(tabcols, newvals))]
+  d <- d[, .SD, .SDcols = c(tabcols, newvals)]
   return(d)
 }
 

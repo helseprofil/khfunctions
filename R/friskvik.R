@@ -59,12 +59,12 @@ generate_friskvik_indicator <- function(dt, id, parameters) {
   }
   
   if(is_not_empty(FVdscr$ALTERNATIV_MALTALL)){
-    d[, MALTALL := get(FVdscr$ALTERNATIV_MALTALL)]
+    d[, MALTALL := d[[FVdscr$ALTERNATIV_MALTALL]]]
     d[, setdiff(getOption("khfunctions.profilvals"), "MALTALL") := NA]
   }
   
   d[SPVFLAGG > 0, getOption("khfunctions.profilvals") := NA]
-  d <- d[, mget(c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals")))]
+  d <- d[, .SD, .SDcols = c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals"))]
   
   setPath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), FriskVDir, parameters$year, "csv")
   
@@ -98,7 +98,9 @@ do_filter_friskvik_age <- function(dt, age_filter, parameters){
 #' @noRd
 do_filter_friskvik_tabs <- function(dt, dscr){
   for (tab in c("AARh", "KJONN", "INNVKAT", "UTDANN", "LANDBAK")) {
-    if(is_not_empty(dscr[[tab]]) && dscr[[tab]] != "-") dt <- dt[get(tab) == dscr[[tab]]]
+    if(is_not_empty(dscr[[tab]]) && dscr[[tab]] != "-"){
+      dt <- dt[dt[[tab]] == dscr[[tab]]]
+    }
   }
   
   if(is_not_empty(dscr$EKSTRA_TAB) && dscr$EKSTRA_TAB != "-"){
