@@ -37,38 +37,38 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
 #' @keywords internal
 #' @noRd
 fix_geo_special <- function(dt, parameters){
+  geonivs <- unique(dt[["GEOniv"]])
   specs = parameters$fileinformation[[parameters$files$TELLER]] 
-  valK <- get_value_columns(names(dt))
+  flags <- intersect(c("spv_tmp", grep("\\.f$", names(dt), value = T)), names(dt))
   bydelstart <- specs[["B_STARTAAR"]]
   dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
   dk2020start <- specs[["DK2020_STARTAAR"]]
-  isbydelstart <- !is.na(bydelstart) && bydelstart > 0
-  isdk2020 <- !is.na(dk2020start) && dk2020start > 0
+  isbydelstart <- !is.na(bydelstart) && bydelstart > 0 & any(geonivs %in% c("B", "V"))
+  isdk2020 <- !is.na(dk2020start) && dk2020start > 0 & "K" %in% geonivs
   
-  if(!isbydelstart && !isdk2020) return(invisible(dt))
-  
-  cat("\n* Håndterer bydelsstartår og delingskommuner\n")
+  if(!isbydelstart && !isdk2020) return(invisible(NULL))
   
   if (isbydelstart) {
-    cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")
-    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
+    cat("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
+    cat(" - Sletter tall for år før ", bydelstart, "\n", sep = "")
+    idx <- which(dt[["GEOniv"]] %in% c("B", "V") & dt[["AARl"]] < bydelstart)
+    data.table::set(dt, i = idx, j = flags, value = 9L)
   }
   
   if (isdk2020) {
+    cat("\n* Håndterer delingskommuner 2020 (DK2020) \n")
     cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
-    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
+    idx <- which(dt[["GEOniv"]] == "K" & dt[["GEO"]] %chin% dk2020 & dt[["AARl"]] < dk2020start)
+    data.table::set(dt, i = idx, j = flags, value = 9L)
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
     ystart <- ifelse(parameters$name == "VALGDELTAKELSE", 2019, 2020)
-    .years <- seq(ystart, ystart+3)
-    .geos <- c("1508", "1580")
-    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (c(paste0(valK, ".f"), "spv_tmp")) := 9]
+    ystop <- ystart + 3
+    idx <- which(dt[["GEO"]] %in% c("1508", "1580") & (dt[["AARl"]] <= ystop & dt[["AARh"]] >= ystart))
+    data.table::set(dt, i = idx, j = flags, value = 9L)
   }
-  return(invisible(dt))
+  return(invisible(NULL))
 }
 
 #' @title do_handle_coverage
