@@ -54,7 +54,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 5. Redigere kolonner og filtrere ugyldige rader
   fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
-  KUBE <- do_format_cube_columns(dt = KUBE, parameters = parameters)
+  do_format_cube_columns(dt = KUBE, parameters = parameters)
   KUBE <- add_smr_and_meis(dt = KUBE, parameters = parameters)
   KUBE <- adjust_smr_and_meis_to_country_normal(dt = KUBE, parameters = parameters)
   KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)

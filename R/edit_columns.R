@@ -29,10 +29,10 @@ get_maltall_column <- function(parameters){
 #' Creates new columns post moving average, as defined in ACCESS::TNP_PROD::NYEKOL_RAD_postMA
 #' @noRd
 do_format_cube_columns <- function(dt, parameters){
-  dt <- add_missing_columns(dt = dt)
-  dt <- add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
-  dt <- set_nonsumvalues(dt = dt)
-  dt <- set_alder_aar(dt = dt)
+  add_missing_columns(dt = dt)
+  add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
+  set_nonsumvalues(dt = dt)
+  set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
   data.table::set(dt, j = "MALTALL", value = dt[[parameters$MALTALL]])
   return(dt)
@@ -46,8 +46,7 @@ add_missing_columns <- function(dt){
   obligcolumns <- c("TELLER","NEVNER","RATE","PREDTELLER")
   obligcolumns <- paste0(rep(obligcolumns, each = 4), c("", ".f", ".a", ".n"))
   missingcolumns <- setdiff(obligcolumns, names(dt))
-  if(length(missingcolumns) > 0) dt[, (missingcolumns) := NA_real_]
-  return(dt)
+  if(length(missingcolumns) > 0) data.table::set(dt, j = missingcolumns, value = NA_real_)
 }
 
 #' @title add_sumvalues
@@ -60,7 +59,6 @@ add_sumvalues <- function(dt, factor){
   dt[, let(sumTELLER = factor * TELLER,
            sumNEVNER = factor * NEVNER,
            sumPREDTELLER = factor * PREDTELLER)]
-  return(dt)
 }
 
 #' @title set_nonsumvalues
@@ -75,15 +73,15 @@ set_nonsumvalues <- function(dt){
     valN = paste0(val, ".n")
     data.table::set(dt, j = val, value = dt[[val]] / dt[[valN]])
   }
-  return(dt)
 }
 
 #' @keywords internal
 #' @noRd
 set_alder_aar <- function(dt){
-  dt[, AAR := paste0(AARl, "_", AARh)]
-  if (all(c("ALDERl", "ALDERh") %in% names(dt))) dt[, ALDER := paste0(ALDERl, "_", ALDERh)]
-  return(dt)
+  data.table::set(dt, j = "AAR", value = paste0(dt[["AARl"]], "_", dt[["AARh"]]))
+  if(all(c("ALDERl", "ALDERh") %in% names(dt))){
+    data.table::set(dt, j = "ALDER", value = paste0(dt[["ALDERl"]], "_", dt[["ALDERh"]]))
+  } 
 }
 
 #' @title filter_invalid_outcodes
