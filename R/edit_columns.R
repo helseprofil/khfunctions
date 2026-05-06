@@ -114,7 +114,6 @@ get_etabs <- function(columnnames, parameters){
 #' @noRd
 set_etab_names <- function(dt, etablist){
   data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
-  return(dt)
 }
 
 #' @keywords internal
