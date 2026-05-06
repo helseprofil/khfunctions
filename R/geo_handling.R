@@ -38,7 +38,8 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
 #' @noRd
 fix_geo_special <- function(dt, parameters){
   geonivs <- unique(dt[["GEOniv"]])
-  specs = parameters$fileinformation[[parameters$files$TELLER]] 
+  specs <- parameters$fileinformation[[parameters$files$TELLER]] 
+  vals <- get_value_columns(names(dt))
   flags <- intersect(c("spv_tmp", grep("\\.f$", names(dt), value = T)), names(dt))
   bydelstart <- specs[["B_STARTAAR"]]
   dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
@@ -48,11 +49,14 @@ fix_geo_special <- function(dt, parameters){
   
   if(!isbydelstart && !isdk2020) return(invisible(NULL))
   
+  # STATA-prikkingen er avhengig av at alle måltall settes til NA
+  # Dersom vi går over til R-prikking, kan måltallene bevares
   if (isbydelstart) {
     cat("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
     cat(" - Sletter tall for år før ", bydelstart, "\n", sep = "")
     idx <- which(dt[["GEOniv"]] %in% c("B", "V") & dt[["AARl"]] < bydelstart)
     data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = vals, value = NA)
   }
   
   if (isdk2020) {
@@ -60,6 +64,7 @@ fix_geo_special <- function(dt, parameters){
     cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
     idx <- which(dt[["GEOniv"]] == "K" & dt[["GEO"]] %chin% dk2020 & dt[["AARl"]] < dk2020start)
     data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = vals, value = NA)
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
@@ -67,6 +72,7 @@ fix_geo_special <- function(dt, parameters){
     ystop <- ystart + 3
     idx <- which(dt[["GEO"]] %in% c("1508", "1580") & (dt[["AARl"]] <= ystop & dt[["AARh"]] >= ystart))
     data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = vals, value = NA)
   }
   return(invisible(NULL))
 }
