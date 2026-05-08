@@ -21,7 +21,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
-  # parameters[["threads"]] <- set_threads()
+  parameters[["threads"]] <- set_threads()
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
@@ -132,6 +132,10 @@ lagkube_cleanup <- function(parameters){
   if(!is.null(parameters$duck)){
     DBI::dbDisconnect(parameters$duck)
     fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
+  }
+  if(!is.null(parameters$threads)){
+    data.table::setDTthreads(parameters$threads$dt)
+    collapse::set_collapse(nthreads = parameters$threads$collapse)
   }
   RODBC::odbcCloseAll()
 }
