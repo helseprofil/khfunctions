@@ -413,28 +413,28 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @keywords internal
 #' @noRd
 do_remove_censored_observations <- function(dt, outvalues, parameters){
+  data.table::set(dt, j = "SPVFLAGG", value = 0L)
+  
   if(parameters$Censor_type == "R"){
     check_if_spv_tmp_correct(dt, parameters)
     dt[, SPVFLAGG := spv_tmp]
-    dt[SPVFLAGG == 9, SPVFLAGG := 1]
-    dt[SPVFLAGG %in% c(-1, 4), SPVFLAGG := 3]
-    return(dt)
   } 
   
-  valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
-  valF <- intersect(names(dt), valF)
-  if(length(valF) > 0){
-    dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-    dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
-                                       list(na.rm = TRUE))), .SDcols = valF] 
-    dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
-    dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
-    dt[SPVFLAGG > 0, (outvalues) := NA]
+  if(parameters$Censor_type == "STATA"){
+    valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
+    valF <- intersect(names(dt), valF)
+    if(length(valF) > 0){
+      dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
+      dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
+                                         list(na.rm = TRUE))), .SDcols = valF] 
+      dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
+      dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
+    }
   }
-  dt[is.na(SPVFLAGG), SPVFLAGG := 0]
-  dt[SPVFLAGG %in% c(-1, 4), SPVFLAGG := 3]
-  dt[SPVFLAGG == 9, SPVFLAGG := 1]
-  return(dt)
+  dt[is.na(SPVFLAGG), SPVFLAGG := 0L]
+  dt[SPVFLAGG %in% c(-1L, 4L), SPVFLAGG := 3L]
+  dt[SPVFLAGG == 9L, SPVFLAGG := 1L]
+  dt[SPVFLAGG > 0L, (outvalues) := NA]
 }
 
 #' @title check_if_spv_tmp_correct
