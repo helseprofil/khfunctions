@@ -237,13 +237,13 @@ melt_access_spec <- function(dscr, name = NULL){
 #' @param allvisvals All columns 
 #' @keywords internal
 #' @noRd
-LagQCKube <- function(allvis, allvistabs, kube){
+LagQCKube <- function(data, allvistabs){
   qcvals <- getOption("khfunctions.qcvals")
-  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(kube))
-  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
+  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
+  uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
-  QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
+  QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
   return(QC)
 }
 
