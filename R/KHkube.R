@@ -70,23 +70,17 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   do_handle_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
   
   # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
-  KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
-  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
+  KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
+  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
   # 8. Slicing av outputfiler
   RESULTAT <- list(KUBE = KUBE)
-  rm(KUBE)
-  gc()
-  
-  RESULTAT[["ALLVIS"]] <- data.table::copy(RESULTAT$KUBE)
-  do_remove_censored_observations(dt = RESULTAT$ALLVIS, outvalues = parameters$outvalues, parameters = parameters)
-  generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
+  RESULTAT[["ALLVIS"]] <- data.table::copy(RESULTAT[["KUBE"]])
+  do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
+  generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
   RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
   RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
-  if(!is_empty(parameters$CUBEinformation$ALLVISFILTER)){
-    ALLVIS <- data.table::copy(RESULTAT$ALLVIS)
-    RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
-  }
+  RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = RESULTAT[["ALLVIS"]], dt_name = "ALLVIS", code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)

@@ -5,11 +5,12 @@
 #' 
 #' @param name name of RSYNT point, refer to the column, to be used for filedump names
 #' @param dt data to be processed 
+#' @param dt_name name of data object, passed to code env
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
 #' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
 #' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
+do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, ...){
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
   
@@ -29,21 +30,21 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
   code <- ensure_correct_url(code, name)
   cat("\n** Starter R-snutt:", name)
   code_env <- new.env()
-  dtname <- as.character(substitute(dt))
-  assign(dtname, dt, envir = code_env)
+  assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
   extra_args <- list(...)
   for(argname in c(names(extra_args))){
     assign(argname, extra_args[[argname]], envir = code_env)
   }
-  newdt <- get(dtname, envir = code_env)
+  
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
-  if ("try-error" %in% class(rsynterr)) {
+  if(inherits(rsynterr, "try-error")){
     print(rsynterr)
     stop("Something went wrong in R")
   }
-  assign(dtname, get(dtname, envir = code_env), envir = code_env)
-  dt <- get(dtname, envir = code_env)
+  # assign(dt_name, get(dt_name, envir = code_env), envir = code_env)
+  # dt <- get(dt_name, envir = code_env)
+  dt <- code_env[[dt_name]]
   cat("\n** R-snutt ferdig")
   return(dt)
 }

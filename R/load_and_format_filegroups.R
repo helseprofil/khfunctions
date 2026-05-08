@@ -125,7 +125,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     }
     
     isffrsynt <- grepl("\\S", filefilter$FF_RSYNT1)
-    if(isffrsynt) FIL <- do_special_handling(name = "FF_RSYNT1", dt = FIL, code = filefilter$FF_RSYNT1, parameters = parameters)
+    if(isffrsynt) FIL <- do_special_handling(name = "FF_RSYNT1", dt = FIL, dt_name = "FIL", code = filefilter$FF_RSYNT1, parameters = parameters)
   }
   .GlobalEnv$BUFFER[[filegroup]] <- FIL
   # cat("\n*** Skriver til duckdb...\n")

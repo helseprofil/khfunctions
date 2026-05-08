@@ -15,6 +15,7 @@
 - Remove get(col)/mget(col), replace with dt[[col]] or .SDcols, whichever is most relevant
 - Implemented data.table::set() several places replacing := or let()
 - More functions operating by reference, avoiding unneccessary copies
+- Explicitly provide dt_name to do_special_handling. 
 
 # khfunctions 1.1.6 (2026-02-25)
 
