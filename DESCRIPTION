@@ -27,7 +27,8 @@ Imports:
     arrow (>= 22.0.0),
     dplyr (>= 1.1.4),
     duckdb (>= 1.4.2),
-    DBI (>= 1.2.3)
+    DBI (>= 1.2.3),
+    parallel
 Suggests: 
     methods,
     testthat (>= 3.0.0),
