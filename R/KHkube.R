@@ -21,6 +21,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
+  # parameters[["threads"]] <- set_threads()
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
@@ -73,15 +74,21 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
   
   # 8. Slicing av outputfiler
-  ALLVIS <- data.table::copy(KUBE)
-  ALLVIS <- do_remove_censored_observations(dt = ALLVIS, outvalues = parameters$outvalues, parameters = parameters)
+  RESULTAT <- list(KUBE = KUBE)
+  rm(KUBE)
+  gc()
+  
+  RESULTAT[["ALLVIS"]] <- data.table::copy(RESULTAT$KUBE)
+  do_remove_censored_observations(dt = RESULTAT$ALLVIS, outvalues = parameters$outvalues, parameters = parameters)
   generate_and_export_all_friskvik_indicators(dt = ALLVIS, parameters = parameters)
-  ALLVIS <- ALLVIS[, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
-  QC <- LagQCKube(allvis = ALLVIS, allvistabs = parameters$outdimensions, kube = KUBE)
-
-  ALLVIS <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
-  RESULTAT <<- list(KUBE = KUBE, ALLVIS = ALLVIS, QC = QC)
+  RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
+  RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
+  if(!is_empty(parameters$CUBEinformation$ALLVISFILTER)){
+    ALLVIS <- data.table::copy(RESULTAT$ALLVIS)
+    RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = ALLVIS, code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
+  }
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
+  assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   cat("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
   cat("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
