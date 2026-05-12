@@ -100,8 +100,9 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, paramete
   for(del in setdiff(names(tellerfildesign$Part), names(nevnerfildesign$Part))) {
     fellesdesign$Part[[del]] <- tellerfildesign$Part[[del]]
   }
+  #Potensielt unødvendig, er det noen gang
   for(del in setdiff(names(nevnerfildesign$Part), names(tellerfildesign$Part))) {
-    InitDes$Part[[del]] <- nevnerfildesign$Part[[del]]
+    fellesdesign$Part[[del]] <- nevnerfildesign$Part[[del]]
   }
   return(fellesdesign)
 }
@@ -117,20 +118,18 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
   }
-  RD1 <- find_redesign(orgdesign = DF1, targetdesign = list(Part = FTabs), parameters = parameters)
-  RD2 <- find_redesign(orgdesign = DF2, targetdesign = list(Part = FTabs), parameters = parameters)
-  omktabs <- names(RD1$FULL)[grepl("_omk$", names(RD1$FULL))]
-  data.table::setkeyv(RD1$FULL, omktabs)
-  data.table::setkeyv(RD2$FULL, omktabs)
-  Dekk1 <- unique(RD1$FULL[, ..omktabs])
-  Dekk2 <- unique(RD2$FULL[, ..omktabs])
-  Dekk12 <- Dekk1[Dekk2, nomatch = 0]
-  data.table::setnames(Dekk12, names(Dekk12), gsub("_omk$", "", names(Dekk12)))
-  FDes <- find_filedesign(Dekk12, parameters = parameters)
-  cat(" Ferdig i FinnFellesTab\n")
+  RD1 <- find_redesign(orgdesign = DF1, targetdesign = list(Part = FTabs), parameters = parameters)$FULL
+  RD2 <- find_redesign(orgdesign = DF2, targetdesign = list(Part = FTabs), parameters = parameters)$FULL
+  omktabs <- grep("_omk$", names(RD1), value = T)
+  Dekk <- collapse::join(unique(RD1[, ..omktabs]), 
+                         unique(RD2[, ..omktabs]), 
+                         how = "i", on = omktabs, overid = 2, verbose = 0)
+  rm(RD1, RD2)
   gc()
+  data.table::setnames(Dekk, old = names(Dekk), new = gsub("_omk$", "", names(Dekk)))
+  FDes <- find_filedesign(Dekk, parameters = parameters)
+  cat(" Ferdig i FinnFellesTab\n")
   return(FDes)
-  # return(list(Dekk = Dekk12, FDes = FDes))
 }
 
 #' FinnKubeDesignB (kb)

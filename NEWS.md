@@ -11,6 +11,7 @@
 - Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))
 - `do_special_handling` gains dt_name argument, to ensure correct name in code environment. 
 - Implemented new function `set_threads`. In `LagKUBE`/`LagFilgruppe`, data.table and collapse now utilizes more threads to speed up processing. 
+- `FinnFellesTab` improved for run time and memory requirement. 
 
 ## Code cleaning
 - Remove get(col)/mget(col), replace with dt[[col]] or .SDcols, whichever is most relevant
