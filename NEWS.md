@@ -9,7 +9,6 @@
 - Implemented `do_handle_coverage`, which censor strata on bydel/levekaar based on coverage. ([issue150](https://github.com/helseprofil/khfunctions/issues/150))
 - Fixed error message when original file not found ([issue151](https://github.com/helseprofil/khfunctions/issues/151), @raniets)
 - Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))
-- `fix_geo_special` no longer delete values. 
 - `do_special_handling` gains dt_name argument, to ensure correct name in code environment. 
 - Implemented new function `set_threads`. In `LagKUBE`/`LagFilgruppe`, data.table and collapse now utilizes more threads to speed up processing. 
 

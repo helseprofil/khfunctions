@@ -26,7 +26,8 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
     partdata <- data.table::copy(out$Parts[[part]])
     if(any_ubeting) partdata <- merge_partdata_orgdesign(partdata = partdata, orgdesign = orgdesign, partinfo = partinfo, parameters = parameters)
     set_partdata_bruk(partdata = partdata, partinfo = partinfo)
-    cb_part <- partdata[Bruk == get(partinfo$pri) & get(partinfo$har) == 1]
+    
+    cb_part <- partdata[Bruk == partdata[[partinfo$pri]] & partdata[[partinfo$har]] == 1]
     FULL <- merge_cbpart_to_full(full = FULL, cb_part = cb_part)
     
     out$SKombs[[part]] <- partdata
@@ -96,10 +97,9 @@ set_redesign_parts <- function(orgdesign, targetdesign, parameters){
     if(partinfo$type == "COL") cb_part <- format_global_codebook_col(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part)
     if(partinfo$type == "INT") cb_part <- format_global_codebook_int(cb_part = cb_part, partinfo = partinfo, target_part = target_part, org_part = org_part, parameters = parameters)
     
-    cb_part[, keep := as.integer(any(get(partinfo$har) == 1)), keyby = c(partinfo$colsomk, partinfo$pri)]
-    data.table::setkeyv(cb_part, partinfo$cols) # KUTT? 
-    cb_part <- cb_part[keep == 1]
-    cb_part[, keep := NULL]
+    keep_idx <- cb_part[, .I[any(x == 1)], by = c(partinfo$colsomk, partinfo$pri),
+                    env = list(x = partinfo$har)]$V1
+    cb_part <- cb_part[keep_idx]
     out[[part]] <- cb_part
   }
   return(out)
@@ -123,10 +123,13 @@ get_global_codebook_part <- function(codebook, target_part, partinfo){
 #' @keywords internal
 #' @noRd
 format_global_codebook_col <- function(cb_part, partinfo, target_part, org_part){
-  cb_part <- cb_part[get(partinfo$omk) %in% unique(target_part[[partinfo$name]])]
-  cb_part[, partinfo$har := 0]
-  cb_part[get(partinfo$name) %in% org_part[[partinfo$name]], partinfo$har := 1]
-  cb_part[, partinfo$dekk := as.integer(!any(get(partinfo$obl) == 1 & get(partinfo$har) == 0)), by = c(partinfo$omk, partinfo$pri)]
+  cb_part <- cb_part[cb_part[[partinfo$omk]] %in% unique(target_part[[partinfo$name]])]
+  cb_part[, partinfo$har := 0L]
+  cb_part[cb_part[[partinfo$name]] %in% org_part[[partinfo$name]], partinfo$har := 1L]
+  cb_part[, partinfo$dekk := 0L]
+  idx <- cb_part[, .I[!any(obl == 1L & har == 0L)], by = c(partinfo$omk, partinfo$pri), 
+                 env = list(obl = partinfo$obl, har = partinfo$har)]$V1
+  data.table::set(cb_part, i = idx, j = partinfo$dekk, value = 1L)
   return(cb_part)
 }
 
@@ -135,15 +138,16 @@ format_global_codebook_col <- function(cb_part, partinfo, target_part, org_part)
 format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part, parameters){
   org_min <- min(org_part[[partinfo$cols[1]]])
   org_max <- max(org_part[[partinfo$cols[2]]])
-  target_intervals <- int_string(dt = target_part, cols = partinfo$cols)
+  target_intervals <- interval_string(dt = target_part, cols = partinfo$cols)
   if (nrow(cb_part) > 0) {
     cb_part[, names(.SD) := lapply(.SD, function(x) gsub("^ALLE$", paste0(org_min, "_", org_max), x, ignore.case = TRUE)), .SDcols = c(partinfo$name, partinfo$omk)]
-    cb_part[, (partinfo$cols) := data.table::tstrsplit(get(partinfo$name), "_", fixed = TRUE)]
-    cb_part[, (partinfo$colsomk) := data.table::tstrsplit(get(partinfo$omk), "_", fixed = TRUE)]
-    cb_part <- cb_part[get(partinfo$omk) %in% target_intervals]
+    data.table::set(cb_part, j = partinfo$cols, value = data.table::tstrsplit(cb_part[[partinfo$name]], "_", fixed = TRUE))
+    data.table::set(cb_part, j = partinfo$colsomk, value = data.table::tstrsplit(cb_part[[partinfo$omk]], "_", fixed = TRUE))
+    cb_part <- cb_part[cb_part[[partinfo$omk]] %in% target_intervals]
   }
-  interval_from <- org_part[, .SD, .SDcols = partinfo$cols][!int_string(dt = org_part, cols = partinfo$cols) %in% parameters$LegKoder]
-  interval_to <- target_part[, .SD, .SDcols = partinfo$cols][!int_string(dt = target_part, cols = partinfo$cols) %in% parameters$LegKoder]
+  
+  interval_from <- org_part[, .SD, .SDcols = partinfo$cols][!interval_string(dt = org_part, cols = partinfo$cols) %in% parameters$LegKoder]
+  interval_to <- target_part[, .SD, .SDcols = partinfo$cols][!interval_string(dt = target_part, cols = partinfo$cols) %in% parameters$LegKoder]
   cb_intervals <- FinnKodebokIntervaller(interval_from, interval_to, delnavn = partinfo$part)
   cb_intervals[, (partinfo$obl) := 1]
   if(partinfo$part == "A") cb_intervals[cb_intervals$ALDERl >= 90, (partinfo$obl) := 0]
@@ -152,15 +156,15 @@ format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part,
   cb_part <- data.table::rbindlist(list(cb_intervals, cb_part[, .SD, .SDcols = names(cb_intervals)]))
   cb_part[, names(.SD) := lapply(.SD, as.integer), .SDcols = names(cb_intervals)]
   cb_part <- collapse::join(org_part, cb_part, on = partinfo$cols, how = "r", verbose = 0, overid = 2) # bytt til "l" når alt fungerer
-  cb_part[is.na(get(partinfo$har)), (partinfo$har) := 0]
+  cb_part[is.na(cb_part[[partinfo$har]]), (partinfo$har) := 0]
   cb_part <- SettPartDekk(cb_part, del = partinfo$part, har = partinfo$har, parameters = parameters)
   return(cb_part)
 }
 
 #' @keywords internal
 #' @noRd
-int_string <- function(dt, cols){
-  dt[, paste(get(cols[1]), get(cols[2]), sep = "_")]
+interval_string <- function(dt, cols){
+  paste(dt[[cols[1]]], dt[[cols[2]]], sep = "_")
 }
 
 #' @title FinnKodebokIntervaller
@@ -173,10 +177,9 @@ FinnKodebokIntervaller <- function(FRA, TIL, delnavn = "INT") {
   sorter <- order(intervals::size(FRAi), decreasing = TRUE)
   FRAi <- FRAi[sorter]
   FRA <- FRA[sorter]
-  # Finn kandidater, dvs inkluderte "underintrevaller"
+  # Finn kandidater, dvs inkluderte "underintervaller"
   KAND <- intervals::interval_included(TILi, FRAi)
-  if ("matrix" %in% class(KAND)) { # Irriterende bug(?) i interval naar TILi har dim 1 eller KAND er n*m
-    # KAND<-list(KAND)
+  if (inherits(KAND, "matrix")) { # Irriterende bug(?) i interval naar TILi har dim 1 eller KAND er n*m
     KAND <- split(KAND, rep(1:ncol(KAND), each = nrow(KAND)))
   }
   
@@ -275,9 +278,8 @@ get_part_info <- function(part, parameters){
 #' @keywords internal
 #' @noRd
 merge_partdata_orgdesign <- function(partdata, orgdesign, partinfo, parameters){
-  orgdata <- orgdesign$SKombs[[partinfo$kombname]]
-  d <- collapse::join(orgdata, partdata, on = partinfo$cols, how = "right", multiple = T, verbose = F)[get(partinfo$dekk) == 1]
-  data.table::setkeyv(d, c(partinfo$cols, partinfo$colsomk)) # KUTT
+  d <- collapse::join(orgdesign$SKombs[[partinfo$kombname]], partdata, on = partinfo$cols, how = "right", multiple = T, verbose = F)
+  d <- d[d[[partinfo$dekk]] == 1]
   d[is.na(HAR), HAR := 0]
   d <- SettPartDekk(d, del = partinfo$part, har = "HAR", betcols = partinfo$betcols, parameters = parameters)
   return(d)
@@ -293,26 +295,29 @@ SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = NULL
   kol <- as.character(parameters$DefDesign$DelKolN[del])
   kolsomkpri <- names(KB)[grepl("_(omk|pri)$", names(KB))]
   bycols <- c(kolsomkpri, betcols)
-  kolL <- paste0(kol, "l")
-  kolLomk <- paste0(kolL, "_omk")
-  kolH <- paste0(kol, "h")
-  kolHomk <- paste0(kolH, "_omk")
   delD <- paste0(del, "_Dekk")
   delO <- paste0(del, "_obl")
   
   if (del %in% names(IntervallHull)) {
-    KB[, let(DekkInt = sum((get(har) == 1 | get(delO) == 0) * (1+get(kolH) - get(kolL))),
+    KB[, let(DekkInt = sum(H == 1L | O == 0L) * (1L + KH - KL),
              FRADELER = .N,
-             NHAR = sum(get(har) == 1 | get(delO) == 0),
-             TotInt = 1+get(kolHomk)-get(kolLomk),
-             NTOT = sum(get(delO) == 1)),
-       by = bycols]
+             NHAR = sum(H == 1L | O == 0L),
+             TotInt = 1 + KHOMK - KLOMK,
+             NTOT = sum(O == 1L)),
+       by = bycols,
+       env = list(H = har, 
+                  O = delO, 
+                  KH = paste0(kol, "h"), 
+                  KL = paste0(kol, "l"),
+                  KHOMK = paste0(kol, "h_omk"),
+                  KLOMK = paste0(kol, "l_omk"))]
     
     sjekkintervall <- rlang::parse_expr(IntervallHull[[del]])
     KB[, (delD) := as.integer(eval(sjekkintervall)), by = bycols]
     KB[, c("DekkInt", "NHAR", "TotInt", "NTOT", "FRADELER") := NULL]
   } else {
-    KB[, (delD) := as.integer(!any(get(har) == 0 & get(delO) == 1)), by = bycols]
+    KB[, (delD) := as.integer(!any(H == 0 & O == 1)), by = bycols, 
+       env = list(H = har, O = delO)]
   }
   
   gc()
@@ -328,8 +333,9 @@ SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = NULL
 set_partdata_bruk <- function(partdata, partinfo){
   bycols = unlist(partinfo[c("colsomk", "betcols")], use.names = F)
   part_aggregate <- partinfo$part %in% partinfo$aggregate
-  if(part_aggregate) partdata[get(partinfo$dekk) == 1, Bruk := max(get(partinfo$pri)), by = bycols]
-  if(!part_aggregate) partdata[get(partinfo$dekk) == 1, Bruk := min(get(partinfo$pri)), by = bycols]
+  
+  aggfun <- ifelse(part_aggregate, "max", "min")
+  partdata[partdata[[partinfo$dekk]] == 1, Bruk := f(x), by = bycols, env = list(f = aggfun, x = partinfo$pri)]
 }
 
 #' @keywords internal
@@ -349,7 +355,7 @@ merge_cbpart_to_full <- function(full, cb_part){
 #' @noRd
 filter_cbpart <- function(cb_part, partinfo){
   out <- list()
-  n_pri <- cb_part[, .(n_pri = length(unique(get(partinfo$pri)))), by = c(partinfo$colsomk)][, max(n_pri)]
+  n_pri <- max(collapse::fndistinct(cb_part[[partinfo$pri]], g = collapse::GRP(cb_part, partinfo$colsomk)))
   out[["status"]] <- ifelse(n_pri == 1, "P", "B") # omdøp til Partiell/Kodebok
   items <- c("cols", "colsomk")
   if(n_pri != 1) items <- c("betcols", items)  

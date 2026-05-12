@@ -40,12 +40,12 @@ find_common_standard_teller_nevner_prednevner_design <- function(parameters){
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {
     SNdesign <- find_design_after_filter(file = "STANDARDNEVNER", parameters = parameters)
-    STNdesign <- FinnFellesTab(DF1 = STdesign, DF2 = SNdesign, parameters = parameters)$FDes
+    STNdesign <- FinnFellesTab(DF1 = STdesign, DF2 = SNdesign, parameters = parameters)
   } else {
     STNdesign <- STdesign
   }
   PNdesign <- parameters$filedesign[[parameters$files$PREDNEVNER]]
-  STNPdesign <- FinnFellesTab(DF1 = STNdesign, DF2 = PNdesign, parameters = parameters)$FDes
+  STNPdesign <- FinnFellesTab(DF1 = STNdesign, DF2 = PNdesign, parameters = parameters)
   
   # Maa filtrere standardtellerdesign med parameters$PredFilter igjen for aa finne fellesdesign som gir til-design for ST og SN
   STNdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters, originaldesign = STNPdesign, outpredfilter = FALSE)
@@ -93,7 +93,7 @@ estimate_predrate <- function(design, parameters){
   cat("\n* Estimerer PREDRATE...")
   missyears <- parameters$MOVAVparameters$missyears
   predrate <- data.table::data.table()
-  merge_teller_nevner(outdata = predrate, parameters = parameters, standardfiles = TRUE, design = design)$TNF
+  merge_teller_nevner(outdata = predrate, parameters = parameters, standardfiles = TRUE, design = design)
   if(missyears$n > 0 && any(missyears$years %in% unique(predrate$AARl))){
     problem <- intersect(missyears$years, unique(predrate$AARl))
     warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 

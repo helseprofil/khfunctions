@@ -96,7 +96,7 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, paramete
   if(!is.null(design)) return(design)
   if(is.null(nevnerfildesign)) return(tellerfildesign)
   
-  fellesdesign <- FinnFellesTab(DF1 = tellerfildesign, DF2 = nevnerfildesign, parameters = parameters)$FDes
+  fellesdesign <- FinnFellesTab(DF1 = tellerfildesign, DF2 = nevnerfildesign, parameters = parameters)
   for(del in setdiff(names(tellerfildesign$Part), names(nevnerfildesign$Part))) {
     fellesdesign$Part[[del]] <- tellerfildesign$Part[[del]]
   }
@@ -129,7 +129,8 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   FDes <- find_filedesign(Dekk12, parameters = parameters)
   cat(" Ferdig i FinnFellesTab\n")
   gc()
-  return(list(Dekk = Dekk12, FDes = FDes))
+  return(FDes)
+  # return(list(Dekk = Dekk12, FDes = FDes))
 }
 
 #' FinnKubeDesignB (kb)
