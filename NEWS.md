@@ -14,7 +14,7 @@
 - `FinnFellesTab` improved for run time and memory requirement. 
 
 ## Code cleaning
-- Remove get(col)/mget(col), replace with dt[[col]] or .SDcols, whichever is most relevant
+- Remove get(col)/mget(col), replace with `dt[[col]]`, `.SDcols` or `env =`, whichever is most relevant
 - Implemented data.table::set() several places replacing := or let()
 - More functions operating by reference, avoiding unneccessary copies
 

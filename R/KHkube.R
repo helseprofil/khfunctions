@@ -57,7 +57,6 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   do_format_cube_columns(dt = KUBE, parameters = parameters)
   add_smr_and_meis(dt = KUBE, parameters = parameters)
-  adjust_smr_and_meis_to_country_normal(dt = KUBE, parameters = parameters)
   KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
   parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
   set_etab_names(dt = KUBE, etablist = parameters$etabs)
