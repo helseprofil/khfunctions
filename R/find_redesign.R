@@ -157,7 +157,7 @@ format_global_codebook_int <- function(cb_part, partinfo, target_part, org_part,
   cb_part[, names(.SD) := lapply(.SD, as.integer), .SDcols = names(cb_intervals)]
   cb_part <- collapse::join(org_part, cb_part, on = partinfo$cols, how = "r", verbose = 0, overid = 2) # bytt til "l" når alt fungerer
   cb_part[is.na(cb_part[[partinfo$har]]), (partinfo$har) := 0]
-  cb_part <- SettPartDekk(cb_part, del = partinfo$part, har = partinfo$har, parameters = parameters)
+  cb_part <- SettPartDekk(KB = cb_part, del = partinfo$part, har = partinfo$har, parameters = parameters)
   return(cb_part)
 }
 
@@ -299,7 +299,7 @@ SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = NULL
   delO <- paste0(del, "_obl")
   
   if (del %in% names(IntervallHull)) {
-    KB[, let(DekkInt = sum(H == 1L | O == 0L) * (1L + KH - KL),
+    KB[, let(DekkInt = sum((H == 1L | O == 0L) * (1L + KH - KL)),
              FRADELER = .N,
              NHAR = sum(H == 1L | O == 0L),
              TotInt = 1 + KHOMK - KLOMK,
@@ -312,8 +312,7 @@ SettPartDekk <- function(KB, del = "", har = paste0(del, "_HAR"), betcols = NULL
                   KHOMK = paste0(kol, "h_omk"),
                   KLOMK = paste0(kol, "l_omk"))]
     
-    sjekkintervall <- rlang::parse_expr(IntervallHull[[del]])
-    KB[, (delD) := as.integer(eval(sjekkintervall)), by = bycols]
+    KB[, (delD) := as.integer(x), by = bycols, env = list(x = str2lang(IntervallHull[[del]]))]
     KB[, c("DekkInt", "NHAR", "TotInt", "NTOT", "FRADELER") := NULL]
   } else {
     KB[, (delD) := as.integer(!any(H == 0 & O == 1)), by = bycols, 
