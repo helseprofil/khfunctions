@@ -5,7 +5,7 @@ control_cube_output <- function(outputlist, parameters){
   all_checks <- numeric()
   all_checks <- c(all_checks, control_censoring(dt = outputlist$QC, parameters = parameters))
   all_checks <- c(all_checks, control_standardization(dt = outputlist$ALLVIS, parameters = parameters))
-  all_checks <- c(all_checks, control_aggregation(dt = outputlist$KUBE))
+  all_checks <- c(all_checks, control_aggregation(dt = outputlist$KUBE, parameters = parameters))
   control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   if(sum(all_checks) == 0){
     cat("\n\n---\n* Alle sjekker passert!\n---\n")
@@ -82,10 +82,12 @@ control_aggregation <- function(dt){
     cat("\n** Ingen ikke-missing teller/nevner i filen, skippet")
     return(0)
   }
-  LF <- compare_geolevels(dt = dt, overcat = "L", undercat = "F")
-  FK <- compare_geolevels(dt = dt, overcat = "F", undercat = "K")
-  BK <- compare_kommune_bydel(dt = dt)
-  comparisons <- LF + FK + BK
+  LF <- compare_geolevels(dt = dt, level = "F", parameters = parameters)
+  FK <- compare_geolevels(dt = dt, level = "K", parameters = parameters)
+  BK <- compare_geolevels(dt = dt, level = "B", parameters = parameters)
+  VKB <- compare_geolevels(dt = dt, level = "V", parameters = parameters)
+  
+  comparisons <- LF + FK + BK + VKB
   if(comparisons > 0){
     cat("\n** Summen av lavere nivå er større enn høyere nivå, noe er feil med aggregeringen, IKKE OK!")
     return(1)
@@ -93,11 +95,33 @@ control_aggregation <- function(dt){
   return(0)
 }
 
-compare_geolevels <- function(dt, overcat, undercat){
-  if(!all(c(overcat, undercat) %in% unique(dt$GEOniv))) return(0)
-  cat("\n** Sjekker", overcat, "vs", undercat)
-  check_teller <- dt[GEOniv %in% c(overcat, undercat) & !is.na(sumTELLER), .N] > 0
-  check_nevner <- dt[GEOniv %in% c(overcat, undercat) & !is.na(sumNEVNER), .N] > 0
+compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
+  level <- match.arg(level)
+  if(!level %in% unique(dt$GEOniv)) return(0)
+  parents <- switch(level,
+                    "F" = collapse::funique(dt[GEOniv == "L", GEO]),
+                    "K" = collapse::funique(dt[GEOniv == "F", GEO]),
+                    "B" = collapse::funique(substr(dt[GEOniv == "B", GEO], 1, 4)),
+                    "V" = sub("00$", "", collapse::funique(substr(dt[GEOniv == "V", GEO], 1, 6))))
+  if(length(parents) == 0){
+    cat("\n*** Ingen rader funnet for overnivå, sjekk ikke utført")
+    return(0)
+  } 
+  overniv_name <- switch(level,
+                         "F"="L", "K"="F", "B"="K", "V"="K/B")
+  dims <- c("GEOniv", setdiff(parameters$outdimensions, "GEO"))
+  d <- data.table::copy(dt[GEOniv == level | GEO %in% parents, .SD, .SDcols = c(dims, c("GEO", "sumTELLER", "sumNEVNER"))])
+  d[GEOniv != level, GEOniv := overniv_name]
+  if(level == "F"){
+    d[, overniv_kode := "0"]
+  } else {
+    cropgeo <- switch(level, "K" = 2, "B" = 4, "V" = 6)
+    d[, overniv_kode := sub("00$", "", substr(GEO, 1, cropgeo))]
+  }
+  
+  cat("\n** Sjekker", switch(level, "F"="Fylke", "K"="Kommune", "B"="Bydel", "V"="Levekårsoner"))
+  check_teller <- d[!is.na(sumTELLER), .N] > 0
+  check_nevner <- d[!is.na(sumNEVNER), .N] > 0
   
   if(!check_teller && !check_nevner){
     cat("\n*** Ingen ikke-missing teller/nevner, sjekk skippet")
@@ -106,35 +130,45 @@ compare_geolevels <- function(dt, overcat, undercat){
   
   t_ok <- n_ok <- TRUE
   
+  g <- collapse::GRP(d, c(dims, "overniv_kode"))
   if(check_teller){
-    sumt_overcat <- collapse::fsum(dt[GEOniv == overcat, sumTELLER])
-    sumt_undercat <- collapse::fsum(dt[GEOniv == undercat, sumTELLER])
-    t_ok <- sumt_overcat >= sumt_undercat
-    if(t_ok) cat("\n*** Totalsummen (teller) av ", overcat, " er større eller lik ", undercat, ", OK!", sep = "")
-    if(!t_ok) cat("\n*** Totalsummen (teller) av ", overcat, " er MINDRE enn ", undercat, ", IKKE OK!", sep = "")
+    sumT_check <- check_value(d = d, value = "sumTELLER", g = g)
+    t_ok <- sumT_check[, .N] == 0
+    if(t_ok) cat("\n*** sumTELLER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
+    if(!t_ok){
+      cat("\n*** sumTELLER for GEOniv='", level, "' er STØRRE enn overkategorien, IKKE OK, se utslag i egen tabell!", sep = "")
+      View(sumT_check, title = paste0("sumTELLER_check_", level, "_vs_", overniv_name))
+    }
   }
   
   if(check_nevner){
-    sumn_overcat <- collapse::fsum(dt[GEOniv == overcat, sumNEVNER])
-    sumn_undercat <- collapse::fsum(dt[GEOniv == undercat, sumNEVNER])
-    n_ok <- sumn_overcat >= sumn_undercat
-    if(t_ok) cat("\n*** Totalsummen (nevner) av ", overcat, " er større eller lik ", undercat, ", OK!", sep = "")
-    if(!t_ok) cat("\n*** Totalsummen (nevner) av ", overcat, " er MINDRE enn ", undercat, ", IKKE OK!", sep = "")
+    sumN_check <- check_value(d = d, value = "sumNEVNER", g = g)
+    n_ok <- sumN_check[, .N] == 0
+    if(n_ok) cat("\n*** sumNEVNER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
+    if(!n_ok){
+      cat("\n*** sumNEVNER for GEOniv='", level, "' er STØRRE enn '", overniv_name, "', IKKE OK!, se utslag i egen tabell!", sep = "")
+      View(sumN_check, title = paste0("sumNEVNER_check_", level, "_vs_", overniv_name))
+    }
   }
 
   if(t_ok && n_ok) return(0)
   return(1)
 }
 
+#' @title check_value
+#' @description helper function for compare_geolevels
+#' @param d data
+#' @param value value column name
+#' @param g GRP object to make comparisons in all strata
 #' @keywords internal
 #' @noRd
-compare_kommune_bydel <- function(dt){
-  if(!all(c("B", "K") %in% unique(dt$GEOniv))) return(0)
-  byer <- c("0301", "1103", "4601", "5001")
-  cols <- c("GEOniv", "GEO", "sumTELLER", "sumNEVNER")
-  d <- dt[GEOniv %in% c("B", "K") & grepl(paste0("^", byer, collapse = "|"), GEO), .SD, .SDcols = cols]
-  out <- compare_geolevels(dt = d, overcat = "K", undercat = "B")
-  return(out)
+check_value <- function(d, value, g){
+  out <- g[["groups"]]
+  data.table::set(out, j = value, value = collapse::fsum(d[[value]], g = g))
+  out <- data.table::dcast(out, formula = ... ~ GEOniv, value.var = value)
+  diff <- out[[overniv_name]] - out[[level]]
+  data.table::set(out, j = "diff", value = diff)
+  return(out[diff < 0])
 }
 
 #' @keywords internal
@@ -165,6 +199,12 @@ control_meis_rate <- function(dt, parameters){
   }
 }
 
+#' @title control_rate_lks
+#' @description check if MEIS/RATE for parent geo is between min/max LKS-value.
+#' @param dt data
+#' @param parameters parameters from lagKUBE
+#' @keywords internal
+#' @noRd
 control_rate_lks <- function(dt, parameters){
   if(!grepl("V", parameters$CUBEinformation$GEOniv)) return(invisible(NULL))
   
