@@ -20,8 +20,6 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
-  parameters[["old_locale"]] <- ensure_utf8_encoding()
-  parameters[["threads"]] <- set_threads()
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
@@ -37,8 +35,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 2. Koble teller og nevner
   KUBE <- data.table::data.table()
   CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
-  
-  # 3. Aggregering til flerårige tall
+
+    # 3. Aggregering til flerårige tall
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
   KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)

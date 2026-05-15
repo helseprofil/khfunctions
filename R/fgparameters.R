@@ -16,6 +16,8 @@ get_filegroup_parameters <- function(user_args){
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  parameters[["old_locale"]] <- ensure_utf8_encoding()
+  parameters[["threads"]] <- set_threads()
   return(c(parameters))
 }
 

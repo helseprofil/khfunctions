@@ -19,6 +19,8 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["KB"]] <- SettKodeBokGlob(parameters = parameters)
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
+  parameters[["old_locale"]] <- ensure_utf8_encoding()
+  parameters[["threads"]] <- set_threads()
   return(parameters)
 }
 
