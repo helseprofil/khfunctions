@@ -163,7 +163,7 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
 #' @keywords internal
 #' @noRd
 check_value <- function(d, value, g){
-  out <- g[["groups"]]
+  out <- data.table::copy(g[["groups"]])
   data.table::set(out, j = value, value = collapse::fsum(d[[value]], g = g))
   out <- data.table::dcast(out, formula = ... ~ GEOniv, value.var = value)
   diff <- out[[overniv_name]] - out[[level]]
