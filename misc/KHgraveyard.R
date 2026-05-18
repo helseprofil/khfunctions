@@ -4395,3 +4395,41 @@ add_maltall <- function(dt, maltallcolumn){
   data.table::set(dt, j = "MALTALL", value = dt[[maltallcolumn]])
   return(dt)
 }
+
+#' @title YAlagVal (kb)
+#' @description 
+#' used in ACCESS, only for befvekst. AGE lag is not used, only year. 
+#' Generate a new file with all dimension columns and the selected value column. 
+#' AARl and ALDERl is changed by the factors specified in YL and AL, to be merged onto different rows. 
+#' 
+#' This function can probably be replaced by collapse-functions flag/flead. 
+#' @param FG file
+#' @param YL year lag
+#' @param AL age lag
+#' @param vals value to create lag value
+#' @keywords internal
+#' @noRd
+YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
+  ltag <- function(lag) {
+    ltag <- ""
+    if (lag > 0) {
+      ltag <- paste("m", abs(lag), sep = "")
+    } else if (lag < 0) {
+      ltag <- paste("p", abs(lag), sep = "")
+    }
+    return(ltag)
+  }
+  FGl <- data.table::copy(FG)
+  FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
+  FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
+  data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
+  tabkols <- setdiff(names(FGl), get_value_columns(names(FG), full = TRUE))
+  lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
+  data.table::setnames(FGl, unlist(lapply(vals, function(x) {
+    paste(x, c("", ".f", ".a"), sep = "")
+  })), lvals)
+  FGl <- FGl[, .SD, .SDcols = c(tabkols, lvals)]
+  data.table::setkeyv(FG, tabkols)
+  data.table::setkeyv(FGl, tabkols)
+  return(FGl)
+}
