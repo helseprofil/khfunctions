@@ -50,23 +50,29 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   
   if (length(KUBEdesign) > 0) {
     cat("\n** Rektangulariserer teller-nevner-fil")
-    rectangularizedcube <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, parameters = parameters)
-    report_removed_codes(file = tellerfil, cube = rectangularizedcube)
-    TNF <- collapse::join(rectangularizedcube, tellerfil, how = "l", overid = 0, verbose = 0)
-    if(isnevnerfil) TNF <- collapse::join(TNF, nevnerfil, how = "l", overid = 0, verbose = 0)
+    TNF <- set_rectangularized_cube_design(colnames = names(tellerfil), design = KUBEdesign$TMP, parameters = parameters)
+    report_removed_codes(file = tellerfil, cube = TNF)
+    merge_cols_by_reference(orgdata = TNF, newdata = tellerfil)
+    rm(tellerfil)
+    if(isnevnerfil){
+      merge_cols_by_reference(orgdata = TNF, newdata = nevnerfil)
+      rm(nevnerfil)
+    }
     set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
     cat("\n*** Ferdig rektangularisert og merget teller-nevner-fil, dim:", dim(TNF))
   } else if (isnevnerfil) {
     TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
+    rm(tellerfil, nevnerfil)
     set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
     cat("\n*** Ferdig merget teller-nevner-fil, dim:", dim(TNF))
   } else {
     TNF <- tellerfil
+    rm(tellerfil)
     cat("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil. dim:", dim(TNF))
   }
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
-  if(isNYEKOL_RAD) TNF <- compute_new_value_from_row_sum(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
+  if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
   if(isNYEKOL_KOL) compute_new_value_from_formula(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
   
@@ -75,7 +81,8 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   if (!identical(dimorg, dim(TNF))) cat("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
-  outdata[, names(TNF) := TNF]
+  outdata[, (names(TNF)) := TNF]
+  rm(TNF)
   return(KUBEdesign$MAIN)
 }
 
@@ -231,12 +238,11 @@ do_redesign_file <- function(filename, filedesign, tndesign, parameters){
   return(file)
 }
 
-#' @title do_rectangularize_cube
+#' @title set_rectangularized_cube_design
 #' @description
 #' rectangularizes cube based on the given design
-#' @param colnames 
-#' @param design 
-#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
 set_rectangularized_cube_design <- function(colnames, design, parameters) {
   DTlist <- list()
   delkolonner <- character(0)

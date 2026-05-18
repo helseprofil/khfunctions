@@ -6,6 +6,8 @@
 - Implemented new function `set_threads`. In `LagKUBE`/`LagFilgruppe`, data.table and collapse now utilizes more threads to speed up processing. 
 - `do_special_handling` gains dt_name argument, to ensure correct name in code environment. 
 - More functions are now operating by reference, avoiding unneccessary copies. This reduces memory requirements drastically!
+- FILFILTRE::nykolsMERGE deactivated, (replaced with special function for BEFVEKST)
+- added function `merge_cols_by_reference()`, which adds columns without making full copies of data
 
 ## LagKUBE improvements
 - Implemented new function `do_filter_KUIL` which filters out only needed levels of KJONN/UTDANN/INNVKAT/LANDBAK. This reduces size of files drastically before further processing ([issue153](https://github.com/helseprofil/khfunctions/issues/153))
@@ -14,6 +16,9 @@
 - Information on secondary censoring is collected in one column ([issue144](https://github.com/helseprofil/khfunctions/issues/144))
 - Added more columns with information on censoring (orgprikket, dekningprikket) ([issue149](https://github.com/helseprofil/khfunctions/issues/149))
 - `do_filfiltre_kollapsdeler` now checks for existing totals before aggregating, added safety against double counting
+- Added function `add_leadyear_befvekst`, removing the need for nykolsmerge which was only used for this.
+- When loading filegroups, colorder is set according to standarddimensions. 
+- `merge_teller_nevner` works more by reference, relying less on copies of data 
 
 ## Quality control for CUBE
 - Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))
