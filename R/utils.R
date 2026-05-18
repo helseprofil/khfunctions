@@ -55,3 +55,27 @@ set_threads <- function(){
   return(list(dt = old_dt,
               collapse = old_collapse))
 }
+
+merge_cols_by_reference <- function(orgdata, newdata){
+  commoncols <- intersect(
+      get_dimension_columns(names(orgdata)),
+      get_dimension_columns(names(newdata))
+  )
+  newcols_names <- setdiff(names(newdata), commoncols)
+  
+  dup_check <- newdata[, .N, by = commoncols][N > 1]
+  
+  if (nrow(dup_check) > 0) {
+    stop(
+      sprintf(
+        "merge_cols_by_reference(): newdata har duplikate nøkler i commoncols (%s). Eksempel:\n%s",
+        paste(commoncols, collapse = ", "),
+        paste(utils::capture.output(print(head(dup_check))), collapse = "\n")
+      ),
+      call. = FALSE
+    )
+  }
+  
+  newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
+  data.table::set(orgdata, j = newcols_names, value = newcols_vals)
+}
