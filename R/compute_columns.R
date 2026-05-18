@@ -86,7 +86,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
     set_implicit_null_after_merge(dt = dt, implicitnull_defs = valdef)
   }
-  return(invisible(dt)
+  return(invisible(dt))
 }
     
 #' @keywords internal
