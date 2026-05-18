@@ -45,6 +45,7 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   } else {
     FIL <- read_filegroup(filegroup = orgfile)
   }
+  
   if(isfilter) FIL <- do_filter_columns(file = FIL, filter = filter)
   
   FIL <- do_filter_KUIL(dt = FIL, parameters = parameters)
@@ -56,10 +57,8 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     if(iskollapsdel) FIL <- do_filfiltre_kollapsdeler(file = FIL, parts = filefilter$KOLLAPSdeler, parameters = parameters)
     
     isnyekolkolprerad <- grepl("\\S", filefilter$NYEKOL_KOL_preRAD)
-    # TODO: optimalisere leggtilnyeverdikolonner
     if(isnyekolkolprerad) compute_new_value_from_formula(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
     
-    # TODO: optimalisere finnredesign (find_redesign) og OmkodFil (recode_file)
     Filter <- set_recode_filter_filfiltre(fileinfo = fileinfo, filefilter = filefilter, parameters = parameters)
     if (length(Filter) > 0){
       prefilterdesign <- find_filedesign(FIL, parameters = parameters)
@@ -74,20 +73,23 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
     }
     
     isnyekolrad <- grepl("\\S", filefilter$NYEKOL_RAD)
-    if(isnyekolrad) FIL <- compute_new_value_from_row_sum(dt = FIL, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
+    if(isnyekolrad) compute_new_value_from_row_sum(dt = FIL, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
     
-    isnykolsmerge <- grepl("\\S", filefilter$NYKOLSmerge)
-    if(isnykolsmerge){
-      cat("\n*** Merger inn ny kolonne: ", filefilter$NYKOLSmerge)
-      NY <- eval(parse(text = filefilter$NYKOLSmerge))
-      commoncols <- intersect(get_dimension_columns(names(NY)), get_dimension_columns(names(FIL)))
-      FIL <- collapse::join(FIL, NY, on = commoncols, how = "l", overid = 2, verbose = 0)
-    }
-    
+    # isnykolsmerge <- grepl("\\S", filefilter$NYKOLSmerge)
+    # if(isnykolsmerge){
+    #   newcols <- eval(str2lang(filefilter$NYKOLSmerge))
+    #   do_filfiltre_nykolsmerge(file = FIL, newcols = newcols)
+    # }
+      
     isffrsynt <- grepl("\\S", filefilter$FF_RSYNT1)
     if(isffrsynt) FIL <- do_special_handling(name = "FF_RSYNT1", dt = FIL, dt_name = "FIL", code = filefilter$FF_RSYNT1, parameters = parameters)
   }
-  .GlobalEnv$BUFFER[[filegroup]] <- FIL
+  
+  if(filegroup == "BEFVEKST") add_leadyear_befvekst(dt = FIL)
+  dimorder <- intersect(getOption("khfunctions.standarddimensions_full"), names(FIL))
+  data.table::setcolorder(FIL, dimorder)
+
+    .GlobalEnv$BUFFER[[filegroup]] <- FIL
   # cat("\n*** Skriver til duckdb...\n")
   # DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
   invisible(gc())
@@ -348,6 +350,13 @@ do_filfiltre_kollapsdeler <- function(file, parts, parameters){
   return(file)
 }  
 
+# do_filfiltre_nykolsmerge <- function(file, newcols){
+#   commoncols <- intersect(get_dimension_columns(names(newcols)), get_dimension_columns(names(file)))
+#   newcolnames <- setdiff(names(newcols), commoncols)
+#   newcolvals <- newcols[file, on = commoncols, ..newcolnames]
+#   data.table::set(file, j = newcolnames, value = newcolvals)
+# }
+
 #' @title set_recode_filter_filfiltre
 #' @description 
 #' Uses information from FILFILTRE-columns GEONIV, ALDER, KJONN, UTDANN, LANDBAK, INNVKAT to further filter
@@ -382,17 +391,6 @@ set_recode_filter_filfiltre <- function(fileinfo, filefilter, parameters){
   return(out)
 }
 
-#' @title do_filfiltre_nykolsmerge
-#' @description
-#' Merges new columns to file according to the NYKOLSmerge column in table FILFILTRE
-#' Only used in befvekst, together with YAlagVal
-#' @keywords internal
-#' @noRd
-# do_filfiltre_nykolsmerge <- function(dt, filefilter){
-#   
-#   return(dt)
-# }
-
 #' @keywords internal
 #' @noRd
 set_integer_columns <- function(dt){
@@ -400,4 +398,26 @@ set_integer_columns <- function(dt){
   non_int_cols <- names(dt)[!sapply(dt, is.integer)]
   to_integer <- intersect(non_int_cols, integers)
   dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = to_integer]
+}
+
+#' @title add_leadyear_befvekst
+#' @description
+#' Adds lead years for filegroup BEFVEKST
+#' @keywords internal
+#' @noRD
+add_leadyear_befvekst <- function(dt){
+  d <- data.table::copy(dt)
+  data.table::set(d, j = c("AARl", "AARh"), 
+                  value = list(d[["AARl"]] - 1, d[["AARh"]] - 1))
+  tabcols <- get_dimension_columns(names(d))
+  if(!d[, max(.N), by = tabcols][, max(V1)] == 1){
+    stop("")
+  }
+  prefix <- "Yp1_A_"
+  oldval_names <- paste0("BEF0101", c("", ".f", ".a"))
+  newval_names <- paste0(prefix, oldval_names)
+  data.table::setnames(d, old = oldval_names, new = newval_names)
+  
+  newval_vals <- d[dt, on = tabcols, ..newval_names]
+  data.table::set(dt, j = newval_names, value = newval_vals)
 }
