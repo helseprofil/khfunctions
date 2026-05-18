@@ -9,7 +9,7 @@
 #' @keywords internal
 #' @noRd
 compute_new_value_from_formula <- function(dt, formulas, post_moving_average = FALSE){
-  if(is_empty(formulas)) return(invisible(NULL))
+  if(is_empty(formulas)) return(invisible(dt))
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
@@ -30,6 +30,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
     }  
     dt[is.na(dt[[name]]) | is.infinite(dt[[name]]) | is.nan(dt[[name]]), (paste0(name, c("", ".f"))) := list(NA, 2)]
   }
+  return(invisible(dt))
 }
 
 #' @noRd
@@ -62,7 +63,7 @@ add_crude_rate <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
-  if(is_empty(formulas)) return(dt)
+  if(is_empty(formulas)) return(invisible(dt))
   formulas <- unlist(strsplit(formulas, ";"))
   if(any(!grepl("^\\S+?\\s*=\\s*\\S+?\\{(.*)\\}$", formulas))){
     stop("FILFILTRE::NYEKOL_RAD har feil format: \n\n'", formulas, 
@@ -80,12 +81,12 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     newcols <- paste0(fparts$new, c("", ".f", ".a"))
     data.table::setnames(newdata, oldcols, newcols)
     newdims <- get_dimension_columns(names(newdata))
-    dt <- collapse::join(dt, newdata[, .SD, .SDcols = c(newdims, newcols)], on = newdims, how = "l", overid = 2, verbose = 0)
+    merge_cols_by_reference(orgdata = dt, newdata = newdata[, .SD, .SDcols = c(newdims, newcols)])
     valdef <- fileinfo$vals
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
     set_implicit_null_after_merge(dt = dt, implicitnull_defs = valdef)
   }
-  return(dt)
+  return(invisible(dt)
 }
     
 #' @keywords internal
@@ -119,10 +120,6 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
   fparts[["filtercols"]] <- gsub("^(\\S+)\\s*(?:%in%|==).*$", "\\1", filters)
   fparts[["filtervals"]] <- gsub("^(?:\\S+)\\s*(?:%in%|==)\\s*(.*)$", "\\1", filters)
   fparts[[""]]  <- fparts$filtercols[fparts$filtercols %in% parameters$DefDesign$DesignKols]
-  # delkols <- parameters$DefDesign$DelKols
-  # fparts[["recodeparts"]] <- names(delkols)[sapply(delkols, function(x) all(x %in% fparts$filtercols))]
-  # fparts[["recodecols"]] <- parameters$DefDesign[]  
-  #  parameters$DefDesign$DelKols$A == fparts$filtercols
   return(fparts)
 }
 
@@ -153,29 +150,26 @@ get_recode_design <- function(filter){
   }
 }
 
-#' @title set_lead_value
+#' #' @title set_lead_value
+#' #' @description 
+#' #' shifts year by `shift`, before merging to main table. 
+#' #' in prefix, m/p means plus/minus. Prefix need to include `_A_` as column names must match expected names later.  
+#' #' @keywords internal
+#' #' @noRd
+#' set_lead_year <- function(file, shift, vals = NULL){
+#'   if(is.null(vals)) stop("vals must be specified to generate lead values")
+#'   d <- data.table::copy(file)
+#'   data.table::set(d, j = c("AARl", "AARh"), 
+#'                   value = list(d[["AARl"]] + shift, NULL))
 #' 
-#' @description
-#' CAN REPLACE YALAGVAL, BUT MUST FIND A WAY OF USING IT IN ACCESS
-#' MAKE NEW COLUMN "LAGVAL" 
-#' @keywords internal
-#' @noRd
-set_lead_value <- function(file, yearlag = -1, vals = NULL){
-  if(is.null(vals)) stop("vals must be specified to generate lead values")
-  d <- data.table::copy(file)
-  d[, lagAARl := AARl + yearlag]
-  d[, c("AARl", "AARh") := list(NULL)]
-  data.table::setnames(d, "lagAARl", "AARl")
-  tabcols <- get_dimension_columns(names(d))
-  # m/p means plus/minus
-  lagprefix <- paste0("Y", ifelse(yearlag < 0, "p", "m"), abs(yearlag), "_A_") 
-  oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
-  newvals <- paste0(lagprefix, allvals)
-  data.table::setnames(d, old = allvals, new = newvals)
-  d <- d[, .SD, .SDcols = c(tabcols, newvals)]
-  return(d)
-}
-
+#'   tabcols <- get_dimension_columns(names(d))
+#'   prefix <- paste0("Y", ifelse(shift < 0, "p", "m"), abs(shift), "_A_") 
+#'   oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
+#'   newvals <- paste0(prefix, oldvals)
+#'   data.table::setnames(d, old = oldvals, new = newvals)
+#'   d <- d[, .SD, .SDcols = c(tabcols, newvals)]
+#'   return(d)
+#' }
 
 # Existing functions to be replaced and removed ---- 
 
