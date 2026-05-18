@@ -31,14 +31,11 @@ calculate_smrtmp <- function(dt, parameters){
 #' @noRd
 adjust_smr_and_meis_to_country_normal <- function(dt, parameters){
   normsubset <- get_normsubset(dt = dt, parameters = parameters)
-  commondims <- intersect(names(normsubset), names(dt))
-  newcols <- setdiff(names(normsubset), commondims)
-  
-  g_dt  <- collapse::GRP(dt, commondims)$group.id
-  g_ref <- collapse::GRP(normsubset, commondims)$group.id
-  map <- match(g_dt, g_ref)
-  vals <- lapply(newcols, function(j) normsubset[[j]][map])
-  data.table::set(dt, j = newcols, value = vals)
+  merge_cols_by_reference(orgdata = dt, newdata = normsubset)
+  # commondims <- intersect(names(normsubset), names(dt))
+  # newcols <- setdiff(names(normsubset), commondims)
+  # newvals <- normsubset[dt, on = commondims, ..newcols]
+  # data.table::set(dt, j = newcols, value = newvals)
   do_adjust_smr_and_meis(dt = dt, parameters = parameters)
 }
 

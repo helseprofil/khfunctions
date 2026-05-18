@@ -56,6 +56,11 @@ set_threads <- function(){
               collapse = old_collapse))
 }
 
+#' @title merge_cols_by_reference
+#' @description
+#' Adds columns from newdata to orgdata by reference
+#' @keywords internal
+#' @noRd
 merge_cols_by_reference <- function(orgdata, newdata){
   commoncols <- intersect(
       get_dimension_columns(names(orgdata)),
