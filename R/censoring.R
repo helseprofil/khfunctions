@@ -414,7 +414,7 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @noRd
 do_remove_censored_observations <- function(dt, outvalues, parameters){
   data.table::set(dt, j = "SPVFLAGG", value = 0L)
-  
+  if(is_empty(parameters$Censor_type)) return(invisible(NULL))
   if(parameters$Censor_type == "R"){
     check_if_spv_tmp_correct(dt, parameters)
     dt[, SPVFLAGG := spv_tmp]
