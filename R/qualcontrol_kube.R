@@ -74,7 +74,7 @@ control_standardization <- function(dt, parameters){
   return(1)
 }
 
-control_aggregation <- function(dt){
+control_aggregation <- function(dt, parameters){
   cat("\n\n* Sjekker aggregering mellom geonivå")
   n_teller <- dt[!is.na(sumTELLER), .N]
   n_nevner <- dt[!is.na(sumNEVNER), .N]
@@ -132,7 +132,7 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
   
   g <- collapse::GRP(d, c(dims, "overniv_kode"))
   if(check_teller){
-    sumT_check <- check_value(d = d, value = "sumTELLER", g = g)
+    sumT_check <- check_value(d = d, value = "sumTELLER", g = g, overniv = overniv_name, underniv = level)
     t_ok <- sumT_check[, .N] == 0
     if(t_ok) cat("\n*** sumTELLER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
     if(!t_ok){
@@ -142,7 +142,7 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
   }
   
   if(check_nevner){
-    sumN_check <- check_value(d = d, value = "sumNEVNER", g = g)
+    sumN_check <- check_value(d = d, value = "sumNEVNER", g = g, overniv = overniv_name, underniv = level)
     n_ok <- sumN_check[, .N] == 0
     if(n_ok) cat("\n*** sumNEVNER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
     if(!n_ok){
@@ -162,11 +162,11 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
 #' @param g GRP object to make comparisons in all strata
 #' @keywords internal
 #' @noRd
-check_value <- function(d, value, g){
+check_value <- function(d, value, g, overniv, underniv){
   out <- data.table::copy(g[["groups"]])
   data.table::set(out, j = value, value = collapse::fsum(d[[value]], g = g))
   out <- data.table::dcast(out, formula = ... ~ GEOniv, value.var = value)
-  diff <- out[[overniv_name]] - out[[level]]
+  diff <- out[[overniv]] - out[[underniv]]
   data.table::set(out, j = "diff", value = diff)
   return(out[diff < 0])
 }
