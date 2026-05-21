@@ -341,8 +341,18 @@ set_partdata_bruk <- function(partdata, partinfo){
 #' @noRd
 merge_cbpart_to_full <- function(full, cb_part){
   commoncols <- intersect(names(full), names(cb_part))
-  full <- collapse::join(full, cb_part[, .SD, .SDcols = commoncols], 
-                         on = commoncols, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
+  keytab <- unique(cb_part[, ..commoncols])
+  
+  idx <- full[
+    keytab,
+    on = commoncols,
+    nomatch = 0L,
+    which = TRUE
+  ]
+  
+  return(full[idx])
+  # full <- collapse::join(full, unique(cb_part[, .SD, .SDcols = commoncols], 
+                         # on = commoncols, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
   return(full)
 }
 
