@@ -21,6 +21,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
+  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
   return(parameters)
 }
 
@@ -182,11 +183,11 @@ get_friskvik_information <- function(parameters){
 #' @noRd
 #' @param parameters global parameters
 get_filedesign <- function(parameters){
-  if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
-  filedesign <- list()
   files <- unique(parameters$files)
+  isfiles <- all(files %in% .GlobalEnv$BUFFER) || all(files %in% DBI::dbListTables(parameters$duck))
+  if(!isfiles) stop("Alle nødvendige filer er ikke lastet inn")
+  filedesign <- list()
   for(file in files){
-    if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     filedesign[[file]] <- find_filedesign(filename = file, parameters = parameters)
   }
   return(filedesign)
@@ -202,7 +203,10 @@ get_filedesign <- function(parameters){
 set_predictionfilter <- function(parameters) {
   refverdi <- parameters$CUBEinformation$REFVERDI
   tellerfile <- parameters$files$TELLER
-  maxaar <- max(BUFFER[[tellerfile]]$AARh)
+  maxaar <- ifelse(!is.null(.GlobalEnv$BUFFER[[tellerfile]]), 
+                   collapse::fmax(.GlobalEnv$BUFFER[[tellerfile]]$AARh),
+                   DBI::dbGetQuery(parameters$duck, paste0("SELECT MAX(AARh) AS maks_aar FROM ", tellerfile))$maks_aar)
+                   
   movav <- ifelse(is_not_empty(parameters$CUBEinformation$MOVAV), parameters$CUBEinformation$MOVAV, 1) 
   if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
   

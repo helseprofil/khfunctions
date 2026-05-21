@@ -10,14 +10,34 @@
 #' @noRd
 find_filedesign <- function(file = NULL, filename = NULL, parameters){
   if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
+  if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
+  isduck <- is_duckdb_file(con = parameters$duck, filename = filename)
   if(!is.null(filename)){
     fileparameters <- parameters$fileinformation[[filename]]
-    if(is.null(file)) file <- .GlobalEnv$BUFFER[[filename]]
+    if(is.null(file) && !isduck && filename %in% .GlobalEnv$BUFFER){
+      file <- .GlobalEnv$BUFFER[[filename]]
+    } else if(!isduck) {
+      stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
+    }
   }
   designs <- list()
-  args <- get_filedesign_args(parameters = parameters, columns_in_file = names(file))
-  designs[["observed"]] <- unique(file[, .SD, .SDcols = args$design_columns])
+  if (data.table::is.data.table(file)) {
+    cols <- names(file)
+  } else if (isduck) {
+    cols <- DBI::dbListFields(parameters$duck, filename)
+  } else {
+    stop("Fant ikke kolonner: verken data.table eller duckdb-tabell")
+  }
+  
+  args <- get_filedesign_args(parameters = parameters, columns_in_file = cols)
+  if(is.null(file)){
+    designs[["observed"]] <- data.table::setDT(
+      DBI::dbGetQuery(parameters$duck, paste0("SELECT DISTINCT ", paste(args$design_columns, collapse = ", "), " FROM ", filename))
+      )
+  } else {
+    designs[["observed"]] <- unique(file[, .SD, .SDcols = args$design_columns])
+  }
   output <- get_filedesign_initial_list(observeddesign = designs$observed, fileparameters = fileparameters, args = args)
   args[["unconditional"]] <- output$UBeting
   args[["conditional"]] <- c(output$BetingOmk, output$BetingF)

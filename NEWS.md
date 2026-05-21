@@ -19,6 +19,9 @@
 - Added function `add_leadyear_befvekst`, removing the need for nykolsmerge which was only used for this.
 - When loading filegroups, colorder is set according to standarddimensions. 
 - `merge_teller_nevner` works more by reference, relying less on copies of data 
+- Implemented duckdb, to remove requirement to keep all files in RAM.
+    - Required filegroups and temporary products are now stored in a on-the-fly duckdb database
+    - Several new functions operated directly on tables in duckdb, meaning they do not need to be loaded into RAM
 
 ## Quality control for CUBE
 - Implemented function `control_rate_lks` ([issue128](https://github.com/helseprofil/khfunctions/issues/128))

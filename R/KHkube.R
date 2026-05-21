@@ -23,18 +23,16 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
-  # parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") # For fremtiden
   
-  # 1. Laste inn filer
-  load_and_format_files(parameters = parameters)
-  parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
-  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
+  # 1. Laste inn filer og oppdatere parametre
+  parameters <- load_and_format_files(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner
   KUBE <- data.table::data.table()
   CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
+  # Kan lese kube direkte fra duckdb her i stedet for å oppdatere en tom dt i merge_teller_nevner
 
     # 3. Aggregering til flerårige tall
   organize_file_for_moving_average(dt = KUBE)

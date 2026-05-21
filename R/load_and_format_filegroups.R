@@ -11,17 +11,22 @@ load_and_format_files <- function(parameters){
   if(!exists("BUFFER", envir = .GlobalEnv)) .GlobalEnv$BUFFER <- list()
   tabfilter_tellerfile <- set_filter_tab(cubeinformation = parameters$CUBEinformation)
   tellerfile <- parameters$files$TELLER
-  isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
-  if(isbuffer) BUFFER[[tellerfile]] <- NULL
+  if(tellerfile %in% names(.GlobalEnv$BUFFER)) BUFFER[[tellerfile]] <- NULL
+  if(is_duckdb_file(con = parameters$duck, filename = tellerfile)) DBI::dbRemoveTable(parameters$duck, tellerfile)
   load_filegroup_to_buffer(filegroup = tellerfile, filter = tabfilter_tellerfile, parameters = parameters)
   
   nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
   for (file in nonteller_files) {
-    isbuffer <- file %in% names(.GlobalEnv$BUFFER)
-    if(isbuffer) BUFFER[[file]] <- NULL
+    if(file %in% names(.GlobalEnv$BUFFER)) BUFFER[[file]] <- NULL
+    if(is_duckdb_file(con = parameters$duck, filename = file)) DBI::dbRemoveTable(parameters$duck, file)
     load_filegroup_to_buffer(filegroup = file, filter = NULL, parameters = parameters)
   }
+  do_clean_duckdb(parameters = parameters)
+
+  parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
+  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   cat("\n* Alle filer lest og formattert")
+  return(parameters)
 }
 
 #' @title load_filegroup_to_buffer
@@ -30,7 +35,7 @@ load_and_format_files <- function(parameters){
 #' The file is filtered using TABfilter and geoharmonized. 
 #' If filefilter is defined, the file is formatted accordingly
 #' @noRd
-load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
+load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters, duck = TRUE){
   filefilter <- parameters$FILFILTRE[tolower(FILVERSJON) == tolower(filegroup)]
   isfilefilter <- nrow(filefilter) > 0
   alderfilter <- set_filter_age(parameters = parameters)
@@ -89,9 +94,13 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters){
   dimorder <- intersect(getOption("khfunctions.standarddimensions_full"), names(FIL))
   data.table::setcolorder(FIL, dimorder)
 
+  if(duck){
+    cat("\n*** Skriver til duckdb...\n")
+    DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
+  } else {
+    cat("\n*** Skriver til lokalt minne...")
     .GlobalEnv$BUFFER[[filegroup]] <- FIL
-  # cat("\n*** Skriver til duckdb...\n")
-  # DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
+  }
   invisible(gc())
 }
 
@@ -143,10 +152,19 @@ set_filter_age <- function(parameters){
   isalder <- is_not_empty(parameters$CUBEinformation$ALDER)
   if(!isalder){
     tellerfile <- parameters$files[["TELLER"]]
-    if(!tellerfile %in% names(.GlobalEnv$BUFFER)) return(NULL)
-    if(!"ALDERl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])) return(NULL)
-    amin <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmin(ALDERl)]
-    amax <- .GlobalEnv$BUFFER[[tellerfile]][, collapse::fmax(ALDERl)]
+    isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
+    isduck <- is_duckdb_file(con = parameters$duck, filename = tellerfile)
+    if(!isbuffer && !isduck) return(NULL)
+    if(isduck && all(c("ALDERl", "ALDERh") %in% DBI::dbListFields(parameters$duck, tellerfile))){
+      a <- DBI::dbGetQuery(parameters$duck, paste0("SELECT MIN(ALDERl) as min, MAX(ALDERh) as max FROM ", tellerfile))
+      amin <- a$min
+      amax <- a$max
+    } else if(isbuffer && all(c("ALDERl", "ALDERh") %in% names(.GlobalEnv$BUFFER[[tellerfile]]))){
+      amin <- collapse::fmin(.GlobalEnv$BUFFER[[tellerfile]][["ALDERl"]])
+      amax <- collapse::fmax(.GlobalEnv$BUFFER[[tellerfile]][["ALDERh"]])
+    } else {
+      return(NULL)
+    }
   } else {
     accessalder <- unlist(strsplit(parameters$CUBEinformation$ALDER, ","))
     if(any(grepl("[^[:digit:]_]", accessalder))) return(NULL)
@@ -167,16 +185,21 @@ set_filter_age <- function(parameters){
 
 #' @title set_filter_year
 #' @description Filters filegroups to remove years prior to AAR_START in ACCESS::KUBER
+#' If tellerfile is already loaded, use the maximum of AAR_START and min(tellerfile[[AARl]]) as filter
 #' @keywords internal
 #' @noRd
 set_filter_year <- function(parameters){
   tellerfile <- parameters$files[["TELLER"]]
-  aarstart <- parameters$CUBEinformation$AAR_START
-  if(tellerfile %in% names(.GlobalEnv$BUFFER)){
-    aarstart <- .GlobalEnv$BUFFER[[tellerfile]][, min(AARl)]
+  aarstart <- min_teller_aar <- parameters$CUBEinformation$AAR_START
+  isbuffer <- tellerfile %in% names(.GlobalEnv$BUFFER)
+  isduck <- is_duckdb_file(con = parameters$duck, filename = tellerfile)
+  if(isduck && "AARl" %in% DBI::dbListFields(parameters$duck, tellerfile)){
+    min_teller_aar <- DBI::dbGetQuery(parameters$duck, paste0("SELECT MIN(AARl) FROM ", tellerfile))[[1]]
+  } else if(isbuffer && "AARl" %in% names(.GlobalEnv$BUFFER[[tellerfile]])){
+    min_teller_aar <- collapse::fmin(.GlobalEnv$BUFFER[[tellerfile]][["AARl"]])
   }
   if(aarstart == 0) return(invisible(NULL))
-  return(paste0("AARl >= ", aarstart))
+  return(paste0("AARl >= ", pmax(aarstart, min_teller_aar)))
 }
 
 #' @title do_filter_KUIL
@@ -287,12 +310,20 @@ read_filegroup <- function(filegroup){
 #' fetches filegroup already loaded into buffer. 
 #' @keywords internal
 #' @noRd
-fetch_filegroup_from_buffer <- function(filegroup, parameters){
+fetch_filegroup_from_buffer <- function(filegroup){
   if(exists("BUFFER", envir = .GlobalEnv) && filegroup %in% names(.GlobalEnv$BUFFER)){
     cat("\n** Henter FIL", filegroup, "fra BUFFER")
     return(data.table::copy(.GlobalEnv$BUFFER[[filegroup]]))
   }
   stop("Filgruppe ", filegroup, " ikke funnet i BUFFER")
+}
+
+fetch_filegroup_from_duckdb <- function(filegroup, parameters){
+  if(is_duckdb_file(con = parameters$duck, filename = filegroup)){
+    cat("\n** Henter FIL", filegroup, "fra duckdb")
+    return(data.table::setDT(DBI::dbReadTable(parameters$duck, filegroup)))
+  }
+  stop("Filgruppe ", filegroup, " ikke funnet i duckdb")
 }
 
 #' @title do_aggregate_file

@@ -129,7 +129,8 @@ estimate_prednevner <- function(design, parameters){
   cat("\n\n* Estimerer PREDNEVNER...")
   missyears <- parameters$MOVAVparameters$missyears
   redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
-  prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER, parameters = parameters)
+  # prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER)
+  prednevner <- fetch_filegroup_from_duckdb(parameters = parameters, filegroup = parameters$files$PREDNEVNER)
   prednevner <- do_filter_and_recode_to_redesign(dt = prednevner, redesign = redesign, parameters = parameters)
   PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(PredNevnerKol)) PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
