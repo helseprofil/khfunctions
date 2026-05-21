@@ -5,10 +5,11 @@ do_censor_cube <- function(dt, parameters){
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
   if(is_empty(parameters$Censor_type)) return(dt)
   
-  if(parameters$Censor_type == "STATA" & parameters$force_r_censoring){
+  if(parameters$Censor_type == "STATA" && isTRUE(parameters$force_r_censoring)){
     print_console_message("\n** ACCESS-parametre satt til STATA-prikking, bytter til R-prikking")
     parameters$Censor_type <- "R"
   }
+  
   if(parameters$Censor_type == "R"){
     data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
     print_console_message("\n* Prikker data (NY R-prikking)")
