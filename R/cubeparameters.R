@@ -5,7 +5,7 @@
 #' @param args arguments passed to LagKUBE
 #' @return A list of relevant parameters
 get_cubeparameters <- function(user_args = list()) {
-  cat("\n* Henter parametre")
+  print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)

@@ -79,8 +79,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   write_cube_output(outputlist = RESULTAT, parameters = parameters)
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
-  cat("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
-  cat("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  print_console_message("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
+  print_console_message("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
 

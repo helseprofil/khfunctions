@@ -20,7 +20,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   DF[, names(.SD) := NULL, .SDcols = names(DF)[!names(DF) %in% c(getOption("khfunctions.kolorgs"), "LEVEL")]]
   data.table::setcolorder(DF, intersect(getOption("khfunctions.kolorgs"), names(DF)))
   convert_all_columns_to_character(dt = DF)
-  cat("\n* Innlesing OK!")
+  print_console_message("\n* Innlesing OK!")
   do_aggregate_if_grunnkrets(dt = DF, filedescription = filedescription, parameters = parameters) # DEPRECATED?
   do_convert_na_to_empty(dt = DF)
   DF[, let(KOBLID = as.character(filedescription$KOBLID))]
@@ -36,7 +36,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
 report_filegroup_progress <- function(file_number, parameters){
   n_files <- parameters$n_files
   filename <- parameters$read_parameters[file_number]$FILNAVN
-  cat("\n", file_number, "/", n_files, ": ", filename, sep = "")
+  print_console_message("\n", file_number, "/", n_files, ": ", filename, sep = "")
 }
 
 #' @title identify_columns_in_file
@@ -215,7 +215,7 @@ do_handle_fylltab <- function(dt, filedescription){
 #' @noRd
 do_aggregate_if_grunnkrets <- function(dt, filedescription, parameters){
   if(is_empty(filedescription$GRUNNKRETS) || filedescription$GRUNNKRETS != 1) return(invisible(NULL))
-  cat("\n* Aggregerer fra grunnkrets...")
+  print_console_message("\n* Aggregerer fra grunnkrets...")
   colorder <- names(dt)
   aggregate <- collapse::join(dt, parameters$GkBHarm, how = "l", on = c("GEO" = "GK"), verbose = 0)
   aggregate[is.na(Bydel2004), Bydel2004 := paste(substr(GEO, 1, 4), "00", sep = "")]

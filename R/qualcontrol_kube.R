@@ -1,25 +1,25 @@
 #' @keywords internal
 #' @noRd
 control_cube_output <- function(outputlist, parameters){
-  cat("\n\n---\n* Kvalitetskontroll:\n---")
+  print_console_message("\n\n---\n* Kvalitetskontroll:\n---")
   all_checks <- numeric()
   all_checks <- c(all_checks, control_censoring(dt = outputlist$QC, parameters = parameters))
   all_checks <- c(all_checks, control_standardization(dt = outputlist$ALLVIS, parameters = parameters))
   all_checks <- c(all_checks, control_aggregation(dt = outputlist$KUBE, parameters = parameters))
   control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   if(sum(all_checks) == 0){
-    cat("\n\n---\n* Alle sjekker passert!\n---\n")
+    print_console_message("\n\n---\n* Alle sjekker passert!\n---\n")
   } else {
-    cat("\n\n---\n* Noen av sjekkene feilet, manuell kontroll nødvendig!\n---\n")
+    print_console_message("\n\n---\n* Noen av sjekkene feilet, manuell kontroll nødvendig!\n---\n")
   }
 }
 
 #' @keywords internal
 #' @noRd
 control_censoring <- function(dt, parameters){
-  cat("\n\n* Sjekker prikking (verdier under grensen):")
+  print_console_message("\n\n* Sjekker prikking (verdier under grensen):")
   if(is_empty(parameters$Censor_type)){ 
-    cat("\n** Kube ikke prikket")
+    print_console_message("\n** Kube ikke prikket")
     return(0)
   }
   teller_ok <- teller_nevner_ok <- nevner_ok <- TRUE
@@ -43,43 +43,43 @@ control_censoring <- function(dt, parameters){
   checks <- setNames(c(teller_ok, teller_nevner_ok, nevner_ok), c("TELLER", "TELLER-NEVNER", "NEVNER"))
   
   if(all(checks)){
-    cat("\n** Alle verdier under satte grenser, prikking OK!")
+    print_console_message("\n** Alle verdier under satte grenser, prikking OK!")
     return(0)
   }
   if(any(!checks)){
     notok <- paste(names(checks)[which(!checks)], collapse = ", ")
-    cat("\n** OBS! noe er galt med prikkingen av: ", notok, ", IKKE OK", sep = "")
+    print_console_message("\n** OBS! noe er galt med prikkingen av: ", notok, ", IKKE OK", sep = "")
     return(1)
   }
 }
 
 control_standardization <- function(dt, parameters){
-  cat("\n\n* Sjekker standardiseringsår")
+  print_console_message("\n\n* Sjekker standardiseringsår")
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
-    cat("\n** Kube ikke standardisert")
+    print_console_message("\n** Kube ikke standardisert")
     return(0)
   }
   if(parameters$CUBEinformation$REFVERDI_VP == "P" & grepl("UNGDATA", parameters$name)){
-    cat("\n** UNGDATA-kube, standardiseres ikke mot siste år, OK!")
+    print_console_message("\n** UNGDATA-kube, standardiseres ikke mot siste år, OK!")
     return(0)
   }
   refverdi <- parameters$CUBEinformation$REFVERDI
   aarh <- as.numeric(sub("\\d{4}_(\\d{4})", "\\1", max(dt$AAR)))
   if(grepl("SISTE", refverdi, ignore.case = TRUE) || grepl(aarh, refverdi)){
-    cat("\n** Standardisert mot siste år/periode, OK!")
+    print_console_message("\n** Standardisert mot siste år/periode, OK!")
     return(0)
   }
   
-  cat("\n*** Kube ikke standardisert mot siste år, IKKE OK!")
+  print_console_message("\n*** Kube ikke standardisert mot siste år, IKKE OK!")
   return(1)
 }
 
 control_aggregation <- function(dt, parameters){
-  cat("\n\n* Sjekker aggregering mellom geonivå")
+  print_console_message("\n\n* Sjekker aggregering mellom geonivå")
   n_teller <- dt[!is.na(sumTELLER), .N]
   n_nevner <- dt[!is.na(sumNEVNER), .N]
   if(n_teller == 0 && n_nevner == 0){
-    cat("\n** Ingen ikke-missing teller/nevner i filen, skippet")
+    print_console_message("\n** Ingen ikke-missing teller/nevner i filen, skippet")
     return(0)
   }
   LF <- compare_geolevels(dt = dt, level = "F", parameters = parameters)
@@ -89,7 +89,7 @@ control_aggregation <- function(dt, parameters){
   
   comparisons <- LF + FK + BK + VKB
   if(comparisons > 0){
-    cat("\n** Summen av lavere nivå er større enn høyere nivå, noe er feil med aggregeringen, IKKE OK!")
+    print_console_message("\n** Summen av lavere nivå er større enn høyere nivå, noe er feil med aggregeringen, IKKE OK!")
     return(1)
   }
   return(0)
@@ -104,7 +104,7 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
                     "B" = collapse::funique(substr(dt[GEOniv == "B", GEO], 1, 4)),
                     "V" = sub("00$", "", collapse::funique(substr(dt[GEOniv == "V", GEO], 1, 6))))
   if(length(parents) == 0){
-    cat("\n*** Ingen rader funnet for overnivå, sjekk ikke utført")
+    print_console_message("\n*** Ingen rader funnet for overnivå, sjekk ikke utført")
     return(0)
   } 
   overniv_name <- switch(level,
@@ -119,12 +119,12 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
     d[, overniv_kode := sub("00$", "", substr(GEO, 1, cropgeo))]
   }
   
-  cat("\n** Sjekker", switch(level, "F"="Fylke", "K"="Kommune", "B"="Bydel", "V"="Levekårsoner"))
+  print_console_message("\n** Sjekker", switch(level, "F"="Fylke", "K"="Kommune", "B"="Bydel", "V"="Levekårsoner"))
   check_teller <- d[!is.na(sumTELLER), .N] > 0
   check_nevner <- d[!is.na(sumNEVNER), .N] > 0
   
   if(!check_teller && !check_nevner){
-    cat("\n*** Ingen ikke-missing teller/nevner, sjekk skippet")
+    print_console_message("\n*** Ingen ikke-missing teller/nevner, sjekk skippet")
     return(0)
   }
   
@@ -134,9 +134,9 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
   if(check_teller){
     sumT_check <- check_value(d = d, value = "sumTELLER", g = g, overniv = overniv_name, underniv = level)
     t_ok <- sumT_check[, .N] == 0
-    if(t_ok) cat("\n*** sumTELLER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
+    if(t_ok) print_console_message("\n*** sumTELLER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
     if(!t_ok){
-      cat("\n*** sumTELLER for GEOniv='", level, "' er STØRRE enn overkategorien, IKKE OK, se utslag i egen tabell!", sep = "")
+      print_console_message("\n*** sumTELLER for GEOniv='", level, "' er STØRRE enn overkategorien, IKKE OK, se utslag i egen tabell!", sep = "")
       View(sumT_check, title = paste0("sumTELLER_check_", level, "_vs_", overniv_name))
     }
   }
@@ -144,9 +144,9 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
   if(check_nevner){
     sumN_check <- check_value(d = d, value = "sumNEVNER", g = g, overniv = overniv_name, underniv = level)
     n_ok <- sumN_check[, .N] == 0
-    if(n_ok) cat("\n*** sumNEVNER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
+    if(n_ok) print_console_message("\n*** sumNEVNER for GEOniv='", level, "' er mindre eller lik '", overniv_name, "' i alle strata, OK!", sep = "")
     if(!n_ok){
-      cat("\n*** sumNEVNER for GEOniv='", level, "' er STØRRE enn '", overniv_name, "', IKKE OK!, se utslag i egen tabell!", sep = "")
+      print_console_message("\n*** sumNEVNER for GEOniv='", level, "' er STØRRE enn '", overniv_name, "', IKKE OK!, se utslag i egen tabell!", sep = "")
       View(sumN_check, title = paste0("sumNEVNER_check_", level, "_vs_", overniv_name))
     }
   }
@@ -175,7 +175,7 @@ check_value <- function(d, value, g, overniv, underniv){
 #' @noRd
 control_meis_rate <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
-  cat("\n\n* Sjekker forholdet mellom MEIS og RATE")
+  print_console_message("\n\n* Sjekker forholdet mellom MEIS og RATE")
   cols <- c(parameters$outdimensions, "MEIS", "RATE")
   d <- dt[!is.na(MEIS), .SD, .SDcols = cols]
   
@@ -186,11 +186,11 @@ control_meis_rate <- function(dt, parameters){
   }
 
   d[, let(diff = round(MEIS - RATE, 2), `ratio, %` = round(100*MEIS/RATE, 2))]
-  cat("\n\n** Diff og ratio (%) på landsnivå per år:\n\n")
+  print_console_message("\n\n** Diff og ratio (%) på landsnivå per år:\n\n")
   d_country <- d[GEO == 0]
   print(d_country, nrows = nrow(d_country))
   
-  cat("\n\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
+  print_console_message("\n\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
   d <- d[GEO != 0 & !is.nan(`ratio, %`)][order(`ratio, %`, decreasing = T)]
   if(nrow(d) <= 10){
     print(d)
@@ -213,10 +213,10 @@ control_rate_lks <- function(dt, parameters){
                            "RATE" %in% parameters$outvalues, "RATE",
                            default = NA_character_)
   if(is.na(val)){
-    cat("\n* Kuben inneholder ikke MEIS eller RATE, sjekk av levekårssoner skippet")
+    print_console_message("\n* Kuben inneholder ikke MEIS eller RATE, sjekk av levekårssoner skippet")
     return(invisible(NULL))
   } else {
-    cat(paste0("\n\n* Sjekker ", val, "-nivå for levekårssoner mot sitt overnivå"))
+    print_console_message(paste0("\n\n* Sjekker ", val, "-nivå for levekårssoner mot sitt overnivå"))
   }
   
   dims <- parameters$outdimensions
@@ -258,9 +258,9 @@ control_rate_lks <- function(dt, parameters){
   out <- collapse::join(out, n, on = bycols, how = "l", verbose = 0, overid = 2)[n_lks_med_tall > 0]
   
   if(nrow(out) > 0){
-    cat("\n** Se tabell for radene som har gitt utslag")
+    print_console_message("\n** Se tabell for radene som har gitt utslag")
     View(out)
   } else {
-    cat("\n** Ingen utslag, kommunetallet ligger mellom minste og største LKS")
+    print_console_message("\n** Ingen utslag, kommunetallet ligger mellom minste og største LKS")
   }
 }

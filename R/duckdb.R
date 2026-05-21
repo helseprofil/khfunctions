@@ -38,7 +38,7 @@ merge_duckdb_table <- function(result, mergeto, mergefrom, con){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  cat("\n*** Håndterer implisitte nuller\n")
+  print_console_message("\n*** Håndterer implisitte nuller\n")
   cols <- DBI::dbListFields(con, table)
   vals <- get_value_columns(cols)
   

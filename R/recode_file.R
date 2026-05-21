@@ -27,7 +27,7 @@ do_filter_dimensions <- function(dt, filters){
   orgrow <- dt[, .N]
   dt <- collapse::join(dt, filtered, how = "inner", overid = 2, verbose = 0)
   filtrow <- dt[, .N]
-  if(filtrow != orgrow) cat("\n** Filtrerer på", names(filtered), "\n** rader før:", orgrow, ", og etter: ", filtrow)
+  if(filtrow != orgrow) print_console_message("\n** Filtrerer på", names(filtered), "\n** rader før:", orgrow, ", og etter: ", filtrow)
   return(dt)
 }
 
@@ -45,7 +45,7 @@ do_recode_and_aggregate_dimensions <- function(dt, recode, cols, parameters){
     data.table::set(dt, j = partinfo$cols, value = dt[, .SD, .SDcols = partinfo$colsomk])
     data.table::set(dt, j = partinfo$colsomk, value = NULL)
     dt <- do_aggregate_file(file = dt)
-    cat(paste0("\n** Omkoder og aggregerer ", partinfo$name, ", rader nå: ", nrow(dt)))
+    print_console_message(paste0("\n** Omkoder og aggregerer ", partinfo$name, ", rader nå: ", nrow(dt)))
   }
   return(dt)
 }

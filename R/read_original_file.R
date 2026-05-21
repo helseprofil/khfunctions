@@ -10,7 +10,7 @@
 #' @param dumps any file dumps requested
 #' @returns formatted original file, ready for further processing
 read_original_file <- function(filedescription, parameters, dumps = list()){
-  cat("\n* Starter innlesing av fil")
+  print_console_message("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   DF <- switch(toupper(filedescription$FORMAT),
                "PARQUET" = do_read_org_parquet(filedescription = filedescription),

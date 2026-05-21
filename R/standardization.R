@@ -13,20 +13,20 @@
 #' @noRd
 add_predteller <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
-  cat("\n* Skal estimere PREDTELLER for standardisering")
+  print_console_message("\n* Skal estimere PREDTELLER for standardisering")
   designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
   predrate <- estimate_predrate(design = designlist$STNdesign, parameters = parameters)
   prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters)
   predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters)
   
-  cat("\n* Merger PREDTELLER med KUBE")
+  print_console_message("\n* Merger PREDTELLER med KUBE")
   commontabs <- intersect(get_dimension_columns(names(dt)), names(predteller))
   dt[predteller, on = commontabs, let(PREDTELLER = i.PREDTELLER, 
                                       PREDTELLER.f = i.PREDTELLER.f, 
                                       PREDTELLER.a = i.PREDTELLER.a,
                                       PREDTELLER.n = TELLER.n)]
   set_implicit_null_after_merge(dt = dt, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
-  cat("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
+  print_console_message("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
 }
 
 #' @title find_common_standard_teller_nevner_prednevner_design
@@ -35,7 +35,7 @@ add_predteller <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 find_common_standard_teller_nevner_prednevner_design <- function(parameters){
-  cat("\n** Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
+  print_console_message("\n** Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
   
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {
@@ -90,7 +90,7 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @keywords internal
 #' @noRd
 estimate_predrate <- function(design, parameters){
-  cat("\n* Estimerer PREDRATE...")
+  print_console_message("\n* Estimerer PREDRATE...")
   missyears <- parameters$MOVAVparameters$missyears
   predrate <- data.table::data.table()
   merge_teller_nevner(outdata = predrate, parameters = parameters, standardfiles = TRUE, design = design)
@@ -109,12 +109,12 @@ estimate_predrate <- function(design, parameters){
   
   ukurante <- predrate[is.na(TELLER) | is.na(NEVNER)]
   if (ukurante[, .N] > 0){
-    cat(paste0("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
-    cat("\nDette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
-    cat("\nDersom det faktisk mangler tall kan det være behov for å justere startår")
-    cat("\nFølgende unike verdier for ulike dimensjonene er påvirket: ")
+    print_console_message(paste0("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
+    print_console_message("\nDette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
+    print_console_message("\nDersom det faktisk mangler tall kan det være behov for å justere startår")
+    print_console_message("\nFølgende unike verdier for ulike dimensjonene er påvirket: ")
     for(dim in get_dimension_columns(names(predrate))){
-      cat(paste0("\n- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))
+      print_console_message(paste0("\n- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))
     }
   }
   predrate <- predrate[, .SD, .SDcols = c(get_dimension_columns(names(predrate)), paste0("PREDRATE", c("", ".f", ".a")))]
@@ -126,7 +126,7 @@ estimate_predrate <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_prednevner <- function(design, parameters){
-  cat("\n\n* Estimerer PREDNEVNER...")
+  print_console_message("\n\n* Estimerer PREDNEVNER...")
   missyears <- parameters$MOVAVparameters$missyears
   redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
   # prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER)
@@ -147,10 +147,10 @@ estimate_prednevner <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_predteller <- function(predrate, prednevner, parameters){
-  cat("\n* Estimerer PREDTELLER...")
+  print_console_message("\n* Estimerer PREDTELLER...")
   commondims <- intersect(get_dimension_columns(names(prednevner)), get_dimension_columns(names(predrate)))
   mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
-  if(mismatch > 0) cat("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
+  if(mismatch > 0) print_console_message("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
   
   predteller <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
   predteller[, let(PREDTELLER = PREDRATE * PREDNEVNER,
@@ -173,7 +173,7 @@ estimate_predteller <- function(predrate, prednevner, parameters){
 #' @noRd
 add_meisskala <- function(dt, parameters){
   if(parameters$PredFilter$ref_year_type != "Specific") return(invisible(NULL))
-  cat("\n* Legger til MEISskala for standardisering\n")
+  print_console_message("\n* Legger til MEISskala for standardisering\n")
 
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
     data.table::set(dt, j = "MEISskala", value = NA_real_)

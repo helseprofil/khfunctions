@@ -9,11 +9,11 @@
 #' @param design Design list
 merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    cat("\n\n* Merger standardteller- og standardnevnerfil\n")
+    print_console_message("\n\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    cat("\n\n* Merger teller- og nevnerfil")
+    print_console_message("\n\n* Merger teller- og nevnerfil")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }
@@ -36,12 +36,12 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   }
   
   tellerfiltype <- ifelse(standardfiles, "standardtellerfil", "tellerfil")
-  cat("\n* Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
+  print_console_message("\n* Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
   do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters, name = tellerfiltype)
   
   if(isnevnerfil) {
     nevnerfiltype <- ifelse(standardfiles, "standardnevnerfil", "nevnerfil")
-    cat("\n* Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
+    print_console_message("\n* Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
     do_redesign_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters, name = nevnerfiltype)
   }
   
@@ -51,7 +51,7 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   tnftype <- ifelse(standardfiles, "standardTNF", "TNF")
   
   if (length(KUBEdesign) > 0) {
-    cat("\n** Rektangulariserer")
+    print_console_message("\n** Rektangulariserer")
     set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tellerfiltype), 
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tnftype)
     report_removed_codes(orgtable = tellerfiltype, recttable = tnftype, parameters = parameters)
@@ -60,21 +60,21 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
       merge_duckdb_table(result = tnftype, mergeto = tnftype, mergefrom = nevnerfiltype, con = parameters$duck)
     }
     set_implicit_null_after_merge_duckdb(table = tnftype, implicitnull_defs = implicitnull_defs, con = parameters$duck)
-    cat("\n*** Ferdig rektangularisert og merget teller-nevner-fil")
+    print_console_message("\n*** Ferdig rektangularisert og merget teller-nevner-fil")
   } else if (isnevnerfil) {
     merge_duckdb_table(result = tnftype, mergeto = tellerfiltype, mergefrom = nevnerfiltype, con = parameters$duck)
     set_implicit_null_after_merge_duckdb(table = tnftype, implicitnull_defs = implicitnull_defs, con = parameters$duck)
     # TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
     # rm(tellerfil, nevnerfil)
     # set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
-    cat("\n*** Ferdig merget teller-nevner-fil")
+    print_console_message("\n*** Ferdig merget teller-nevner-fil")
   } else {
     invisible(
       DBI::dbExecute(parameters$duck, paste0("CREATE OR REPLACE TABLE ", tnftype, " AS SELECT * FROM ", tellerfiltype))
     )
     # TNF <- tellerfil
     # rm(tellerfil)
-    cat("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil")
+    print_console_message("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil")
   }
   
   TNF <- data.table::setDT(DBI::dbReadTable(parameters$duck, tnftype))
@@ -86,7 +86,7 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   
   dimorg <- dim(TNF)
   TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
-  if (!identical(dimorg, dim(TNF))) cat("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
+  if (!identical(dimorg, dim(TNF))) print_console_message("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
   
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
   outdata[, (names(TNF)) := TNF]
@@ -129,7 +129,7 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, paramete
 #' @param DF2 
 #' @param parameters global parameters
 FinnFellesTab <- function(DF1, DF2, parameters) {
-  cat("Starter i FinnFellesTab.")
+  print_console_message("Starter i FinnFellesTab.")
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
@@ -144,7 +144,7 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   gc()
   data.table::setnames(Dekk, old = names(Dekk), new = gsub("_omk$", "", names(Dekk)))
   FDes <- find_filedesign(Dekk, parameters = parameters)
-  cat(" Ferdig i FinnFellesTab\n")
+  print_console_message(" Ferdig i FinnFellesTab\n")
   return(FDes)
 }
 
@@ -241,10 +241,10 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
 #' @noRd
 do_redesign_file <- function(filename, filedesign, tndesign, parameters, name){
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
-  if(nrow(redesign$Udekk) > 0) cat("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   file <- do_filter_and_recode_to_redesign(dt = fetch_filegroup_from_duckdb(filegroup = filename, parameters = parameters),
                                            redesign = redesign, parameters = parameters)
-  cat("\n*** Skriver", name, "til duckdb...\n")
+  print_console_message("\n*** Skriver", name, "til duckdb...\n")
   DBI::dbWriteTable(parameters$duck, name = name, value = file, overwrite = T)
 }
 
@@ -277,7 +277,7 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
                                                    rektangularisert))
   }
   
-  cat("\n*** Skriver", tnfname, "til duckdb...\n")
+  print_console_message("\n*** Skriver", tnfname, "til duckdb...\n")
   DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
 }
 
@@ -290,13 +290,13 @@ report_removed_codes <- function(orgtable, recttable, parameters){
   if(length(remove) == 0) return(invisible(NULL))
   remove_valid <- remove[!grepl("99$", remove)]
   if (length(remove_valid) > 0) {
-    cat("!! GEO ", paste(remove_valid, collapse = ","), " kastes ved rektangularisering!!\n")
-    cat("!! Dessuten kastes ", length(setdiff(remove, remove_valid)), "99-koder!\n")
+    print_console_message("!! GEO ", paste(remove_valid, collapse = ","), " kastes ved rektangularisering!!\n")
+    print_console_message("!! Dessuten kastes ", length(setdiff(remove, remove_valid)), "99-koder!\n")
     r <- paste0(remove, collapse = ", ")
     print(DBI::dbGetQuery(parameters$duck, paste0("SELECT * FROM ", orgtable, " WHERE GEO IN (", r, ")")))
-    cat("#---#\n")
+    print_console_message("#---#\n")
   } else if (length(setdiff(remove, remove_valid)) > 0) {
-    cat("Kaster ", length(setdiff(remove, remove_valid)), "99-koder ved rektangulerisering.\n")
+    print_console_message("Kaster ", length(setdiff(remove, remove_valid)), "99-koder ved rektangulerisering.\n")
   }
 }
 

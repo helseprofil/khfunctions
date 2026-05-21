@@ -1,5 +1,5 @@
 clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
-  cat("\n\n* Starter rensing av dimensjoner...")
+  print_console_message("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO(dt = dt, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR(dt = dt, cleanlog = cleanlog)
   do_clean_ALDER(dt = dt, parameters = parameters, cleanlog = cleanlog)
@@ -8,14 +8,14 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   do_clean_INNVKAT(dt = dt, cleanlog = cleanlog)
   do_clean_LANDBAK(dt = dt, cleanlog = cleanlog)
   
-  cat("\n* Dimensjoner ferdig renset")
+  print_console_message("\n* Dimensjoner ferdig renset")
   return(dt)
 }
 
 #' @title do_clean_GEO
 #' @noRd
 do_clean_GEO <- function(dt, parameters, cleanlog){
-  cat("\n** Renser GEO")
+  print_console_message("\n** Renser GEO")
   dt[, let(GEO = trimws(GEO))]
   format_raw_geo(dt = dt)
   recode_geo_from_name(dt = dt, parameters = parameters)
@@ -70,7 +70,7 @@ set_unknown_geo_99 <- function(dt, parameters){
     n_valid99 <- dt[GEO %in% recode_valid99$ORGGEO, .N]
     if(n_valid99 > 0){
       org_geo_codes <- c(org_geo_codes, recode_valid99$ORGGEO)
-      cat("\n*** Setter ", n_valid99, " kjente 99-koder, fra originalkode(r): ", paste(unknown[valid99_ind], collapse = ", "), sep = "")
+      print_console_message("\n*** Setter ", n_valid99, " kjente 99-koder, fra originalkode(r): ", paste(unknown[valid99_ind], collapse = ", "), sep = "")
       dt[recode_valid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
     }
     
@@ -79,7 +79,7 @@ set_unknown_geo_99 <- function(dt, parameters){
     n_invalid99 <- dt[GEO %in% recode_invalid99[RECODE != getOption("khfunctions.geo_illegal"), ORGGEO], .N]
     if(n_invalid99 > 0){
       org_geo_codes <- c(org_geo_codes, recode_invalid99$ORGGEO)
-      cat("\n*** Setter ", n_invalid99, " helt ukjente 99-koder, fra originalkode(r): ", paste(unknown[invalid99_ind], collapse = ", "), sep = "")
+      print_console_message("\n*** Setter ", n_invalid99, " helt ukjente 99-koder, fra originalkode(r): ", paste(unknown[invalid99_ind], collapse = ", "), sep = "")
       dt[recode_invalid99, on = c(GEO = "ORGGEO"), GEO := ifelse(!is.na(i.RECODE), i.RECODE, GEO)] 
     }
     org_geo_codes <<- org_geo_codes
@@ -121,15 +121,15 @@ check_if_geo_ok <- function(dt, parameters, cleanlog){
   geo_ok <- geo_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
   cleanlog[geo_ok, on = "KOBLID", GEO_ok := i.ok]
   n_not_ok <- sum(geo_ok$ok == 0)
-  if(n_not_ok > 0) cat("\n*** Fant ugyldige GEO i ", n_not_ok, " originalfiler, ikke OK!", sep = "")
-  if(n_not_ok == 0) cat("\n*** Alle GEO ok")
+  if(n_not_ok > 0) print_console_message("\n*** Fant ugyldige GEO i ", n_not_ok, " originalfiler, ikke OK!", sep = "")
+  if(n_not_ok == 0) print_console_message("\n*** Alle GEO ok")
 }
 
 #' @title do_clean_AAR
 #' @description formats AAR and generate AARl/AARh
 #' @noRd
 do_clean_AAR <- function(dt, cleanlog){
-  cat("\n** Renser AAR")
+  print_console_message("\n** Renser AAR")
   dt[, let(AAR = trimws(AAR))]
   dt[grepl("^Høsten ", AAR), let(AAR = sub("^Høsten ", "", AAR))]
   dt[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), let(AAR = sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", AAR))]
@@ -148,7 +148,7 @@ do_clean_AAR <- function(dt, cleanlog){
 #' @noRd
 do_clean_ALDER <- function(dt, parameters, cleanlog){
   if(!"ALDER" %in% names(dt)) return(invisible(NULL))
-  cat("\n** Renser ALDER")
+  print_console_message("\n** Renser ALDER")
   
   isalder <- is_not_empty(parameters$filegroup_information$ALDER_ALLE)
   amin <- ifelse(isalder, parameters$filegroup_information$amin, getOption("khfunctions.amin"))
@@ -190,7 +190,7 @@ do_clean_ALDER <- function(dt, parameters, cleanlog){
 #' @noRd
 do_clean_KJONN <- function(dt, cleanlog){
   if(!"KJONN" %in% names(dt)) return(invisible(NULL))
-  cat("\n** Renser KJONN")
+  print_console_message("\n** Renser KJONN")
   dt[, let(KJONN = trimws(KJONN))]
   dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
   dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
@@ -205,7 +205,7 @@ do_clean_KJONN <- function(dt, cleanlog){
 #' @noRd
 do_clean_UTDANN <- function(dt, cleanlog){
   if(!"UTDANN" %in% names(dt)) return(invisible(NULL))
-  cat("\n** Renser UTDANN")
+  print_console_message("\n** Renser UTDANN")
   dt[, let(UTDANN = trimws(UTDANN))]
   dt[grepl("^0[0-4]$", UTDANN), let(UTDANN = sub("^0([0-4])$", "\\1", UTDANN))]
   dt[grepl("^alle$", UTDANN, ignore.case = TRUE), let(UTDANN = "0")]
@@ -218,7 +218,7 @@ do_clean_UTDANN <- function(dt, cleanlog){
 #' @noRd
 do_clean_INNVKAT <- function(dt, cleanlog){
   if(!"INNVKAT" %in% names(dt)) return(invisible(NULL))
-  cat("\n** Renser INNVKAT")
+  print_console_message("\n** Renser INNVKAT")
   dt[, let(INNVKAT = trimws(INNVKAT))]
   dt[grepl("^alle$", INNVKAT, ignore.case = TRUE), let(INNVKAT = "0")]
   dt[is.na(INNVKAT), let(INNVKAT = getOption("khfunctions.innvkat_ukjent"))]
@@ -230,7 +230,7 @@ do_clean_INNVKAT <- function(dt, cleanlog){
 #' @noRd
 do_clean_LANDBAK <- function(dt, cleanlog){
   if(!"LANDBAK" %in% names(dt)) return(invisible(NULL))
-  cat("\n** Renser LANDBAK")
+  print_console_message("\n** Renser LANDBAK")
   dt[, let(LANDBAK = trimws(LANDBAK))]
   dt[grepl("^alle$", LANDBAK, ignore.case = TRUE), let(LANDBAK = "0")]
   dt[is.na(LANDBAK), let(LANDBAK = getOption("khfunctions.landbak_ukjent"))] # illegal/8 = uoppgitt
@@ -248,8 +248,8 @@ check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
   dim_ok_log <- dim_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
   rawfiles_not_ok <- dim_ok_log[ok == 0, unique(KOBLID)]
   cleanlog[dim_ok_log, on = "KOBLID", paste0(col, "_ok") := i.ok]
-  if(n_not_ok > 0) cat("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
+  if(n_not_ok > 0) print_console_message("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
                        "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
-  if(n_not_ok == 0) cat("\n*** Alle ", col, " ok", sep = "")
+  if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
 }
   

@@ -5,7 +5,7 @@
 #' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
-  cat("\n* Henter parametre")
+  print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)

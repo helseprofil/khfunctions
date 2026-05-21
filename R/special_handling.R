@@ -20,15 +20,15 @@ do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, kobl
   is_stata <- grepl("<STATA>", code)
   
   if(is_stata){
-    cat("\n** Starter STATA-snutt:", name)
+    print_console_message("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
-    cat("\n** Ferdig i STATA")
+    print_console_message("\n** Ferdig i STATA")
     return(dt)
   }
   
   code <- ensure_correct_url(code, name)
-  cat("\n** Starter R-snutt:", name)
+  print_console_message("\n** Starter R-snutt:", name)
   code_env <- new.env()
   assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
@@ -45,7 +45,7 @@ do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, kobl
   # assign(dt_name, get(dt_name, envir = code_env), envir = code_env)
   # dt <- get(dt_name, envir = code_env)
   dt <- code_env[[dt_name]]
-  cat("\n** R-snutt ferdig")
+  print_console_message("\n** R-snutt ferdig")
   return(dt)
 }
 
@@ -143,7 +143,7 @@ do_stata_processing <- function(dt, script, parameters){
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
-  cat("\n*** Sletter midlertidige datafiler")
+  print_console_message("\n*** Sletter midlertidige datafiler")
   gc()
   for(file in c("parquet_in", "parquet_out", "dta")){
     path <- statafiles[[file]]
@@ -158,7 +158,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
-  cat("\n*** Fikser kolonnenavn pre stata")
+  print_console_message("\n*** Fikser kolonnenavn pre stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -171,7 +171,7 @@ fix_column_names_pre_stata <- function(oldnames){
 
 #' @noRd
 fix_column_names_post_stata <- function(oldnames){
-  cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
+  print_console_message("\n*** Leser filen inn igjen og fikser kolonnenavn")
   fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
@@ -223,7 +223,7 @@ set_stata_filenames <- function(batchdate, tmpdir){
 #' @keywords internal
 #' @noRd
 do_write_stata_file <- function(dt, statafiles, use_parquet){
-  cat("\n*** Skriver STATA-fil")
+  print_console_message("\n*** Skriver STATA-fil")
   if(use_parquet){
     do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
   } else {
@@ -270,7 +270,7 @@ generate_stata_do_file <- function(script, statafiles, use_parquet){
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
-  cat("\n*** Running STATA-script...")
+  print_console_message("\n*** Running STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }

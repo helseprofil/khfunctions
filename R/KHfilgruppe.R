@@ -17,7 +17,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  cat("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
+  print_console_message("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
   if(parameters$n_files == 1){
     Filgruppe <- make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
@@ -27,7 +27,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
     }
     Filgruppe <- data.table::rbindlist(Filgruppe, fill = TRUE, use.names = TRUE)
   }
-  cat("-----\n* Alle originalfiler lest og stablet")
+  print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   check_encoding(dt = Filgruppe)
   
@@ -35,7 +35,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
-  cat("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+  print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
   
   do_set_fg_column_order(dt = Filgruppe)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
@@ -48,8 +48,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  cat("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
-  cat("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  print_console_message("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
+  print_console_message("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
@@ -135,7 +135,7 @@ check_encoding <- function(dt) {
     }
     ok <- FALSE
   } else {
-    cat("\n** Ingen encoding-problemer oppdaget")
+    print_console_message("\n** Ingen encoding-problemer oppdaget")
   }
   
   if(!ok){

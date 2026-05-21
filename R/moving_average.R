@@ -18,7 +18,7 @@ get_movav_information <- function(dt, parameters){
 find_missing_year <- function(aarl){
   aarl_min_max <- min(aarl):max(aarl)
   aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
-  if(length(aarl_missing) > 0) cat("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
+  if(length(aarl_missing) > 0) print_console_message("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
   return(list(n = length(aarl_missing), years = aarl_missing))
 }
 
@@ -91,7 +91,7 @@ do_aggregate_periods <- function(dt, parameters){
 #' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
 #' @noRd
 calculate_period_sums <- function(dt, period, missing_year){
-  cat("\n* Aggregerer til ", period, "-årige tall\n", sep = "")
+  print_console_message("\n* Aggregerer til ", period, "-årige tall\n", sep = "")
   allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
   dt <- extend_to_periods(dt = dt, periods = allperiods)
   values <- get_value_columns(names(dt))

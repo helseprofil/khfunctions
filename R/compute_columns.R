@@ -13,7 +13,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
-    cat("\n*** Legger til nye kolonner: ", f)
+    print_console_message("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()
@@ -36,7 +36,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
 #' @noRd
 add_crude_rate <- function(dt, parameters){
   if(!"NEVNER" %in% names(dt)){
-    cat("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
   
@@ -73,7 +73,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
   
   for(formula in formulas){
     formula <- trimws(formula)
-    cat("\n*** Legger til kolonner som sum av rader: ", formula)
+    print_console_message("\n*** Legger til kolonner som sum av rader: ", formula)
     fparts <- extract_formula_parts(formula = formula, fileinfo = fileinfo, parameters = parameters)
     
     newdata <- EkstraherRadSummer(dt, pstrorg = fparts$filter, FGP = fileinfo, parameters = parameters)
@@ -123,31 +123,33 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
   return(fparts)
 }
 
+#' @title merge_cols_by_reference
+#' @description
+#' Adds columns from newdata to orgdata by reference
 #' @keywords internal
 #' @noRd
-get_recode_design <- function(filter){
+merge_cols_by_reference <- function(orgdata, newdata){
+  commoncols <- intersect(
+    get_dimension_columns(names(orgdata)),
+    get_dimension_columns(names(newdata))
+  )
+  newcols_names <- setdiff(names(newdata), commoncols)
   
-  # Omkod disse
-  if (length(subvals) > 0) {
-    # For omkodbare kolonner maa disse omkodes til soekte verdier (for generalitet maa det omkodes selv om disse finnes)
-    OmkParts <- list()
-    parameters$DefDesign$DelKols
-    for (part in names(parameters$DefDesign$DelKols)) {
-      if (all(parameters$DefDesign$DelKols[[del]] %in% names(subvals))) {
-        dvals <- subvals[parameters$DefDesign$DelKols[[del]]]
-        if (parameters$DefDesign$DelFormat[[del]] == "integer") {
-          dvals <- setNames(as.integer(dvals), names(dvals))
-        }
-        OmkParts[[del]] <- setNames(data.frame(matrix(dvals, ncol = length(dvals))), names(dvals))
-      } else if (any(parameters$DefDesign$DelKols[[del]] %in% names(subvals))) {
-        print("VARSKU HER!!!!!!!!!!!!!!! FEIL i EkstraherRadSummer!")
-      }
-    }
-    print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
-    orgdesign <- find_filedesign(dt, parameters = parameters)
-    redesign <- find_redesign(orgdesign = orgdesign, targetdesign = list(Parts = OmkParts), parameters = parameters)
-    dt <- do_filter_and_recode_to_redesign(dt = dt, redesign = redesign, parameters = parameters)
+  dup_check <- newdata[, .N, by = commoncols][N > 1]
+  
+  if (nrow(dup_check) > 0) {
+    stop(
+      sprintf(
+        "merge_cols_by_reference(): newdata har duplikate nøkler i commoncols (%s). Eksempel:\n%s",
+        paste(commoncols, collapse = ", "),
+        paste(utils::capture.output(print(head(dup_check))), collapse = "\n")
+      ),
+      call. = FALSE
+    )
   }
+  
+  newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
+  data.table::set(orgdata, j = newcols_names, value = newcols_vals)
 }
 
 #' #' @title set_lead_value

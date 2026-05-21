@@ -32,6 +32,7 @@
 ## Code cleaning
 - Remove get(col)/mget(col), replace with `dt[[col]]`, `.SDcols` or `env =`, whichever is most relevant
 - Implemented data.table::set() several places replacing := or let()
+- New function `print_console_message` wraps around cat(), but ensure that output is printed in full
 
 # khfunctions 1.1.6 (2026-02-25)
 

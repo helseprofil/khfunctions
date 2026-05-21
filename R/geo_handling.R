@@ -7,7 +7,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
   geoomk <- parameters$KnrHarm
   georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
   if(georecode > 0){
-    cat("\n*** Recoding", georecode, "geo-codes")
+    print_console_message("\n*** Recoding", georecode, "geo-codes")
     file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
     file[!is.na(GEO_omk), let(GEO = GEO_omk)]
     file[, let(GEO_omk = NULL, HARMstd = NULL)]
@@ -52,22 +52,22 @@ fix_geo_special <- function(dt, parameters){
   # STATA-prikkingen er avhengig av at alle måltall settes til NA
   # Dersom vi går over til R-prikking, kan måltallene bevares
   if (isbydelstart) {
-    cat("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
-    cat(" - Sletter tall for år før ", bydelstart, "\n", sep = "")
+    print_console_message("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
+    print_console_message(" - Sletter tall for år før ", bydelstart, "\n", sep = "")
     idx <- which(dt[["GEOniv"]] %in% c("B", "V") & dt[["AARl"]] < bydelstart)
     data.table::set(dt, i = idx, j = flags, value = 9L)
     data.table::set(dt, i = idx, j = vals, value = NA)
   }
   
   if (isdk2020) {
-    cat("\n* Håndterer delingskommuner 2020 (DK2020) \n")
-    cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
+    print_console_message("\n* Håndterer delingskommuner 2020 (DK2020) \n")
+    print_console_message(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
     idx <- which(dt[["GEOniv"]] == "K" & dt[["GEO"]] %chin% dk2020 & dt[["AARl"]] < dk2020start)
     data.table::set(dt, i = idx, j = flags, value = 9L)
     data.table::set(dt, i = idx, j = vals, value = NA)
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-    cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
+    print_console_message(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
     ystart <- ifelse(parameters$name == "VALGDELTAKELSE", 2019, 2020)
     ystop <- ystart + 3
     idx <- which(dt[["GEO"]] %in% c("1508", "1580") & (dt[["AARl"]] <= ystop & dt[["AARh"]] >= ystart))
@@ -84,8 +84,8 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
   if("dekningprikket" %notin% names(dt)) dt[, dekningprikket := 0L]
   geolevel <- match.arg(geolevel)
   if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))
-  cat(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
-  cat("\n*** Originalt", dt[GEOniv == geolevel, .N], "rader")
+  print_console_message(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
+  print_console_message("\n*** Originalt", dt[GEOniv == geolevel, .N], "rader")
   # Sette inn kommentar om kriteriene?
   dims <- parameters$outdimensions
   flags <- c(grep("\\.f$", names(dt), value = T))
@@ -94,9 +94,9 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
     dt[skjul, dekningprikket := 1L, on = dims]
     n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
     dt[spv_tmp == 0 & dekningprikket == 1L, (c(flags, "spv_tmp")) := 1L]
-    cat("\n***", n_new, "rader skjules")
+    print_console_message("\n***", n_new, "rader skjules")
   } else {
-    cat("\n*** Ingen rader skjules")
+    print_console_message("\n*** Ingen rader skjules")
   }
 }
 

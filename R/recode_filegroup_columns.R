@@ -22,7 +22,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   recodecols <- unique(codebook$FELTTYPE)[unique(codebook$FELTTYPE) %in% names(dt)]
   if(nrow(codebook) == 0) return(dt)
   
-  cat("\n* KODEBOK:")
+  print_console_message("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
     orgvalues <- unique(dt[[col]])
@@ -33,7 +33,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   }
   recodelog[, KOBLID := filedescription$KOBLID]
   n_recoded <- sum(as.numeric(recodelog$FREQ), na.rm = T)
-  cat("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
+  print_console_message("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
   if(length(recodecols) > 0) dt <- do_remove_deleted_rows(dt = dt, cols = recodecols)
@@ -130,7 +130,7 @@ do_remove_deleted_rows <- function(dt, cols){
   dt[, let(kast = 0)]
   dt[rowSums(dt[, ..cols] == "-", na.rm = T) > 0, let(kast = 1)]
   n_remove <- sum(dt$kast, na.rm = T)
-  if(n_remove > 0) cat("\n** Kaster", n_remove, "slettede rader")
+  if(n_remove > 0) print_console_message("\n** Kaster", n_remove, "slettede rader")
   dt <- dt[kast == 0][, let(kast = NULL)]
   return(dt)
 }
@@ -141,7 +141,7 @@ do_remove_deleted_rows <- function(dt, cols){
 #' @noRd
 do_recode_tknr <- function(dt, tknr, parameters){
   if(is_empty(tknr) || tknr != "1") return(invisible(NULL))
-  cat("\n* Omkoder fra TKNR")
+  print_console_message("\n* Omkoder fra TKNR")
   dt[parameters$TKNR, on = c(GEO = "ORGKODE"), GEO := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, GEO)]
 }
 
@@ -151,6 +151,6 @@ do_recode_tknr <- function(dt, tknr, parameters){
 #' @noRd
 do_recode_soner_4 <- function(dt, filedescription){
   if(!grepl("4", filedescription$SONER)) return(invisible(NULL))
-  cat("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  print_console_message("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
   dt[nchar(GEO) == 4, let(GEO = paste0(GEO, "00"))]
 }

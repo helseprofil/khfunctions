@@ -4433,3 +4433,26 @@ YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
   data.table::setkeyv(FGl, tabkols)
   return(FGl)
 }
+
+#' TilFilLogg (kb)
+#'
+#' @param koblid 
+#' @param felt 
+#' @param verdi 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
+  # Sjekk om finnes rad for filid, eller lag ny
+  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
+    print("**************Hvorfor er jeg egentlig her?*********************'")
+    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
+    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
+    sqlQuery(globs$log, upd)
+  }
+  if (is.character(verdi)) {
+    verdi <- paste("'", verdi, "'", sep = "")
+    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
+  }
+  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
+  tmp <- sqlQuery(globs$log, upd)
+}

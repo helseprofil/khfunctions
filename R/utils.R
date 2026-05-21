@@ -51,37 +51,13 @@ set_threads <- function(){
   use_dt <- pmax(old_dt, use)
   data.table::setDTthreads(use_dt)
   collapse::set_collapse(nthreads = use)
-  cat("\n* Antall kjerner brukt\n** data.table:", use_dt, "\n** collapse: ", use)
+  print_console_message("\n* Antall kjerner brukt\n** data.table:", use_dt, "\n** collapse: ", use)
   
   return(list(dt = old_dt,
               collapse = old_collapse))
 }
 
-#' @title merge_cols_by_reference
-#' @description
-#' Adds columns from newdata to orgdata by reference
-#' @keywords internal
-#' @noRd
-merge_cols_by_reference <- function(orgdata, newdata){
-  commoncols <- intersect(
-      get_dimension_columns(names(orgdata)),
-      get_dimension_columns(names(newdata))
-  )
-  newcols_names <- setdiff(names(newdata), commoncols)
-  
-  dup_check <- newdata[, .N, by = commoncols][N > 1]
-  
-  if (nrow(dup_check) > 0) {
-    stop(
-      sprintf(
-        "merge_cols_by_reference(): newdata har duplikate nøkler i commoncols (%s). Eksempel:\n%s",
-        paste(commoncols, collapse = ", "),
-        paste(utils::capture.output(print(head(dup_check))), collapse = "\n")
-      ),
-      call. = FALSE
-    )
-  }
-  
-  newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
-  data.table::set(orgdata, j = newcols_names, value = newcols_vals)
+print_console_message <- function(...) {
+  base::cat(..., "\n")
+  utils::flush.console()
 }
