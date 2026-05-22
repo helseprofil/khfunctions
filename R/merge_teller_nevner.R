@@ -13,7 +13,7 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    print_console_message("\n\n* Merger teller- og nevnerfil")
+    print_console_message("\n* Merger teller- og nevnerfil")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }
@@ -36,7 +36,7 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   }
   
   tellerfiltype <- ifelse(standardfiles, "standardtellerfil", "tellerfil")
-  print_console_message("\n* Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
+  print_console_message("\n** Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
   do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters, name = tellerfiltype)
   
   if(isnevnerfil) {

@@ -126,7 +126,7 @@ estimate_predrate <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_prednevner <- function(design, parameters){
-  print_console_message("\n\n* Estimerer PREDNEVNER...")
+  print_console_message("\n\n* Estimerer PREDNEVNER...\n")
   missyears <- parameters$MOVAVparameters$missyears
   redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
   # prednevner <- fetch_filegroup_from_buffer(filegroup = parameters$files$PREDNEVNER)
@@ -147,7 +147,7 @@ estimate_prednevner <- function(design, parameters){
 #' @keywords internal
 #' @noRd
 estimate_predteller <- function(predrate, prednevner, parameters){
-  print_console_message("\n* Estimerer PREDTELLER...")
+  print_console_message("\n\n* Estimerer PREDTELLER...\n")
   commondims <- intersect(get_dimension_columns(names(prednevner)), get_dimension_columns(names(predrate)))
   mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
   if(mismatch > 0) print_console_message("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
