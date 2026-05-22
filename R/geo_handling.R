@@ -131,7 +131,7 @@ get_deletestrata <- function(dt, dims, level){
   f <- as.formula(paste(paste(bycols, collapse = " + "), "~ col"))
   deletestrata <- data.table::dcast(deletestrata, formula = f, value.var = "ukjent")
   deletestrata[, diff := sumTELLER - sumNEVNER]
-  deletestrata <- deletestrata[sumTELLER > 0.08 | abs(diff) > 0.05, .SD, .SDcols = bycols]
+  deletestrata <- deletestrata[sumTELLER > getOption("khfunctions.dekning_sumteller") | abs(diff) > getOption("khfunctions.dekning_diff"), .SD, .SDcols = bycols]
   
   delete <- collapse::join(deletestrata, deletecodes, on = "overniv", multiple = TRUE, verbose = FALSE, overid = 2)[, .SD, .SDcols = dims]
   return(delete)
