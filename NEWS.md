@@ -1,4 +1,4 @@
-# khfunctions (development version)
+# khfunctions 1.2.0
 
 ## General changes
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
@@ -19,7 +19,7 @@
 - Added function `add_leadyear_befvekst`, removing the need for nykolsmerge which was only used for this.
 - When loading filegroups, colorder is set according to standarddimensions. 
 - `merge_teller_nevner` works more by reference, relying less on copies of data 
-- Implemented duckdb, to remove requirement to keep all files in RAM.
+- Implemented `duckdb` for temporary storage of data
     - Required filegroups and temporary products are now stored in a on-the-fly duckdb database
     - Several new functions operated directly on tables in duckdb, meaning they do not need to be loaded into RAM
 
