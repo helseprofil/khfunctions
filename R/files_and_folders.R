@@ -67,6 +67,7 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
     print_console_message("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
     return(invisible(NULL))
   } 
+
   print_console_message("\n* SJEKKER FRISKVIKFILER\n\n")
   qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = T)
   tabname <- paste0("FRISKVIKSJEKK_", profil,"_", geoniv)
