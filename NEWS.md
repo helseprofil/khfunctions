@@ -19,7 +19,7 @@
 - Added function `add_leadyear_befvekst`, removing the need for nykolsmerge which was only used for this.
 - When loading filegroups, colorder is set according to standarddimensions. 
 - `merge_teller_nevner` works more by reference, relying less on copies of data 
-- Implemented `duckdb` for temporary storage of data
+- Implemented `duckdb` for temporary storage of data ([issue157](https://github.com/helseprofil/khfunctions/issues/157))
     - Required filegroups and temporary products are now stored in a on-the-fly duckdb database
     - Several new functions operated directly on tables in duckdb, meaning they do not need to be loaded into RAM
 
