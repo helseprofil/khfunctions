@@ -4384,3 +4384,75 @@ list_snutter <- function(folder){
   files <- grep(paste0("^", folder, "/.*\\.R$"), tree, value = T, ignore.case = T)
   return(files)
 }
+
+#' @title add_maltall
+#' @description sets maltall column
+#' @param dt dataset
+#' @param maltallcolumn the column containing maltall, identified with get_maltall_column()
+#' @keywords internal
+#' @noRd
+add_maltall <- function(dt, maltallcolumn){
+  data.table::set(dt, j = "MALTALL", value = dt[[maltallcolumn]])
+  return(dt)
+}
+
+#' @title YAlagVal (kb)
+#' @description 
+#' used in ACCESS, only for befvekst. AGE lag is not used, only year. 
+#' Generate a new file with all dimension columns and the selected value column. 
+#' AARl and ALDERl is changed by the factors specified in YL and AL, to be merged onto different rows. 
+#' 
+#' This function can probably be replaced by collapse-functions flag/flead. 
+#' @param FG file
+#' @param YL year lag
+#' @param AL age lag
+#' @param vals value to create lag value
+#' @keywords internal
+#' @noRd
+YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
+  ltag <- function(lag) {
+    ltag <- ""
+    if (lag > 0) {
+      ltag <- paste("m", abs(lag), sep = "")
+    } else if (lag < 0) {
+      ltag <- paste("p", abs(lag), sep = "")
+    }
+    return(ltag)
+  }
+  FGl <- data.table::copy(FG)
+  FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
+  FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
+  data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
+  tabkols <- setdiff(names(FGl), get_value_columns(names(FG), full = TRUE))
+  lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
+  data.table::setnames(FGl, unlist(lapply(vals, function(x) {
+    paste(x, c("", ".f", ".a"), sep = "")
+  })), lvals)
+  FGl <- FGl[, .SD, .SDcols = c(tabkols, lvals)]
+  data.table::setkeyv(FG, tabkols)
+  data.table::setkeyv(FGl, tabkols)
+  return(FGl)
+}
+
+#' TilFilLogg (kb)
+#'
+#' @param koblid 
+#' @param felt 
+#' @param verdi 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
+  # Sjekk om finnes rad for filid, eller lag ny
+  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
+    print("**************Hvorfor er jeg egentlig her?*********************'")
+    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
+    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
+    sqlQuery(globs$log, upd)
+  }
+  if (is.character(verdi)) {
+    verdi <- paste("'", verdi, "'", sep = "")
+    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
+  }
+  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
+  tmp <- sqlQuery(globs$log, upd)
+}

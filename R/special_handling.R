@@ -5,11 +5,12 @@
 #' 
 #' @param name name of RSYNT point, refer to the column, to be used for filedump names
 #' @param dt data to be processed 
+#' @param dt_name name of data object, passed to code env
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
 #' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
 #' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
+do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, ...){
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
   
@@ -19,32 +20,32 @@ do_special_handling <- function(name, dt, code, parameters, koblid = NULL, ...){
   is_stata <- grepl("<STATA>", code)
   
   if(is_stata){
-    cat("\n** Starter STATA-snutt:", name)
+    print_console_message("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
-    cat("\n** Ferdig i STATA")
+    print_console_message("\n** Ferdig i STATA")
     return(dt)
   }
   
   code <- ensure_correct_url(code, name)
-  cat("\n** Starter R-snutt:", name)
+  print_console_message("\n** Starter R-snutt:", name)
   code_env <- new.env()
-  dtname <- as.character(substitute(dt))
-  assign(dtname, dt, envir = code_env)
+  assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
   extra_args <- list(...)
   for(argname in c(names(extra_args))){
     assign(argname, extra_args[[argname]], envir = code_env)
   }
-  newdt <- get(dtname, envir = code_env)
+  
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
-  if ("try-error" %in% class(rsynterr)) {
+  if(inherits(rsynterr, "try-error")){
     print(rsynterr)
     stop("Something went wrong in R")
   }
-  assign(dtname, get(dtname, envir = code_env), envir = code_env)
-  dt <- get(dtname, envir = code_env)
-  cat("\n** R-snutt ferdig")
+  # assign(dt_name, get(dt_name, envir = code_env), envir = code_env)
+  # dt <- get(dt_name, envir = code_env)
+  dt <- code_env[[dt_name]]
+  print_console_message("\n** R-snutt ferdig")
   return(dt)
 }
 
@@ -142,7 +143,7 @@ do_stata_processing <- function(dt, script, parameters){
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
-  cat("\n*** Sletter midlertidige datafiler")
+  print_console_message("\n*** Sletter midlertidige datafiler")
   gc()
   for(file in c("parquet_in", "parquet_out", "dta")){
     path <- statafiles[[file]]
@@ -157,7 +158,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
-  cat("\n*** Fikser kolonnenavn pre stata")
+  print_console_message("\n*** Fikser kolonnenavn pre stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -170,7 +171,7 @@ fix_column_names_pre_stata <- function(oldnames){
 
 #' @noRd
 fix_column_names_post_stata <- function(oldnames){
-  cat("\n*** Leser filen inn igjen og fikser kolonnenavn")
+  print_console_message("\n*** Leser filen inn igjen og fikser kolonnenavn")
   fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
@@ -222,7 +223,7 @@ set_stata_filenames <- function(batchdate, tmpdir){
 #' @keywords internal
 #' @noRd
 do_write_stata_file <- function(dt, statafiles, use_parquet){
-  cat("\n*** Skriver STATA-fil")
+  print_console_message("\n*** Skriver STATA-fil")
   if(use_parquet){
     do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
   } else {
@@ -269,7 +270,7 @@ generate_stata_do_file <- function(script, statafiles, use_parquet){
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
-  cat("\n*** Running STATA-script...")
+  print_console_message("\n*** Running STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }

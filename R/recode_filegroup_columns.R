@@ -22,10 +22,10 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   recodecols <- unique(codebook$FELTTYPE)[unique(codebook$FELTTYPE) %in% names(dt)]
   if(nrow(codebook) == 0) return(dt)
   
-  cat("\n* KODEBOK:")
+  print_console_message("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
-    orgvalues <- dt[, unique(get(col))]
+    orgvalues <- unique(dt[[col]])
     cb_subset <- codebook[FELTTYPE == col]
     recodelog <- do_recode_kb(dt = dt, cb = cb_subset, col = col, log = recodelog)
     recodelog <- do_recode_regex(dt = dt, cb = cb_subset, col = col, log = recodelog)
@@ -33,7 +33,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   }
   recodelog[, KOBLID := filedescription$KOBLID]
   n_recoded <- sum(as.numeric(recodelog$FREQ), na.rm = T)
-  cat("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
+  print_console_message("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
   if(length(recodecols) > 0) dt <- do_remove_deleted_rows(dt = dt, cols = recodecols)
@@ -71,9 +71,9 @@ do_recode_kb <- function(dt, cb, col, log){
   if(nrow(cb) == 0) return(log)
   newlog <- initiate_codebooklog(nrow = nrow(cb))
   newlog[, let(DELID = cb$DELID, FELTTYPE = col, TYPE = "KB", ORG = cb$ORGKODE, OMK = cb$NYKODE)]
-  freq <- data.table::setnames(dt[get(col) %in% cb$ORGKODE, .N, by = col], c("ORG", "FREQ"))
+  freq <- data.table::setnames(dt[dt[[col]] %in% cb$ORGKODE, .N, by = col], c("ORG", "FREQ"))
   newlog <- newlog[freq, on = "ORG", FREQ := i.FREQ]
-  dt[cb, on = setNames("ORGKODE", col), (col) := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, get(col))]
+  dt[cb, on = setNames("ORGKODE", col), (col) := i.NYKODE]
   log <- data.table::rbindlist(list(log, newlog))
   return(log)
 }
@@ -92,27 +92,28 @@ do_recode_regex <- function(dt, cb, col, log){
   
   if(!grepl("^VAL\\d{1}", col)){
     newlog <- initiate_codebooklog()
-    for(i in 1:nrow(cb)){
+    for(i in seq_len(nrow(cb))){
       cb_i <- cb[i]
-      orgcodes_i <- dt[grepl(paste(cb_i$ORGKODE, collapse = "|"), get(col)), unique(get(col))]
+      orgcodes_i <- unique(dt[grepl(cb_i$ORGKODE, dt[[col]])][[col]])
       newlog_i <- initiate_codebooklog(nrow = length(orgcodes_i))
       newlog_i[, let(DELID = cb_i$DELID, FELTTYPE = col, TYPE = "SUB", ORG = orgcodes_i)]
       newlog_i[, OMK := sub(cb_i$ORGKODE, cb_i$NYKODE, ORG, perl = TRUE)]
       newlog <- data.table::rbindlist(list(newlog, newlog_i))
     }
     
-    freq <- data.table::setnames(dt[get(col) %in% newlog$ORG, .N, by = col], c("ORG", "FREQ"))
+    freq <- data.table::setnames(dt[dt[[col]] %in% newlog$ORG, .N, by = col], c("ORG", "FREQ"))
     newlog <- newlog[freq, on = "ORG", FREQ := i.FREQ]
     translated_cb <- newlog[, .SD, .SDcols = c("ORG", "OMK")]
-    dt[translated_cb, on = setNames("ORG", col), (col) := data.table::fifelse(!is.na(i.OMK), i.OMK, get(col))]
+    dt[translated_cb, on = setNames("ORG", col), (col) := i.OMK]
   }
   
   if(grepl("^VAL\\d{1}", col)){
     newlog <- initiate_codebooklog(nrow = nrow(cb))
     newlog[, let(DELID = cb$DELID, FELTTYPE = col, TYPE = "SUB", ORG = cb$ORGKODE, OMK = cb$NYKODE)]
-    for(i in 1:nrow(cb)){
-      newlog[i, FREQ := dt[grepl(cb[i, ORGKODE], get(col)), .N]]
-      dt[grepl(cb[i, ORGKODE], get(col)), (col) := sub(cb[i, ORGKODE], cb[i, NYKODE], get(col), perl = TRUE)]
+    for(i in seq_len(nrow(cb))){
+      idx <- which(!is.na(dt[[col]]) & grepl(cb[i, ORGKODE], dt[[col]]))
+      newlog[i, FREQ := dt[idx, .N]]
+      data.table::set(dt, i = idx, j = col, value = sub(cb[i, ORGKODE], cb[i, NYKODE], dt[[col]][idx], perl = TRUE))
     }
   }
   log <- data.table::rbindlist(list(log, newlog))
@@ -129,7 +130,7 @@ do_remove_deleted_rows <- function(dt, cols){
   dt[, let(kast = 0)]
   dt[rowSums(dt[, ..cols] == "-", na.rm = T) > 0, let(kast = 1)]
   n_remove <- sum(dt$kast, na.rm = T)
-  if(n_remove > 0) cat("\n** Kaster", n_remove, "slettede rader")
+  if(n_remove > 0) print_console_message("\n** Kaster", n_remove, "slettede rader")
   dt <- dt[kast == 0][, let(kast = NULL)]
   return(dt)
 }
@@ -140,7 +141,7 @@ do_remove_deleted_rows <- function(dt, cols){
 #' @noRd
 do_recode_tknr <- function(dt, tknr, parameters){
   if(is_empty(tknr) || tknr != "1") return(invisible(NULL))
-  cat("\n* Omkoder fra TKNR")
+  print_console_message("\n* Omkoder fra TKNR")
   dt[parameters$TKNR, on = c(GEO = "ORGKODE"), GEO := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, GEO)]
 }
 
@@ -150,6 +151,6 @@ do_recode_tknr <- function(dt, tknr, parameters){
 #' @noRd
 do_recode_soner_4 <- function(dt, filedescription){
   if(!grepl("4", filedescription$SONER)) return(invisible(NULL))
-  cat("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  print_console_message("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
   dt[nchar(GEO) == 4, let(GEO = paste0(GEO, "00"))]
 }

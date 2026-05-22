@@ -13,14 +13,14 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_handle_kastkols(dt = DF, filedescription = filedescription)  
   do_reshape_var(dt = DF, filedescription = filedescription, parameters = parameters)
   do_split_multihead(dt = DF, filedescription = filedescription)
-  DF <- do_special_handling(name = "RSYNT2", dt = DF, code = filedescription$RSYNT2, parameters = parameters, koblid = filedescription$KOBLID)
+  DF <- do_special_handling(name = "RSYNT2", dt = DF, dt_name = "DF", code = filedescription$RSYNT2, parameters = parameters, koblid = filedescription$KOBLID)
   give_columns_default_names(dt = DF, filedescription = filedescription, defcolumns = filecolumns$have)
   do_set_default_values(dt = DF, filedescription = filedescription, defaultcolumns = filecolumns$default)
   check_if_all_columns_exist(dt = DF, filecolumns = filecolumns)
   DF[, names(.SD) := NULL, .SDcols = names(DF)[!names(DF) %in% c(getOption("khfunctions.kolorgs"), "LEVEL")]]
   data.table::setcolorder(DF, intersect(getOption("khfunctions.kolorgs"), names(DF)))
   convert_all_columns_to_character(dt = DF)
-  cat("\n* Innlesing OK!")
+  print_console_message("\n* Innlesing OK!")
   do_aggregate_if_grunnkrets(dt = DF, filedescription = filedescription, parameters = parameters) # DEPRECATED?
   do_convert_na_to_empty(dt = DF)
   DF[, let(KOBLID = as.character(filedescription$KOBLID))]
@@ -36,7 +36,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
 report_filegroup_progress <- function(file_number, parameters){
   n_files <- parameters$n_files
   filename <- parameters$read_parameters[file_number]$FILNAVN
-  cat("\n", file_number, "/", n_files, ": ", filename, sep = "")
+  print_console_message("\n", file_number, "/", n_files, ": ", filename, sep = "")
 }
 
 #' @title identify_columns_in_file
@@ -147,34 +147,15 @@ check_if_all_columns_exist <- function(dt, filecolumns){
 #' @param dt data
 #' @noRd
 convert_all_columns_to_character <- function(dt){
-  orgcolorder <- data.table::copy(names(dt))
-  non_char_cols <- names(dt)[!sapply(dt, is.character)]
+  non_char_cols <- names(dt)[!vapply(dt, is.character, FUN.VALUE = logical(1))]
   if(length(non_char_cols) > 0){
-    for(col in non_char_cols){
-      dt[, tempvar := as.character(get(col)), by = col]
-      dt[, (col) := NULL]
-      data.table::setnames(dt, "tempvar", col)
-    }
+    data.table::set(dt, 
+                    j = non_char_cols, 
+                    value = lapply(dt[, ..non_char_cols], as.character))
   }
-  data.table::setcolorder(dt, orgcolorder)
 }
 
-# convert_to_integer_if_possible <- function(dt, cols){
-#   orgcolorder <- data.table::copy(names(dt))
-#   convert <- character()
-#   for(col in cols){
-#     if(all.equal(dt[[col]], as.integer(dt[[col]]))) convert <- c(convert, col)
-#   }
-#   if(length(convert) > 0){
-#     for(col in convert){
-#       dt[, tempvar := as.integer(get(col)), by = col]
-#       dt[, (col) := NULL]
-#       data.table::setnames(dt, "tempvar", col)
-#     }
-#   }
-#   data.table::setcolorder(dt, orgcolorder)
-# }
-
+#' @noRd
 do_convert_na_to_empty <- function(dt){
   dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
 }
@@ -221,7 +202,7 @@ do_handle_fylltab <- function(dt, filedescription){
   if(!all(cols %in% names(dt))) stop("Feil i FYLLTAB: ", paste0("Kolonner ", paste(cols[!cols %in% names(dt)], collapse = ","), " finnes ikke"))
   
   for(col in cols){
-    dt[get(col) == "", col := NA]
+    dt[dt[[col]] == "", (col) := NA]
     dt[, names(.SD) := zoo::na.locf(.SD, na.rm = FALSE), .SDcols = col]
   }
 }
@@ -234,7 +215,7 @@ do_handle_fylltab <- function(dt, filedescription){
 #' @noRd
 do_aggregate_if_grunnkrets <- function(dt, filedescription, parameters){
   if(is_empty(filedescription$GRUNNKRETS) || filedescription$GRUNNKRETS != 1) return(invisible(NULL))
-  cat("\n* Aggregerer fra grunnkrets...")
+  print_console_message("\n* Aggregerer fra grunnkrets...")
   colorder <- names(dt)
   aggregate <- collapse::join(dt, parameters$GkBHarm, how = "l", on = c("GEO" = "GK"), verbose = 0)
   aggregate[is.na(Bydel2004), Bydel2004 := paste(substr(GEO, 1, 4), "00", sep = "")]

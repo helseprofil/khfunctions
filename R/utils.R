@@ -43,3 +43,21 @@ ensure_utf8_encoding <- function(){
   if(old_ctype != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", "nb-NO.UTF-8")
   return(old_ctype)
 }
+
+set_threads <- function(){
+  old_dt <- data.table::getDTthreads()
+  old_collapse <- collapse::get_collapse("nthreads")
+  use <- max(1L, min(6L, parallel::detectCores() %/% 2L))
+  use_dt <- pmax(old_dt, use)
+  data.table::setDTthreads(use_dt)
+  collapse::set_collapse(nthreads = use)
+  print_console_message("\n* Antall kjerner brukt\n** data.table:", use_dt, "\n** collapse: ", use)
+  
+  return(list(dt = old_dt,
+              collapse = old_collapse))
+}
+
+print_console_message <- function(...) {
+  base::cat(...)
+  utils::flush.console()
+}

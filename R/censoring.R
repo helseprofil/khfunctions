@@ -5,12 +5,19 @@ do_censor_cube <- function(dt, parameters){
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
   if(is_empty(parameters$Censor_type)) return(dt)
   
+  if(parameters$Censor_type == "STATA" && isTRUE(parameters$force_r_censoring)){
+    print_console_message("\n** ACCESS-parametre satt til STATA-prikking, bytter til R-prikking")
+    parameters$Censor_type <- "R"
+  }
+  
   if(parameters$Censor_type == "R"){
-    cat("\n* Prikker data (NY R-prikking)")
+    data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
+    print_console_message("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
-    # cat("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
+    print_console_message("\n** STATA-prikking er aktiv, gjør endringer i ACCESS om du ønsker R-prikking")
+    # print_console_message("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
     # do_censor_primary_secondary(dt = dt, parameters = parameters)
     # Ready to replace the rows below
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
@@ -18,7 +25,20 @@ do_censor_cube <- function(dt, parameters){
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
+  do_collect_naboprikk(dt = dt)
   return(dt)
+}
+
+#' @title do_collect_naboprikk
+#' @description
+#' Add column "naboprikket", indicating secondary censoring
+#' Collects information from columns "naboprikketIomgX"
+#' @keywords internal
+#' @noRd
+do_collect_naboprikk <- function(dt){
+  if(!"^naboprikket$" %in% names(dt)) dt[, naboprikket := 0L]
+  naboprikkcols <- grep("^naboprikketIomg", names(dt), value = T)
+  if(length(naboprikkcols) > 0) dt[rowSums(dt[, ..naboprikkcols]) > 0, naboprikket := 1L]
 }
 
 #' @title do_censor_primary_secondary
@@ -31,22 +51,75 @@ do_censor_cube <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_censor_primary_secondary <- function(dt, parameters){
-  dt[, let(pvern = 0L, serieprikket = 0L)]
-  
   limits <- get_censor_limits(spec = parameters$CUBEinformation)
   alltriangles <- get_censor_triangles(parameters = parameters)
+  # CHECK TRIANGLE VALUES - verdiene i et triangel må eksistere i kuben
+  # Trenger ikke sjekke geotriangler som er maskinelle, men manuelt angitte triangler bør sjekkes for feil. 
   dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
-  cat("\n* Starter personvernhåndtering")
+  print_console_message("\n* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   
-  cat("\n* NABOPRIKKING på:", names(alltriangles), "\n")
+  print_console_message("\n* NABOPRIKKING på:", names(alltriangles), "\n")
   do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
   valuesF <- paste0(get_value_columns(names(dt)), ".f")
   dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
+}
+
+#' @title do_censor_primary
+#' @description
+#' Initial censoring of numbers below the limit for censoring
+#' TELLER, NEVNER-TELLER, NEVNER
+#' DEV: 
+#' For evt spesialverdier som skal aksepteres, f.eks. mobbing = 0, kan dette også legges i access 
+#' og settes som unntak her. Kan settes som spesialgrense og inkluderes i limits.
+#' Dersom høye tall skal aksepteres, bør også nevner-teller-prikking kunne slås av.
+#' @keywords internal
+#' @noRD
+do_censor_primary <- function(dt, limits){
+  if(is_not_empty(limits$TELLER)){
+    print_console_message("\n*** Prikker på liten teller og teller-nevner")
+    idx <- which(dt[["spv_tmp"]] == 0 & 
+                   (dt[["sumTELLER"]] <= limits$TELLER | dt[["sumNEVNER"]] - dt[["sumTELLER"]] <= limits$TELLER))
+    data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
+  }
+  if(is_not_empty(limits$NEVNER)){
+    print_console_message("\n*** Prikker på liten nevner")
+    idx <- which(dt[["spv_tmp"]] == 0 & dt[["sumNEVNER"]] <= limits$NEVNER)
+    data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
+  }
+  print_console_message("\n** Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
+}
+
+#' @title do_censor_serie
+#' @description
+#' Serieprikker på grensene som er satt i options anon_svakandel og anon_hullandel
+#' Rader med spv_tmp = 9 (missing inn eller kan ikke brukes) teller i dag med i 
+#' nevner når andelen svake eller prikkede rader skal beregnes. 
+#' De kan holdes utenfor ved å filtrere på spv_tmp != 9 når proporsjonene beregnes
+#' DEV:
+#' Må håndtere evt spesialverdier som skal aksepteres, de kan ikke regnes som prikket her heller.
+#' @keywords internal
+#' @noRd
+do_censor_serie <- function(dt, limits, dims){
+  seriedims <- setdiff(dims, "AAR")
+  primary_limit <- getOption("khfunctions.anon_hullandel")
+  weak_limit <- getOption("khfunctions.anon_svakandel")
+  helper_columns <- c("weak", "propweak", "propprimary")
+  data.table::set(dt, j = helper_columns, value = 0)
+  
+  data.table::set(dt, i = which(dt[["sumTELLER"]] <= limits$STATTOL), j = "weak", value = 1L)
+  # Kan holde spv_tmp == 9 utenfor her
+  dt[, let(propweak = mean(weak, na.rm = T), propprimary = mean(orgprikket, na.rm = T)), by = seriedims]
+  
+  idx <- which(dt[["spv_tmp"]] == 0 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
+  data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
+  print_console_message(paste0("\n** Serieprikker ", dt[serieprikket == 1, .N], " rader fordi tidsserien har en andel personvernprikker > ", primary_limit, 
+             " eller at andelen sumTELLER <= ", limits$STATTOL, " > ", weak_limit))
+  data.table::set(dt, j = helper_columns, value = NULL)
 }
 
 #' @description Written with assistance from copilot
@@ -73,7 +146,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
   
   while (nyeprikker > 0L || force_runde){
     itcol <- paste0("naboprikketIomg", iteration)
-    dt[, (itcol) := 0L]
+    data.table::set(dt, j = itcol, value = 0L)
     
     for(censordim in names(alltriangles)){
       triangles <- alltriangles[[censordim]]
@@ -106,7 +179,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
           ant_available  = sum(pvern == 0L, na.rm = TRUE)
         ), by = sc]
         
-        prob <- stats[antpvern == 1L | (antpvern > 1L & (sumtellerprikk <= limits$TELLER | sumnevnerprikk <= limits$NEVNER) & ant_available >= 2L), get(sc)]
+        prob <- stats[antpvern == 1L | (antpvern > 1L & (sumtellerprikk <= limits$TELLER | sumnevnerprikk <= limits$NEVNER) & ant_available >= 2L), .SD[[1]],.SDcols = sc]
         if (length(prob) == 0L) next
         
         # 2) Prioritetskart for trekanten: NAVN-basert oppslag (kritisk når nivåene er numeric)
@@ -115,11 +188,11 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
         # pri_vec  <- unname(rank_map[as.character(dt[[cd]])])
         
         # 3) Serie-kandidat (pvern==0 & serieprikket==1): velg ÉN per strata, lavest prioritet
-        ser <- dt[in_triangle & get(sc) %in% prob & pvern == 0L & serieprikket == 1L,
+        ser <- dt[in_triangle & dt[[sc]] %in% prob & pvern == 0L & serieprikket == 1L,
                   {
                     tri_levels_sc <- order_for_sc(tri, .SD)
                     rank_map_sc <- setNames(seq_along(tri_levels_sc), as.character(tri_levels_sc))
-                    pri <- unname(rank_map_sc[as.character(get(cd))]) # ta ut prioritet for disse radene
+                    pri <- unname(rank_map_sc[as.character(.SD[[cd]])]) # ta ut prioritet for disse radene
                     if (all(is.na(pri))) {
                       .(rowid = integer())
                     } else {
@@ -146,14 +219,15 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
           }
           
           if(length(target) > 0L){
-            nonc_dt <- dt[in_triangle & get(sc) %in% target & pvern == 0L & (is.na(serieprikket) | serieprikket == 0L),
+            nonc_dt <- dt[in_triangle & dt[[sc]] %in% target & pvern == 0L & (is.na(serieprikket) | serieprikket == 0L),
                           {
                             tri_levels_sc <- order_for_sc(tri, .SD)
                             rank_map_sc <- setNames(seq_along(tri_levels_sc), as.character(tri_levels_sc))
-                            .(rowid = rid__, pri = unname(rank_map_sc[as.character(get(cd))]))
+                            .(rowid = rid__, pri = unname(rank_map_sc[as.character(.SD[[cd]])]))
                           },
                           by = sc
-            ][order(get(sc), -pri)]
+            ]
+            data.table::setorderv(nonc_dt, c(sc, "pri"), c(1, -1))
             
             if (nrow(nonc_dt) > 0L) {
               noncensoredrowids <- nonc_dt[, .SD[1L], by = sc]$rowid
@@ -164,70 +238,18 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
         # 5) Oppdater i én batch for denne trekanten
         rows_to_censor <- unique(c(serierowids, noncensoredrowids))
         if (length(rows_to_censor) > 0L) {
-          dt[rows_to_censor, let(pvern = 1L, spv_tmp = 3L)]
-          dt[rows_to_censor, (itcol) := 1L]
-          
-          
-          newly_resolved <- unique(dt[rows_to_censor, get(sc)])
-          # resolved_sid <- union(resolved_sid, newly_resolved)
+          idx <- which(dt[["rid__"]] %in% rows_to_censor)
+          data.table::set(dt, i = idx, j = c(itcol, "pvern", "spv_tmp"), value = list(1L, 1L, 3L))
         }
       }
     }
-    nyeprikker <- dt[, sum(get(itcol))]
+    nyeprikker <- collapse::fsum(dt[[itcol]])
     onlyserie <- ifelse(iteration <= max_serie_rounds, " (bare serieprikker brukt)", "")
-    cat(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie, "\n"))
+    print_console_message(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie, "\n"))
     force_runde <- iteration <= max_serie_rounds
     iteration <- iteration + 1L
   }
-  dt[, (unname(strata_cols)) := NULL]
-  dt[, let(rid__ = NULL, skal_naboprikkes = NULL)]
-}
-
-#' @title do_censor_serie
-#' @description
-#' Serieprikker på grensene som er satt i options anon_svakandel og anon_hullandel
-#' Flagg 9 (finnes ikke eller kan ikke beregnes pga missing inn) holdes utenfor.
-#' DEV:
-#' Må håndtere evt spesialverdier som skal aksepteres, de kan ikke regnes som prikket her heller.
-#' @keywords internal
-#' @noRd
-do_censor_serie <- function(dt, limits, dims){
-  seriedims <- setdiff(dims, "AAR")
-  primary_limit <- getOption("khfunctions.anon_hullandel")
-  weak_limit <- getOption("khfunctions.anon_svakandel")
-  helper_columns <- c("weak", "propweak", "propprimary")
-  dt[, (helper_columns) := 0]
-  
-  dt[sumTELLER <= limits$STATTOL, let(weak = 1L)]
-  dt[, let(propweak = mean(weak, na.rm = T), propprimary = sum(pvern, na.rm = T)/.N), by = seriedims]
-  
-  dt[spv_tmp == 0 & (propweak > weak_limit | propprimary > primary_limit), let(serieprikket = 1, spv_tmp = 4)]
-  cat(paste0("\n** Serieprikker ", dt[serieprikket == 1, .N], " rader fordi tidsserien har en andel personvernprikker > ", primary_limit, 
-             " eller at andelen sumTELLER <= ", limits$STATTOL, " > ", weak_limit))
-  dt[, (helper_columns) := NULL]
-}
-
-#' @title do_censor_primary
-#' @description
-#' Initial censoring of numbers below the limit for censoring
-#' TELLER, NEVNER-TELLER, NEVNER
-#' DEV: 
-#' For evt spesialverdier som skal aksepteres, f.eks. mobbing = 0, kan dette også legges i access 
-#' og settes som unntak her. Kan settes som spesialgrense og inkluderes i limits.
-#' Dersom høye tall skal aksepteres, bør også nevner-teller-prikking kunne slås av.
-#' @keywords internal
-#' @noRD
-do_censor_primary <- function(dt, limits){
-  if(is_not_empty(limits$TELLER)){
-    cat("\n*** Prikker på liten teller og teller-nevner")
-    dt[spv_tmp == 0 & sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)]
-    dt[spv_tmp == 0 & sumNEVNER - sumTELLER <= limits$TELLER, let(pvern = 1, spv_tmp = 3)] 
-  }
-  if(is_not_empty(limits$NEVNER)){
-    cat("\n*** Prikker på liten nevner")
-    dt[spv_tmp == 0 & sumNEVNER <= limits$NEVNER, let(pvern = 1, spv_tmp = 3)]
-  }
-  cat("\n** Antall primærprikker i filen: ", dt[pvern == 1, .N])
+  data.table::set(dt, j = c(unname(strata_cols), "rid__", "skal_naboprikkes"), value = NULL)
 }
 
 #' @title get_censor_limits
@@ -381,7 +403,7 @@ warn_if_special_triangles <- function(alltriangles) {
   }, logical(1L))]
   
   if (length(special_dims) > 0L) {
-    cat("\n**** Spesialstrata oppdaget for dimensjonene: ",
+    print_console_message("\n**** Spesialstrata oppdaget for dimensjonene: ",
         paste(special_dims, collapse = ", "),
         "\n**** Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
   } 
@@ -396,21 +418,40 @@ warn_if_special_triangles <- function(alltriangles) {
 #' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
 #' @keywords internal
 #' @noRd
-do_remove_censored_observations <- function(dt, outvalues){
-  valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
-  valF <- intersect(names(dt), valF)
-  if(length(valF) > 0){
-    dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-    dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
-                                       list(na.rm = TRUE))), .SDcols = valF] 
-    dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
-    dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
-    dt[SPVFLAGG > 0, (outvalues) := NA]
+do_remove_censored_observations <- function(dt, outvalues, parameters){
+  data.table::set(dt, j = "SPVFLAGG", value = 0L)
+  if(is_empty(parameters$Censor_type)) return(invisible(NULL))
+  if(parameters$Censor_type == "R"){
+    check_if_spv_tmp_correct(dt, parameters)
+    dt[, SPVFLAGG := spv_tmp]
+  } 
+  
+  if(parameters$Censor_type == "STATA"){
+    valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
+    valF <- intersect(names(dt), valF)
+    if(length(valF) > 0){
+      dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
+      dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
+                                         list(na.rm = TRUE))), .SDcols = valF] 
+      dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
+      dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
+    }
   }
-  dt[is.na(SPVFLAGG), SPVFLAGG := 0]
-  dt[SPVFLAGG %in% c(-1, 4), SPVFLAGG := 3]
-  dt[SPVFLAGG == 9, SPVFLAGG := 1]
-  return(dt)
+  dt[is.na(SPVFLAGG), SPVFLAGG := 0L]
+  dt[SPVFLAGG %in% c(-1L, 4L), SPVFLAGG := 3L]
+  dt[SPVFLAGG == 9L, SPVFLAGG := 1L]
+  dt[SPVFLAGG > 0L, (outvalues) := NA]
+}
+
+#' @title check_if_spv_tmp_correct
+#' @description
+#' If spv_tmp is 0, but a .f-column is > 0, spv_tmp is corrected before being used to set SPVFLAGG. 
+#' @keywords internal
+#' @noRd
+check_if_spv_tmp_correct <- function(dt, parameters){
+  valF <- paste0(union(getOption("khfunctions.valcols"), parameters$outvalues), ".f")
+  valF <- intersect(names(dt), valF)
+  dt[spv_tmp == 0 & rowSums(dt[, .SD, .SDcols = valF]) > 0, spv_tmp := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
 }
 
 #' @title do_censor_kube_stata

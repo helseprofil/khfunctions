@@ -4,13 +4,12 @@
 #' @noRd
 scale_rate_and_meisskala <- function(dt, parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
-  scale <- as.numeric(parameters$CUBEinformation$RATESKALA)
-  if(!is_rateskala) return(dt)
-  cat("\n* Skalerer RATE til per", scale, "\n")
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  if(!is_rateskala) return(invisible(NULL))
+  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
   
-  if("RATE" %in% names(dt)) dt[, RATE := RATE * scale]
-  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scale]
-  return(dt)
+  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
+  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
 }
 
 #' @title get_maltall_column
@@ -30,12 +29,12 @@ get_maltall_column <- function(parameters){
 #' Creates new columns post moving average, as defined in ACCESS::TNP_PROD::NYEKOL_RAD_postMA
 #' @noRd
 do_format_cube_columns <- function(dt, parameters){
-  dt <- add_missing_columns(dt = dt)
-  dt <- add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
-  dt <- set_nonsumvalues(dt = dt)
-  dt <- set_alder_aar(dt = dt)
+  add_missing_columns(dt = dt)
+  add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
+  set_nonsumvalues(dt = dt)
+  set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
-  dt <- add_maltall(dt = dt, maltallcolumn = parameters$MALTALL)
+  data.table::set(dt, j = "MALTALL", value = dt[[parameters$MALTALL]])
   return(dt)
 }
 
@@ -47,8 +46,7 @@ add_missing_columns <- function(dt){
   obligcolumns <- c("TELLER","NEVNER","RATE","PREDTELLER")
   obligcolumns <- paste0(rep(obligcolumns, each = 4), c("", ".f", ".a", ".n"))
   missingcolumns <- setdiff(obligcolumns, names(dt))
-  if(length(missingcolumns) > 0) dt[, (missingcolumns) := NA_real_]
-  return(dt)
+  if(length(missingcolumns) > 0) data.table::set(dt, j = missingcolumns, value = NA_real_)
 }
 
 #' @title add_sumvalues
@@ -61,7 +59,6 @@ add_sumvalues <- function(dt, factor){
   dt[, let(sumTELLER = factor * TELLER,
            sumNEVNER = factor * NEVNER,
            sumPREDTELLER = factor * PREDTELLER)]
-  return(dt)
 }
 
 #' @title set_nonsumvalues
@@ -74,28 +71,17 @@ set_nonsumvalues <- function(dt){
   if(length(values) == 0) return(dt)
   for(val in values){
     valN = paste0(val, ".n")
-    dt[, (val) := get(val)/get(valN)]
+    data.table::set(dt, j = val, value = dt[[val]] / dt[[valN]])
   }
-  return(dt)
 }
 
 #' @keywords internal
 #' @noRd
 set_alder_aar <- function(dt){
-  dt[, AAR := paste0(AARl, "_", AARh)]
-  if (all(c("ALDERl", "ALDERh") %in% names(dt))) dt[, ALDER := paste0(ALDERl, "_", ALDERh)]
-  return(dt)
-}
-
-#' @title add_maltall
-#' @description sets maltall column
-#' @param dt dataset
-#' @param maltallcolumn the column containing maltall, identified with get_maltall_column()
-#' @keywords internal
-#' @noRd
-add_maltall <- function(dt, maltallcolumn){
-  dt[, MALTALL := get(maltallcolumn)]
-  return(dt)
+  data.table::set(dt, j = "AAR", value = paste0(dt[["AARl"]], "_", dt[["AARh"]]))
+  if(all(c("ALDERl", "ALDERh") %in% names(dt))){
+    data.table::set(dt, j = "ALDER", value = paste0(dt[["ALDERl"]], "_", dt[["ALDERh"]]))
+  } 
 }
 
 #' @title filter_invalid_outcodes
@@ -128,7 +114,6 @@ get_etabs <- function(columnnames, parameters){
 #' @noRd
 set_etab_names <- function(dt, etablist){
   data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
-  return(dt)
 }
 
 #' @keywords internal
@@ -167,43 +152,3 @@ get_outvalues_allvis <- function(parameters){
   }
   return(cols)
 }
-
-#' @title fix_geo_special
-#' @description Manually handle bydel startaar, DK2020 and AALESUND/HARAM
-#' @keywords internal
-#' @noRd
-fix_geo_special <- function(dt, parameters){
-  specs = parameters$fileinformation[[parameters$files$TELLER]] 
-  valK <- get_value_columns(names(dt))
-  bydelstart <- specs[["B_STARTAAR"]]
-  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
-  dk2020start <- specs[["DK2020_STARTAAR"]]
-  isbydelstart <- !is.na(bydelstart) && bydelstart > 0
-  isdk2020 <- !is.na(dk2020start) && dk2020start > 0
-  
-  if(!isbydelstart && !isdk2020) return(invisible(dt))
-  
-  cat("\n* Håndterer bydelsstartår og delingskommuner\n")
-  
-  if (isbydelstart) {
-    cat(" - Sletter bydelstall for år før ", bydelstart, "\n", sep = "")
-    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (valK) := NA]
-    dt[GEOniv %in% c("B", "V") & AARl < bydelstart, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
-  }
-  
-  if (isdk2020) {
-    cat(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
-    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (valK) := NA]
-    dt[GEOniv == "K" & GEO %chin% dk2020 & AARl < dk2020start, (c(paste0(valK, ".f"), "spv_tmp")) := 9]
-    
-    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
-    cat(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
-    ystart <- ifelse(parameters$name == "VALGDELTAKELSE", 2019, 2020)
-    .years <- seq(ystart, ystart+3)
-    .geos <- c("1508", "1580")
-    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (valK) := NA]
-    dt[GEOniv == "K" & GEO %in% .geos &  (AARl %in% .years | AARh %in% .years | (AARl < min(.years) & AARh > max(.years))), (c(paste0(valK, ".f"), "spv_tmp")) := 9]
-  }
-  return(invisible(dt))
-}
-

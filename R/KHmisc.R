@@ -33,9 +33,9 @@ expand.grid.dt <- function(...){
 #' Previous name SettMergeNAs
 #' @keywords internal
 #' @noRd
-set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
-  cat("\n*** Håndterer implisitte nuller")
-  vals <- get_value_columns(names(file))
+set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
+  print_console_message("\n*** Håndterer implisitte nuller")
+  vals <- get_value_columns(names(dt))
   
   for (val in vals) {
     if (val %in% names(implicitnull_defs)) {
@@ -52,12 +52,11 @@ set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
     
     valF <- paste0(val, ".f")
     valA <- paste0(val, ".a")
-    missingrows <- which((is.na(file[[val]]) & file[[valF]] == 0) | is.na(file[[valF]]))
+    missingrows <- which((is.na(dt[[val]]) & dt[[valF]] == 0) | is.na(dt[[valF]]))
     n_missing <- length(missingrows)
-    if(n_missing > 0) cat("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
-    file[missingrows, names(.SD) := replacemissing, .SDcols = c(val, valF, valA)]
+    if(n_missing > 0) print_console_message("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
+    data.table::set(dt, i = missingrows, j = c(val, valF, valA), value = replacemissing)
   }
-  return(file)
 }
 
 
@@ -65,7 +64,7 @@ set_implicit_null_after_merge <- function(file, implicitnull_defs = list()) {
 
 #' KHerr (kb)
 KHerr <- function(error) {
-  cat(
+  print_console_message(
     "***************************************************************************\n",
     "*KHFEIL!! ", error, "\n***************************************************************************\n"
   )
@@ -109,29 +108,7 @@ SVcloneRecord <- function(dbh, table, koblid) {
   sqlQuery(dbh, sql)
 }
 
-#' TilFilLogg (kb)
-#'
-#' @param koblid 
-#' @param felt 
-#' @param verdi 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
-  # Sjekk om finnes rad for filid, eller lag ny
-  if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
-    print("**************Hvorfor er jeg egentlig her?*********************'")
-    sqlQuery(globs$log, paste("DELETE * FROM INNLES_LOGG WHERE KOBLID=", koblid, "AND SV='S'", sep = ""))
-    upd <- paste("INSERT INTO INNLES_LOGG ( KOBLID, BATCH, SV, FILGRUPPE ) SELECT=", koblid, ",'", batchdate, "', 'S',", FinnFilGruppeFraKoblid(koblid, globs = globs), sep = "")
-    sqlQuery(globs$log, upd)
-  }
-  if (is.character(verdi)) {
-    verdi <- paste("'", verdi, "'", sep = "")
-    verdi <- gsub("\\n", "' & Chr(13) & Chr(10) & '", verdi) # Veldig saer \n i Access!
-  }
-  upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
-  tmp <- sqlQuery(globs$log, upd)
-  # cat("********\n",tmp,"__________\n")
-}
+
 
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 #' expand.grid.df (ybk)

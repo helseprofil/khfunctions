@@ -10,7 +10,7 @@
 #' @param dumps any file dumps requested
 #' @returns formatted original file, ready for further processing
 read_original_file <- function(filedescription, parameters, dumps = list()){
-  cat("\n* Starter innlesing av fil")
+  print_console_message("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   DF <- switch(toupper(filedescription$FORMAT),
                "PARQUET" = do_read_org_parquet(filedescription = filedescription),
@@ -24,7 +24,7 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   
   if(is_not_empty(filedescription$RSYNT1)){
     DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-    DF <- do_special_handling(name = "RSYNT1", dt = DF, code = filedescription$RSYNT1, parameters = parameters, koblid = filedescription$KOBLID, filedescription = filedescription)
+    DF <- do_special_handling(name = "RSYNT1", dt = DF, dt_name = "DF", code = filedescription$RSYNT1, parameters = parameters, koblid = filedescription$KOBLID, filedescription = filedescription)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
     if(length(extracols) > 0) DF[, (extracols) := NULL]
   }
@@ -71,7 +71,7 @@ do_read_org_parquet <- function(filedescription){
   file <- arrow::open_dataset(filedescription$filepath)
   chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
   file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
-  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+  if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   do_convert_na_to_empty(file)
   return(file)
 }
@@ -79,7 +79,7 @@ do_read_org_parquet <- function(filedescription){
 #' @noRd
 do_read_org_spss <- function(filedescription){
   file <-try(foreign::read.spss(file = filedescription$filepath, use.value.labels = FALSE, max.value.labels = 0, as.data.frame = T), silent = T)
-  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+  if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   return(file)
 }
@@ -91,7 +91,7 @@ do_read_org_csv <- function(filedescription, read_arg_list){
   sep <- ifelse("sep" %in% names(read_arg_list), read_arg_list$sep, ";")
   encoding <- ifelse("encoding" %in% names(read_arg_list), read_arg_list$encoding, "unknown")
   file <- try(data.table::fread(file = filedescription$filepath, header = FALSE, skip = 0, colClasses = "character", sep = sep, encoding = encoding))
-  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+  if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   format_arg_list <- c(list(file = file, filedescription = filedescription), read_arg_list)
   file <- do.call(format_excel_and_csv_files, format_arg_list)
   return(file)
@@ -105,7 +105,7 @@ do_read_org_excel <- function(filedescription, read_arg_list){
     sheet <- find_correct_excel_sheet(sheet = as.character(read_arg_list$ark), sheets = sheets, filename = filedescription$FILNAVN)
   }
   file <- suppressMessages(try(readxl::read_excel(filedescription$filepath, sheet = sheet, col_names = FALSE, col_types = "text", skip = 0, na = "NA")))
-  if("try-error" %in% class(file)) stop("Error when reading file: ", filedescription$FILNAVN)
+  if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   file <- do.call(format_excel_and_csv_files, c(list(file = file, filedescription = filedescription), read_arg_list))
   return(file)

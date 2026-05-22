@@ -9,11 +9,11 @@
 #' @keywords internal
 #' @noRd
 compute_new_value_from_formula <- function(dt, formulas, post_moving_average = FALSE){
-  if(is_empty(formulas)) return(invisible(NULL))
+  if(is_empty(formulas)) return(invisible(dt))
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
-    cat("\n*** Legger til nye kolonner: ", f)
+    print_console_message("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()
@@ -28,14 +28,15 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
       dt[, paste0(name, ".n") := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = paste0(included_columns, ".n")]
       dt[, (paste0(name, c(".fn1", ".fn3", ".fn9"))) := list(0,0,0)]
     }  
-    dt[is.na(get(name)) | is.infinite(get(name)) | is.nan(get(name)), (paste0(name, c("", ".f"))) := list(NA, 2)]
+    dt[is.na(dt[[name]]) | is.infinite(dt[[name]]) | is.nan(dt[[name]]), (paste0(name, c("", ".f"))) := list(NA, 2)]
   }
+  return(invisible(dt))
 }
 
 #' @noRd
 add_crude_rate <- function(dt, parameters){
   if(!"NEVNER" %in% names(dt)){
-    cat("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
   
@@ -62,7 +63,7 @@ add_crude_rate <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
-  if(is_empty(formulas)) return(dt)
+  if(is_empty(formulas)) return(invisible(dt))
   formulas <- unlist(strsplit(formulas, ";"))
   if(any(!grepl("^\\S+?\\s*=\\s*\\S+?\\{(.*)\\}$", formulas))){
     stop("FILFILTRE::NYEKOL_RAD har feil format: \n\n'", formulas, 
@@ -72,7 +73,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
   
   for(formula in formulas){
     formula <- trimws(formula)
-    cat("\n*** Legger til kolonner som sum av rader: ", formula)
+    print_console_message("\n*** Legger til kolonner som sum av rader: ", formula)
     fparts <- extract_formula_parts(formula = formula, fileinfo = fileinfo, parameters = parameters)
     
     newdata <- EkstraherRadSummer(dt, pstrorg = fparts$filter, FGP = fileinfo, parameters = parameters)
@@ -80,14 +81,14 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     newcols <- paste0(fparts$new, c("", ".f", ".a"))
     data.table::setnames(newdata, oldcols, newcols)
     newdims <- get_dimension_columns(names(newdata))
-    dt <- collapse::join(dt, newdata[, .SD, .SDcols = c(newdims, newcols)], on = newdims, how = "l", overid = 2, verbose = 0)
+    merge_cols_by_reference(orgdata = dt, newdata = newdata[, .SD, .SDcols = c(newdims, newcols)])
     valdef <- fileinfo$vals
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
-    dt <- set_implicit_null_after_merge(file = dt, implicitnull_defs = valdef)
+    set_implicit_null_after_merge(dt = dt, implicitnull_defs = valdef)
   }
-  return(dt)
+  return(invisible(dt))
 }
-    
+
 #' @keywords internal
 #' @noRd
 extract_formula_parts <- function(formula, fileinfo, parameters){
@@ -119,63 +120,58 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
   fparts[["filtercols"]] <- gsub("^(\\S+)\\s*(?:%in%|==).*$", "\\1", filters)
   fparts[["filtervals"]] <- gsub("^(?:\\S+)\\s*(?:%in%|==)\\s*(.*)$", "\\1", filters)
   fparts[[""]]  <- fparts$filtercols[fparts$filtercols %in% parameters$DefDesign$DesignKols]
-  # delkols <- parameters$DefDesign$DelKols
-  # fparts[["recodeparts"]] <- names(delkols)[sapply(delkols, function(x) all(x %in% fparts$filtercols))]
-  # fparts[["recodecols"]] <- parameters$DefDesign[]  
-  #  parameters$DefDesign$DelKols$A == fparts$filtercols
   return(fparts)
 }
 
-#' @keywords internal
-#' @noRd
-get_recode_design <- function(filter){
-  
-  # Omkod disse
-  if (length(subvals) > 0) {
-    # For omkodbare kolonner maa disse omkodes til soekte verdier (for generalitet maa det omkodes selv om disse finnes)
-    OmkParts <- list()
-    parameters$DefDesign$DelKols
-    for (part in names(parameters$DefDesign$DelKols)) {
-      if (all(parameters$DefDesign$DelKols[[del]] %in% names(subvals))) {
-        dvals <- subvals[parameters$DefDesign$DelKols[[del]]]
-        if (parameters$DefDesign$DelFormat[[del]] == "integer") {
-          dvals <- setNames(as.integer(dvals), names(dvals))
-        }
-        OmkParts[[del]] <- setNames(data.frame(matrix(dvals, ncol = length(dvals))), names(dvals))
-      } else if (any(parameters$DefDesign$DelKols[[del]] %in% names(subvals))) {
-        print("VARSKU HER!!!!!!!!!!!!!!! FEIL i EkstraherRadSummer!")
-      }
-    }
-    print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
-    orgdesign <- find_filedesign(dt, parameters = parameters)
-    redesign <- find_redesign(orgdesign = orgdesign, targetdesign = list(Parts = OmkParts), parameters = parameters)
-    dt <- do_filter_and_recode_to_redesign(dt = dt, redesign = redesign, parameters = parameters)
-  }
-}
-
-#' @title set_lead_value
-#' 
+#' @title merge_cols_by_reference
 #' @description
-#' CAN REPLACE YALAGVAL, BUT MUST FIND A WAY OF USING IT IN ACCESS
-#' MAKE NEW COLUMN "LAGVAL" 
+#' Adds columns from newdata to orgdata by reference
 #' @keywords internal
 #' @noRd
-set_lead_value <- function(file, yearlag = -1, vals = NULL){
-  if(is.null(vals)) stop("vals must be specified to generate lead values")
-  d <- data.table::copy(file)
-  d[, lagAARl := AARl + yearlag]
-  d[, c("AARl", "AARh") := list(NULL)]
-  data.table::setnames(d, "lagAARl", "AARl")
-  tabcols <- get_dimension_columns(names(d))
-  # m/p means plus/minus
-  lagprefix <- paste0("Y", ifelse(yearlag < 0, "p", "m"), abs(yearlag), "_A_") 
-  oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
-  newvals <- paste0(lagprefix, allvals)
-  data.table::setnames(d, old = allvals, new = newvals)
-  d <- d[, mget(c(tabcols, newvals))]
-  return(d)
+merge_cols_by_reference <- function(orgdata, newdata){
+  commoncols <- intersect(
+    get_dimension_columns(names(orgdata)),
+    get_dimension_columns(names(newdata))
+  )
+  newcols_names <- setdiff(names(newdata), commoncols)
+  
+  dup_check <- newdata[, .N, by = commoncols][N > 1]
+  
+  if (nrow(dup_check) > 0) {
+    stop(
+      sprintf(
+        "merge_cols_by_reference(): newdata har duplikate nøkler i commoncols (%s). Eksempel:\n%s",
+        paste(commoncols, collapse = ", "),
+        paste(utils::capture.output(print(head(dup_check))), collapse = "\n")
+      ),
+      call. = FALSE
+    )
+  }
+  
+  newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
+  data.table::set(orgdata, j = newcols_names, value = newcols_vals)
 }
 
+#' #' @title set_lead_value
+#' #' @description 
+#' #' shifts year by `shift`, before merging to main table. 
+#' #' in prefix, m/p means plus/minus. Prefix need to include `_A_` as column names must match expected names later.  
+#' #' @keywords internal
+#' #' @noRd
+#' set_lead_year <- function(file, shift, vals = NULL){
+#'   if(is.null(vals)) stop("vals must be specified to generate lead values")
+#'   d <- data.table::copy(file)
+#'   data.table::set(d, j = c("AARl", "AARh"), 
+#'                   value = list(d[["AARl"]] + shift, NULL))
+#' 
+#'   tabcols <- get_dimension_columns(names(d))
+#'   prefix <- paste0("Y", ifelse(shift < 0, "p", "m"), abs(shift), "_A_") 
+#'   oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
+#'   newvals <- paste0(prefix, oldvals)
+#'   data.table::setnames(d, old = oldvals, new = newvals)
+#'   d <- d[, .SD, .SDcols = c(tabcols, newvals)]
+#'   return(d)
+#' }
 
 # Existing functions to be replaced and removed ---- 
 
@@ -226,7 +222,7 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
         print("VARSKU HER!!!!!!!!!!!!!!! FEIL i EkstraherRadSummer!")
       }
     }
-    print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
+    # print("Til OmkodFil fra EkstraherRadSummer, dette kan fort gi udekt ved ubalansert design. Dette faller bort igjen ved NF[TNF")
     orgdesign <- find_filedesign(dt, parameters = parameters)
     redesign <- find_redesign(orgdesign = orgdesign, targetdesign = list(Parts = OmkParts), parameters = parameters)
     dt <- do_filter_and_recode_to_redesign(dt = dt, redesign = redesign, parameters = parameters)
@@ -236,40 +232,4 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
   return(dt)
 }
 
-#' @title YAlagVal (kb)
-#' @description 
-#' used in ACCESS, only for befvekst. AGE lag is not used, only year. 
-#' Generate a new file with all dimension columns and the selected value column. 
-#' AARl and ALDERl is changed by the factors specified in YL and AL, to be merged onto different rows. 
-#' 
-#' This function can probably be replaced by collapse-functions flag/flead. 
-#' @param FG file
-#' @param YL year lag
-#' @param AL age lag
-#' @param vals value to create lag value
-#' @keywords internal
-#' @noRd
-YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
-  ltag <- function(lag) {
-    ltag <- ""
-    if (lag > 0) {
-      ltag <- paste("m", abs(lag), sep = "")
-    } else if (lag < 0) {
-      ltag <- paste("p", abs(lag), sep = "")
-    }
-    return(ltag)
-  }
-  FGl <- data.table::copy(FG)
-  FGl[, c("lAARl", "lALDERl") := list(AARl + YL, ALDERl + AL)]
-  FGl[, c("AARl", "AARh", "ALDERl", "ALDERh") := list(NULL)]
-  data.table::setnames(FGl, c("lAARl", "lALDERl"), c("AARl", "ALDERl"))
-  tabkols <- setdiff(names(FGl), get_value_columns(names(FG), full = TRUE))
-  lvals <- paste("Y", ltag(YL), "_A", ltag(AL), "_", vals, c("", ".f", ".a"), sep = "")
-  data.table::setnames(FGl, unlist(lapply(vals, function(x) {
-    paste(x, c("", ".f", ".a"), sep = "")
-  })), lvals)
-  FGl <- FGl[, .SD, .SDcols = c(tabkols, lvals)]
-  data.table::setkeyv(FG, tabkols)
-  data.table::setkeyv(FGl, tabkols)
-  return(FGl)
-}
+

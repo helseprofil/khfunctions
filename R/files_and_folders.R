@@ -13,16 +13,16 @@
 #   alltargetfiles <- kubestatus_ok[, filenames]
 #   notwanted <- setdiff(orgprodfiles, alltargetfiles)
 #   if(length(notwanted) > 0){
-#     cat("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
+#     print_console_message("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
 #         paste("\n -", notwanted))
-#     cat("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
+#     print_console_message("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
 #     x <- utils::menu(title = "\n\nVil du flytte disse filene til arkivet og fortsette?",
 #                      choices = c("Ja, flytt filene", "Nei, avbryt"))
 #     if(x == 2){
-#       cat("\nAvbryter oppdatering av mappe...")
+#       print_console_message("\nAvbryter oppdatering av mappe...")
 #       return(invisible(NULL))
 #     } else {
-#       cat("\nFlytter filer til arkiv")
+#       print_console_message("\nFlytter filer til arkiv")
 #       from <- file.path(prod, notwanted)
 #       to <- file.path(arkiv, notwanted)
 #       fs::file_move(from, to)
@@ -64,10 +64,11 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   if(length(filelist$notfound) > 0) report_godkjent_files_notfound(filelist$notfound, year)
   
   if(utils::packageVersion("qualcontrol") < base::package_version("1.3.8")){
-    cat("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
+    print_console_message("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
     return(invisible(NULL))
   } 
-  cat("\n* SJEKKER FRISKVIKFILER\n\n")
+
+  print_console_message("\n* SJEKKER FRISKVIKFILER\n\n")
   qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = T)
   tabname <- paste0("FRISKVIKSJEKK_", profil,"_", geoniv)
   if(nrow(.GlobalEnv[[tabname]]) > 0) evaluate_friskviksjekk(tabname = tabname)
@@ -77,14 +78,14 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
 evaluate_friskviksjekk <- function(tabname){
   d <- data.table::copy(.GlobalEnv[[tabname]])
   miss_kube <- d[is.na(Kube), .N]
-  if(miss_kube > 0) cat("\n** Ikke alle kubefiler ble lest inn, feil i funksjonen eller manglende kuber")
+  if(miss_kube > 0) print_console_message("\n** Ikke alle kubefiler ble lest inn, feil i funksjonen eller manglende kuber")
   problem <- d[ALT_OK != "Ja", .N]
   if(problem > 0){
-    cat(paste0("\n** Noen av filene har potensielle problemer, se tabell med View(", tabname, ") for detaljer"))
+    print_console_message(paste0("\n** Noen av filene har potensielle problemer, se tabell med View(", tabname, ") for detaljer"))
     problem_indikatorer <- d[ALT_OK != "Ja", unique(Friskvik)]
-    cat("\n** Sjekk spesielt følgende indikatorer: ", paste0("\n - ", problem_indikatorer))
+    print_console_message("\n** Sjekk spesielt følgende indikatorer: ", paste0("\n - ", problem_indikatorer))
   } else {
-    cat("\n** Ingen problemer avdekket")
+    print_console_message("\n** Ingen problemer avdekket")
   }
 }
 

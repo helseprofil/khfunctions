@@ -5,11 +5,11 @@
 #' @noRd
 write_filegroup_output <- function(dt, parameters){
   if(!parameters$write) return(invisible(NULL))
-  cat("\n\n* SAVING OUTPUT FILES:\n")
+  print_console_message("\n\n* SAVING OUTPUT FILES:\n")
   root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  cat("\n", parquet,"\n", datert)
+  print_console_message("\n", parquet,"\n", datert)
   table <- convert_dt_to_arrow_table(dt)
   arrow::write_parquet(table, sink = parquet, compression = "snappy")
   file.copy(from = parquet, to = datert)
@@ -47,11 +47,11 @@ do_write_parquet <- function(dt, filepath){
 #' @noRd
 write_population_filegroup <- function(table, root){
   table <- add_partition_columns(table = table)
-  cat("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
   do_write_parquet_dataset(table = table, 
                            path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo")),
                            partitioncols = c("AARl", "lks"))
-  cat("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
   do_write_parquet_dataset(table = table, 
                            path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo")),
                            partitioncols = c("alder", "AARl", "lks"))
@@ -85,7 +85,7 @@ do_write_parquet_dataset <- function(table, path, partitioncols){
     dplyr::arrange(!!!rlang::syms(partitioncols))
   
   arrow::write_dataset(dataset = dataset, path = path, format = "parquet", partitioning = partitioncols, compression = "snappy")
-  cat("Ferdig!")
+  print_console_message("Ferdig!")
 }
 
 #' @title write_codebooklog
@@ -94,7 +94,7 @@ do_write_parquet_dataset <- function(table, path, partitioncols){
 write_codebooklog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
   log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "TYPE", "ORG", "OMK", "FREQ"))]
-  cat("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  print_console_message("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
@@ -106,7 +106,7 @@ write_codebooklog <- function(log, parameters){
 #' @noRd
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
-  cat("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  print_console_message("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
@@ -116,7 +116,7 @@ write_cleanlog <- function(log, parameters){
 move_old_files_to_archive <- function(path, parameters){
   oldfiles <- list.files(path, pattern = paste0(".*_", parameters$name, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.csv$"))
   if(length(oldfiles) == 0) return(invisible(NULL))
-  cat("\n** Flytter gamle filer til arkiv-mappen")
+  print_console_message("\n** Flytter gamle filer til arkiv-mappen")
   for(file in oldfiles){
     fs::file_move(path = file.path(path, file), new_path = file.path(path, "arkiv", file)) 
   }  
@@ -138,14 +138,14 @@ write_cube_output <- function(outputlist, parameters){
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   
-  cat("\nSAVING OUTPUT FILES:\n")
+  print_console_message("\nSAVING OUTPUT FILES:\n")
   # Full cube .parquet format
   do_write_parquet(outputlist$KUBE, filepath = datert_parquet_full)
-  cat("\n", datert_parquet_full)
+  print_console_message("\n", datert_parquet_full)
   # Main output file for stat bank (csv and parquet)
   data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
   do_write_parquet_allvis(dt = outputlist$ALLVIS, filepath = datert_parquet, parameters = parameters)
-  cat("\n", datert_csv, "\n", datert_parquet)
+  print_console_message("\n", datert_csv, "\n", datert_parquet)
   
   # QC files (parquet and csv)
   data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";")
@@ -237,13 +237,13 @@ melt_access_spec <- function(dscr, name = NULL){
 #' @param allvisvals All columns 
 #' @keywords internal
 #' @noRd
-LagQCKube <- function(allvis, allvistabs, kube){
+LagQCKube <- function(data, allvistabs){
   qcvals <- getOption("khfunctions.qcvals")
-  stataprikkvals <- grep("^pvern$|^serieprikket$|^naboprikketIomg*", names(kube), value = T)
-  uprikk <- data.table::copy(kube)[, .SD, .SDcols = c(allvistabs, qcvals, stataprikkvals)]
+  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
+  uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
   
-  QC <- collapse::join(allvis, uprikk, on = allvistabs, overid = 2, verbose = 0)
+  QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
   return(QC)
 }
 

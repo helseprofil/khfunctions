@@ -8,12 +8,12 @@ generate_and_export_all_friskvik_indicators <- function(dt, parameters) {
   if(!parameters$write) return(invisible(NULL))
   indikatorer <- parameters$friskvik[, .SD, .SDcols = c("INDIKATOR", "ID")]
   if (nrow(indikatorer) == 0){
-    cat("\n** INGEN FRISKVIKFILER SATT OPP")
+    print_console_message("\n** INGEN FRISKVIKFILER SATT OPP")
     return(invisible(NULL))
   }
   
   for(i in 1:nrow(indikatorer)){ 
-    cat("\n\n** Lager Friskvikfil for", indikatorer[i, INDIKATOR])
+    print_console_message("\n\n** Lager Friskvikfil for", indikatorer[i, INDIKATOR])
     generate_friskvik_indicator(dt = dt, id = indikatorer[i, ID], parameters = parameters)
   }
 }
@@ -25,7 +25,7 @@ generate_and_export_all_friskvik_indicators <- function(dt, parameters) {
 generate_friskvik_indicator <- function(dt, id, parameters) {
   FVdscr <- parameters$friskvik[ID == id]
   if(!FVdscr$MODUS %in% c("K", "F", "B")){
-    cat("\n***ADVARSEL!!!!!!!! modus ", FVdscr$MODUS, "kan ikke brukes i FRISKVIK ikke\nFriskvikfil for ID =", id, "kan ikke genereres")
+    print_console_message("\n***ADVARSEL!!!!!!!! modus ", FVdscr$MODUS, "kan ikke brukes i FRISKVIK ikke\nFriskvikfil for ID =", id, "kan ikke genereres")
     return(invisible(NULL))
   }
   
@@ -54,17 +54,17 @@ generate_friskvik_indicator <- function(dt, id, parameters) {
   d[, (setdiff(getOption("khfunctions.profiltabs"), names(d))) := NA_character_]
   missing <- setdiff(c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals")), names(d))
   if (length(missing) > 0) {
-    cat("\n!!OBS, Kolonnene", missing, "mangler i friskvikfilen, settes til NA!")
+    print_console_message("\n!!OBS, Kolonnene", missing, "mangler i friskvikfilen, settes til NA!")
     d[, (missing) := NA]
   }
   
   if(is_not_empty(FVdscr$ALTERNATIV_MALTALL)){
-    d[, MALTALL := get(FVdscr$ALTERNATIV_MALTALL)]
+    d[, MALTALL := d[[FVdscr$ALTERNATIV_MALTALL]]]
     d[, setdiff(getOption("khfunctions.profilvals"), "MALTALL") := NA]
   }
   
   d[SPVFLAGG > 0, getOption("khfunctions.profilvals") := NA]
-  d <- d[, mget(c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals")))]
+  d <- d[, .SD, .SDcols = c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals"))]
   
   setPath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), FriskVDir, parameters$year, "csv")
   
@@ -73,10 +73,10 @@ generate_friskvik_indicator <- function(dt, id, parameters) {
   utfiln <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", parameters$batchdate, ".csv"))
   msgpath <- paste0(FriskVDir, "/", getOption("khfunctions.year"), "/csv/", basename(utfiln))
   if(nrow(d) > 0){
-    cat("\n-->> SKRIVER", msgpath)
+    print_console_message("\n-->> SKRIVER", msgpath)
     data.table::fwrite(d, utfiln, sep = ";", row.names = FALSE)
   } else {
-    cat("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:", msgpath)
+    print_console_message("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:", msgpath)
   }
 } 
 
@@ -98,7 +98,9 @@ do_filter_friskvik_age <- function(dt, age_filter, parameters){
 #' @noRd
 do_filter_friskvik_tabs <- function(dt, dscr){
   for (tab in c("AARh", "KJONN", "INNVKAT", "UTDANN", "LANDBAK")) {
-    if(is_not_empty(dscr[[tab]]) && dscr[[tab]] != "-") dt <- dt[get(tab) == dscr[[tab]]]
+    if(is_not_empty(dscr[[tab]]) && dscr[[tab]] != "-"){
+      dt <- dt[dt[[tab]] == dscr[[tab]]]
+    }
   }
   
   if(is_not_empty(dscr$EKSTRA_TAB) && dscr$EKSTRA_TAB != "-"){
@@ -127,22 +129,22 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   
   valid_cube <- read_kubestatus(parameters$dbh, year)[KUBE_NAVN == cubename]
   if(nrow(valid_cube) == 0){
-    cat("\n*Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
+    print_console_message("\n*Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
     return(invisible(NULL))
   }
   if(nrow(valid_cube) > 1){
-    cat("\n*>1 godkjent kube funnet i KUBESTATUS som matchet cubename, kan ikke lage friskvikfiler")
+    print_console_message("\n*>1 godkjent kube funnet i KUBESTATUS som matchet cubename, kan ikke lage friskvikfiler")
     return(invisible(NULL))
   }
   
   parameters[["batchdate"]] <- valid_cube$DATOTAG_KUBE
   indicators <- parameters$friskvik[, .SD, .SDcols = c("INDIKATOR", "ID")]
   if(is.null(friskvik_id)){
-    cat("\n* Generating all friskvik files as 'friskvik_id = NULL', ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
+    print_console_message("\n* Generating all friskvik files as 'friskvik_id = NULL', ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
   } else {
     if(any(!friskvik_id %in% indicators$ID)) stop("At least 1 of the requested friskvik_id(s) (", paste(friskvik_id, collapse = ", "), ") does not exist!")
     indicators <- indicators[ID %in% friskvik_id]
-    cat("\n* Generating requested friskvik ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
+    print_console_message("\n* Generating requested friskvik ID(s):", paste(indicators$ID, collapse = ", "), overwritewarning)
   }
   
   cube_name <- paste0(valid_cube$KUBE_NAVN, "_", valid_cube$DATOTAG_KUBE, ".parquet")

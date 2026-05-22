@@ -5,7 +5,7 @@
 #' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
-  cat("\n* Henter parametre")
+  print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
@@ -16,6 +16,8 @@ get_filegroup_parameters <- function(user_args){
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  parameters[["old_locale"]] <- ensure_utf8_encoding()
+  parameters[["threads"]] <- set_threads()
   return(c(parameters))
 }
 

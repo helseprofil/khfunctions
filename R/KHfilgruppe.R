@@ -11,14 +11,13 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
   parameters <- get_filegroup_parameters(user_args = user_args)
-  parameters[["old_locale"]] <- ensure_utf8_encoding()
   # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  cat("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
+  print_console_message("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
   if(parameters$n_files == 1){
     Filgruppe <- make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
@@ -28,7 +27,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
     }
     Filgruppe <- data.table::rbindlist(Filgruppe, fill = TRUE, use.names = TRUE)
   }
-  cat("-----\n* Alle originalfiler lest og stablet")
+  print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   check_encoding(dt = Filgruppe)
   
@@ -36,21 +35,21 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
-  cat("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+  print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
   
   do_set_fg_column_order(dt = Filgruppe)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
   set_integer_columns(dt = Filgruppe)
-  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
+  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, dt_name = "Filgruppe", code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  cat("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
-  cat("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  print_console_message("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
+  print_console_message("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
@@ -58,6 +57,10 @@ lagfilgruppe_cleanup <- function(parameters){
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   RODBC::odbcCloseAll()
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
+  if(!is.null(parameters$threads)){
+    data.table::setDTthreads(parameters$threads$dt)
+    collapse::set_collapse(nthreads = parameters$threads$collapse)
+  }
 }
 
 #' @title initiate_cleanlog
@@ -114,7 +117,7 @@ check_encoding <- function(dt) {
     if (any(grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE))) {
       # If an error is found, store the column name and unique values
       values <- unique(dt[[col]][grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE)])
-      koblid <- dt[get(col) %in% values, unique(KOBLID)]
+      koblid <- dt[dt[[col]] %in% values, unique(KOBLID)]
       errors[[col]] <- list(values = values, koblid = koblid)
     }
   }
@@ -132,7 +135,7 @@ check_encoding <- function(dt) {
     }
     ok <- FALSE
   } else {
-    cat("\n** Ingen encoding-problemer oppdaget")
+    print_console_message("\n** Ingen encoding-problemer oppdaget")
   }
   
   if(!ok){

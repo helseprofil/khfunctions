@@ -5,7 +5,7 @@
 #' @param args arguments passed to LagKUBE
 #' @return A list of relevant parameters
 get_cubeparameters <- function(user_args = list()) {
-  cat("\n* Henter parametre")
+  print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
@@ -19,6 +19,10 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["KB"]] <- SettKodeBokGlob(parameters = parameters)
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
+  parameters[["old_locale"]] <- ensure_utf8_encoding()
+  parameters[["threads"]] <- set_threads()
+  db <- paste0("duck_", parameters$name, "_", parameters$batchdate)
+  parameters[["duck"]] <- init_duckdb(dbname = db) 
   return(parameters)
 }
 
@@ -180,11 +184,11 @@ get_friskvik_information <- function(parameters){
 #' @noRd
 #' @param parameters global parameters
 get_filedesign <- function(parameters){
-  if(!exists("BUFFER", envir = .GlobalEnv)) stop("BUFFER does not exist, files not loaded")
-  filedesign <- list()
   files <- unique(parameters$files)
+  isfiles <- all(files %in% .GlobalEnv$BUFFER) || all(files %in% DBI::dbListTables(parameters$duck))
+  if(!isfiles) stop("Alle nødvendige filer er ikke lastet inn")
+  filedesign <- list()
   for(file in files){
-    if(is.null(.GlobalEnv$BUFFER[[file]])) stop("File ", file, " is not loaded into BUFFER")
     filedesign[[file]] <- find_filedesign(filename = file, parameters = parameters)
   }
   return(filedesign)
@@ -200,7 +204,10 @@ get_filedesign <- function(parameters){
 set_predictionfilter <- function(parameters) {
   refverdi <- parameters$CUBEinformation$REFVERDI
   tellerfile <- parameters$files$TELLER
-  maxaar <- max(BUFFER[[tellerfile]]$AARh)
+  maxaar <- ifelse(!is.null(.GlobalEnv$BUFFER[[tellerfile]]), 
+                   collapse::fmax(.GlobalEnv$BUFFER[[tellerfile]]$AARh),
+                   DBI::dbGetQuery(parameters$duck, paste0("SELECT MAX(AARh) AS maks_aar FROM ", tellerfile))$maks_aar)
+                   
   movav <- ifelse(is_not_empty(parameters$CUBEinformation$MOVAV), parameters$CUBEinformation$MOVAV, 1) 
   if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
   
@@ -252,7 +259,7 @@ set_predictionfilter <- function(parameters) {
 #' @param origdesign Cubedesign after merging teller and nevner. 
 update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
   if(!parameters$MOVAVparameters$is_movav) return(origdesign)
-  aar <- unique(dt[, mget(c("AARl", "AARh"))])
+  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
   origdesign$Y <- aar
   return(origdesign)
 }
