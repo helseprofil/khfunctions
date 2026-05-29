@@ -1,3 +1,7 @@
+# khfunctions (development version)
+
+- `control_rate_lks` gains a N_lks column indicating number of lks in each strata ([issue160](https://github.com/helseprofil/khfunctions/issues/160))
+
 # khfunctions 1.2.1 (2026-05-29)
 
 - adjusted to new access format, removed connection to deprecated khlogg.
