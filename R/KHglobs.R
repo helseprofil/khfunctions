@@ -105,7 +105,6 @@ connect_khelsa <- function(){
       "DBQ=", path, ";"
     )
   )
-  
 }
 
 #' @keywords internal

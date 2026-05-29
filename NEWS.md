@@ -1,6 +1,7 @@
-# khfunctions (development version)
+# khfunctions 1.2.1 (2026-05-29)
 
 - adjusted to new access format, removed connection to deprecated khlogg.
+- activated qualcontrol functions lks
 
 # khfunctions 1.2.0 (2026-05-28)
 
