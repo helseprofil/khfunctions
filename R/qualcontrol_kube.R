@@ -6,12 +6,13 @@ control_cube_output <- function(outputlist, parameters){
   all_checks <- c(all_checks, control_censoring(dt = outputlist$QC, parameters = parameters))
   all_checks <- c(all_checks, control_standardization(dt = outputlist$ALLVIS, parameters = parameters))
   all_checks <- c(all_checks, control_aggregation(dt = outputlist$KUBE, parameters = parameters))
-  control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   if(sum(all_checks) == 0){
     print_console_message("\n\n---\n* Alle sjekker passert!\n---\n")
   } else {
     print_console_message("\n\n---\n* Noen av sjekkene feilet, manuell kontroll nødvendig!\n---\n")
   }
+  control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
+  control_rate_lks(dt = outputlist$KUBE, parameters = parameters)
 }
 
 #' @keywords internal
@@ -259,7 +260,7 @@ control_rate_lks <- function(dt, parameters){
   
   if(nrow(out) > 0){
     print_console_message("\n** Se tabell for radene som har gitt utslag")
-    View(out)
+    View(out, title = "lks_rateutslag")
   } else {
     print_console_message("\n** Ingen utslag, kommunetallet ligger mellom minste og største LKS")
   }

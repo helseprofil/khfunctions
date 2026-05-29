@@ -1,4 +1,9 @@
-# khfunctions 1.2.0
+# khfunctions 1.2.1 (2026-05-29)
+
+- adjusted to new access format, removed connection to deprecated khlogg.
+- activated qualcontrol functions lks
+
+# khfunctions 1.2.0 (2026-05-28)
 
 ## General changes
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
