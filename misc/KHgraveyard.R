@@ -4456,3 +4456,34 @@ TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs
   upd <- paste("UPDATE INNLES_LOGG SET ", felt, "=", verdi, " WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = "")
   tmp <- sqlQuery(globs$log, upd)
 }
+
+#' @title connect_khlogg
+#' @description connects to khlogg.mdb
+#' @keywords internal
+#' @noRd
+connect_khlogg <- function(){
+  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
+                                         getOption("khfunctions.logg")))
+}
+
+#' SkrivKBLogg (kb)
+#'
+#' @param KB 
+#' @param type 
+#' @param filbesk 
+#' @param gruppe 
+#' @param batchdate 
+#' @param globs global parameters, defaults to SettGlobs
+SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
+  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
+  sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
+}
+
+#' @noRd
+#' @description
+#' Empties previous record in log for the current file, and initiate the new record
+initiate_read_log <- function(filedescription, parameters){
+  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filedescription$KOBLID, "AND SV='S'"))
+  RODBC::sqlQuery(parameters$log, paste0("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filedescription$KOBLID, ",'", parameters$batchdate, "', 'S','", filedescription$FILGRUPPE, "'"))
+  return(invisible(NULL))
+}

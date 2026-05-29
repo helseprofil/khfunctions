@@ -78,19 +78,6 @@ FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
 }
 
-#' SkrivKBLogg (kb)
-#'
-#' @param KB 
-#' @param type 
-#' @param filbesk 
-#' @param gruppe 
-#' @param batchdate 
-#' @param globs global parameters, defaults to SettGlobs
-SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
-  sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
-  sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
-}
-
 #' SVcloneRecord (kb)
 #'
 #' @param dbh 

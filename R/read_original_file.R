@@ -206,15 +206,6 @@ format_colname_string_as_vector <- function(string, old_new = c("old", "new"), f
   stop("Feil i MANHEADER: både kolonnenavn og posisjon angitt som gamle kolonnenavn")
 }
 
-#' @noRd
-#' @description
-#' Empties previous record in log for the current file, and initiate the new record
-initiate_read_log <- function(filedescription, parameters){
-  RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filedescription$KOBLID, "AND SV='S'"))
-  RODBC::sqlQuery(parameters$log, paste0("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filedescription$KOBLID, ",'", parameters$batchdate, "', 'S','", filedescription$FILGRUPPE, "'"))
-  return(invisible(NULL))
-}
-
 #' @title excelcols
 #' @return default excel headers
 excelcols <- function(){

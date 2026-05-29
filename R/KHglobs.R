@@ -5,7 +5,6 @@
 get_global_parameters <- function(){
   globs <- list()
   globs[["dbh"]] <- connect_khelsa()
-  globs[["log"]] <- connect_khlogg()
   globs[["batchdate"]] <- SettKHBatchDate()
   globs[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(globs$batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(globs$batchdate))
   globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from GEOKoder", as.is = TRUE), key = "GEO")
@@ -95,17 +94,18 @@ FinnStataExe <- function() {
 #' @keywords internal
 #' @noRd
 connect_khelsa <- function(){
-  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                         getOption("khfunctions.db")))
-}
-
-#' @title connect_khlogg
-#' @description connects to khlogg.mdb
-#' @keywords internal
-#' @noRd
-connect_khlogg <- function(){
-  RODBC::odbcConnectAccess2007(file.path(getOption("khfunctions.root"), 
-                                         getOption("khfunctions.logg")))
+  path <- file.path(getOption("khfunctions.root"),
+                    getOption("khfunctions.db"))
+  
+  if(!file.exists(path)) stop("Finner ikke databasefilen ", path)
+  
+  RODBC::odbcDriverConnect(
+    paste0(
+      "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
+      "DBQ=", path, ";"
+    )
+  )
+  
 }
 
 #' @keywords internal

@@ -1,6 +1,8 @@
 # khfunctions (development version)
 
-# khfunctions 1.2.0
+- adjusted to new access format, removed connection to deprecated khlogg.
+
+# khfunctions 1.2.0 (2026-05-28)
 
 ## General changes
 - Options is now checked every time the package is loaded ([issue143](https://github.com/helseprofil/khfunctions/issues/143))
