@@ -5,11 +5,6 @@ do_censor_cube <- function(dt, parameters){
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
   if(is_empty(parameters$Censor_type)) return(dt)
   
-  if(parameters$Censor_type == "STATA" && isTRUE(parameters$force_r_censoring)){
-    print_console_message("\n** ACCESS-parametre satt til STATA-prikking, bytter til R-prikking")
-    parameters$Censor_type <- "R"
-  }
-  
   if(parameters$Censor_type == "R"){
     data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
     print_console_message("\n* Prikker data (NY R-prikking)")
@@ -62,9 +57,12 @@ do_censor_primary_secondary <- function(dt, parameters){
   print_console_message("\n* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
-  
-  print_console_message("\n* NABOPRIKKING på:", names(alltriangles), "\n")
-  do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
+  if(length(alltriangles) > 0){
+    print_console_message("\n* NABOPRIKKING på:", names(alltriangles), "\n")
+    do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
+  } else {
+    print_console_message("\n* Ingen naboprikking satt opp\n")
+  }
   valuesF <- paste0(get_value_columns(names(dt)), ".f")
   dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
 }
