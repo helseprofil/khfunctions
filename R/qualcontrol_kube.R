@@ -227,15 +227,16 @@ control_rate_lks <- function(dt, parameters){
   data.table::set(d, j = val, value = round(d[[val]], 1))
   bycols <- c("kommune", setdiff(dims, "GEO"))
   
-  d <- d[, N := .N, by = bycols][N > 2][, N := NULL]
+  d <- d[, N := .N, by = bycols][N > 2]
   
   g <- collapse::GRP(d, bycols)
   res <- collapse::add_vars(g[["groups"]],
-                     overniv = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[[val]]), g = g),
-                     lks_min = collapse::fmin(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
-                     lks_max = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
-                     overniv_sumteller = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[["sumTELLER"]]), g = g),
-                     lks_sumteller = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumTELLER"]], NA_real_), g = g))
+                            N_lks = collapse::fndistinct(data.table::fifelse(d[["GEOniv"]] == "V", d[["GEO"]], NA_character_), g = g),
+                            overniv = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[[val]]), g = g),
+                            lks_min = collapse::fmin(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
+                            lks_max = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", d[[val]], NA_real_), g = g),
+                            overniv_sumteller = collapse::fmax(data.table::fifelse(d[["GEOniv"]] == "V", NA_real_, d[["sumTELLER"]]), g = g),
+                            lks_sumteller = collapse::fsum(data.table::fifelse(d[["GEOniv"]] == "V", d[["sumTELLER"]], NA_real_), g = g))
   res[, let(teller_diff = overniv_sumteller - lks_sumteller)][, names(.SD) := NULL, .SDcols = c("overniv_sumteller", "lks_sumteller")]
   if("sumNEVNER" %in% tncols){
     res <- collapse::add_vars(res,
@@ -253,6 +254,7 @@ control_rate_lks <- function(dt, parameters){
   out[retning == "over", diff := overniv - lks_max]
   colsrename <- c("overniv", "lks_min", "lks_max")
   data.table::setnames(out, colsrename, paste0(colsrename, "_", val))
+  data.table::setcolorder(out, c("kommune", "N_lks"))
   
   n <- collapse::join(out[, .SD, .SDcols = bycols], d[GEOniv == "V", .SD, .SDcols = c(bycols, "spv_tmp")], multiple = T, on = bycols, , verbose = 0, overid = 2)
   n <- unique(n[, n_lks_med_tall := sum(spv_tmp == 0), by = bycols])[, .SD, .SDcols = c(bycols, "n_lks_med_tall")]

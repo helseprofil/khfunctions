@@ -13,6 +13,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
   parameters[["files"]] <- get_filenames(parameters = parameters)
   parameters[["FILFILTRE"]] <- get_filfiltre(parameters = parameters)
+  parameters[["LKS_STARTAAR"]] <- get_lks_startaar(parameters = parameters)
   parameters[["fileinformation"]] <- get_filegroup_information(parameters = parameters)
   parameters[["friskvik"]] <- get_friskvik_information(parameters = parameters)
   parameters[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
@@ -24,6 +25,13 @@ get_cubeparameters <- function(user_args = list()) {
   db <- paste0("duck_", parameters$name, "_", parameters$batchdate)
   parameters[["duck"]] <- init_duckdb(dbname = db) 
   return(parameters)
+}
+
+get_lks_startaar <- function(parameters){
+  lks_start <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
+                                                 query = paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0"), 
+                                                 as.is = TRUE))
+  return(lks_start)
 }
 
 #' @title get_cube_information

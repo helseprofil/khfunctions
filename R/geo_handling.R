@@ -59,6 +59,17 @@ fix_geo_special <- function(dt, parameters){
     data.table::set(dt, i = idx, j = vals, value = NA)
   }
   
+  # Fjerner tall før startår for LKS, som definert i tabell ACCESS::LKS_STARTAAR
+  # Dette gjøres uansett om bydelstart er satt i access eller ikke, dersom kuben har levekårssonedata. 
+  if("V" %in% unique(dt[["GEOniv"]])){
+    print_console_message("\n* Håndterer startår for levekårssoner\n")
+    dt[parameters$LKS_STARTAAR, lks_startaar := i.lks_startaar, on = "GEO"]
+    idx <- which(dt[["AARl"]] < dt[["lks_startaar"]])
+    data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = vals, value = NA)
+    data.table::set(dt, j = "lks_startaar", value = NULL)
+  }
+  
   if (isdk2020) {
     print_console_message("\n* Håndterer delingskommuner 2020 (DK2020) \n")
     print_console_message(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")

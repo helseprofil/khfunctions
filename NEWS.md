@@ -1,3 +1,11 @@
+# khfunctions 1.2.2 (2026-06-03)
+
+- `control_rate_lks` gains a N_lks column indicating number of lks in each strata ([issue160](https://github.com/helseprofil/khfunctions/issues/160))
+- remove option to force R censoring
+- Skip secondary censoring when no triangles are specified
+- Implement `LKS_STARTAAR` table
+
+
 # khfunctions 1.2.1 (2026-05-29)
 
 - adjusted to new access format, removed connection to deprecated khlogg.
