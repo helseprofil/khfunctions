@@ -53,10 +53,10 @@ fix_geo_special <- function(dt, parameters){
   # Dersom vi går over til R-prikking, kan måltallene bevares
   if (isbydelstart) {
     print_console_message("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
-    print_console_message(" - Sletter tall for år før ", bydelstart, "\n", sep = "")
+    print_console_message(" - Sletter tall for år før ", bydelstart, " dersom de finnes\n", sep = "")
     idx <- which(dt[["GEOniv"]] %in% c("B", "V") & dt[["AARl"]] < bydelstart)
     data.table::set(dt, i = idx, j = flags, value = 9L)
-    data.table::set(dt, i = idx, j = vals, value = NA)
+    # data.table::set(dt, i = idx, j = vals, value = NA)
   }
   
   # Fjerner tall før startår for LKS, som definert i tabell ACCESS::LKS_STARTAAR
@@ -66,7 +66,7 @@ fix_geo_special <- function(dt, parameters){
     dt[parameters$LKS_STARTAAR, lks_startaar := i.lks_startaar, on = "GEO"]
     idx <- which(dt[["AARl"]] < dt[["lks_startaar"]])
     data.table::set(dt, i = idx, j = flags, value = 9L)
-    data.table::set(dt, i = idx, j = vals, value = NA)
+    # data.table::set(dt, i = idx, j = vals, value = NA)
     data.table::set(dt, j = "lks_startaar", value = NULL)
   }
   
@@ -75,7 +75,7 @@ fix_geo_special <- function(dt, parameters){
     print_console_message(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
     idx <- which(dt[["GEOniv"]] == "K" & dt[["GEO"]] %chin% dk2020 & dt[["AARl"]] < dk2020start)
     data.table::set(dt, i = idx, j = flags, value = 9L)
-    data.table::set(dt, i = idx, j = vals, value = NA)
+    # data.table::set(dt, i = idx, j = vals, value = NA)
     
     # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
     print_console_message(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
@@ -83,8 +83,11 @@ fix_geo_special <- function(dt, parameters){
     ystop <- ystart + 3
     idx <- which(dt[["GEO"]] %in% c("1508", "1580") & (dt[["AARl"]] <= ystop & dt[["AARh"]] >= ystart))
     data.table::set(dt, i = idx, j = flags, value = 9L)
-    data.table::set(dt, i = idx, j = vals, value = NA)
+    # data.table::set(dt, i = idx, j = vals, value = NA)
   }
+  
+  idx <- which(dt[["spv_tmp"]] == 9)
+  data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
   return(invisible(NULL))
 }
 

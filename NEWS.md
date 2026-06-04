@@ -1,3 +1,8 @@
+# khfunctions (development version)
+- Move `fix_geo_special` to later, and set specific marker to indicate rows flagged here. 
+- `fix_geo_special` no longer removes values ([issue152](https://github.com/helseprofil/khfunctions/issues/152)). Values removed IF STATA-censoring is active. 
+- added columns `geoprikket` and `manuellprikket`
+
 # khfunctions 1.2.2 (2026-06-03)
 
 - `control_rate_lks` gains a N_lks column indicating number of lks in each strata ([issue160](https://github.com/helseprofil/khfunctions/issues/160))
