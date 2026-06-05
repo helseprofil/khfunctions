@@ -1,3 +1,12 @@
+# khfunctions 1.2.3 (2026-06-05)
+
+- `do_format_cube_columns` now also adds censor-columns
+- Added new columns `geoprikket` and `manuellprikket`
+- `fix_geo_special` movved to after do_format_cube_columns, to be able to set `geoprikket = 1`
+- `fix_geo_special` no longer removes values ([issue152](https://github.com/helseprofil/khfunctions/issues/152)). Values removed IF STATA-censoring is active. 
+- Increased R-dependency to >= 4.1
+- Made `read_stata_files` more robust against edge cases where string columns were saved as `string_view` on some (virtual) machines, which could not be read by R. 
+
 # khfunctions 1.2.2 (2026-06-03)
 
 - `control_rate_lks` gains a N_lks column indicating number of lks in each strata ([issue160](https://github.com/helseprofil/khfunctions/issues/160))

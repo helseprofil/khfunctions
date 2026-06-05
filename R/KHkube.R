@@ -49,11 +49,11 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
 
   # 5. Redigere kolonner og filtrere ugyldige rader
-  fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   do_format_cube_columns(dt = KUBE, parameters = parameters)
   add_smr_and_meis(dt = KUBE, parameters = parameters)
   KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
+  fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
   set_etab_names(dt = KUBE, etablist = parameters$etabs)
   parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)

@@ -35,6 +35,7 @@ do_format_cube_columns <- function(dt, parameters){
   set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
   data.table::set(dt, j = "MALTALL", value = dt[[parameters$MALTALL]])
+  data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
   return(dt)
 }
 

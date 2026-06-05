@@ -6,12 +6,16 @@ do_censor_cube <- function(dt, parameters){
   if(is_empty(parameters$Censor_type)) return(dt)
   
   if(parameters$Censor_type == "R"){
-    data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
+    # data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
     print_console_message("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
     print_console_message("\n** STATA-prikking er aktiv, gjør endringer i ACCESS om du ønsker R-prikking")
+    # Må slette verdiene for rader med spv_tmp = 9
+    vals <- get_value_columns(names(dt))
+    idx <- which(dt[["spv_tmp"]] == 9)
+    data.table::set(dt, i = idx, j = vals, value = NA)
     # print_console_message("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
     # do_censor_primary_secondary(dt = dt, parameters = parameters)
     # Ready to replace the rows below

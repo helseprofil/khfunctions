@@ -240,7 +240,19 @@ do_write_stata_file <- function(dt, statafiles, use_parquet){
 #' @noRd
 do_read_stata_file <- function(statafiles, use_parquet){
   if(use_parquet){
-    dt <- data.table::copy(data.table::setDT(arrow::read_parquet(statafiles$parquet_in)))
+    d0 <- arrow::open_dataset(statafiles$parquet_in)
+    s0 <- d0$schema
+    fields <- lapply(s0$fields, function(f) {
+      if(f$type$ToString() == "string_view") {
+        arrow::field(f$name, arrow::large_utf8())
+      } else {
+        f
+      }
+    })
+    
+    s1 <- do.call(arrow::schema, fields)
+    d <- arrow::open_dataset(statafiles$parquet_in, schema = s1)
+    dt <- d |> dplyr::collect() |> data.table::as.data.table()
   } else {
     dt <- data.table::setDT(haven::read_dta(statafiles$dta))
   }
