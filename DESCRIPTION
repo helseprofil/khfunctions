@@ -24,7 +24,7 @@ Imports:
     stringr (>= 1.5.1),
     zoo (>= 1.8.14),
     data.table (>= 1.17.8),
-    arrow (>= 24.0.0),
+    arrow (>= 23.0.0),
     dplyr (>= 1.1.4),
     duckdb (>= 1.4.2),
     DBI (>= 1.2.3),
