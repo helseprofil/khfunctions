@@ -1,7 +1,11 @@
-# khfunctions (development version)
-- Move `fix_geo_special` to later, and set specific marker to indicate rows flagged here. 
+# khfunctions 1.2.3 (2026-06-05)
+
+- `do_format_cube_columns` now also adds censor-columns
+- Added new columns `geoprikket` and `manuellprikket`
+- `fix_geo_special` movved to after do_format_cube_columns, to be able to set `geoprikket = 1`
 - `fix_geo_special` no longer removes values ([issue152](https://github.com/helseprofil/khfunctions/issues/152)). Values removed IF STATA-censoring is active. 
-- added columns `geoprikket` and `manuellprikket`
+- Increased R-dependency to >= 4.1
+- Made `read_stata_files` more robust against edge cases where string columns were saved as `string_view` on some (virtual) machines, which could not be read by R. 
 
 # khfunctions 1.2.2 (2026-06-03)
 
