@@ -1,6 +1,6 @@
 # khfunctions 1.2.4 (2026-06-12)
 
-- Expand qualcontrol cube
+- Expand qualcontrol cube ([issue164](https://github.com/helseprofil/khfunctions/issues/164))
     - `report_value_totals` added to aggregation check, to see if underniv is much smaller than overniv
     - `report_n_uniqe_geoniv` reports number of unique geocodes, and number of kommune/bydel with lks data
 
