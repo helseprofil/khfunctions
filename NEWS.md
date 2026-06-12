@@ -1,3 +1,9 @@
+# khfunctions 1.2.4 (2026-06-12)
+
+- Expand qualcontrol cube
+    - `report_value_totals` added to aggregation check, to see if underniv is much smaller than overniv
+    - `report_n_uniqe_geoniv` reports number of unique geocodes, and number of kommune/bydel with lks data
+
 # khfunctions 1.2.3 (2026-06-05)
 
 - `do_format_cube_columns` now also adds censor-columns

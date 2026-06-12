@@ -11,6 +11,7 @@ control_cube_output <- function(outputlist, parameters){
   } else {
     print_console_message("\n\n---\n* Noen av sjekkene feilet, manuell kontroll nødvendig!\n---\n")
   }
+  report_n_unique_geoniv(d = unique(outputlist$KUBE[, .SD, .SDcols = c("GEOniv", "GEO")]))
   control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   control_rate_lks(dt = outputlist$KUBE, parameters = parameters)
 }
@@ -75,6 +76,7 @@ control_standardization <- function(dt, parameters){
   return(1)
 }
 
+
 control_aggregation <- function(dt, parameters){
   print_console_message("\n\n* Sjekker aggregering mellom geonivå")
   n_teller <- dt[!is.na(sumTELLER), .N]
@@ -96,6 +98,11 @@ control_aggregation <- function(dt, parameters){
   return(0)
 }
 
+#' @title compare_geolevels
+#' @description compare geolevels to check aggregation. 
+#' @param dt data
+#' @keywords internal
+#' @noRd
 compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
   level <- match.arg(level)
   if(!level %in% unique(dt$GEOniv)) return(0)
@@ -151,9 +158,31 @@ compare_geolevels <- function(dt, level = c("F", "K", "B", "V"), parameters){
       View(sumN_check, title = paste0("sumNEVNER_check_", level, "_vs_", overniv_name))
     }
   }
+  report_value_totals(d = d, overniv = overniv_name, underniv = level)
 
   if(t_ok && n_ok) return(0)
   return(1)
+}
+
+#' @title report_value_totals
+#' @description helper function for compare_geolevels. reports total values of underniv, overniv and ratio, to catch if underniv is much smaller. 
+#' @param dt data
+#' @keywords internal
+#' @noRd
+report_value_totals <- function(d, overniv, underniv){
+  out <- data.table::data.table(value = c("sumTELLER", "sumNEVNER"), x = NA_real_, y = NA_real_, ratio = NA_real_)
+  cols <- c(overniv, underniv)
+  data.table::setnames(out, c("x", "y"), cols)
+  
+  for(val in c("sumTELLER", "sumNEVNER")){
+    if(val %in% names(d)){
+      totals <- as.list(collapse::fsum(d[[val]], g = collapse::GRP(d, "GEOniv")))
+      out[value == val, (cols) := totals[cols]]
+      out[value == val, ratio := round(x / y, 3), env = list(x = underniv, y = overniv)]
+    }
+  }
+  print_console_message("\n*** Totalverdier:\n")
+  print(out, row.names = F, print.keys = F, class = F)
 }
 
 #' @title check_value
@@ -171,6 +200,29 @@ check_value <- function(d, value, g, overniv, underniv){
   data.table::set(out, j = "diff", value = diff)
   return(out[diff < 0])
 }
+
+#' @title report_n_unique_geoniv
+#' @description
+#' summarize N unique geo codes per level
+#' @param d data
+#' @keywords internal
+#' @noRd
+report_n_unique_geoniv <- function(d){
+  for(geoniv in c("F", "K", "B", "V")){
+    label <- switch(geoniv,
+                    "F" = "fylker",
+                    "K" = "kommuner",
+                    "B" = "bydeler",
+                    "V" = "levekårssoner")
+    print_console_message(paste0("\n* Antall unike ", label, ": ", unique(d[GEOniv == geoniv, length(unique(GEO))])))
+  }
+  if("V" %in% unique(d$GEOniv)){
+    print_console_message(paste0("\n* Antall kommuner/bydeler med levekårssonedata: ", 
+                                 length(sub("00$", "", collapse::funique(substr(d[GEOniv == "V", GEO], 1, 6))))
+    ))
+  }
+}
+
 
 #' @keywords internal
 #' @noRd
