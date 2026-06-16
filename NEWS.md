@@ -1,3 +1,7 @@
+# khfunctions 1.2.5 (2026-06-16)
+
+- Critical bugfix in censoring, which did not remove numbers if censoring was turned off. Numbers are still removed for other reasons, e.g. LKS_STARTAAR, and need to get the appropriate SPVFLAGG. 
+
 # khfunctions 1.2.4 (2026-06-12)
 
 - Expand qualcontrol cube ([issue164](https://github.com/helseprofil/khfunctions/issues/164))
@@ -8,7 +12,7 @@
 
 - `do_format_cube_columns` now also adds censor-columns
 - Added new columns `geoprikket` and `manuellprikket`
-- `fix_geo_special` movved to after do_format_cube_columns, to be able to set `geoprikket = 1`
+- `fix_geo_special` moved to after do_format_cube_columns, to be able to set `geoprikket = 1`
 - `fix_geo_special` no longer removes values ([issue152](https://github.com/helseprofil/khfunctions/issues/152)). Values removed IF STATA-censoring is active. 
 - Increased R-dependency to >= 4.1
 - Made `read_stata_files` more robust against edge cases where string columns were saved as `string_view` on some (virtual) machines, which could not be read by R. 

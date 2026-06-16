@@ -422,13 +422,11 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @noRd
 do_remove_censored_observations <- function(dt, outvalues, parameters){
   data.table::set(dt, j = "SPVFLAGG", value = 0L)
-  if(is_empty(parameters$Censor_type)) return(invisible(NULL))
-  if(parameters$Censor_type == "R"){
+  
+  if(is_empty(parameters$Censor_type) || parameters$Censor_type == "R"){
     check_if_spv_tmp_correct(dt, parameters)
     dt[, SPVFLAGG := spv_tmp]
-  } 
-  
-  if(parameters$Censor_type == "STATA"){
+  } else if(parameters$Censor_type == "STATA"){
     valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
     valF <- intersect(names(dt), valF)
     if(length(valF) > 0){
