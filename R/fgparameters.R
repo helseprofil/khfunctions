@@ -18,7 +18,8 @@ get_filegroup_parameters <- function(user_args){
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  return(c(parameters))
+  parameters[["duck"]] <- init_duckdb(dbname = "filgruppeduck") 
+  return(parameters)
 }
 
 #' @noRd

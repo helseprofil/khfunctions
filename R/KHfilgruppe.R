@@ -19,21 +19,22 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   codebooklog <- initiate_codebooklog(nrow = 0)
   print_console_message("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
   if(parameters$n_files == 1){
-    Filgruppe <- make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
+    make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
-    Filgruppe <- vector("list", parameters$n_files)
     for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
-      Filgruppe[[file_number]] <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
+      make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     }
-    Filgruppe <- data.table::rbindlist(Filgruppe, fill = TRUE, use.names = TRUE)
   }
+  do_clean_duckdb(parameters = parameters)
   print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
+  
+  Filgruppe <- data.table::setDT(DBI::dbReadTable(parameters$duck, "FILGRUPPE"))
   check_encoding(dt = Filgruppe)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
-  Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
-  Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
+  clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
+  clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
   print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
   
@@ -57,6 +58,10 @@ lagfilgruppe_cleanup <- function(parameters){
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   RODBC::odbcCloseAll()
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
+  if(!is.null(parameters$duck)){
+    DBI::dbDisconnect(parameters$duck)
+    fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
+  }
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)

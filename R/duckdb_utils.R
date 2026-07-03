@@ -3,21 +3,17 @@
 #' @keywords duckdb
 #' @noRd
 init_duckdb <- function(dbname){
-  tmpdir <- file.path(fs::path_home(), "helseprofil", "duck")
-  if(!fs::dir_exists(tmpdir)) fs::dir_create(tmpdir)
-  db <- file.path(tmpdir, paste0(dbname, ".duckdb"))
-  if(file.exists(db)){
-    try({
-      con_tmp <- DBI::dbConnect(duckdb::duckdb(), dbdir = db)
-      DBI::dbDisconnect(con_tmp, shutdown = TRUE)
-    }, silent = TRUE)
-    
-    fs::file_delete(
-      c(db,paste0(db, ".wal"),paste0(db, ".tmp"))[fs::file_exists(c(
-      db,paste0(db, ".wal"),paste0(db, ".tmp")
-    ))])
+  duckdir <- file.path(fs::path_home(), "helseprofil", "duck")
+  fs::dir_create(duckdir)
+  db <- file.path(duckdir, paste0(dbname, ".duckdb"))
+  
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db)
+  
+  tabs <- DBI::dbListTables(con)
+  for(i in seq_along(tabs)){
+    invisible(DBI::dbExecute(con, paste0("DROP TABLE IF EXISTS ", tabs[[i]], " CASCADE;")))
   }
-  DBI::dbConnect(duckdb::duckdb(), dbdir = db)
+  con
 }
 
 #' @title do_clean_duckdb

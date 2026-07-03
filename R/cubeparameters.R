@@ -22,8 +22,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  db <- paste0("duck_", parameters$name, "_", parameters$batchdate)
-  parameters[["duck"]] <- init_duckdb(dbname = db) 
+  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
   return(parameters)
 }
 
