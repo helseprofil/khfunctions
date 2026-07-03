@@ -3,32 +3,44 @@
 #' Reads the original file, with specific methods to read XLS/XLSX/CSV/SPSS-files, 
 #' all producing data.table for further processing. Excel/CSV-files are further formatted
 #' according to parameters set inn INNLESARGS (or default values). 
-#' - Sets manual header as specified in MANHEADER
-#' - Applies special handling if code provided to RSYNT1
 #' @param filedescription Row from parameters$read_parameters corresponding to the current file
 #' @param parameters filegroup parameters, set by `get_filegroup_parameters()`
 #' @param dumps any file dumps requested
-#' @returns formatted original file, ready for further processing
+#' @returns original file is read into duckdb as `temp_orgfile`
 read_original_file <- function(filedescription, parameters, dumps = list()){
   print_console_message("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
-  DF <- switch(toupper(filedescription$FORMAT),
-               "PARQUET" = do_read_org_parquet(filedescription = filedescription),
-               "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),
-               "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list),
-               "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list),
-               "SPSS" = do_read_org_spss(filedescription = filedescription))
-  DF <- set_manheader(file = DF, manheader = filedescription$MANHEADER)
-  names(DF) <- trimws(names(DF))
-  names(DF)[names(DF) == ""] <- paste("C", which(names(DF) == ""), sep = "")
-  
-  if(is_not_empty(filedescription$RSYNT1)){
-    DF[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-    DF <- do_special_handling(name = "RSYNT1", dt = DF, dt_name = "DF", code = filedescription$RSYNT1, parameters = parameters, koblid = filedescription$KOBLID, filedescription = filedescription)
-    extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(DF), value = T)
-    if(length(extracols) > 0) DF[, (extracols) := NULL]
+  switch(toupper(filedescription$FORMAT),
+         "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = parameters$duck),
+         "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
+         "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
+         "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
+         "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck))
+  invisible(NULL)
+}
+
+
+repair_colnames <- function(dt){
+  cols <- trimws(names(dt))
+  empty <- cols == ""
+  if(any(empty)){
+    cols[empty] <- paste0("C", which(empty))
+    data.table::setnames(dt, cols)
   }
-  return(DF)
+  invisible(NULL)
+}
+
+#' @keywords internal
+#' @noRd
+do_write_temp_orgfile <- function(file, con){
+  DBI::dbWriteTable(
+    conn = con,
+    name = "temp_orgfile",
+    value = file,
+    overwrite = TRUE,
+    temporary = TRUE
+  )
+  invisible(NULL)
 }
 
 #' @title format_innlesarg_as_list
@@ -67,25 +79,36 @@ format_innlesarg_as_list <- function(args){
 #' Reads .parquet files. As orgfiles must be read as character only, read_parquet cannot be used here.
 #' @keywords internal
 #' @noRd
-do_read_org_parquet <- function(filedescription){
-  file <- arrow::open_dataset(filedescription$filepath)
-  chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
-  file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
-  if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
-  do_convert_na_to_empty(file)
-  return(file)
+do_read_org_parquet <- function(filedescription, con){
+  path <- normalizePath(filedescription$filepath, winslash = "/")
+  sql <- sprintf("CREATE OR REPLACE TEMP TABLE temp_orgfile AS SELECT * FROM read_parquet('%s')", path)
+  tryCatch(
+    invisible(DBI::dbExecute(con, sql)),
+    error = function(e) {
+      stop( "Error when reading file: ", filedescription$FILNAVN, "\n", conditionMessage(e))
+    }
+  )
+  invisible(NULL)
+
+  # file <- arrow::open_dataset(filedescription$filepath)
+  # chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
+  # file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
+  # if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
+  # do_convert_na_to_empty(file)
+  # return(file)
 }
 
 #' @noRd
-do_read_org_spss <- function(filedescription){
+do_read_org_spss <- function(filedescription, con){
   file <-try(foreign::read.spss(file = filedescription$filepath, use.value.labels = FALSE, max.value.labels = 0, as.data.frame = T), silent = T)
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
-  return(file)
+  repair_colnames(file)
+  do_write_temp_orgfile(file = file, con = con)
 }
 
 #' @noRd
-do_read_org_csv <- function(filedescription, read_arg_list){
+do_read_org_csv <- function(filedescription, read_arg_list, con){
   # Change encoding = "latin1" (works for read.csv) to "Latin-1" (works for fread)
   if(is_not_empty(read_arg_list$encoding) && read_arg_list$encoding == "latin1") read_arg_list$encoding <- "Latin-1"
   sep <- ifelse("sep" %in% names(read_arg_list), read_arg_list$sep, ";")
@@ -94,11 +117,12 @@ do_read_org_csv <- function(filedescription, read_arg_list){
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   format_arg_list <- c(list(file = file, filedescription = filedescription), read_arg_list)
   file <- do.call(format_excel_and_csv_files, format_arg_list)
-  return(file)
+  repair_colnames(file)
+  do_write_temp_orgfile(file = file, con = con)
 }
 
 #' @noRd
-do_read_org_excel <- function(filedescription, read_arg_list){
+do_read_org_excel <- function(filedescription, read_arg_list, con){
   sheets <- gsub("\'|\\$", "", readxl::excel_sheets(filedescription$filepath))
   sheet <- sheets[1]
   if(is_not_empty(read_arg_list$ark)){
@@ -108,8 +132,10 @@ do_read_org_excel <- function(filedescription, read_arg_list){
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   file <- do.call(format_excel_and_csv_files, c(list(file = file, filedescription = filedescription), read_arg_list))
-  return(file)
+  repair_colnames(file)
+  do_write_temp_orgfile(file = file, con = con)
 }
+
 
 #' @noRd
 find_correct_excel_sheet <- function(sheet, sheets, filename){
@@ -172,39 +198,7 @@ set_file_header_from_firstrow <- function(file, filedescription){
   return(file)
 }
 
-#' @title set_manheader
-#' @description
-#' Manually sets headers according to parameters set in INNLESING::MANHEADER
-#' @noRd
-set_manheader <- function(file, manheader){
-  if(is_empty(manheader)) return(file)
-  manheader_split <- trimws(unlist(strsplit(manheader, "=")))
-  old <- format_colname_string_as_vector(string = manheader_split[1], old_new = "old", file = file)
-  new <- format_colname_string_as_vector(string = manheader_split[2], old_new = "new", file = file)
-  if(length(old) != length(new)) stop("Feil i MANHEADER: Ulikt antall kolonner angitt på hver side av '='")
-  data.table::setnames(file, old = old, new = new)
-  return(file)
-}
 
-#' @noRd
-format_colname_string_as_vector <- function(string, old_new = c("old", "new"), file){
-  if(grepl("^\\[", string)) string <- gsub("^\\[|\\]$", "", string)
-  if(grepl("^c\\(", string)) string <- gsub("^c\\(|\\)$", "", string)
-  if(grepl("\"", string)) string <- gsub("\"", "", string)
-  colnames <- trimws(strsplit(string, ",")[[1]])
-  if(old_new == "new") return(colnames)
-  
-  numeric <- suppressWarnings(as.numeric(colnames))
-  if(all(!is.na(numeric))){
-    if(min(numeric) <= 0 && max(numeric) > ncol(file)) stop("Feil i MANHEADER: Angitt kolonnenummer eksisterer ikke i filen")
-    return(numeric)
-  }
-  if(all(is.na(numeric))){
-    if(!all(colnames %in% names(file))) stop("Feil i MANHEADER: Minst ett angitt gammelt kolonnenavn [", paste(colnames, collapse = ", "), "] eksisterer ikke i filen")
-    return(colnames)
-  }
-  stop("Feil i MANHEADER: både kolonnenavn og posisjon angitt som gamle kolonnenavn")
-}
 
 #' @title excelcols
 #' @return default excel headers
