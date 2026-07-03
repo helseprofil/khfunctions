@@ -265,9 +265,11 @@ LagQCKube <- function(data, allvistabs){
 #' * PRIKKpre/post (before and after censoring)
 #' * RSYNT_POSTPROSESSpre/post (Before and after RSYNT_POSTPROSESS)
 #' @param dumpname name of requested filedump
-#' @param dt data to be stored
+#' @param dt data to be stored, can be NULL if data is in duckdb
 #' @param parameters global parameters
 #' @param koblid used when requesting file dumps during processing of original files, default = NULL
+#' @param duck TRUE/FALSE, is data to be written located in duckdb
+#' @param tablename name of table in duckdb to be stored
 #' @examples
 #' # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
 #' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
@@ -275,12 +277,17 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
                                                     "KODEBOKpre", "KODEBOKpost", "RSYNT_PRE_FGLAGRINGpre", "RSYNT_PRE_FGLAGRINGpost",
                                                     "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre", "SLUTTREDIGERpost", 
                                                     "PRIKKpre", "PRIKKpost", "RSYNT_POSTPROSESSpre", "RSYNT_POSTPROSESSpost"), 
-                                       dt, parameters, koblid = NULL){
+                                       dt = NULL, parameters, koblid = NULL, duck = FALSE, tablename = NULL){
   if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
+  if(is.null(dt) && (isFALSE(duck) | is.null(tablename))) stop("Filedump requested, but data not provided or in duckdb")
   format <- parameters$dumps[[dumpname]]
   dumpdir <- file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"))
   filename <- paste0(parameters$name, "_", dumpname)
   if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
+  
+  if(is.null(dt) && isTRUE(duck)){
+    dt <- fetch_duckdb_table(con = parameters$duck, tablename = tablename)
+  }
     
   if("CSV" %in% format) data.table::fwrite(dt, file = file.path(dumpdir, paste0(filename, ".csv"), sep = ";"))
   if("R" %in% format){
@@ -292,5 +299,5 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
     dtout <- fix_column_names_pre_stata(dt)
     haven::write_dta(dtout, path = file.path(dumpdir, paste0(filename, ".dta")))
   }
+  invisible(gc())
 }
-  
