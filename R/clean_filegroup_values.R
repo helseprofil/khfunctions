@@ -11,7 +11,6 @@ clean_filegroup_values <- function(dt, parameters, cleanlog){
   }
   
   print_console_message("\n* Verdikolonner ferdig renset")
-  return(dt)
 }
 
 #' @title do_set_val_flag

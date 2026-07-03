@@ -9,7 +9,6 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   do_clean_LANDBAK(dt = dt, cleanlog = cleanlog)
   
   print_console_message("\n* Dimensjoner ferdig renset")
-  return(dt)
 }
 
 #' @title do_clean_GEO
