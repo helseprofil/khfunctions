@@ -10,20 +10,63 @@
 #' @param parameters global parameters
 #' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
 #' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, ...){
-  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
-  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
+do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, ...){
+  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)
+  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
   
-  is_code <- !is.null(code) && !is.na(code) && code != ""
+  is_code <- is_not_empty(code)
   if(!is_code) return(dt)
+  
   code <- clean_rsynt_code(code = code, name = name)
   is_stata <- grepl("<STATA>", code)
+  is_sql <- grepl("<SQL>", code)
+  
+  use_duck <- isTRUE(duck) && is_not_empty(tablename)
+  if(use_duck && !tablename %in% DBI::dbListTables(parameters$duck)){
+    stop("do_special_handling forsøker å bruke duckdb, men tabellen finnes ikke")
+  }
+  
+  con <- parameters$duck
+  
+  if(is_sql){
+    if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
+    print_console_message("\n** Starter SQL-snutt:", name)
+    code <- gsub("<SQL>[ \n]*(.*)", "\\1", code)
+    code <- ensure_correct_url(code, name)
+    code_env <- new.env(parent = parent.frame())
+    assign("parameters", parameters, envir = code_env)
+    assign("tablename", tablename, envir = code_env)
+    assign("duckdb_con", con, envir = code_env)
+    
+    sqlsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
+    if(inherits(sqlsynterr, "try-error")){
+      print(sqlsynterr)
+      stop("Noe gikk galt i SQL-snutten")
+    }
+    do_clean_duckdb(con = con)
+    return(invisible(NULL))
+  }
+  
+  if(is.null(dt) && use_duck){
+    dt <- fetch_duckdb_table(con = con, tablename = tablename)
+  }
+  
+  if(name == "RSYNT1"){
+    dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
+  }
   
   if(is_stata){
     print_console_message("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
+    extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
+    if(length(extracols) > 0) dt[, (extracols) := NULL]
     print_console_message("\n** Ferdig i STATA")
+    if(use_duck){
+      write_duckdb_table(dt = dt, con = con, tablename = tablename)
+      do_clean_duckdb(con = parameters$duck)
+      return(invisible(NULL))
+    }
     return(dt)
   }
   
@@ -42,10 +85,16 @@ do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, kobl
     print(rsynterr)
     stop("Something went wrong in R")
   }
-  # assign(dt_name, get(dt_name, envir = code_env), envir = code_env)
-  # dt <- get(dt_name, envir = code_env)
+
   dt <- code_env[[dt_name]]
+  extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
+  if(length(extracols) > 0) dt[, (extracols) := NULL]
   print_console_message("\n** R-snutt ferdig")
+  if(use_duck){
+    write_duckdb_table(dt = dt, con = con, tablename = tablename)
+    do_clean_duckdb(con = con)
+    return(invisible(NULL))
+  }
   return(dt)
 }
 
