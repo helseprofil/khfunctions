@@ -14,21 +14,40 @@
 #' @param dumps in case file dumps before or after kodebok are requested.
 #' @returns recoded data file (updated by reference)
 recode_columns_with_codebook <- function(dt, filedescription, parameters, codebooklog, dumps){
-  dt <- data.table::copy(dt)
-  save_filedump_if_requested(dumpname = "KODEBOKpre", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)
-  on.exit({save_filedump_if_requested(dumpname = "KODEBOKpost", dt = dt, parameters = parameters, koblid = filedescription$KOBLID)}, add = TRUE)
+  save_filedump_if_requested(dumpname = "KODEBOKpre", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
+  on.exit({
+    save_filedump_if_requested(dumpname = "KODEBOKpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
+    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_recode"))
+    if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) {
+      invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
+    }
+  }, add = TRUE)
+  
+  con <- parameters$duck
   
   codebook <- parameters$codebook[DELID %in% c(filedescription$DELID, "FELLES")]
-  recodecols <- unique(codebook$FELTTYPE)[unique(codebook$FELTTYPE) %in% names(dt)]
-  if(nrow(codebook) == 0) return(dt)
+  recodecols <- intersect(unique(codebook$FELTTYPE), 
+                          DBI::dbListFields(con, "temp_orgfile"))
+  if(nrow(codebook) == 0) return(invisible(NULL))
+  
+  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_recode"))
+  
+  if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
+  
+  invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile ADD COLUMN ROWID_KH BIGINT"))
+  invisible(DBI::dbExecute(con, "UPDATE temp_orgfile SET ROWID_KH = rowid"))
+  
+  recode_dt <- data.table::setDT(
+    DBI::dbGetQuery(con, sprintf("SELECT ROWID_KH, %s FROM temp_orgfile",
+        paste(DBI::dbQuoteIdentifier(con, recodecols),collapse = ", "))))
   
   print_console_message("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
-    orgvalues <- unique(dt[[col]])
+    orgvalues <- unique(recode_dt[[col]])
     cb_subset <- codebook[FELTTYPE == col]
-    recodelog <- do_recode_kb(dt = dt, cb = cb_subset, col = col, log = recodelog)
-    recodelog <- do_recode_regex(dt = dt, cb = cb_subset, col = col, log = recodelog)
+    recodelog <- do_recode_kb(dt = recode_dt, cb = cb_subset, col = col, log = recodelog)
+    recodelog <- do_recode_regex(dt = recode_dt, cb = cb_subset, col = col, log = recodelog)
     recodelog <- do_list_unchanged_values(col = col, orgvalues = orgvalues, log = recodelog)
   }
   recodelog[, KOBLID := filedescription$KOBLID]
@@ -36,8 +55,26 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   print_console_message("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
-  if(length(recodecols) > 0) dt <- do_remove_deleted_rows(dt = dt, cols = recodecols)
-  return(dt)
+  if(n_recoded == 0) return(invisible(NULL))
+  
+  recode_dt[, kast := as.integer(rowSums(.SD == "-", na.rm = TRUE) > 0), .SDcols = recodecols]
+  DBI::dbWriteTable(con, "temp_recode", recode_dt, overwrite = TRUE)
+  update_recoded_cols_db(con = con, recodecols = recodecols)
+  
+  n_remove <- recode_dt[, sum(kast, na.rm = T)]
+  if(n_remove > 0){
+    print_console_message("\n** Kaster", n_remove, "slettede rader")
+    DBI::dbExecute(con, "DELETE FROM temp_orgfile WHERE ROWID_KH IN (SELECT ROWID_KH FROM temp_recode WHERE kast = 1)")
+  }
+  
+  invisible(NULL)
+}
+
+update_recoded_cols_db <- function(con, recodecols){
+  set_clause <- paste(sprintf("%1$s = r.%1$s", as.character(DBI::dbQuoteIdentifier(con, recodecols))), collapse = ", ")
+  sql <- sprintf("UPDATE temp_orgfile t SET %s FROM temp_recode r WHERE t.ROWID_KH = r.ROWID_KH",
+                 set_clause)
+  DBI::dbExecute(con, sql)
 }
 
 do_list_unchanged_values <- function(col, orgvalues, log){
@@ -134,6 +171,38 @@ do_remove_deleted_rows <- function(dt, cols){
   dt <- dt[kast == 0][, let(kast = NULL)]
   return(dt)
 }
+
+#' @title do_recode_tknr_db
+#' @description Koder om TKNR-koder til kommunekoder via TKNR-tabellen i access
+#' @noRd
+do_recode_tknr_db <- function(tknr, parameters){
+  if (is_empty(tknr) || tknr != "1") return(invisible(NULL))
+  
+  on.exit({
+    invisible(DBI::dbExecute(parameters$duck, "DROP TABLE IF EXISTS temp_tknr"))
+  }, add = TRUE)
+  print_console_message("\n* Omkoder fra TKNR")
+  DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
+  
+  DBI::dbExecute(parameters$duck,
+    "UPDATE temp_orgfile AS t SET GEO = x.NYKODE FROM temp_tknr AS x WHERE t.GEO = x.ORGKODE AND x.NYKODE IS NOT NULL"
+  )
+  invisible(NULL)
+}
+
+#' @title do_recode_soner_4_db
+#' @description Gjør 4-sifrede sonekoder om til 6-sifret ved å legge til 00
+#' @noRd
+do_recode_soner_4_db <- function(filedescription, con) {
+  if(is_empty(filedescription$SONER) || !grepl("4", filedescription$SONER)) return(invisible(NULL))
+  print_console_message("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  DBI::dbExecute(con, "UPDATE temp_orgfile SET GEO = GEO || '00' WHERE length(GEO) = 4")
+  invisible(NULL)
+}
+
+
+
+
 
 #' @title do_recode_tknr
 #' @description

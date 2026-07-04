@@ -19,30 +19,6 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
   invisible(NULL)
 }
 
-
-repair_colnames <- function(dt){
-  cols <- trimws(names(dt))
-  empty <- cols == ""
-  if(any(empty)){
-    cols[empty] <- paste0("C", which(empty))
-    data.table::setnames(dt, cols)
-  }
-  invisible(NULL)
-}
-
-#' @keywords internal
-#' @noRd
-do_write_temp_orgfile <- function(file, con){
-  DBI::dbWriteTable(
-    conn = con,
-    name = "temp_orgfile",
-    value = file,
-    overwrite = TRUE,
-    temporary = TRUE
-  )
-  invisible(NULL)
-}
-
 #' @title format_innlesarg_as_list
 #' @description
 #' Splitter args ved komma, beholder uttrykk i hermetegn eller c()
@@ -81,7 +57,7 @@ format_innlesarg_as_list <- function(args){
 #' @noRd
 do_read_org_parquet <- function(filedescription, con){
   path <- normalizePath(filedescription$filepath, winslash = "/")
-  sql <- sprintf("CREATE OR REPLACE TEMP TABLE temp_orgfile AS SELECT * FROM read_parquet('%s')", path)
+  sql <- sprintf("CREATE OR REPLACE TABLE temp_orgfile AS SELECT * FROM read_parquet('%s')", path)
   tryCatch(
     invisible(DBI::dbExecute(con, sql)),
     error = function(e) {
@@ -89,13 +65,6 @@ do_read_org_parquet <- function(filedescription, con){
     }
   )
   invisible(NULL)
-
-  # file <- arrow::open_dataset(filedescription$filepath)
-  # chrschema <- arrow::schema(lapply(names(file), function(x) arrow::Field$create(name = x, type = arrow::string())))
-  # file <- try(data.table::as.data.table(arrow::open_dataset(filedescription$filepath, schema = chrschema)))
-  # if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
-  # do_convert_na_to_empty(file)
-  # return(file)
 }
 
 #' @noRd
@@ -104,7 +73,8 @@ do_read_org_spss <- function(filedescription, con){
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   repair_colnames(file)
-  do_write_temp_orgfile(file = file, con = con)
+  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  invisible(gc())
 }
 
 #' @noRd
@@ -117,9 +87,51 @@ do_read_org_csv <- function(filedescription, read_arg_list, con){
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   format_arg_list <- c(list(file = file, filedescription = filedescription), read_arg_list)
   file <- do.call(format_excel_and_csv_files, format_arg_list)
+  
+  if(any(sapply(file, has_invalid_utf8))){
+    file <- try_fix_invalid_utf8(dt = file)
+  }
+  
   repair_colnames(file)
-  do_write_temp_orgfile(file = file, con = con)
+  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  invisible(gc())
 }
+
+has_invalid_utf8 <- function(x) {
+  x <- x[!is.na(x)]
+  any(vapply(
+    x,
+    function(s) is.na(iconv(s, from = "UTF-8", to = "UTF-8")),
+    logical(1)
+  ))
+}
+
+try_fix_invalid_utf8 <- function(dt){
+  
+  print_console_message("\nForsøker å fikse encodingproblemer. Du bør kanskje legge til encoding=\"Latin-1\" i INNLESARG for å unngå dette i fremtiden.")
+  bad_cols <- names(dt)[sapply(dt, has_invalid_utf8)]
+  if(length(bad_cols) == 0) return(invisible(d))
+  
+  
+  try_encodings <- c("latin1","CP1252","ISO-8859-1")
+  
+  for (enc in try_encodings) {
+    d <- data.table::copy(dt)
+    d[, (bad_cols) := lapply(.SD,iconv,from = enc,to = "UTF-8"), .SDcols = bad_cols]
+    
+    still_bad <- names(d)[sapply(d, has_invalid_utf8)]
+    
+    if (length(still_bad) == 0) return(invisible(d))
+  }
+  
+  stop(
+    "Fant ugyldig UTF-8, men klarte ikke å reparere dataene. Du må kanskje legge til encoding=\"Latin-1\" i INNLESARG",
+    "Kolonner med problemer: ",
+    paste(bad_cols, collapse = ", ")
+  )
+  
+}
+
 
 #' @noRd
 do_read_org_excel <- function(filedescription, read_arg_list, con){
@@ -133,7 +145,8 @@ do_read_org_excel <- function(filedescription, read_arg_list, con){
   data.table::setDT(file)
   file <- do.call(format_excel_and_csv_files, c(list(file = file, filedescription = filedescription), read_arg_list))
   repair_colnames(file)
-  do_write_temp_orgfile(file = file, con = con)
+  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  invisible(gc())
 }
 
 
@@ -198,6 +211,7 @@ set_file_header_from_firstrow <- function(file, filedescription){
   return(file)
 }
 
+# HELPERS ----
 
 
 #' @title excelcols
@@ -209,6 +223,17 @@ excelcols <- function(){
   c(single, double, triple)
 }
 
+#' @keywords internal
+#' @noRd
+repair_colnames <- function(dt){
+  cols <- trimws(names(dt))
+  empty <- cols == ""
+  if(any(empty)){
+    cols[empty] <- paste0("C", which(empty))
+    data.table::setnames(dt, cols)
+  }
+  invisible(NULL)
+}
 
 # TO BE DELETED ----
 #' @noRd
