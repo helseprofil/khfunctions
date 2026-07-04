@@ -21,7 +21,7 @@ load_and_format_files <- function(parameters){
     if(is_duckdb_file(con = parameters$duck, filename = file)) DBI::dbRemoveTable(parameters$duck, file)
     load_filegroup_to_buffer(filegroup = file, filter = NULL, parameters = parameters)
   }
-  do_clean_duckdb(parameters = parameters)
+  do_clean_duckdb(con = parameters$duck)
 
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)

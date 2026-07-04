@@ -4487,3 +4487,17 @@ initiate_read_log <- function(filedescription, parameters){
   RODBC::sqlQuery(parameters$log, paste0("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filedescription$KOBLID, ",'", parameters$batchdate, "', 'S','", filedescription$FILGRUPPE, "'"))
   return(invisible(NULL))
 }
+
+#' @title set_manheader
+#' @description
+#' Manually sets headers according to parameters set in INNLESING::MANHEADER
+#' @noRd
+set_manheader <- function(file, manheader){
+  if(is_empty(manheader)) return(file)
+  manheader_split <- trimws(unlist(strsplit(manheader, "=")))
+  old <- format_colname_string_as_vector(string = manheader_split[1], old_new = "old", file = file)
+  new <- format_colname_string_as_vector(string = manheader_split[2], old_new = "new", file = file)
+  if(length(old) != length(new)) stop("Feil i MANHEADER: Ulikt antall kolonner angitt på hver side av '='")
+  data.table::setnames(file, old = old, new = new)
+  return(file)
+}

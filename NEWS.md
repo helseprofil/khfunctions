@@ -1,3 +1,14 @@
+# khfunctions (development version)
+
+- init_duckdb is more robust towards existing db file, and sets maximum memory limit
+- Filename dropped from duckdb name
+- Implement duckdb for LagFilgruppe
+    - Processing and stacking of original files is done in duckdb, minimizing memory requirements
+- `do_special_handling` 
+    - reads and write to duckdb, new arguments `duck` and `tablename`
+    - handles SQL code as input, prefixed with <SQL>
+- RSYNT1 moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
+
 # khfunctions 1.2.5 (2026-06-16)
 
 - Critical bugfix in censoring, which did not remove numbers if censoring was turned off. Numbers are still removed for other reasons, e.g. LKS_STARTAAR, and need to get the appropriate SPVFLAGG. 

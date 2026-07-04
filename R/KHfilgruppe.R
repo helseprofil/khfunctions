@@ -25,11 +25,11 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
       make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     }
   }
-  do_clean_duckdb(parameters = parameters)
+  do_clean_duckdb(con = parameters$duck)
   print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   
-  Filgruppe <- data.table::setDT(DBI::dbReadTable(parameters$duck, "FILGRUPPE"))
+  Filgruppe <- fetch_duckdb_table(parameters$duck, "FILGRUPPE")
   check_encoding(dt = Filgruppe)
   
   cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
@@ -42,7 +42,9 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
   remove_helper_columns(dt = Filgruppe)
   set_integer_columns(dt = Filgruppe)
-  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, dt_name = "Filgruppe", code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
+  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, dt_name = "Filgruppe", 
+                                   code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
+                                   parameters = parameters, duck = FALSE, tablename = NULL)
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)

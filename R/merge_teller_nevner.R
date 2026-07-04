@@ -91,7 +91,7 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
   TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
   outdata[, (names(TNF)) := TNF]
   rm(TNF)
-  do_clean_duckdb(parameters = parameters)
+  do_clean_duckdb(con = parameters$duck)
   return(KUBEdesign$MAIN)
 }
 
