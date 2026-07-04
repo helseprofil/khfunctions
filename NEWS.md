@@ -6,7 +6,9 @@
     - Processing and stacking of original files is done in duckdb, minimizing memory requirements
 - `do_special_handling` 
     - reads and write to duckdb, new arguments `duck` and `tablename`
-    - handles SQL code as input, prefixed with <SQL>
+    - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
+    - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
+    - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
 - RSYNT1 moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
 
 # khfunctions 1.2.5 (2026-06-16)
