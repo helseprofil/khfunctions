@@ -6,8 +6,7 @@ init_duckdb <- function(dbname){
   duckdir <- file.path(fs::path_home(), "helseprofil", "duck")
   fs::dir_create(duckdir)
   db <- file.path(duckdir, paste0(dbname, ".duckdb"))
-  
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db)
+  con <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE), dbdir = db)
   DBI::dbExecute(con, "SET memory_limit = '8GB'")
   
   tabs <- DBI::dbListTables(con)
