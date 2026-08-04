@@ -178,7 +178,9 @@ add_missing_lks <- function(dt, parameters){
     add_invalid <- dt[GEO %in% invalid$overniv]
     data.table::set(add_invalid, j = "GEOniv", value = "V")
     add_invalid[invalid, on = setNames("overniv", "GEO"), GEO := lks]
-    add_invalid[, let(spv_tmp = 1, geoprikket = 1)]
+    add_invalid[, let(spv_tmp = 2, geoprikket = 1)]
+    vals <- union(get_value_columns(names(dt)), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR"))
+    data.table::set(add_invalid, j = vals, value = NA)
     } else {
       add_invalid <- dt[0]
     }
