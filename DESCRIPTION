@@ -1,6 +1,6 @@
 Package: khfunctions
 Title: Data processing for FHP/OVP
-Version: 1.2.5
+Version: 1.2.6
 Authors@R: 
     person("Vegard", "Lysne", , "vegard.lysne@helsedir.no", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
@@ -26,7 +26,7 @@ Imports:
     data.table (>= 1.17.8),
     arrow (>= 23.0.0),
     dplyr (>= 1.1.4),
-    duckdb (>= 1.4.2),
+    duckdb (>= 1.5.5),
     DBI (>= 1.2.3),
     parallel
 Suggests: 

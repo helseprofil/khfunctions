@@ -150,3 +150,39 @@ get_deletestrata <- function(dt, dims, level){
   delete <- collapse::join(deletestrata, deletecodes, on = "overniv", multiple = TRUE, verbose = FALSE, overid = 2)[, .SD, .SDcols = dims]
   return(delete)
 }
+
+#' @title add_missing_lks
+#' @param dt 
+#' @param parameters 
+#' @noRd
+add_missing_lks <- function(dt, parameters){
+  if(!"V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))) return(invisible(NULL))
+  
+  # Legg til soner for kommuner med bare en sone
+  single <- data.table::data.table(lks = parameters$GeoKoder[GEOniv == "V", unique(GEO)])
+  single[, overniv := sub("00$", "", substr(lks, 1, 6))]
+  single[, N := .N, by = overniv]
+  single <- single[N == 1]
+  if(nrow(single) > 0){
+    add_single <- dt[GEO %in% single$overniv]
+    data.table::set(add_single, j = "GEOniv", value = "V")
+    add_single[single, on = setNames("overniv", "GEO"), GEO := lks]
+    } else {
+      add_single <- dt[0]
+    }
+  
+  # Legg til ugyldige soner, som skal eksistere men være prikket
+  invalid <- data.table::data.table(lks = parameters$GeoKoder[GEOniv == "V" & TYP == "U" & !GEO %in% unique(add_single[["GEO"]]), unique(GEO)])
+  if(nrow(invalid) > 0){
+    invalid[, overniv := sub("00$", "", substr(lks, 1, 6))]
+    add_invalid <- dt[GEO %in% invalid$overniv]
+    data.table::set(add_invalid, j = "GEOniv", value = "V")
+    add_invalid[invalid, on = setNames("overniv", "GEO"), GEO := lks]
+    add_invalid[, let(spv_tmp = 1, geoprikket = 1)]
+    } else {
+      add_invalid <- dt[0]
+    }
+  
+  dt <- data.table::rbindlist(list(dt, add_single, add_invalid))
+  return(dt)
+}

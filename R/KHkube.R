@@ -67,6 +67,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
   KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
   KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
+  KUBE <- add_missing_lks(dt = KUBE, parameters = parameters)
   
   # 8. Slicing av outputfiler
   RESULTAT <- list(KUBE = KUBE)

@@ -1,3 +1,8 @@
+# khfunctions 1.2.6 (2026-08-04)
+
+- Added function to handle bydel/kommune levels with single lks. LKS is added as a copy of the parent level. For invalid zones which is not a single zone, a censored copy of the parent level is added. ([issue170](https://github.com/helseprofil/khfunctions/issues/170))
+- Increased min version of duckdb to 1.5.5 due to new functionality.
+
 # khfunctions 1.2.5 (2026-06-16)
 
 - Critical bugfix in censoring, which did not remove numbers if censoring was turned off. Numbers are still removed for other reasons, e.g. LKS_STARTAAR, and need to get the appropriate SPVFLAGG. 
