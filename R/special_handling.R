@@ -9,11 +9,13 @@
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
 #' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
+#' @param duck is data located in duckdb (TRUE) or in memory (FALSE)
+#' @param tablename name of table in duckdb
+#' @param filedescription filedescription object if relevant, default = NULL
 #' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, ...){
+do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, filedescription = NULL){
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
-  
   is_code <- is_not_empty(code)
   if(!is_code) return(dt)
   
@@ -75,10 +77,7 @@ do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, kobl
   code_env <- new.env()
   assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
-  extra_args <- list(...)
-  for(argname in c(names(extra_args))){
-    assign(argname, extra_args[[argname]], envir = code_env)
-  }
+  assign("filedescription", filedescription, envir = code_env)
   
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
   if(inherits(rsynterr, "try-error")){
