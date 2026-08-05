@@ -8,7 +8,7 @@ init_duckdb <- function(dbname){
   db <- file.path(tmpdir, paste0(dbname, ".duckdb"))
   if(file.exists(db)){
     try({
-      con_tmp <- DBI::dbConnect(duckdb::duckdb(), dbdir = db)
+      con_tmp <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE), dbdir = db)
       DBI::dbDisconnect(con_tmp, shutdown = TRUE)
     }, silent = TRUE)
     
@@ -17,7 +17,7 @@ init_duckdb <- function(dbname){
       db,paste0(db, ".wal"),paste0(db, ".tmp")
     ))])
   }
-  DBI::dbConnect(duckdb::duckdb(), dbdir = db)
+  DBI::dbConnect(duckdb::duckdb(shared_home = FALSE), dbdir = db)
 }
 
 #' @title do_clean_duckdb
