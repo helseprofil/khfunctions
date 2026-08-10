@@ -1,3 +1,7 @@
+# khfunctions 1.2.7
+
+- Critical bugfix in add_missing_lks()
+
 # khfunctions 1.2.6 (2026-08-04)
 
 - Added function to handle bydel/kommune levels with single lks. LKS is added as a copy of the parent level. For invalid zones which is not a single zone, a censored copy of the parent level is added. ([issue170](https://github.com/helseprofil/khfunctions/issues/170))

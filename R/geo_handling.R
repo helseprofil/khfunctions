@@ -156,8 +156,6 @@ get_deletestrata <- function(dt, dims, level){
 #' @param parameters 
 #' @noRd
 add_missing_lks <- function(dt, parameters){
-  if(!"V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))) return(invisible(NULL))
-  
   # Legg til soner for kommuner med bare en sone
   single <- data.table::data.table(lks = parameters$GeoKoder[GEOniv == "V", unique(GEO)])
   single[, overniv := sub("00$", "", substr(lks, 1, 6))]
