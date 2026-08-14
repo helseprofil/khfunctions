@@ -29,23 +29,18 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   do_clean_duckdb(con = parameters$duck)
   print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
-  
-  # Filgruppe <- fetch_duckdb_table(parameters$duck, "FILGRUPPE")
-  # check_encoding(dt = Filgruppe)
   cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
+  clean_filegroup_dimensions_duckdb(parameters = parameters, cleanlog = cleanlog)
+  clean_filegroup_values_duckdb(parameters = parameters, cleanlog = cleanlog)
   
-  clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
-  clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
   print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+  rename_fg_value_columns_duckdb(parameters = parameters)
+  set_integer_columns_duckdb(con = parameters$duck)
   
-  do_set_fg_column_order(dt = Filgruppe)
-  do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
-  remove_helper_columns(dt = Filgruppe)
-  set_integer_columns(dt = Filgruppe)
-  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, dt_name = "Filgruppe", 
-                                   code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
-                                   parameters = parameters, duck = FALSE, tablename = NULL)
+  do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = NULL, dt_name = "Filgruppe", 
+                      code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
+                      parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
   
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
@@ -105,68 +100,34 @@ initiate_cleanlog_db <- function(codebooklog, parameters){
   return(log)
 }
 
-#' @keywords internal
-#' @noRd
-do_set_fg_column_order <- function(dt){
-  colorder <- "GEO"
-  dims <- c(grep("GEO", getOption("khfunctions.standarddimensions"), value = T, invert = T))
-  for(i in c(dims, "TAB", "VAL", "GEOniv", "FYLKE", "KOBLID")){
-    colorder <- c(colorder, (names(dt)[startsWith(names(dt), i)]))
-  }
-  data.table::setcolorder(dt, colorder)
+rename_fg_value_columns_duckdb <- function(parameters){
+  con <- parameters$duck
+  vals <- intersect(c("VAL1", "VAL2", "VAL3"), DBI::dbListFields(con, "FILGRUPPE"))
+  valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
+  
+  rename_map <- data.table::data.table(
+    old = c(vals, paste0(vals, ".a"), paste0(vals, ".f")),
+    new = c(valnames, paste0(valnames, ".a"), paste0(valnames, ".f"))
+  )
+  
+  sql <- paste0(sprintf(
+      'ALTER TABLE FILGRUPPE RENAME COLUMN "%s" TO "%s"',
+      rename_map$old,
+      rename_map$new
+    ),
+    collapse = ";\n"
+  )
+  
+  invisible(DBI::dbExecute(con, sql))
 }
 
-#' @title remove_helper_columns
-#' @noRd
-remove_helper_columns <- function(dt){
-  helpers <- c("LEVEL")
-  helpers <- helpers[helpers %in% names(dt)]
-  dt[, (helpers) := NULL]
-}
-
-#' @title check_encoding
-#' @description
-#' Scans all character columns for potential encoding issues. 
-#' Searches for `<c3><a6>`, etc., which indicates UTF-8 read by a single-byte locale.
-#' Searches for `Ã`, which indicates UTF-8 bytes were misinterpreted as Latin-1 characters.
-#'
-#' @param dt file group
-#' @returns a list of unique problematic values which indicates that a specific file should be read with different encoding
-check_encoding <- function(dt) {
-  encoding_error_pattern <- "<c3>|<c2>|<e2>|<c5>|Ã"
-  char_cols <- names(dt)[sapply(dt, is.character)]
-  setdiff(char_cols, "KOBLID")
-  errors <- list()
-  ok <- TRUE
+set_integer_columns_duckdb <- function(con){
+  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
+  cols <- intersect(integers,DBI::dbListFields(con, "FILGRUPPE"))
   
-  for (col in char_cols) {
-    if (any(grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE))) {
-      # If an error is found, store the column name and unique values
-      values <- unique(dt[[col]][grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE)])
-      koblid <- dt[dt[[col]] %in% values, unique(KOBLID)]
-      errors[[col]] <- list(values = values, koblid = koblid)
-    }
-  }
-  
-  if (length(errors) > 0) {
-    warning("Potential encoding issues detected in the following columns.
-            The values below are examples of garbled characters.
-            The file might have been read with the wrong encoding (e.g., Latin-1 instead of UTF-8).",
-            immediate. = TRUE)
-    
-    # Print the detailed information in a readable format
-    for (col in names(errors)) {
-      message(paste0("\nColumn '", col, "' has the following values with encoding issues in files specified by koblid: "))
-      print(errors[[col]])
-    }
-    ok <- FALSE
-  } else {
-    print_console_message("\n** Ingen encoding-problemer oppdaget")
-  }
-  
-  if(!ok){
-    choice <- utils::menu(c("Ja, fortsett", "Nei, stopp her"),
-                          title = "\nPotensielle encodingproblemer funnet, vil du fortsette?")
-    if(choice == 2) stop("Dataprosesseringen stoppet pga encodingproblematikk")
-  }
+  sql <- paste(sprintf(
+  "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
+  cols,cols),collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
 }
