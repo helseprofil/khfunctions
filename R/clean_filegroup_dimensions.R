@@ -3,19 +3,15 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   print_console_message("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR_duckdb(con = con, cleanlog = cleanlog)
-  # do_clean_GEO(dt = dt, parameters = parameters, cleanlog = cleanlog)
-  # do_clean_AAR(dt = dt, cleanlog = cleanlog)
-  do_clean_ALDER(dt = dt, parameters = parameters, cleanlog = cleanlog)
-  do_clean_KJONN(dt = dt, cleanlog = cleanlog)
-  do_clean_UTDANN(dt = dt, cleanlog = cleanlog)
-  do_clean_INNVKAT(dt = dt, cleanlog = cleanlog)
-  do_clean_LANDBAK(dt = dt, cleanlog = cleanlog)
-  
+  do_clean_ALDER_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
+  do_clean_dimension_duckdb(con = con, col = "KJONN", cleanlog = cleanlog, illegal = getOption("khfunctions.illegal"))
+  do_clean_dimension_duckdb(con = con, col = "UTDANN", cleanlog = cleanlog, illegal = getOption("khfunctions.illegal"))
+  do_clean_dimension_duckdb(con = con, col = "INNVKAT", cleanlog = cleanlog, illegal = getOption("khfunctions.innvkat_illegal"))
+  do_clean_dimension_duckdb(con = con, col = "LANDBAK", cleanlog = cleanlog, illegal = getOption("khfunctions.landbak_illegal"))
   print_console_message("\n* Dimensjoner ferdig renset")
 }
 
 check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
-  
   dim_ok <- DBI::dbGetQuery(con, 
   sprintf("SELECT KOBLID, MIN(CASE WHEN %s IN ('%s') THEN 0 ELSE 1 END) AS ok
       FROM FILGRUPPE GROUP BY KOBLID",
@@ -23,7 +19,6 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
       paste(illegal, collapse = "','")))
   
   data.table::setDT(dim_ok)
-  
   cleanlog[dim_ok, on = "KOBLID", paste0(col, "_ok") := i.ok]
   rawfiles_not_ok <- dim_ok[ok == 0, unique(KOBLID)]
   n_not_ok <- length(rawfiles_not_ok)
@@ -39,6 +34,7 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 #' @Title do_clean_GEO_duckdb
 #' @description
 #' Renser GEO-verdier. Bygger en geo_map-tabell som skrives til duckdb, som brukes til å overskrive GEO-kolonnen
+#' Legger til GEOniv og FYLKE
 #' @noRd
 do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
   print_console_message("\n** Renser GEO og legger til GEOniv og FYLKE")
@@ -48,14 +44,44 @@ do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
     },add = TRUE)
   
   build_geo_map(con = con, parameters = parameters)
-  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS GEOniv VARCHAR"))
-  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS FYLKE VARCHAR"))
+  update <- DBI::dbGetQuery(con, "SELECT EXISTS(SELECT 1 FROM geo_map WHERE GEO_ORG != GEO_CLEAN) AS update")[["update"]]
+  if(update){
   invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE AS t SET
-                                 GEO = m.GEO_CLEAN,
-                                 GEOniv = m.GEOniv,
-                                 FYLKE = m.FYLKE
+                                 GEO = m.GEO_CLEAN
                                  FROM geo_map AS m 
                                  WHERE t.GEO = m.GEO_ORG"))
+  } else {
+    print_console_message("\n*** Alle GEO-koder var gyldige")
+  }
+  
+  check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, 
+                               col = "GEO", illegal = getOption("khfunctions.geo_illegal"))
+  
+  add_geoniv_fylke(con = con, parameters = parameters)
+  invisible(NULL)
+}
+
+#' Legge til GEOniv og FYLKE
+add_geoniv_fylke <- function(con, parameters){
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS GEOniv VARCHAR"))
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS FYLKE VARCHAR"))
+  
+  invisible(DBI::dbExecute(con,
+    "UPDATE FILGRUPPE SET 
+    GEOniv = CASE
+      WHEN GEO = '0' THEN 'L'
+      WHEN GEO IN ('81','82','83','84') THEN 'H'
+      WHEN LENGTH(GEO) = 10 THEN 'V'
+      WHEN LENGTH(GEO) = 6 THEN 'B'
+      WHEN LENGTH(GEO) = 4 THEN 'K'
+      WHEN LENGTH(GEO) = 2 THEN 'F'
+      ELSE 'U'
+    END,
+    FYLKE = CASE
+      WHEN GEO IN ('0','81','82','83','84') THEN '00'
+      WHEN LENGTH(GEO) IN (2,4,6,10) THEN SUBSTRING(GEO, 1, 2)
+      ELSE NULL
+    END"))
   
   # SETT GEOniv S dersom nødvendig, gjelder for spesifikke KOBLID - sjekk om nødvendig
   sone6 <- parameters$read_parameters[grepl("6", SONER), unique(KOBLID)]
@@ -69,12 +95,8 @@ do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
                    WHERE f.KOBLID = s.KOBLID AND length(f.GEO) = 6")
     
     DBI::dbExecute(con,
-    "UPDATE FILGRUPPE SET GEOniv = 'S' WHERE GEOniv = 'B' AND RIGHT(GEO, 2) = '00'")
+                   "UPDATE FILGRUPPE SET GEOniv = 'S' WHERE GEOniv = 'B' AND RIGHT(GEO, 2) = '00'")
   }
-  
-  check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, 
-                               col = "GEO", illegal = getOption("khfunctions.geo_illegal"))
-  invisible(NULL)
 }
 
 #' @Title build_geo_map
@@ -88,11 +110,11 @@ build_geo_map <- function(con, parameters){
   recode_geo_from_name(dt = geo_map, parameters = parameters)
   geo_map[GEO != "0" & nchar(GEO) %in% c(1,3,5,7,9), GEO := paste0("0", GEO)]
   set_unknown_geo_99_map(dt = geo_map, parameters = parameters)
-  set_geoniv_map(dt = geo_map)
-  set_fylke_map(dt = geo_map)
+  # set_geoniv_map(dt = geo_map)
+  # set_fylke_map(dt = geo_map)
   invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS geo_map"))
   DBI::dbWriteTable(con, "geo_map",
-                    value = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO, GEOniv, FYLKE)],
+                    value = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)],
                     temporary = TRUE, overwrite = TRUE)
   invisible(NULL)
 }
@@ -150,27 +172,6 @@ set_unknown_geo_99_map <- function(dt, parameters){
   dt[recode, on = "GEO", GEO := i.RECODE]
 }
 
-#' @title set_fylke_map
-#' @noRd
-set_geoniv_map <- function(dt){
-  dt[, let(GEOniv = NA_character_)]
-  dt[nchar(GEO) == 10, let(GEOniv = "V")]
-  dt[nchar(GEO) == 6, let(GEOniv = "B")]
-  dt[nchar(GEO) == 4, let(GEOniv = "K")]
-  dt[nchar(GEO) == 2, let(GEOniv = "F")]
-  dt[GEO == "0", let(GEOniv = "L")]
-  dt[GEO %in% c("81", "82", "83", "84"), let(GEOniv = "H")]
-  dt[is.na(GEOniv), let(GEOniv = "U")]
-}
-
-#' @title set_fylke
-#' @noRd
-set_fylke_map <- function(dt){
-  dt[, let(FYLKE = NA_character_)]
-  dt[GEOniv %in% c("V", "S", "K", "F", "B"), let(FYLKE = sub("(\\d{2}).*", "\\1", GEO))]
-  dt[GEOniv %in% c("L", "H"), let(FYLKE = "00")]
-}
-
 #' @title set_fylke
 #' @description henter minste verdi av ok fra geo_map i duckdb per KOBLID, og skriver dette til cleanlog.
 #' Hvis minste verdi er 0 er det minst en GEO som er ikke ok, ellers skal verdien være 1.
@@ -187,7 +188,11 @@ update_geo_cleanlog <- function(con, cleanlog){
 }
 
 # AAR ----
-
+#' @Title do_clean_AAR_duckdb
+#' @description
+#' Renser AAR-verdier. Bygger en aar_map-tabell som skrives til duckdb, som brukes til å overskrive AAR-kolonnen
+#' Legger også til AARl og AARh
+#' @noRd
 do_clean_AAR_duckdb <- function(con, cleanlog){
   print_console_message("\n** Renser AAR og legger til AARl/AARh")
   on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS aar_map"), add = TRUE)
@@ -242,118 +247,180 @@ build_aar_map <- function(con){
   invisible(NULL)
 }
 
+# ALDER ----
 
-
-
-
-
-#' @title do_clean_ALDER
+#' @Title do_clean_ALDER_duckdb
+#' @description
+#' Renser ALDER-verdier. Bygger en alder_map-tabell som skrives til duckdb, som brukes til å overskrive ALDER-kolonnen
+#' Legger også til ALDERl og ALDERh
 #' @noRd
-do_clean_ALDER <- function(dt, parameters, cleanlog){
-  if(!"ALDER" %in% names(dt)) return(invisible(NULL))
-  print_console_message("\n** Renser ALDER")
+do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
+  print_console_message("\n** Renser ALDER og legger til ALDERl/ALDERh")
+  
+  on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS alder_map"), add = TRUE)
+  
+  build_alder_map(con = con, parameters = parameters)
+  
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS ALDERl VARCHAR"))
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS ALDERh VARCHAR"))
+  
+  invisible(DBI::dbExecute(con,"UPDATE FILGRUPPE AS t SET 
+                                ALDER  = m.ALDER_CLEAN,
+                                ALDERl = m.ALDERl,
+                                ALDERh = m.ALDERh 
+                                FROM alder_map AS m
+                                WHERE t.ALDER = m.ALDER_ORG"))
+  
+  check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
+                               col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
+  invisible(NULL)
+}
+
+#' @Title build_alder_map
+#' @description Bygger mappingtabell for ALDER
+#' @noRd
+build_alder_map <- function(con, parameters){
+  
+  alder_map <- DBI::dbGetQuery(con, "SELECT DISTINCT CAST(ALDER AS VARCHAR) AS ALDER FROM FILGRUPPE")
+  data.table::setDT(alder_map)
   
   isalder <- is_not_empty(parameters$filegroup_information$ALDER_ALLE)
   amin <- ifelse(isalder, parameters$filegroup_information$amin, getOption("khfunctions.amin"))
-  amax <- ifelse(isalder, parameters$filegroup_information$amax, getOption("khfunctions.amax"))
-  dt[, let(ALDER = trimws(ALDER))]
-  dt[grepl("_år$", ALDER), let(ALDER = sub("_år$", " år", ALDER))]
+  amax <- ifelse(isalder,parameters$filegroup_information$amax,getOption("khfunctions.amax"))
+  alder_illegal <- getOption("khfunctions.alder_illegal")
+  
+  if(grepl("_", alder_illegal, fixed = TRUE)){
+    alder_illegal_split <- strsplit(alder_illegal,"_",fixed = TRUE)[[1]]
+  } else {
+    alder_illegal_split <- c(alder_illegal,alder_illegal)
+  }
+  
+  alder_map[, ALDER_ORG := ALDER]
+  alder_map[, ALDER := trimws(ALDER)]
+  alder_map[grepl("_år$", ALDER), ALDER := sub("_år$", " år", ALDER)]
   
   pattern <- "^(\\d+)\\s*[-_]\\s*(\\d+).*" # XX-_YY
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\2", ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\2", ALDER, ignore.case = TRUE)]
   pattern <- "^(\\d+)\\s*(?:år)?$" # XX (år)
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\1", ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\1", ALDER, ignore.case = TRUE)]
   pattern <- "^(\\d+)\\s*(?:\\+\\s*(?:år)?|år\\s*\\+|\\+)$" # XX(+|år+|+år)
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
   pattern <- "^(\\d+)\\s*(?:-\\s*(?:år)?|år\\s*-|-)$" # XX(-|år-|-år)
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
   pattern <- "^-\\s*(\\d+)(?:\\s*år)$" # -XX(år)
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*eldre" # XX (år)(og|eller) eldre
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(?:år)?\\s*(og|eller)\\s*eldre" # XX (år)(og|eller) eldre
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
   pattern <- "^over\\s*(\\d+)\\s*(?:år)?" # over xx (år)
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
-  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*(yngre|under)"# xx (år)(og|eller)yngre
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(?:år)?\\s*(og|eller)\\s*(yngre|under)"# xx (år)(og|eller)yngre
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
   pattern <- "^Alle\\s*(aldre.*|)|(Totalt|I alt)"
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_", amax), ALDER, ignore.case = TRUE)]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_", amax), ALDER, ignore.case = TRUE)]
   pattern <- "Ukjent|Uoppgitt|Ikke kjent"
-  dt[grepl(pattern, ALDER), ALDER := sub(pattern, getOption("khfunctions.alder_ukjent"), ALDER, ignore.case = TRUE)]
-  dt[!grepl("^\\d+_\\d+$", ALDER), ALDER := getOption("khfunctions.alder_illegal")]
+  alder_map[grepl(pattern, ALDER), ALDER := sub(pattern, getOption("khfunctions.alder_ukjent"), ALDER, ignore.case = TRUE)]
+  alder_map[!grepl("^\\d+_\\d+$", ALDER), ALDER := alder_illegal]
   
-  alderint <- c("ALDERl", "ALDERh")
-  dt[, (alderint) := data.table::tstrsplit(ALDER, "_")]
-  dt[as.integer(ALDERl) > as.integer(ALDERh), let(ALDER = getOption("khfunctions.alder_illegal"))]
-  dt[as.integer(ALDERl) > as.integer(ALDERh), (alderint) := data.table::tstrsplit(getOption("khfunctions.alder_illegal"), "_")]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
-  dt[, let(ALDER = NULL)]
+  valid <- alder_map[["ALDER"]] != alder_illegal
+  alder_map[, c("ALDERl", "ALDERh") := character()]
+  alder_map[valid, c("ALDERl", "ALDERh") := data.table::tstrsplit(ALDER,"_",fixed = TRUE)]
+  
+  alder_map[valid &!is.na(ALDERl) &!is.na(ALDERh) & as.integer(ALDERl) > as.integer(ALDERh), ALDER := alder_illegal]
+  alder_map[ALDER == alder_illegal,c("ALDERl", "ALDERh") := alder_illegal_split]
+  
+  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS alder_map"))
+  DBI::dbWriteTable(con, "alder_map",
+                    value = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)],
+                    temporary = TRUE,overwrite = TRUE)
+  
+  invisible(NULL)
 }
 
-#' @title do_clean_KJONN
+
+
+# KJONN, UTDANN, INNVKAT, LANDBAK ----
+
+#' @Title do_clean_dimension_duckdb
+#' @description
+#' Renser KJONN, UTDANN, INNVKAT og LANDBAK. Disse følger samme logikk med å bare oppdatere en enkelt kolonne.
 #' @noRd
-do_clean_KJONN <- function(dt, cleanlog){
-  if(!"KJONN" %in% names(dt)) return(invisible(NULL))
-  print_console_message("\n** Renser KJONN")
-  dt[, let(KJONN = trimws(KJONN))]
-  dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
-  dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
-  dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
-  dt[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), let(KJONN = getOption("khfunctions.ukjent"))]
-  dt[is.na(KJONN), let(KJONN = getOption("khfunctions.ukjent"))]
-  dt[!KJONN %in% c("0","1","2", getOption("khfunctions.ukjent")), let(KJONN = getOption("khfunctions.illegal"))]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "KJONN", illegal = getOption("khfunctions.illegal"))
+do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
+  if(!col %in% DBI::dbListFields(con, "FILGRUPPE")) return(invisible(NULL))
+  print_console_message("\n** Renser", col)
+  
+  map_table_name <- paste0(tolower(col), "_map")
+  on.exit(DBI::dbExecute(con,paste0("DROP TABLE IF EXISTS ", map_table_name)), add = TRUE)
+  build_dimension_map(con = con, col = col, map_table_name = map_table_name)
+  
+  update <- DBI::dbGetQuery(con, 
+                            sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE ORG != CLEAN) AS update",
+                                    map_table_name))[["update"]]
+  
+  if(update){
+    invisible(DBI::dbExecute(
+      con,
+      sprintf(
+        "UPDATE FILGRUPPE AS t
+         SET %s = m.CLEAN
+         FROM %s AS m
+         WHERE t.%s = m.ORG",
+        col, map_table_name, col)
+    ))
+  } else {
+    print_console_message("\n*** Alle ", col, "-verdier var gyldige", sep = "")
+  }
+  check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, col = col, illegal = illegal)
+  invisible(NULL)
 }
 
-#' @title do_clean_UTDANN
-#' @noRd
-do_clean_UTDANN <- function(dt, cleanlog){
-  if(!"UTDANN" %in% names(dt)) return(invisible(NULL))
-  print_console_message("\n** Renser UTDANN")
-  dt[, let(UTDANN = trimws(UTDANN))]
-  dt[grepl("^0[0-4]$", UTDANN), let(UTDANN = sub("^0([0-4])$", "\\1", UTDANN))]
-  dt[grepl("^alle$", UTDANN, ignore.case = TRUE), let(UTDANN = "0")]
-  dt[is.na(UTDANN), let(UTDANN = getOption("khfunctions.ukjent"))]
-  dt[!UTDANN %in% c(0,1,2,3,4, getOption("khfunctions.ukjent")), let(UTDANN = getOption("khfunctions.illegal"))]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "UTDANN", illegal = getOption("khfunctions.illegal"))
+build_dimension_map <- function(con, col, map_table_name){
+  map <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT CAST(%s AS VARCHAR) AS %s FROM FILGRUPPE", col, col))
+  data.table::setDT(map)
+  data.table::set(map, j = "ORG", value = map[[col]])
+  data.table::set(map, j = col, value = trimws(map[[col]]))
+  
+  clean_fun <- switch(col,
+                      KJONN   = clean_kjonn_map,
+                      UTDANN  = clean_utdann_map,
+                      INNVKAT = clean_innvkat_map,
+                      LANDBAK = clean_landbak_map,
+                      stop("Ukjent kolonne: ", col))
+  clean_fun(map)
+
+  data.table::setnames(map, col, "CLEAN")
+  invisible(DBI::dbExecute(con,paste0("DROP TABLE IF EXISTS ", map_table_name)))
+  DBI::dbWriteTable(con, map_table_name,
+                    value = map[, .(ORG, CLEAN)],
+                    temporary = TRUE, overwrite = TRUE)
+  invisible(NULL)
 }
 
-#' @title do_clean_INNVKAT
-#' @noRd
-do_clean_INNVKAT <- function(dt, cleanlog){
-  if(!"INNVKAT" %in% names(dt)) return(invisible(NULL))
-  print_console_message("\n** Renser INNVKAT")
-  dt[, let(INNVKAT = trimws(INNVKAT))]
-  dt[grepl("^alle$", INNVKAT, ignore.case = TRUE), let(INNVKAT = "0")]
-  dt[is.na(INNVKAT), let(INNVKAT = getOption("khfunctions.innvkat_ukjent"))]
-  dt[!INNVKAT %in% c(0, 2, 3, 20, getOption("khfunctions.innvkat_ukjent")), let(INNVKAT = getOption("khfunctions.innvkat_illegal"))]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "INNVKAT", illegal = getOption("khfunctions.innvkat_illegal"))
+clean_kjonn_map <- function(map){
+  map[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), KJONN := "1"]
+  map[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), KJONN := "2"]
+  map[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), KJONN := "0"]
+  map[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), KJONN := getOption("khfunctions.ukjent")]
+  map[is.na(KJONN), KJONN := getOption("khfunctions.ukjent")]
+  map[!KJONN %in% c("0","1","2", getOption("khfunctions.ukjent")), KJONN := getOption("khfunctions.illegal")]
 }
 
-#' @title do_clean_LANDBAK
-#' @noRd
-do_clean_LANDBAK <- function(dt, cleanlog){
-  if(!"LANDBAK" %in% names(dt)) return(invisible(NULL))
-  print_console_message("\n** Renser LANDBAK")
-  dt[, let(LANDBAK = trimws(LANDBAK))]
-  dt[grepl("^alle$", LANDBAK, ignore.case = TRUE), let(LANDBAK = "0")]
-  dt[is.na(LANDBAK), let(LANDBAK = getOption("khfunctions.landbak_ukjent"))] # illegal/8 = uoppgitt
-  dt[!LANDBAK %in% c(0:9, 20), let(LANDBAK = getOption("khfunctions.landbak_illegal"))]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "LANDBAK", illegal = getOption("khfunctions.landbak_illegal"))
+clean_utdann_map <- function(map){
+  map[grepl("^0[0-4]$", UTDANN), UTDANN := sub("^0([0-4])$", "\\1", UTDANN)]
+  map[grepl("^alle$", UTDANN, ignore.case = TRUE), UTDANN := "0"]
+  map[is.na(UTDANN), UTDANN := getOption("khfunctions.ukjent")]
+  map[!UTDANN %in% c(0,1,2,3,4, getOption("khfunctions.ukjent")), UTDANN := getOption("khfunctions.illegal")]
 }
 
-#' @title check_if_dimension_ok
-#' @description Check if any illegal values remain for each dimension after cleaning
-#' @noRd
-check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
-  dim_ok <- dt[, .SD, .SDcols = c(col, "KOBLID")][, let(ok = 1)]
-  dim_ok[dim_ok[[col]] %in% illegal, let(ok = 0)]
-  n_not_ok <- sum(dim_ok$ok == 0)
-  dim_ok_log <- dim_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
-  rawfiles_not_ok <- dim_ok_log[ok == 0, unique(KOBLID)]
-  cleanlog[dim_ok_log, on = "KOBLID", paste0(col, "_ok") := i.ok]
-  if(n_not_ok > 0) print_console_message("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
-                       "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
-  if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
+clean_innvkat_map <- function(map){
+  map[grepl("^alle$", INNVKAT, ignore.case = TRUE), INNVKAT := "0"]
+  map[is.na(INNVKAT), INNVKAT := getOption("khfunctions.innvkat_ukjent")]
+  map[!INNVKAT %in% c(0, 2, 3, 20, getOption("khfunctions.innvkat_ukjent")), INNVKAT := getOption("khfunctions.innvkat_illegal")]
+}
+
+clean_landbak_map <- function(map){
+  map[grepl("^alle$", LANDBAK, ignore.case = TRUE), LANDBAK := "0"]
+  map[is.na(LANDBAK), LANDBAK := getOption("khfunctions.landbak_ukjent")] # illegal/8 = uoppgitt
+  map[!LANDBAK %in% c(0:9, 20), LANDBAK := getOption("khfunctions.landbak_illegal")]
 }
 
 # OLD ----
@@ -464,4 +531,113 @@ do_clean_AAR <- function(dt, cleanlog){
   dt[AARl > AARh, (aarint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
   check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
   dt[, let(AAR = NULL)]
+}
+
+#' @title do_clean_ALDER
+#' @noRd
+do_clean_ALDER <- function(dt, parameters, cleanlog){
+  if(!"ALDER" %in% names(dt)) return(invisible(NULL))
+  print_console_message("\n** Renser ALDER")
+  
+  isalder <- is_not_empty(parameters$filegroup_information$ALDER_ALLE)
+  amin <- ifelse(isalder, parameters$filegroup_information$amin, getOption("khfunctions.amin"))
+  amax <- ifelse(isalder, parameters$filegroup_information$amax, getOption("khfunctions.amax"))
+  dt[, let(ALDER = trimws(ALDER))]
+  dt[grepl("_år$", ALDER), let(ALDER = sub("_år$", " år", ALDER))]
+  
+  pattern <- "^(\\d+)\\s*[-_]\\s*(\\d+).*" # XX-_YY
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\2", ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(?:år)?$" # XX (år)
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, "\\1_\\1", ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(?:\\+\\s*(?:år)?|år\\s*\\+|\\+)$" # XX(+|år+|+år)
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(?:-\\s*(?:år)?|år\\s*-|-)$" # XX(-|år-|-år)
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  pattern <- "^-\\s*(\\d+)(?:\\s*år)$" # -XX(år)
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*eldre" # XX (år)(og|eller) eldre
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  pattern <- "^over\\s*(\\d+)\\s*(?:år)?" # over xx (år)
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0("\\1_", amax), ALDER, ignore.case = TRUE)]
+  pattern <- "^(\\d+)\\s*(:?år)?\\s*(og|eller)\\s*(yngre|under)"# xx (år)(og|eller)yngre
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_\\1"), ALDER, ignore.case = TRUE)]
+  pattern <- "^Alle\\s*(aldre.*|)|(Totalt|I alt)"
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, paste0(amin, "_", amax), ALDER, ignore.case = TRUE)]
+  pattern <- "Ukjent|Uoppgitt|Ikke kjent"
+  dt[grepl(pattern, ALDER), ALDER := sub(pattern, getOption("khfunctions.alder_ukjent"), ALDER, ignore.case = TRUE)]
+  dt[!grepl("^\\d+_\\d+$", ALDER), ALDER := getOption("khfunctions.alder_illegal")]
+  
+  alderint <- c("ALDERl", "ALDERh")
+  dt[, (alderint) := data.table::tstrsplit(ALDER, "_")]
+  dt[as.integer(ALDERl) > as.integer(ALDERh), let(ALDER = getOption("khfunctions.alder_illegal"))]
+  dt[as.integer(ALDERl) > as.integer(ALDERh), (alderint) := data.table::tstrsplit(getOption("khfunctions.alder_illegal"), "_")]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
+  dt[, let(ALDER = NULL)]
+}
+
+#' @title do_clean_KJONN
+#' @noRd
+do_clean_KJONN <- function(dt, cleanlog){
+  if(!"KJONN" %in% names(dt)) return(invisible(NULL))
+  print_console_message("\n** Renser KJONN")
+  dt[, let(KJONN = trimws(KJONN))]
+  dt[grepl("^(M|Menn|Mann|gutt(er|)|g)$", KJONN, ignore.case = TRUE), let(KJONN = "1")]
+  dt[grepl("^(K|F|Kvinner|Kvinne|jente(r|)|j)$", KJONN, ignore.case = TRUE), let(KJONN = "2")]
+  dt[grepl("^(Tot(alt|)|Begge([\\s\\._]*kjønn|)|Alle|A|M\\+K)$", KJONN, ignore.case = TRUE), let(KJONN = "0")]
+  dt[grepl("^(Uspesifisert|Uoppgitt|Ikke\\s*(spesifisert|oppgitt)|Ukjent|)$", KJONN, ignore.case = TRUE), let(KJONN = getOption("khfunctions.ukjent"))]
+  dt[is.na(KJONN), let(KJONN = getOption("khfunctions.ukjent"))]
+  dt[!KJONN %in% c("0","1","2", getOption("khfunctions.ukjent")), let(KJONN = getOption("khfunctions.illegal"))]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "KJONN", illegal = getOption("khfunctions.illegal"))
+}
+
+#' @title do_clean_UTDANN
+#' @noRd
+do_clean_UTDANN <- function(dt, cleanlog){
+  if(!"UTDANN" %in% names(dt)) return(invisible(NULL))
+  print_console_message("\n** Renser UTDANN")
+  dt[, let(UTDANN = trimws(UTDANN))]
+  dt[grepl("^0[0-4]$", UTDANN), let(UTDANN = sub("^0([0-4])$", "\\1", UTDANN))]
+  dt[grepl("^alle$", UTDANN, ignore.case = TRUE), let(UTDANN = "0")]
+  dt[is.na(UTDANN), let(UTDANN = getOption("khfunctions.ukjent"))]
+  dt[!UTDANN %in% c(0,1,2,3,4, getOption("khfunctions.ukjent")), let(UTDANN = getOption("khfunctions.illegal"))]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "UTDANN", illegal = getOption("khfunctions.illegal"))
+}
+
+#' @title do_clean_INNVKAT
+#' @noRd
+do_clean_INNVKAT <- function(dt, cleanlog){
+  if(!"INNVKAT" %in% names(dt)) return(invisible(NULL))
+  print_console_message("\n** Renser INNVKAT")
+  dt[, let(INNVKAT = trimws(INNVKAT))]
+  dt[grepl("^alle$", INNVKAT, ignore.case = TRUE), let(INNVKAT = "0")]
+  dt[is.na(INNVKAT), let(INNVKAT = getOption("khfunctions.innvkat_ukjent"))]
+  dt[!INNVKAT %in% c(0, 2, 3, 20, getOption("khfunctions.innvkat_ukjent")), let(INNVKAT = getOption("khfunctions.innvkat_illegal"))]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "INNVKAT", illegal = getOption("khfunctions.innvkat_illegal"))
+}
+
+#' @title do_clean_LANDBAK
+#' @noRd
+do_clean_LANDBAK <- function(dt, cleanlog){
+  if(!"LANDBAK" %in% names(dt)) return(invisible(NULL))
+  print_console_message("\n** Renser LANDBAK")
+  dt[, let(LANDBAK = trimws(LANDBAK))]
+  dt[grepl("^alle$", LANDBAK, ignore.case = TRUE), let(LANDBAK = "0")]
+  dt[is.na(LANDBAK), let(LANDBAK = getOption("khfunctions.landbak_ukjent"))] # illegal/8 = uoppgitt
+  dt[!LANDBAK %in% c(0:9, 20), let(LANDBAK = getOption("khfunctions.landbak_illegal"))]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "LANDBAK", illegal = getOption("khfunctions.landbak_illegal"))
+}
+
+#' @title check_if_dimension_ok
+#' @description Check if any illegal values remain for each dimension after cleaning
+#' @noRd
+check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
+  dim_ok <- dt[, .SD, .SDcols = c(col, "KOBLID")][, let(ok = 1)]
+  dim_ok[dim_ok[[col]] %in% illegal, let(ok = 0)]
+  n_not_ok <- sum(dim_ok$ok == 0)
+  dim_ok_log <- dim_ok[, .(ok = ifelse(sum(ok == 0) == 0, 1, 0)), by = KOBLID]
+  rawfiles_not_ok <- dim_ok_log[ok == 0, unique(KOBLID)]
+  cleanlog[dim_ok_log, on = "KOBLID", paste0(col, "_ok") := i.ok]
+  if(n_not_ok > 0) print_console_message("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
+                                         "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
+  if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
 }
