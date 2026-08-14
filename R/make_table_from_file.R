@@ -230,7 +230,7 @@ do_set_default_values_db <- function(filedescription, defaultcolumns, con){
 #' @description Fjerner kolonner som ikke trengs videre
 #' @noRd
 drop_unwanted_columns_db <- function(con){
-  keep_cols <- c(getOption("khfunctions.kolorgs"), "LEVEL")
+  keep_cols <- c(getOption("khfunctions.kolorgs"))
   existing_cols <- DBI::dbListFields(con, "temp_orgfile")
   cols_to_drop <- setdiff(existing_cols, keep_cols)
   if(length(cols_to_drop) == 0) return(invisible(NULL))

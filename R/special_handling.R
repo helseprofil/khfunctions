@@ -4,7 +4,7 @@
 #' code must be provided in specific files and specified in STATA to be used at certain points in data processing. 
 #' 
 #' @param name name of RSYNT point, refer to the column, to be used for filedump names
-#' @param dt data to be processed 
+#' @param dt data to be processed, default is NULL as data should ideally be in duckdb
 #' @param dt_name name of data object, passed to code env
 #' @param code code to be performed, either R or STATA
 #' @param parameters global parameters
@@ -13,7 +13,7 @@
 #' @param tablename name of table in duckdb
 #' @param filedescription filedescription object if relevant, default = NULL
 #' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, filedescription = NULL){
+do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, filedescription = NULL){
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
   is_code <- is_not_empty(code)
@@ -53,11 +53,11 @@ do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, kobl
     dt <- fetch_duckdb_table(con = con, tablename = tablename)
   }
   
-  if(name == "RSYNT1"){
-    dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
-  }
   
   if(is_stata){
+    if(name == "RSYNT1"){
+      dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
+    }
     print_console_message("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)

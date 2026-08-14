@@ -16,6 +16,8 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
          "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
          "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
          "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck))
+  
+  invisible(DBI::dbExecute(parameters$duck, "ALTER TABLE temp_orgfile DROP COLUMN IF EXISTS LEVEL"))
   invisible(NULL)
 }
 

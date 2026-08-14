@@ -1,15 +1,20 @@
 # khfunctions (development version)
 
-- init_duckdb is more robust towards existing db file, and sets maximum memory limit
+- init_duckdb is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
 - Filename dropped from duckdb name
 - Implement duckdb for LagFilgruppe
     - Processing and stacking of original files is done in duckdb, minimizing memory requirements
+    - `RSYNT1` moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
+    - Cleaning of dimension and value columns is done directly in duckdb
+    - Columns are renamed, and values are converted to integer in duckdb
+    - `RSYNT_PRE_FGLAGRING` now utilizes duckdb, meaning data doesn't need to go into memory
 - `do_special_handling` 
     - reads and write to duckdb, new arguments `duck` and `tablename`
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
-- RSYNT1 moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
+    
+- graveyard2 initiated, for functions deprecated when switching to duckdb processing
 
 # khfunctions 1.2.7 (2026-08-10)
 
