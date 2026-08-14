@@ -2,8 +2,9 @@ clean_filegroup_dimensions <- function(dt, parameters, cleanlog){
   con <- parameters$duck
   print_console_message("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
+  do_clean_AAR_duckdb(con = con, cleanlog = cleanlog)
   # do_clean_GEO(dt = dt, parameters = parameters, cleanlog = cleanlog)
-  do_clean_AAR(dt = dt, cleanlog = cleanlog)
+  # do_clean_AAR(dt = dt, cleanlog = cleanlog)
   do_clean_ALDER(dt = dt, parameters = parameters, cleanlog = cleanlog)
   do_clean_KJONN(dt = dt, cleanlog = cleanlog)
   do_clean_UTDANN(dt = dt, cleanlog = cleanlog)
@@ -41,6 +42,11 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 #' @noRd
 do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
   print_console_message("\n** Renser GEO og legger til GEOniv og FYLKE")
+  on.exit({
+    DBI::dbExecute(con, "DROP TABLE IF EXISTS sone6")
+    DBI::dbExecute(con, "DROP TABLE IF EXISTS geo_map")
+    },add = TRUE)
+  
   build_geo_map(con = con, parameters = parameters)
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS GEOniv VARCHAR"))
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS FYLKE VARCHAR"))
@@ -57,7 +63,6 @@ do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
     DBI::dbWriteTable(con, "sone6", 
                       data.table::data.table(KOBLID = sone6),
                       temporary = TRUE, overwrite = TRUE)
-    on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS sone6"), add = TRUE)
     
     DBI::dbExecute(con,
                    "UPDATE FILGRUPPE AS f SET GEOniv = 'S' FROM sone6 AS s
@@ -182,24 +187,65 @@ update_geo_cleanlog <- function(con, cleanlog){
 }
 
 # AAR ----
-#' @title do_clean_AAR
-#' @description formats AAR and generate AARl/AARh
-#' @noRd
-do_clean_AAR <- function(dt, cleanlog){
-  print_console_message("\n** Renser AAR")
-  dt[, let(AAR = trimws(AAR))]
-  dt[grepl("^Høsten ", AAR), let(AAR = sub("^Høsten ", "", AAR))]
-  dt[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), let(AAR = sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", AAR))]
-  dt[grepl("^ *(\\d+) *$", AAR), let(AAR = sub("^ *(\\d+) *$", "\\1_\\1", AAR))]
-  dt[!grepl("^\\d{4}_\\d{4}$", AAR), let(AAR = getOption("khfunctions.aar_illegal"))]
+
+do_clean_AAR_duckdb <- function(con, cleanlog){
+  print_console_message("\n** Renser AAR og legger til AARl/AARh")
+  on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS aar_map"), add = TRUE)
+  build_aar_map(con = con)
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARl VARCHAR"))
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARh VARCHAR"))
   
-  aarint <- c("AARl", "AARh")
-  dt[, (aarint) := data.table::tstrsplit(AAR, "_")]
-  dt[AARl > AARh, let(AAR = getOption("khfunctions.aar_illegal"))]
-  dt[AARl > AARh, (aarint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
-  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
-  dt[, let(AAR = NULL)]
+  invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE AS t SET 
+                                AAR = m.AAR_CLEAN, 
+                                AARl = m.AARl, 
+                                AARh = m.AARh 
+                                FROM aar_map AS m
+                                WHERE t.AAR = m.AAR_ORG"))
+  
+  check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
+                               col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
+  invisible(NULL)
 }
+
+#' @Title build_aar_map
+#' @description Bygger mappingtabell for AAR
+#' @noRd
+build_aar_map <- function(con){
+  aar_map <- DBI::dbGetQuery(con, "SELECT DISTINCT CAST(AAR AS VARCHAR) AS AAR FROM FILGRUPPE")
+  data.table::setDT(aar_map)
+  
+  aar_illegal <- getOption("khfunctions.aar_illegal")
+  if(grepl("_", aar_illegal, fixed = TRUE)){
+    aar_illegal_split <- strsplit(aar_illegal,"_",fixed = TRUE)[[1]]
+  } else {
+    aar_illegal_split <- c(aar_illegal,aar_illegal)
+  }
+  
+  aar_map[, AAR_ORG := AAR]
+  aar_map[, AAR := trimws(AAR)]
+  aar_map[grepl("^Høsten ", AAR), AAR := sub("^Høsten ", "", AAR)]
+  aar_map[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), AAR := sub("^(\\d+) *[_-] *(\\d+)$","\\1_\\2",AAR)]
+  aar_map[grepl("^ *(\\d+) *$", AAR), AAR := sub("^ *(\\d+) *$","\\1_\\1",AAR)]
+  aar_map[!grepl("^\\d{4}_\\d{4}$", AAR), AAR := aar_illegal]
+  
+  valid <- aar_map[["AAR"]] != aar_illegal
+  aar_map[, c("AARl", "AARh") := character()]
+  aar_map[valid, c("AARl", "AARh") := data.table::tstrsplit(AAR, "_", fixed = TRUE)]
+  aar_map[valid & !is.na(AARl) & !is.na(AARh) & as.integer(AARl) > as.integer(AARh), AAR := aar_illegal]
+  aar_map[AAR == aar_illegal, c("AARl", "AARh") := aar_illegal_split]
+  
+  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS aar_map"))
+  DBI::dbWriteTable(con, "aar_map", 
+                    value = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)],
+                    temporary = TRUE, overwrite = TRUE)
+  
+  invisible(NULL)
+}
+
+
+
+
+
 
 #' @title do_clean_ALDER
 #' @noRd
@@ -401,3 +447,21 @@ check_if_geo_ok <- function(dt, parameters, cleanlog){
   if(n_not_ok == 0) print_console_message("\n*** Alle GEO ok")
 }
 
+#' @title do_clean_AAR
+#' @description formats AAR and generate AARl/AARh
+#' @noRd
+do_clean_AAR <- function(dt, cleanlog){
+  print_console_message("\n** Renser AAR")
+  dt[, let(AAR = trimws(AAR))]
+  dt[grepl("^Høsten ", AAR), let(AAR = sub("^Høsten ", "", AAR))]
+  dt[grepl("^(\\d+) *[_-] *(\\d+)$", AAR), let(AAR = sub("^(\\d+) *[_-] *(\\d+)$", "\\1_\\2", AAR))]
+  dt[grepl("^ *(\\d+) *$", AAR), let(AAR = sub("^ *(\\d+) *$", "\\1_\\1", AAR))]
+  dt[!grepl("^\\d{4}_\\d{4}$", AAR), let(AAR = getOption("khfunctions.aar_illegal"))]
+  
+  aarint <- c("AARl", "AARh")
+  dt[, (aarint) := data.table::tstrsplit(AAR, "_")]
+  dt[AARl > AARh, let(AAR = getOption("khfunctions.aar_illegal"))]
+  dt[AARl > AARh, (aarint) := data.table::tstrsplit(getOption("khfunctions.aar_illegal"), "_")]
+  check_if_dimension_ok(dt = dt, cleanlog = cleanlog, col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
+  dt[, let(AAR = NULL)]
+}
