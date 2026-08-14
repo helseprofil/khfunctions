@@ -25,14 +25,15 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
       make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     }
   }
+  clean_tempfiles(con = parameters$duck)
   do_clean_duckdb(con = parameters$duck)
   print_console_message("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   
-  Filgruppe <- fetch_duckdb_table(parameters$duck, "FILGRUPPE")
-  check_encoding(dt = Filgruppe)
+  # Filgruppe <- fetch_duckdb_table(parameters$duck, "FILGRUPPE")
+  # check_encoding(dt = Filgruppe)
+  cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
   
-  cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
   clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
@@ -77,6 +78,24 @@ lagfilgruppe_cleanup <- function(parameters){
 initiate_cleanlog <- function(dt, codebooklog, parameters){
   log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
   n_rows <- dt[, .(N_rows = .N), by = KOBLID]
+  log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
+  n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
+  n_deleted <- codebooklog[OMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
+  data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
+  return(log)
+}
+
+#' @title initiate_cleanlog
+#' @description
+#' Initiates log for filegroup cleaning
+#' @noRd
+initiate_cleanlog_db <- function(codebooklog, parameters){
+  if(!"FILGRUPPE" %in% DBI::dbListTables(parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
+  koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
+  log <- parameters$read_parameters[KOBLID %in% koblids, .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
+  n_rows <- data.table::setDT(DBI::dbGetQuery(parameters$duck, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))
   log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
   n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
   log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)

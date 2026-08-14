@@ -70,6 +70,15 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   invisible(NULL)
 }
 
+#' @title update_codebooklog
+#' @description updates codebooklog by reference
+#' @noRd
+update_codebooklog <- function(codebooklog, recodelog){
+  updated_codebooklog <- data.table::rbindlist(list(codebooklog, recodelog))
+  codebooklog[, names(codebooklog) := NULL][, names(updated_codebooklog) := updated_codebooklog]
+}
+
+#' @noRd
 update_recoded_cols_db <- function(con, recodecols){
   set_clause <- paste(sprintf("%1$s = r.%1$s", as.character(DBI::dbQuoteIdentifier(con, recodecols))), collapse = ", ")
   sql <- sprintf("UPDATE temp_orgfile t SET %s FROM temp_recode r WHERE t.ROWID_KH = r.ROWID_KH",
@@ -77,6 +86,7 @@ update_recoded_cols_db <- function(con, recodecols){
   DBI::dbExecute(con, sql)
 }
 
+#' @noRd
 do_list_unchanged_values <- function(col, orgvalues, log){
   if(grepl("^VAL\\d{1}", col) | col == "GEO") return(log)
   unchanged <- setdiff(orgvalues, log$ORG)

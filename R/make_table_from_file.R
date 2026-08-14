@@ -274,19 +274,6 @@ check_if_all_columns_exist <- function(filecolumns, con){
   return(invisible(NULL))
 }
 
-# Process file data.table ----
-
-
-
-
-#' @title update_codebooklog
-#' @description updates codebooklog by reference
-#' @noRd
-update_codebooklog <- function(codebooklog, recodelog){
-  updated_codebooklog <- data.table::rbindlist(list(codebooklog, recodelog))
-  codebooklog[, names(codebooklog) := NULL][, names(updated_codebooklog) := updated_codebooklog]
-}
-
 # READ/WRITE DUCKDB ----
 
 #' @noRd
