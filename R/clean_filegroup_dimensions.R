@@ -208,6 +208,7 @@ do_clean_AAR_duckdb <- function(con, cleanlog){
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
                                col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE DROP COLUMN AAR"))
   invisible(NULL)
 }
 
@@ -272,6 +273,7 @@ do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
                                col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE DROP COLUMN ALDER"))
   invisible(NULL)
 }
 
