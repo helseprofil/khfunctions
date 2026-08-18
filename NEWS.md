@@ -8,6 +8,7 @@
     - Cleaning of dimension and value columns is done directly in duckdb
     - Columns are renamed, and values are converted to integer in duckdb
     - `RSYNT_PRE_FGLAGRING` now utilizes duckdb, meaning data doesn't need to go into memory
+    - write_filegroup_output now writes parquet files directly from duckdb
 - `do_special_handling` 
     - reads and write to duckdb, new arguments `duck` and `tablename`
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`

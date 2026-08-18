@@ -42,8 +42,9 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
                       parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
   
+  sort_filegroup_duckdb(con = parameters$duck)
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
+  # RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
@@ -131,3 +132,30 @@ set_integer_columns_duckdb <- function(con){
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }
+
+#' @title sort_filegroup_duckdb
+#' @description
+#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
+#' Overskriver tabellen med sortert versjon.
+#' @param con duckdb-connection
+#' @noRd
+sort_filegroup_duckdb <- function(con){
+  
+  dims <- khfunctions:::get_dimension_columns(
+    DBI::dbListFields(con, "FILGRUPPE")
+  )
+  dims <- setdiff(dims, c("GEOniv", "FYLKE", "AARh", "ALDERh"))
+  dims <- union(c("GEO", "AARl", "ALDERl", "KJONN", "INNVKAT", "UTDANN"), dims)
+  dims_sql <- paste(dims, collapse = ", ")
+  
+  sql <- sprintf(
+    "CREATE OR REPLACE TABLE FILGRUPPE AS
+    SELECT *
+    FROM FILGRUPPE
+    ORDER BY %s",
+    dims_sql
+  )
+  
+  invisible(DBI::dbExecute(con, sql))
+}
+

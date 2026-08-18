@@ -10,8 +10,9 @@ write_filegroup_output <- function(dt, parameters){
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
   print_console_message("\n", parquet,"\n", datert)
-  table <- convert_dt_to_arrow_table(dt)
-  arrow::write_parquet(table, sink = parquet, compression = "snappy")
+  # table <- convert_dt_to_arrow_table(dt)
+  # arrow::write_parquet(table, sink = parquet, compression = "snappy")
+  do_write_parquet_duckdb(tablename = "FILGRUPPE", filepath = parquet, parameters = parameters)
   file.copy(from = parquet, to = datert)
   if(grepl("BEF_GKny", parameters$name, ignore.case = T)) write_population_filegroup(table = table, root = root)
 }
@@ -38,6 +39,21 @@ convert_dt_to_arrow_table <- function(dt){
 do_write_parquet <- function(dt, filepath){
   table <- convert_dt_to_arrow_table(dt)
   arrow::write_parquet(table, sink = filepath, compression = "snappy")
+}
+
+do_write_parquet_duckdb <- function(tablename, filepath, parameters){
+  invisible(DBI::dbExecute(
+    parameters$duck,
+    sprintf(
+      "COPY %s TO '%s' 
+      (
+        FORMAT PARQUET, 
+        COMPRESSION ZSTD, 
+        ROW_GROUP_SIZE 1000000
+      )",
+      tablename,
+      gsub("\\\\", "/", filepath)
+    )))
 }
 
 #' @title write_population_filegroup
