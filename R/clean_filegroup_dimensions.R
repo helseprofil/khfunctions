@@ -156,9 +156,9 @@ set_unknown_geo_99_map <- function(dt, parameters){
   
   # Gjør ugyldige 99-koder til helt ukjente (f.eks 8899 -> 9999)
   # GEO-koder som ikke er tall blir til geo-illegal standardverdi
-  recode[!RECODE %in% parameters$GeoKoder$GEO & grepl("^\\d+$", GEO), 
+  recode[!RECODE %in% parameters$GeoKoder$GEO & grepl("^\\d+$", RECODE), 
          RECODE := vapply(nchar(GEO), function(n) paste(rep("9", n), collapse = ""), character(1))]
-  recode[!(GEO %in% parameters$GeoKoder$GEO | GEO %in% c("99", "9999", "999999", "9999999999")),
+  recode[!(RECODE %in% parameters$GeoKoder$GEO | RECODE %in% c("99", "9999", "999999", "9999999999")),
          RECODE := getOption("khfunctions.geo_illegal")]
   recode99 <- recode[RECODE != getOption("khfunctions.geo_illegal")]
   print_console_message("\n*** Setter ukjente numeriske koder til 99, fra originalkode(r): ", 
