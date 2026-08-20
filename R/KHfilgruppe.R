@@ -42,6 +42,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
                       parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
   
+  add_partition_columns_befolkning_duckdb(parameters = parameters)
   sort_filegroup_duckdb(con = parameters$duck)
   # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
   # RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
@@ -71,22 +72,6 @@ lagfilgruppe_cleanup <- function(parameters){
 #' @description
 #' Initiates log for filegroup cleaning
 #' @noRd
-initiate_cleanlog <- function(dt, codebooklog, parameters){
-  log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
-  n_rows <- dt[, .(N_rows = .N), by = KOBLID]
-  log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
-  n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
-  log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
-  n_deleted <- codebooklog[OMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
-  log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
-  data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
-  return(log)
-}
-
-#' @title initiate_cleanlog
-#' @description
-#' Initiates log for filegroup cleaning
-#' @noRd
 initiate_cleanlog_db <- function(codebooklog, parameters){
   if(!"FILGRUPPE" %in% DBI::dbListTables(parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
   koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
@@ -100,62 +85,3 @@ initiate_cleanlog_db <- function(codebooklog, parameters){
   data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
   return(log)
 }
-
-rename_fg_value_columns_duckdb <- function(parameters){
-  con <- parameters$duck
-  vals <- intersect(c("VAL1", "VAL2", "VAL3"), DBI::dbListFields(con, "FILGRUPPE"))
-  valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
-  
-  rename_map <- data.table::data.table(
-    old = c(vals, paste0(vals, ".a"), paste0(vals, ".f")),
-    new = c(valnames, paste0(valnames, ".a"), paste0(valnames, ".f"))
-  )
-  
-  sql <- paste0(sprintf(
-      'ALTER TABLE FILGRUPPE RENAME COLUMN "%s" TO "%s"',
-      rename_map$old,
-      rename_map$new
-    ),
-    collapse = ";\n"
-  )
-  
-  invisible(DBI::dbExecute(con, sql))
-}
-
-set_integer_columns_duckdb <- function(con){
-  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
-  cols <- intersect(integers,DBI::dbListFields(con, "FILGRUPPE"))
-  
-  sql <- paste(sprintf(
-  "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
-  cols,cols),collapse = ";\n")
-  invisible(DBI::dbExecute(con, sql))
-  invisible(NULL)
-}
-
-#' @title sort_filegroup_duckdb
-#' @description
-#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
-#' Overskriver tabellen med sortert versjon.
-#' @param con duckdb-connection
-#' @noRd
-sort_filegroup_duckdb <- function(con){
-  
-  dims <- khfunctions:::get_dimension_columns(
-    DBI::dbListFields(con, "FILGRUPPE")
-  )
-  dims <- setdiff(dims, c("GEOniv", "FYLKE", "AARh", "ALDERh"))
-  dims <- union(c("GEO", "AARl", "ALDERl", "KJONN", "INNVKAT", "UTDANN"), dims)
-  dims_sql <- paste(dims, collapse = ", ")
-  
-  sql <- sprintf(
-    "CREATE OR REPLACE TABLE FILGRUPPE AS
-    SELECT *
-    FROM FILGRUPPE
-    ORDER BY %s",
-    dims_sql
-  )
-  
-  invisible(DBI::dbExecute(con, sql))
-}
-

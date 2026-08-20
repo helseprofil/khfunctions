@@ -77,6 +77,22 @@ remove_helper_columns <- function(dt){
   dt[, (helpers) := NULL]
 }
 
+#' @title initiate_cleanlog
+#' @description
+#' Initiates log for filegroup cleaning
+#' @noRd
+initiate_cleanlog <- function(dt, codebooklog, parameters){
+  log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
+  n_rows <- dt[, .(N_rows = .N), by = KOBLID]
+  log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
+  n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
+  n_deleted <- codebooklog[OMK == "-", .(N_rows_deleted = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
+  log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
+  data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
+  return(log)
+}
+
 # clean_filegroup_values ----
 clean_filegroup_values <- function(dt, parameters, cleanlog){
   print_console_message("\n* Starter rensing av verdikolonner...")
@@ -359,3 +375,6 @@ check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
                                          "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
   if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
 }
+
+
+
