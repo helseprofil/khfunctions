@@ -3,16 +3,20 @@
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
-write_filegroup_output <- function(dt, parameters){
+write_filegroup_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   print_console_message("\n\n* SAVING OUTPUT FILES:\n")
   root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  print_console_message("\n", parquet,"\n", datert)
-  do_write_parquet_duckdb(tablename = "FILGRUPPE", filepath = parquet, parameters = parameters)
+  con <- parameters$duck
+  print_console_message("\n Skriver:\n", parquet,"\n", datert)
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)){
+    add_lks_filter(con = con)
+    sort_bef_gkny_duckdb(con = con)
+  } 
+  do_write_parquet_duckdb(con = con, tablename = "FILGRUPPE", filepath = parquet)
   file.copy(from = parquet, to = datert)
-  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) do_write_population_filegroup_duckdb(parameters = parameters)
 }
 
 #' @title convert_dt_to_arrow_table
@@ -39,9 +43,16 @@ do_write_parquet <- function(dt, filepath){
   arrow::write_parquet(table, sink = filepath, compression = "snappy")
 }
 
-do_write_parquet_duckdb <- function(tablename, filepath, parameters){
+#' @title do_write_parquet_duckdb
+#' @description
+#' Skriver parquet-fil fra tabell i duckdb
+#' 
+#' @param con duckdb connection
+#' @param tablename tabellen som skal skrives
+#' @param filepath sti til der filen skal skrives til
+do_write_parquet_duckdb <- function(con, tablename, filepath){
   invisible(DBI::dbExecute(
-    parameters$duck,
+    con,
     sprintf(
       "COPY %s TO '%s' 
       (
@@ -54,35 +65,38 @@ do_write_parquet_duckdb <- function(tablename, filepath, parameters){
     )))
 }
 
-do_write_population_filegroup_duckdb <- function(parameters){
-  if(!grepl("BEF_GKny", parameters$name, ignore.case = T)) return(invisible(NULL))
-  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
-  con <- parameters$duck
-  path_aargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo"))
-  path_alderaargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo"))
+#' @title sort_bef_gkny_duckdb
+#' @description
+#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
+#' Overskriver tabellen med sortert versjon.
+#' @param con duckdb-connection
+#' @noRd
+sort_bef_gkny_duckdb <- function(con){
   
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDER, AARl og GEOniv.....")
-  DBI::dbExecute(con,
-                 sprintf("COPY FILGRUPPE TO '%s'
-                          (
-                            FORMAT PARQUET,
-                            COMPRESSION ZSTD,
-                            ROW_GROUP_SIZE 1000000,
-                            PARTITION_BY (alder, AARl, lks)
-                          )",
-                         gsub("\\\\", "/", path_alderaargeo)))
+  dims <- khfunctions:::get_dimension_columns(DBI::dbListFields(con, "FILGRUPPE"))
+  sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
+  sortdims <- union(sort, dims)
+  sortdims_sql <- paste(sortdims, collapse = ", ")
   
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  sql <- sprintf(
+    "CREATE OR REPLACE TABLE FILGRUPPE AS
+    SELECT *
+    FROM FILGRUPPE
+    ORDER BY %s",
+    sortdims_sql
+  )
   
-  DBI::dbExecute(con,
-                 sprintf("COPY FILGRUPPE TO '%s'
-                          (
-                            FORMAT PARQUET,
-                            COMPRESSION ZSTD,
-                            ROW_GROUP_SIZE 1000000,
-                            PARTITION_BY (AARl, lks)
-                          )",
-                         gsub("\\\\", "/", path_aargeo)))
+  invisible(DBI::dbExecute(con, sql))
+}
+
+#' @title add_lks_filter
+#' @description Legger til lks 0/1 for å kunne filtrere bort lks-data i innlesing
+#' @param con kobling til duckdb
+#' @noRd
+add_lks_filter <- function(con) {
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS lks INTEGER;"))
+  invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE SET lks = CASE WHEN GEOniv = 'V' THEN 1 ELSE 0 END"))
+  invisible(NULL)
 }
 
 #' @title write_codebooklog
