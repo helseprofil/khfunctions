@@ -18,6 +18,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
   is_code <- is_not_empty(code)
   if(!is_code) return(dt)
+  invisible(gc()) # Sikre at minnet er ryddet før snutt
   
   code <- clean_rsynt_code(code = code, name = name)
   is_stata <- grepl("<STATA>", code)

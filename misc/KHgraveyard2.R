@@ -425,3 +425,36 @@ do_write_parquet_dataset <- function(table, path, partitioncols){
   print_console_message("Ferdig!")
 }
 
+
+write_population_filegroup <- function(table, root){
+  
+  if(!grepl("BEF_GKny", parameters$name, ignore.case = T)) return(invisible(NULL))
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  con <- parameters$duck
+  path_aargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo"))
+  path_alderaargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo"))
+  DBI::dbExecute()
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDER, AARl og GEOniv.....")
+  DBI::dbExecute(con,
+                 sprintf("COPY FILGRUPPE TO '%s'
+                          (
+                            FORMAT PARQUET,
+                            COMPRESSION ZSTD,
+                            ROW_GROUP_SIZE 1000000,
+                            PARTITION_BY (alder, AARl, lks)
+                          )",
+                         gsub("\\\\", "/", path_alderaargeo)))
+  
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  
+  DBI::dbExecute(con,
+                 sprintf("COPY FILGRUPPE TO '%s'
+                          (
+                            FORMAT PARQUET,
+                            COMPRESSION ZSTD,
+                            ROW_GROUP_SIZE 1000000,
+                            PARTITION_BY (AARl, lks)
+                          )",
+                         gsub("\\\\", "/", path_aargeo)))
+}
+

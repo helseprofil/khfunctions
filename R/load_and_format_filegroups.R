@@ -431,6 +431,17 @@ set_integer_columns <- function(dt){
   dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = to_integer]
 }
 
+set_integer_columns_duckdb <- function(con){
+  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
+  cols <- intersect(integers,DBI::dbListFields(con, "FILGRUPPE"))
+  
+  sql <- paste(sprintf(
+    "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
+    cols,cols),collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}
+
 #' @title add_leadyear_befvekst
 #' @description
 #' Adds lead years for filegroup BEFVEKST

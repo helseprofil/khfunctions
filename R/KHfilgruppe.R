@@ -42,10 +42,6 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
                       parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
   
-  add_partition_columns_befolkning_duckdb(parameters = parameters)
-  sort_filegroup_duckdb(con = parameters$duck)
-  # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  # RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
@@ -84,4 +80,25 @@ initiate_cleanlog_db <- function(codebooklog, parameters){
   log <- collapse::join(log, n_deleted, on = "KOBLID", verbose = 0)
   data.table::setnafill(log, fill = 0, cols = names(log)[sapply(log, is.numeric)])
   return(log)
+}
+
+rename_fg_value_columns_duckdb <- function(parameters){
+  con <- parameters$duck
+  vals <- intersect(c("VAL1", "VAL2", "VAL3"), DBI::dbListFields(con, "FILGRUPPE"))
+  valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
+  
+  rename_map <- data.table::data.table(
+    old = c(vals, paste0(vals, ".a"), paste0(vals, ".f")),
+    new = c(valnames, paste0(valnames, ".a"), paste0(valnames, ".f"))
+  )
+  
+  sql <- paste0(sprintf(
+    'ALTER TABLE FILGRUPPE RENAME COLUMN "%s" TO "%s"',
+    rename_map$old,
+    rename_map$new
+  ),
+  collapse = ";\n"
+  )
+  
+  invisible(DBI::dbExecute(con, sql))
 }
