@@ -10,11 +10,9 @@ write_filegroup_output <- function(dt, parameters){
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
   print_console_message("\n", parquet,"\n", datert)
-  # table <- convert_dt_to_arrow_table(dt)
-  # arrow::write_parquet(table, sink = parquet, compression = "snappy")
   do_write_parquet_duckdb(tablename = "FILGRUPPE", filepath = parquet, parameters = parameters)
   file.copy(from = parquet, to = datert)
-  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) write_population_filegroup(table = table, root = root)
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) do_write_population_filegroup_duckdb(parameters = parameters)
 }
 
 #' @title convert_dt_to_arrow_table
@@ -56,52 +54,35 @@ do_write_parquet_duckdb <- function(tablename, filepath, parameters){
     )))
 }
 
-#' @title write_population_filegroup
-#' @description
-#' Writes a partitioned dataset for BEF_GKny, for quicker read times when used as nevner file
-#' Generates two helper columns to partition the data into age groups and with/without lks
-#' @noRd
-write_population_filegroup <- function(table, root){
-  table <- add_partition_columns(table = table)
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
-  do_write_parquet_dataset(table = table, 
-                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo")),
-                           partitioncols = c("AARl", "lks"))
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
-  do_write_parquet_dataset(table = table, 
-                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo")),
-                           partitioncols = c("alder", "AARl", "lks"))
-}
-
-#' @keywords internal
-#' @noRd
-add_partition_columns <- function(table){
-  table <- arrow::as_arrow_table(
-    table |>
-      dplyr::mutate(
-        lks = dplyr::if_else(GEOniv == "V", 1L, 0L),
-        alder = dplyr::case_when(
-          ALDERh <= 17 ~ "0_17",
-          ALDERh <= 29 ~ "18_29",
-          ALDERh <= 44 ~ "30_44",
-          ALDERh <= 67 ~ "45_67",
-          ALDERh <= 79 ~ "68_79",
-          .default = "80_120"
-          )
-        )
-  )
-  return(table)
-}
-
-#' @keywords internal
-#' @noRd
-do_write_parquet_dataset <- function(table, path, partitioncols){
-  dataset <- table |> 
-    dplyr::group_by(!!!rlang::syms(partitioncols)) |>
-    dplyr::arrange(!!!rlang::syms(partitioncols))
+do_write_population_filegroup_duckdb <- function(parameters){
+  if(!grepl("BEF_GKny", parameters$name, ignore.case = T)) return(invisible(NULL))
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  con <- parameters$duck
+  path_aargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo"))
+  path_alderaargeo <- file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo"))
   
-  arrow::write_dataset(dataset = dataset, path = path, format = "parquet", partitioning = partitioncols, compression = "snappy")
-  print_console_message("Ferdig!")
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDER, AARl og GEOniv.....")
+  DBI::dbExecute(con,
+                 sprintf("COPY FILGRUPPE TO '%s'
+                          (
+                            FORMAT PARQUET,
+                            COMPRESSION ZSTD,
+                            ROW_GROUP_SIZE 1000000,
+                            PARTITION_BY (alder, AARl, lks)
+                          )",
+                         gsub("\\\\", "/", path_alderaargeo)))
+  
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  
+  DBI::dbExecute(con,
+                 sprintf("COPY FILGRUPPE TO '%s'
+                          (
+                            FORMAT PARQUET,
+                            COMPRESSION ZSTD,
+                            ROW_GROUP_SIZE 1000000,
+                            PARTITION_BY (AARl, lks)
+                          )",
+                         gsub("\\\\", "/", path_aargeo)))
 }
 
 #' @title write_codebooklog

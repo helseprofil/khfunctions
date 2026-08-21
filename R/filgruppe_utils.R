@@ -50,7 +50,7 @@ sort_filegroup_duckdb <- function(con){
     SELECT *
     FROM FILGRUPPE
     ORDER BY %s",
-    dims_sql
+    sortdims_sql
   )
   
   invisible(DBI::dbExecute(con, sql))

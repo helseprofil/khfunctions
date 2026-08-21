@@ -376,5 +376,52 @@ check_if_dimension_ok <- function(dt, cleanlog, col, illegal){
   if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
 }
 
+# Write output ----
+#' @title write_population_filegroup
+#' @description
+#' Writes a partitioned dataset for BEF_GKny, for quicker read times when used as nevner file
+#' Generates two helper columns to partition the data into age groups and with/without lks
+#' @noRd
+write_population_filegroup <- function(table, root){
+  table <- add_partition_columns(table = table)
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
+  do_write_parquet_dataset(table = table, 
+                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo")),
+                           partitioncols = c("AARl", "lks"))
+  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
+  do_write_parquet_dataset(table = table, 
+                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo")),
+                           partitioncols = c("alder", "AARl", "lks"))
+}
 
+#' @keywords internal
+#' @noRd
+add_partition_columns <- function(table){
+  table <- arrow::as_arrow_table(
+    table |>
+      dplyr::mutate(
+        lks = dplyr::if_else(GEOniv == "V", 1L, 0L),
+        alder = dplyr::case_when(
+          ALDERh <= 17 ~ "0_17",
+          ALDERh <= 29 ~ "18_29",
+          ALDERh <= 44 ~ "30_44",
+          ALDERh <= 67 ~ "45_67",
+          ALDERh <= 79 ~ "68_79",
+          .default = "80_120"
+        )
+      )
+  )
+  return(table)
+}
+
+#' @keywords internal
+#' @noRd
+do_write_parquet_dataset <- function(table, path, partitioncols){
+  dataset <- table |> 
+    dplyr::group_by(!!!rlang::syms(partitioncols)) |>
+    dplyr::arrange(!!!rlang::syms(partitioncols))
+  
+  arrow::write_dataset(dataset = dataset, path = path, format = "parquet", partitioning = partitioncols, compression = "snappy")
+  print_console_message("Ferdig!")
+}
 
