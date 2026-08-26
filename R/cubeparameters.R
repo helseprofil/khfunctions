@@ -8,6 +8,7 @@ get_cubeparameters <- function(user_args = list()) {
   print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
+  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
@@ -22,7 +23,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
+  
   return(parameters)
 }
 
@@ -278,7 +279,10 @@ update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
 get_geo_recoding <- function(parameters){
   KnrHarm <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
-  return(data.table::rbindlist(list(KnrHarm, KnrHarmS)))
+  out <- data.table::rbindlist(list(KnrHarm, KnrHarmS))[, .SD, .SDcols = c("GEO", "GEO_omk")]
+  invisible(DBI::dbExecute(parameters$duck, "DROP TABLE IF EXISTS KnrHarm"))
+  DBI::dbWriteTable(parameters$duck, name = "KnrHarm", value = out)
+  return(out)
 }
 
 #' @title SettKodeBokGlob
