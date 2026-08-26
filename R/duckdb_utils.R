@@ -32,12 +32,12 @@ do_clean_duckdb <- function(con){
   }
 }
 
-#' @title is_duckdb_file
+#' @title is_duckdb_table
 #' @description Checks if table exists in duckdb
 #' @keywords duckdb
 #' @noRd
-is_duckdb_file <- function(con, filename){
-  DBI::dbIsValid(con) && filename %in% DBI::dbListTables(con)
+is_duckdb_table <- function(con, tablename){
+  DBI::dbIsValid(con) && tablename %in% DBI::dbListTables(con)
 }
 
 #' @title quote_col_duckdb

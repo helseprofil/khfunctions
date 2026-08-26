@@ -12,7 +12,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters){
   if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
-  isduck <- is_duckdb_file(con = parameters$duck, filename = filename)
+  isduck <- is_duckdb_table(con = parameters$duck, tablename = filename)
   if(!is.null(filename)){
     fileparameters <- parameters$fileinformation[[filename]]
     if(is.null(file) && !isduck && filename %in% .GlobalEnv$BUFFER){

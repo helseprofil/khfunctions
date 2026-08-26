@@ -8,11 +8,10 @@
 #' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
-#' @param removebuffer should original files in the buffer be removed when no longer needed to free memory?
 #' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
@@ -25,7 +24,9 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   # 1. Laste inn filer og oppdatere parametre
-  parameters <- load_and_format_files(parameters = parameters)
+  load_and_format_files(parameters = parameters)
+  parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
+  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
@@ -45,7 +46,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 4. Standardisering 
   add_predteller(dt = KUBE, parameters = parameters)
   add_meisskala(dt = KUBE, parameters = parameters)
-  if(parameters$removebuffer) remove_original_files_from_buffer()
+  # if(parameters$removebuffer) remove_original_files_from_buffer()
   scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
 
   # 5. Redigere kolonner og filtrere ugyldige rader
