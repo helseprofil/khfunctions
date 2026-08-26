@@ -1,24 +1,3 @@
-#' @title write_filegroup_output
-#' @param outfile filgruppe
-#' @param parameters global parameters
-#' @keywords internal
-#' @noRd
-write_filegroup_output <- function(parameters){
-  if(!parameters$write) return(invisible(NULL))
-  print_console_message("\n\n* SAVING OUTPUT FILES:\n")
-  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
-  parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
-  datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  con <- parameters$duck
-  print_console_message("\n Skriver:\n", parquet,"\n", datert)
-  if(grepl("BEF_GKny", parameters$name, ignore.case = T)){
-    add_lks_filter(con = con)
-    sort_bef_gkny_duckdb(con = con)
-  } 
-  do_write_parquet_duckdb(con = con, tablename = "FILGRUPPE", filepath = parquet)
-  file.copy(from = parquet, to = datert)
-}
-
 #' @title convert_dt_to_arrow_table
 #' @description
 #' Removes attributes except column names before converting to an arrow table (for writing)
@@ -65,38 +44,31 @@ do_write_parquet_duckdb <- function(con, tablename, filepath){
     )))
 }
 
-#' @title sort_bef_gkny_duckdb
-#' @description
-#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
-#' Overskriver tabellen med sortert versjon.
-#' @param con duckdb-connection
-#' @noRd
-sort_bef_gkny_duckdb <- function(con){
-  
-  dims <- khfunctions:::get_dimension_columns(DBI::dbListFields(con, "FILGRUPPE"))
-  sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
-  sortdims <- union(sort, dims)
-  sortdims_sql <- paste(sortdims, collapse = ", ")
-  
-  sql <- sprintf(
-    "CREATE OR REPLACE TABLE FILGRUPPE AS
-    SELECT *
-    FROM FILGRUPPE
-    ORDER BY %s",
-    sortdims_sql
-  )
-  
-  invisible(DBI::dbExecute(con, sql))
-}
+# do_write_csv_duckdb <- function(){
+#   
+# }
 
-#' @title add_lks_filter
-#' @description Legger til lks 0/1 for å kunne filtrere bort lks-data i innlesing
-#' @param con kobling til duckdb
+# Filgruppe ----
+
+#' @title write_filegroup_output
+#' @param outfile filgruppe
+#' @param parameters global parameters
+#' @keywords internal
 #' @noRd
-add_lks_filter <- function(con) {
-  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS lks INTEGER;"))
-  invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE SET lks = CASE WHEN GEOniv = 'V' THEN 1 ELSE 0 END"))
-  invisible(NULL)
+write_filegroup_output <- function(parameters){
+  if(!parameters$write) return(invisible(NULL))
+  print_console_message("\n\n* SAVING OUTPUT FILES:\n")
+  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
+  datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
+  con <- parameters$duck
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)){
+    add_lks_filter(con = con)
+    sort_bef_gkny_duckdb(con = con)
+  } 
+  print_console_message("\n Skriver:\n", parquet,"\n", datert)
+  do_write_parquet_duckdb(con = con, tablename = "FILGRUPPE", filepath = parquet)
+  file.copy(from = parquet, to = datert)
 }
 
 #' @title write_codebooklog
@@ -132,6 +104,45 @@ move_old_files_to_archive <- function(path, parameters){
     fs::file_move(path = file.path(path, file), new_path = file.path(path, "arkiv", file)) 
   }  
 }
+
+#' @title add_lks_filter
+#' @description Legger til lks 0/1 for å kunne filtrere bort lks-data i innlesing
+#' @param con kobling til duckdb
+#' @noRd
+add_lks_filter <- function(con) {
+  print_console_message("\n Legger til sorteringskolonner for befolkningsfilgruppe")
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS lks INTEGER;"))
+  invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE SET lks = CASE WHEN GEOniv = 'V' THEN 1 ELSE 0 END"))
+  invisible(NULL)
+}
+
+#' @title sort_bef_gkny_duckdb
+#' @description
+#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
+#' Overskriver tabellen med sortert versjon.
+#' @param con duckdb-connection
+#' @noRd
+sort_bef_gkny_duckdb <- function(con){
+  print_console_message("\n Sorterer befolkningsfilgruppe")
+  
+  dims <- khfunctions:::get_dimension_columns(DBI::dbListFields(con, "FILGRUPPE"))
+  sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
+  sortdims <- union(sort, dims)
+  sortdims_sql <- paste(sortdims, collapse = ", ")
+  
+  sql <- sprintf(
+    "CREATE OR REPLACE TABLE FILGRUPPE AS
+    SELECT *
+    FROM FILGRUPPE
+    ORDER BY %s",
+    sortdims_sql
+  )
+  
+  invisible(DBI::dbExecute(con, sql))
+}
+
+
+# Kube ----
 
 #' @title write_cube_output
 #' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
@@ -257,6 +268,8 @@ LagQCKube <- function(data, allvistabs){
   QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
   return(QC)
 }
+
+# Fildumper ----
 
 #' @title save_filedump_if_requested
 #' @description
