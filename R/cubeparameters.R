@@ -159,7 +159,7 @@ get_filegroup_information <- function(parameters){
   
   for(file in unique(unlist(parameters$files))){
     filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$FILFILTRE)
-    fileinfo[[file]] <- read_filegroups_and_add_values(filegroup = filename, parameters = parameters)
+    fileinfo[[file]] <- read_filegroups_and_add_values(filegroup = filename, parameters = parameters, translate_bef = TRUE)
   }
   return(fileinfo)
 }

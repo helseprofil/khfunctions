@@ -15,15 +15,15 @@ get_filegroup_parameters <- function(user_args){
   parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
   parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
   parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
-  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
   parameters[["duck"]] <- init_duckdb(dbname = "filgruppeduck") 
+  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   return(parameters)
 }
 
 #' @noRd
-read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
+read_filegroups_and_add_values <- function(filegroup = NULL, parameters, translate_bef = FALSE){
   if(is.null(filegroup)) filegroup <- parameters$name
   if(grepl("BEF_Gkny", filegroup, ignore.case = TRUE)) filegroup <- "BEF_GKny"
   FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup, "' AND ", parameters$validdates), as.is = TRUE))
@@ -40,17 +40,26 @@ read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
     amax <- getOption("khfunctions.amax")
   }
   
+  valnamecols <- grep("^VAL\\d+navn$", names(FILGRUPPER), value = TRUE)
+  valnamecols <- valnamecols[vapply(FILGRUPPER[valnamecols],is_not_empty,logical(1))]
+  
+  if(translate_bef && grepl("BEF_GKny", filegroup, ignore.case = TRUE)){
+    if(is.null(parameters[["TNPinformation"]])) stop("Forsøker å lese parameters$TNPinformation, men den finnes ikke")
+    befcol <- valnamecols[unlist(FILGRUPPER[valnamecols], use.names = FALSE) == "BEF"]
+    correctbef <- unique(grep("^BEF|^mBEF", unlist(parameters$TNPinformation[c("TELLERKOL", "NEVNERKOL")],
+                                                   use.names = FALSE),value = TRUE))
+    if(length(correctbef) == 1){
+      FILGRUPPER[befcol] <- correctbef
+    }
+  }
+  
   vals <- list()
-  for(val in grep("^VAL", getOption("khfunctions.kolorgs"), value = T)) {
-    valname <- paste0(val, "navn")
-    isvalname <- !is.na(FILGRUPPER[[valname]]) && FILGRUPPER[[valname]] != ""
-    valname <- ifelse(isvalname, FILGRUPPER[[valname]], val)
-    valmiss <- paste0(val, "miss")
-    isvalmiss <-  !is.na(FILGRUPPER[[valmiss]]) && FILGRUPPER[[valmiss]] != ""
-    valmiss <- ifelse(isvalmiss, FILGRUPPER[[valmiss]], "0")
-    valsumbar <- paste0(val, "sumbar")
-    isvalsumbar <- !is.na(FILGRUPPER[[valsumbar]]) && FILGRUPPER[[valsumbar]] != ""
-    valsumbar <- ifelse(isvalsumbar, FILGRUPPER[[valsumbar]], "0")
+  for(val in valnamecols) {
+    valname <- FILGRUPPER[[val]]
+    miss <- sub("navn", "miss", val)
+    valmiss <- if(is_not_empty(FILGRUPPER[[miss]])) { FILGRUPPER[[miss]] } else {"0"}
+    sumbar <- sub("navn", "sumbar", val)
+    valsumbar <- if(is_not_empty(FILGRUPPER[[sumbar]])) { FILGRUPPER[[sumbar]] } else {"0"}
     vals[[valname]] <- list(miss = valmiss, sumbar = valsumbar)
   }
   return(c(FILGRUPPER, list(vals = vals, amin = amin, amax = amax)))
