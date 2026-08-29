@@ -82,3 +82,66 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
     invisible(DBI::dbExecute(con, query))
   }
 }
+
+do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
+  
+  cols <- DBI::dbListFields(con, tablename)
+  dimcols <- get_dimension_columns(cols)
+  valcols <- get_value_columns(cols)
+  
+  dims_sql <- DBI::dbQuoteIdentifier(con, dimcols)
+  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  
+  aggcols_sql <- unlist(lapply(valcols,
+      function(val){
+        valf <- DBI::dbQuoteIdentifier(con, paste0(val, ".f"))
+        vala <- DBI::dbQuoteIdentifier(con, paste0(val, ".a"))
+        val <- DBI::dbQuoteIdentifier(con, val)
+        c(sprintf("SUM(%s) AS %s", val, val),
+          sprintf("MAX(%s) AS %s", valf, valf),
+          sprintf("SUM(CASE WHEN %s IS NULL OR %s = 0 THEN 0 ELSE %s END) AS %s",
+            val, val, vala, vala))
+        }))
+  
+  sql <- sprintf(paste("CREATE OR REPLACE TABLE %s AS",
+                       "SELECT %s FROM %s",
+                       "GROUP BY %s"),
+                 table_sql,
+                 paste(c(dims_sql, aggcols_sql),collapse = ", "),
+                 table_sql,
+                 paste(dims_sql,collapse = ", "))
+  
+  invisible(DBI::dbExecute(con, sql))
+  
+  nonsum <- intersect(
+    valcols,
+    names(vals)[
+    vapply(
+      vals,
+      function(x) identical(as.character(x$sumbar), "0"),
+      logical(1))
+    ])
+  
+  if(length(nonsum) > 0){
+    replace_sql <- unlist(
+      lapply(nonsum, function(val){
+        valf <- DBI::dbQuoteIdentifier(con, paste0(val, ".f"))
+        vala <- DBI::dbQuoteIdentifier(con, paste0(val, ".a"))
+        val <- DBI::dbQuoteIdentifier(con, val)
+        c(sprintf("CASE WHEN %s > 1 THEN NULL ELSE %s END AS %s", vala, val, val),
+          sprintf("CASE WHEN %s > 1 THEN 2 ELSE %s END AS %s",vala, valf, valf))
+      }))
+    
+    sql <- sprintf(
+      paste("CREATE OR REPLACE TABLE %s AS",
+            "SELECT * REPLACE(%s) FROM %s"),
+      table_sql,
+      paste(replace_sql, collapse = ", "),
+      table_sql
+    )
+    
+    invisible(DBI::dbExecute(con, sql))
+  }
+  
+  invisible(NULL)
+}
