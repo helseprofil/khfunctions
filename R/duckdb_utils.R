@@ -55,7 +55,10 @@ quote_col_duckdb <- function(x){
 fetch_duckdb_table <- function(con, tablename){
   exist <- tablename %in% DBI::dbListTables(con)
   if(!exist) stop(tablename, " finnes ikke i duckdb")
-  dt <- DBI::dbReadTable(con, tablename)
+  dt <- DBI::dbGetQuery(con, 
+                        sprintf("SELECT * FROM %s", 
+                                DBI::dbQuoteIdentifier(con, tablename))
+                        )
   data.table::setDT(dt)
 }
 
