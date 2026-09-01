@@ -8,9 +8,10 @@ load_and_format_filegroups_to_duckdb <- function(parameters){
   print_console_message("\n* Laster og formatterer filgrupper\n")
   con <- parameters$duck
   tellerfile <- parameters$files$TELLER
+  nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
+  
   load_filegroup_to_duckdb(con = con, filegroup = tellerfile, parameters = parameters)
   
-  nonteller_files <- unique(grep(paste0("^", tellerfile, "$"), parameters$files, invert = T, value = T))
   for (file in nonteller_files) {
     load_filegroup_to_duckdb(con = con, filegroup = file, parameters = parameters)
   }
@@ -67,10 +68,12 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   
   if(!is.null(ff$nyekolkolprerad)){
     # NYEKOLKOLPRERAD LOGIKK
+    # Bare brukt i sysvak, og flyttet til pre_fglagring, så denne er foreløpig inaktivert
+    # compute_new_value_from_formula(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
   }
   
   if(!is.null(ff$kollapsdel)){
-    # KOLLAPSDELLOGIKK
+    do_filfiltre_kollapsdeler_duckdb(con = con, filegroup = filegroup, parts = ff$kollapsdel, parameters = parameters)
   }
   
   
@@ -92,6 +95,7 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   
   if(!is.null(ff$nyekolrad)){
     # NYEKOLRADLOGIKK
+    # compute_new_value_from_row_sum(dt = FIL, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
   }
   
   if(!is.null(ff$ffrsynt)){
@@ -311,16 +315,16 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
 
 # FILFILTRE ----
 get_filefilterconds <- function(filefilter, fileinfo, parameters){
-  out <- list("kollapsdel" = NULL, 
-              "nyekolkolprerad" = NULL, 
+  out <- list("nyekolkolprerad" = NULL, 
+              "kollapsdel" = NULL, 
               "Filter" = NULL, 
               "rect" = FALSE, 
               "nyekolrad" = NULL, 
               "ffrsynt" = NULL)
   
   if(nrow(filefilter) > 0){
-    if(grepl("\\S", filefilter$KOLLAPSdeler)) out[["kollapsdel"]] <- filefilter$KOLLAPSdeler
     if(grepl("\\S", filefilter$NYEKOL_KOL_preRAD)) out[["nyekolkolprerad"]] <- filefilter$NYEKOL_KOL_preRAD
+    if(grepl("\\S", filefilter$KOLLAPSdeler)) out[["kollapsdel"]] <- filefilter$KOLLAPSdeler
     out[["Filter"]] <- set_recode_filter_filfiltre(fileinfo = fileinfo, filefilter = filefilter, parameters = parameters)
     out[["rect"]] <- filefilter$REKTISER == 1
     if(grepl("\\S", filefilter$NYEKOL_RAD)) out[["nyekolrad"]] <- filefilter$NYEKOL_RAD
@@ -334,8 +338,8 @@ get_filefilterconds <- function(filefilter, fileinfo, parameters){
 do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
   
   parts <- trimws(strsplit(parts, ",", fixed = TRUE)[[1]])
-  columns <- unlist(parameters$DefDesign$DelKolsF[parts])
-  totals <- unlist(parameters$TotalKoder[parts])
+  columns <- as.character(unlist(parameters$DefDesign$DelKolsF[parts]))
+  totals <- as.character(unlist(parameters$TotalKoder[parts]))
   tab_sql <- as.character(DBI::dbQuoteIdentifier(con, filegroup))
   
   for(i in seq_along(columns)){
@@ -352,6 +356,18 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
                    totals[i]))
       }
   }
+  
+  updatecols <- DBI::dbQuoteIdentifier(con, columns)
+  updatetotals <- DBI::dbQuoteString(con, totals)
+  
+  set_sql <- sprintf("%s = %s", 
+                     updatecols, updatetotals)
+  sql <- sprintf("UPDATE %s SET %s", 
+                 tab_sql, paste(set_sql, collapse = ", "))
+  
+  invisible(DBI::dbExecute(con, sql))
+  
+  do_aggregate_file_duckdb(con = con, tablename = filegroup)
 }
 
 
