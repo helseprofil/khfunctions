@@ -10,7 +10,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   filecolumns <- identify_columns_in_file(filedescription = filedescription)
   read_original_file(filedescription = filedescription, parameters = parameters, dumps = dumps)
   convert_duckdb_cols_to_string(con = parameters$duck, table_name = "temp_orgfile")
-  set_manheader_db(manheader = filedescription$MANHEADER, con = parameters$duck)
+  set_manheader_duckdb(manheader = filedescription$MANHEADER, con = parameters$duck)
   
   if(is_not_empty(filedescription$RSYNT1)){
     do_special_handling(name = "RSYNT1", dt = NULL, dt_name = "DF", code = filedescription$RSYNT1, 
@@ -18,10 +18,10 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
                         koblid = filedescription$KOBLID, filedescription = filedescription)
   }
   
-  give_columns_default_names(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
-  do_handle_fylltab(filedescription = filedescription, con = parameters$duck)
-  do_handle_kastkols_db(kastkols = filedescription$KASTKOLS, con = parameters$duck)  
-  do_reshape_var_db(filedescription = filedescription, con = parameters$duck)
+  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
+  # do_handle_fylltab(filedescription = filedescription, con = parameters$duck)
+  do_handle_kastkols_duckdb(kastkols = filedescription$KASTKOLS, con = parameters$duck)  
+  do_reshape_var_duckdb(filedescription = filedescription, con = parameters$duck)
   do_split_multihead(dt = DF, filedescription = filedescription, con = parameters$duck)
   
   if(is_not_empty(filedescription$RSYNT2)){
@@ -30,23 +30,25 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
                         koblid = filedescription$KOBLID)
   }
   
-  give_columns_default_names(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
-  do_set_default_values_db(filedescription = filedescription, defaultcolumns = filecolumns$default, con = parameters$duck)
+  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
+  do_set_default_values_duckdb(filedescription = filedescription, defaultcolumns = filecolumns$default, con = parameters$duck)
   check_if_all_columns_exist(filecolumns = filecolumns, con = parameters$duck)
-  drop_unwanted_columns_db(con = parameters$duck)
-  # do_aggregate_if_grunnkrets(dt = DF, filedescription = filedescription, parameters = parameters) # DEPRECATED?
-  do_convert_na_to_empty_db(con = parameters$duck)
+  drop_unwanted_columns_duckdb(con = parameters$duck)
+  drop_unwanted_columns_duckdb(con = parameters$duck)
   invisible(DBI::dbExecute(parameters$duck, paste0("ALTER TABLE temp_orgfile ADD COLUMN KOBLID VARCHAR DEFAULT ", filedescription$KOBLID)))
   recode_columns_with_codebook(dt = DF, filedescription = filedescription, parameters = parameters, codebooklog = codebooklog, dumps = dumps)
   do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
   do_recode_soner_4_db(filedescription = filedescription, con = parameters$duck)
   
   append_temp_orgfil_to_filgruppe(con = parameters$duck)
-  # add_table_to_fgduck(dt = DF, con = parameters$duck)
 }
 
 # Process file DUCKDB ----
-set_manheader_db <- function(manheader, con){
+#' @title set_manheader_duckdb
+#' @description manual renaming of columns from ACCESS::INNLESING
+#' @family duckdb
+#' @noRd
+set_manheader_duckdb <- function(manheader, con){
   if(is_empty(manheader)) return(invisible(NULL))
   origcols <- DBI::dbListFields(con, "temp_orgfile")
   manheader_split <- trimws(unlist(strsplit(manheader, "=")))
@@ -62,6 +64,10 @@ set_manheader_db <- function(manheader, con){
   }
 }
 
+#' @title manheader_to_vector
+#' @description helper
+#' @family duckdb
+#' @noRd
 manheader_to_vector <- function(string, old_new = c("old", "new"), origcols){
   if(grepl("^\\[", string)) string <- gsub("^\\[|\\]$", "", string)
   if(grepl("^c\\(", string)) string <- gsub("^c\\(|\\)$", "", string)
@@ -85,8 +91,9 @@ manheader_to_vector <- function(string, old_new = c("old", "new"), origcols){
 #' @description
 #' Renames columns to GEO, AAR, KJONN, ALDER, UTDANN, INNVKAT, LANDBAK, TAB1:3, VAL1:3
 #' Use information from INNLESING to check which columns should be renamed to standard names. 
+#' @family duckdb
 #' @noRd
-give_columns_default_names <- function(filedescription, defcolumns, con){
+give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
   cols <- DBI::dbListFields(con, "temp_orgfile")
   rename <- setNames(as.character(filedescription[, ..defcolumns]), defcolumns)
   rename <- rename[rename != names(rename)]
@@ -112,7 +119,11 @@ give_columns_default_names <- function(filedescription, defcolumns, con){
   }
 }
 
-do_handle_kastkols_db <- function(kastkols, con){
+#' @title do_handle_kastkols_duckdb
+#' @description delete columns
+#' @family duckdb
+#' @noRd
+do_handle_kastkols_duckdb <- function(kastkols, con){
   if(is_empty(kastkols)) return(invisible(NULL))
   
   remove <- gsub("^c\\(|\\)$", "", kastkols)
@@ -131,7 +142,11 @@ do_handle_kastkols_db <- function(kastkols, con){
   invisible(NULL)
 }
 
-do_reshape_var_db <- function(filedescription, con){
+#' @title do_reshape_var_duckdb
+#' @description reshape columns accoring to ACCESS::INNLESING
+#' @family duckdb
+#' @noRd
+do_reshape_var_duckdb <- function(filedescription, con){
   invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_orgfile_reshape"))
   
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
@@ -160,7 +175,13 @@ do_reshape_var_db <- function(filedescription, con){
     collapse = ","
   )
   
-  sql <- sprintf("CREATE OR REPLACE TABLE temp_orgfile_reshape AS SELECT %s FROM (SELECT * FROM temp_orgfile UNPIVOT (%s FOR %s IN (%s)))",
+  sql <- sprintf("CREATE OR REPLACE TABLE temp_orgfile_reshape 
+                 AS SELECT %s 
+                 FROM (
+                  SELECT * 
+                  FROM temp_orgfile 
+                  UNPIVOT INCLUDE NULLS (%s FOR %s IN (%s))
+                 )",
                  select_sql,
                  DBI::dbQuoteIdentifier(con, cols$val),
                  DBI::dbQuoteIdentifier(con, cols$var),
@@ -174,8 +195,8 @@ do_reshape_var_db <- function(filedescription, con){
 }
 
 #' @title get_reshape_parameters
-#' @description
-#' Identifies a list of columns needed for reshape
+#' @description Identifies a list of columns needed for reshape
+#' @family duckdb
 #' @noRd
 get_reshape_parameters <- function(filedescription, allcolumns){
   id <- measure <- NULL
@@ -191,10 +212,11 @@ get_reshape_parameters <- function(filedescription, allcolumns){
   return(out)
 }
 
-#' @title do_set_default_values_db
+#' @title do_set_default_values_duckdb
 #' @description setter default verdier for kolonner som ikke finnes i originalfil
+#' @family duckdb
 #' @noRd
-do_set_default_values_db <- function(filedescription, defaultcolumns, con){
+do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
   if(length(defaultcolumns) == 0) return(invisible(NULL))
   
   default <- filedescription[, ..defaultcolumns]
@@ -226,10 +248,11 @@ do_set_default_values_db <- function(filedescription, defaultcolumns, con){
   invisible(NULL)
 }
 
-#' @title drop_unwanted_columns_db
+#' @title drop_unwanted_columns_duckdb
 #' @description Fjerner kolonner som ikke trengs videre
+#' @family duckdb
 #' @noRd
-drop_unwanted_columns_db <- function(con){
+drop_unwanted_columns_duckdb <- function(con){
   keep_cols <- c(getOption("khfunctions.kolorgs"))
   existing_cols <- DBI::dbListFields(con, "temp_orgfile")
   cols_to_drop <- setdiff(existing_cols, keep_cols)
@@ -241,10 +264,11 @@ drop_unwanted_columns_db <- function(con){
   invisible(NULL)
 }
 
-#' @title do_convert_na_to_empty_db
+#' @title drop_unwanted_columns_duckdb
 #' @description Erstatter manglende celler med "" (alle kolonner er tekst)
+#' @family duckdb
 #' @noRd
-do_convert_na_to_empty_db <- function(con) {
+drop_unwanted_columns_duckdb <- function(con) {
   cols <- DBI::dbListFields(con, "temp_orgfile")
   
   set_clause <- paste(sprintf("%s = COALESCE(%s, '')",
@@ -262,6 +286,7 @@ do_convert_na_to_empty_db <- function(con) {
 #' Checks if obligatory columns GEO, AAR, Val1, and values defined in  exists
 #' @param dt data
 #' @param filecolumns list of columns present in file and columns to be given default value
+#' @family duckdb
 #' @noRd
 check_if_all_columns_exist <- function(filecolumns, con){
   oblig <- c("GEO", "AAR", "VAL1")
@@ -274,8 +299,9 @@ check_if_all_columns_exist <- function(filecolumns, con){
   return(invisible(NULL))
 }
 
-# READ/WRITE DUCKDB ----
-
+#' @title append_temp_orgfil_to_filgruppe
+#' @description Stack original files to generate filegroup
+#' @family duckdb
 #' @noRd
 append_temp_orgfil_to_filgruppe <- function(con){
   
@@ -308,30 +334,6 @@ append_temp_orgfil_to_filgruppe <- function(con){
   invisible(NULL)
 }
 
-#' @noRd
-add_table_to_fgduck <- function(dt, con){
-  DBI::dbWriteTable(con, "tmp_in", dt, temporary = TRUE, overwrite = TRUE)
-  on.exit(invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_in")), add = TRUE)
-  
-  if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
-    cols <- names(dt)
-    cols_esc <- gsub('"', '""', cols, fixed = TRUE)
-    sql <- sprintf("CREATE TABLE FILGRUPPE (%s)", paste(sprintf('"%s" VARCHAR', cols_esc), collapse = ", "))
-    invisible(DBI::dbExecute(con, sql))
-    invisible(DBI::dbExecute(con, "INSERT INTO FILGRUPPE BY NAME SELECT * FROM tmp_in"))
-  } else {
-    cols_existing <- DBI::dbListFields(con, "FILGRUPPE")
-    cols_new <- names(dt)
-    missing_cols <- setdiff(cols_new, cols_existing)
-    if(length(missing_cols) > 0){
-      for(col in missing_cols){
-        col_esc <- gsub('"', '""', col, fixed = TRUE)
-        invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN \"%s\" VARCHAR", col_esc)))
-      }
-    }
-    invisible(DBI::dbExecute(con, "INSERT INTO FILGRUPPE BY NAME SELECT * FROM tmp_in"))
-  }
-}
 
 # HELPERS ----
 #' @title report_filegroup_progress
