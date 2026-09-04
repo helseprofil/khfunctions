@@ -17,6 +17,7 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
                   c("Parts", "SKombs", "KBs", "Filters", "FULL", "Dekk", "Udekk", "DelStatus"))
   out[["Parts"]] <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
   partcols <- get_partcols_and_set_aggpri(cols = names(out$Parts), parameters = parameters)
+  out[["order"]] <- partcols
   
   for(part in partcols){
     partinfo <- get_part_info(part = part, parameters = parameters)
@@ -35,7 +36,6 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
     
     filter <- all(cb_part$codebook[, .SD, .SDcols = partinfo$cols] == cb_part$codebook[, .SD, .SDcols = partinfo$colsomk])
     if(filter) cb_part <- switch_cbpart_to_filter(cb_part = cb_part, partinfo = partinfo)
-    # if(part == "Y" & cb_part$status == "B") stop("Delstatus for AAR kan ikke være B"), tror ikke denne trengs da delstatus ikke brukes i omkodfil. Må sjekke. 
     
     out$KBs[[part]] <- cb_part$codebook
     out$DelStatus[[part]] <- cb_part$status
