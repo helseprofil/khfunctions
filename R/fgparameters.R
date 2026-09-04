@@ -8,6 +8,8 @@ get_filegroup_parameters <- function(user_args){
   print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
+  parameters[["duck"]] <- init_duckdb(dbname = "filgruppeduck") 
+  DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
   parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
@@ -17,7 +19,6 @@ get_filegroup_parameters <- function(user_args){
   parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  parameters[["duck"]] <- init_duckdb(dbname = "filgruppeduck") 
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   return(parameters)
 }

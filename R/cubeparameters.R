@@ -9,6 +9,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
+  DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
@@ -156,7 +157,6 @@ get_filfiltre <- function(parameters){
 #' @param parameters global parameters
 get_filegroup_information <- function(parameters){
   fileinfo <- list()
-  
   for(file in unique(unlist(parameters$files))){
     filename <- replace_filename_if_filefilters(filename = file, filefilters = parameters$FILFILTRE)
     fileinfo[[file]] <- read_filegroups_and_add_values(filegroup = filename, parameters = parameters, translate_bef = TRUE)
