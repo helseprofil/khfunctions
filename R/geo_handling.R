@@ -1,3 +1,9 @@
+#' @title do_harmonize_geo_duckdb
+#' @description
+#' Harmonizes geographical codes, used in `LagFilgruppe()`. 
+#' Uses table KnrHarm in duckdb for recoding to current geographical codes.
+#' @family duckdb
+#' @noRd 
 do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = TRUE){
     
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
@@ -31,8 +37,19 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
   }
     
   do_aggregate_file_duckdb(con = con, tablename = tablename, vals = vals)
+  if(add_fylke) add_fylke_duckdb(con = con, tablename = tablename)
   
-  if(add_fylke){
+  
+  invisible(NULL)
+}
+
+#' @title add_fylke_duckdb
+#' @description
+#' Helper function to add FYLKE column as function of GEO and GEOniv
+#' @family duckdb
+#' @noRd 
+add_fylke_duckdb <- function(con, tablename){
+  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
     sql <- sprintf(
       paste(
         "CREATE OR REPLACE TABLE %s AS",
@@ -46,44 +63,9 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
       table_sql,table_sql)
     
     DBI::dbExecute(con, sql)
-  }
-  
-  invisible(NULL)
 }
 
-#' @title do_harmonize_geo
-#' @description
-#' Harmonizes geographical codes, used in `LagFilgruppe()`. 
-#' Uses table KnrHarm in ACCESS, read into parameters, for recoding to current geographical codes.
-#' @noRd 
-do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, parameters) {
-  geoomk <- parameters$KnrHarm
-  georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
-  if(georecode > 0){
-    print_console_message("\n*** Recoding", georecode, "geo-codes")
-    file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
-    file[!is.na(GEO_omk), let(GEO = GEO_omk)]
-    file[, let(GEO_omk = NULL, HARMstd = NULL)]
-  }
-  if("FYLKE" %in% names(file)) file[, FYLKE := NULL]
-  file <- do_aggregate_file(file = file, valsumbardef = vals)
-  
-  if(rectangularize){
-    rectangularized <- data.table::data.table()
-    design <- find_filedesign(file, parameters = parameters)
-    year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
-    for (Gn in design$Part[["Gn"]][["GEOniv"]]) {
-      validgeo <- data.table::data.table(GEO = parameters$GeoKoder[GEOniv == Gn & FRA <= year & TIL > year]$GEO)
-      designgeo <- design$Design[HAR == 1 & GEOniv == Gn, .SD, .SDcols = intersect(names(file), names(design$Design))]
-      rectangularized <- data.table::rbindlist(list(expand.grid.dt(designgeo, validgeo), rectangularized))
-    }
-    file <- collapse::join(rectangularized, file, how = "l", overid = 0, verbose = 0)
-    set_implicit_null_after_merge(dt = file, implicitnull_defs = vals)
-  }
-  
-  file[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]
-  return(file)
-}
+
 
 #' @title fix_geo_special
 #' @description Manually handle bydel startaar, DK2020 and Aalesund/Haram
@@ -238,4 +220,42 @@ add_missing_lks <- function(dt, parameters){
   
   dt <- data.table::rbindlist(list(dt, add_single, add_invalid))
   return(dt)
+}
+
+# old version ----
+
+#  Keep this as it is used in rsynt ungdata
+
+#' @title do_harmonize_geo
+#' @description
+#' Harmonizes geographical codes, used in `LagFilgruppe()`. 
+#' Uses table KnrHarm in ACCESS, read into parameters, for recoding to current geographical codes.
+#' @noRd 
+do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, parameters) {
+  geoomk <- parameters$KnrHarm
+  georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
+  if(georecode > 0){
+    print_console_message("\n*** Recoding", georecode, "geo-codes")
+    file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
+    file[!is.na(GEO_omk), let(GEO = GEO_omk)]
+    file[, let(GEO_omk = NULL, HARMstd = NULL)]
+  }
+  if("FYLKE" %in% names(file)) file[, FYLKE := NULL]
+  file <- do_aggregate_file(file = file, valsumbardef = vals)
+  
+  if(rectangularize){
+    rectangularized <- data.table::data.table()
+    design <- find_filedesign(file, parameters = parameters)
+    year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
+    for (Gn in design$Part[["Gn"]][["GEOniv"]]) {
+      validgeo <- data.table::data.table(GEO = parameters$GeoKoder[GEOniv == Gn & FRA <= year & TIL > year]$GEO)
+      designgeo <- design$Design[HAR == 1 & GEOniv == Gn, .SD, .SDcols = intersect(names(file), names(design$Design))]
+      rectangularized <- data.table::rbindlist(list(expand.grid.dt(designgeo, validgeo), rectangularized))
+    }
+    file <- collapse::join(rectangularized, file, how = "l", overid = 0, verbose = 0)
+    set_implicit_null_after_merge(dt = file, implicitnull_defs = vals)
+  }
+  
+  file[, FYLKE := ifelse(GEOniv %in% c("H", "L"), "00", substr(GEO, 1, 2))]
+  return(file)
 }
