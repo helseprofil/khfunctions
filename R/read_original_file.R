@@ -81,7 +81,6 @@ do_read_org_spss <- function(filedescription, con){
 
 #' @noRd
 do_read_org_csv <- function(filedescription, read_arg_list, con){
-  # Change encoding = "latin1" (works for read.csv) to "Latin-1" (works for fread)
   if(is_not_empty(read_arg_list$encoding) && read_arg_list$encoding == "latin1") read_arg_list$encoding <- "Latin-1"
   sep <- ifelse("sep" %in% names(read_arg_list), read_arg_list$sep, ";")
   encoding <- ifelse("encoding" %in% names(read_arg_list), read_arg_list$encoding, "unknown")
@@ -90,7 +89,7 @@ do_read_org_csv <- function(filedescription, read_arg_list, con){
   format_arg_list <- c(list(file = file, filedescription = filedescription), read_arg_list)
   file <- do.call(format_excel_and_csv_files, format_arg_list)
   
-  if(any(sapply(file, has_invalid_utf8))){
+  if(any(sapply(file, has_invalid_encoding))){
     file <- try_fix_invalid_utf8(dt = file)
   }
   
@@ -99,21 +98,23 @@ do_read_org_csv <- function(filedescription, read_arg_list, con){
   invisible(gc())
 }
 
-has_invalid_utf8 <- function(x) {
+has_invalid_encoding <- function(x) {
   x <- x[!is.na(x)]
   any(vapply(
     x,
-    function(s) is.na(iconv(s, from = "UTF-8", to = "UTF-8")),
+    function(s) is.na(iconv(s, from = "", to = "UTF-8")),
     logical(1)
   ))
 }
 
+#' @title try_fix_invalid_utf8
+#' @description
+#' Tries to fix encoding for columns that cannot be interpreted as UTF-8
+#' @noRd
 try_fix_invalid_utf8 <- function(dt){
-  
   print_console_message("\nForsøker å fikse encodingproblemer. Du bør kanskje legge til encoding=\"Latin-1\" i INNLESARG for å unngå dette i fremtiden.")
-  bad_cols <- names(dt)[sapply(dt, has_invalid_utf8)]
-  if(length(bad_cols) == 0) return(invisible(d))
-  
+  bad_cols <- names(dt)[sapply(dt, has_invalid_encoding)]
+  if(length(bad_cols) == 0) return(invisible(dt))
   
   try_encodings <- c("latin1","CP1252","ISO-8859-1")
   
@@ -121,7 +122,7 @@ try_fix_invalid_utf8 <- function(dt){
     d <- data.table::copy(dt)
     d[, (bad_cols) := lapply(.SD,iconv,from = enc,to = "UTF-8"), .SDcols = bad_cols]
     
-    still_bad <- names(d)[sapply(d, has_invalid_utf8)]
+    still_bad <- names(d)[sapply(d, has_invalid_encoding)]
     
     if (length(still_bad) == 0) return(invisible(d))
   }
@@ -133,7 +134,6 @@ try_fix_invalid_utf8 <- function(dt){
   )
   
 }
-
 
 #' @noRd
 do_read_org_excel <- function(filedescription, read_arg_list, con){
