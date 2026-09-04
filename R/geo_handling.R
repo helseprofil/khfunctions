@@ -39,7 +39,6 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
   do_aggregate_file_duckdb(con = con, tablename = tablename, vals = vals)
   if(add_fylke) add_fylke_duckdb(con = con, tablename = tablename)
   
-  
   invisible(NULL)
 }
 

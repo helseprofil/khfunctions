@@ -1,19 +1,33 @@
 # khfunctions (development version)
 
-- init_duckdb is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
-- Filename dropped from duckdb name
-- Implement duckdb for LagFilgruppe
-    - Processing and stacking of original files is done in duckdb, minimizing memory requirements
-    - `RSYNT1` moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
-    - Cleaning of dimension and value columns is done directly in duckdb
-    - Columns are renamed, and values are converted to integer in duckdb
-    - `RSYNT_PRE_FGLAGRING` now utilizes duckdb, meaning data doesn't need to go into memory
-    - write_filegroup_output now writes parquet files directly from duckdb
+## LagFilgruppe
+  - Implement duckdb for LagFilgruppe
+      - Processing and stacking of original files is done in duckdb, minimizing memory requirements
+          - Non-parquet original files are read, and encoding is fixed if required, before writing to duckdb
+      - `RSYNT1` moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
+      - Cleaning of dimension and value columns is done directly in duckdb
+      - Columns are renamed, and values are converted to integer in duckdb
+      - `RSYNT_PRE_FGLAGRING` now utilizes duckdb, meaning data doesn't need to go into memory
+      - write_filegroup_output now writes parquet files directly from duckdb
+  - Deprecate the partitioned versions of BEF_GKny, as the sorted filegroup can be filtered during reading. 
+
+## LagKUBE
+  - Deprecated BUFFER, as files now are stored in duckdb and not in memory
+  - `load_and_format_files()` now reads filegroups directly into duckdb for further processing
+      - Everything moved into one pipeline, with filefilter-functions included only when needed
+      - Formatting and filefilter functionality moved to duckdb
+  - do_harmonize_geo translated to sql, and add_fylke added as an argument
+
+## Other changes
+- `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
+- Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
+- Parameter tables GeoKoder and KnrHarm written to duckdb
 - `do_special_handling` 
     - reads and write to duckdb, new arguments `duck` and `tablename`
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
+- KnrHarm and GeoKoder written into duckdb for faster geo recoding
     
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
 

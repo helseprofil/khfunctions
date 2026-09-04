@@ -46,7 +46,6 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   isbef <- grepl("^BEF_GKny$", orgfile, ignore.case = TRUE)
   islks <- "V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))
   
-  
   orgfilepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
   if(!file.exists(orgfilepath)) stop("Finner ikke filgruppe: ", orgfile, " i STABLAORG/R/NYESTE.")
   allcols <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", DBI::dbQuoteString(con, orgfilepath)))$column_name
@@ -55,47 +54,38 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   alderfilter <- set_filter_age_sql(con = con, parameters = parameters)
   yearfilter <- set_filter_year_sql(con = con, parameters = parameters)
   lksfilter <- set_filter_lks_sql(isbef = isbef, islks = islks, allcols = allcols)
-  
   filter <- paste0(c(tabfilter, alderfilter, yearfilter, lksfilter), collapse = " AND ")
   readcols <- identify_readcols(allcols = allcols, bef = isbef, parameters = parameters)
   
-  
   print_console_message(paste0("\n** Leser inn filgruppe ", filegroup, " til duckdb med filter ", filter))
   read_filegroup_duckdb(con = con, tablename = filegroup, filepath = orgfilepath, filter = filter, readcols = readcols)
+  
   do_filter_KUIL_duckdb(con = con, filegroup = filegroup, cubeinformation = parameters$CUBEinformation)
 
   ff <- get_filefilterconds(filefilter = filefilter, fileinfo = fileinfo, parameters = parameters)
-  
-  if(!is.null(ff$nyekolkolprerad)){
-    # NYEKOLKOLPRERAD LOGIKK
-    # Bare brukt i sysvak, og flyttet til pre_fglagring, så denne er foreløpig inaktivert
-    # compute_new_value_from_formula(dt = FIL, formulas = filefilter$NYEKOL_KOL_preRAD, post_moving_average = FALSE)
-  }
+  # if(!is.null(ff$nyekolkolprerad)){ #   # Bare brukt i sysvak, og flyttet til pre_fglagring, så denne er foreløpig inaktivert # }
   
   if(!is.null(ff$kollapsdel)){
     do_filfiltre_kollapsdeler_duckdb(con = con, filegroup = filegroup, parts = ff$kollapsdel, parameters = parameters)
   }
   
-  
   if(!is.null(ff$Filter) && length(ff$Filter) > 0){
-    # SKRIV DISSE OM TIL SQL, det er en ren filtrering og trenger ikke omkodingen som ligger i do_filter_and_recode_to_redesign
-    ### prefilterdesign <- find_filedesign(FIL, parameters = parameters)
-    ### redesign_filter <- find_redesign(orgdesign = prefilterdesign, targetdesign = list(Parts = Filter), parameters = parameters)
-    ### FIL <- do_filter_and_recode_to_redesign(dt = FIL, redesign = redesign_filter, parameters = parameters)
+    prefilterdesign <- find_filedesign(file = NULL, filename = filegroup, parameters = parameters)
+    redesign_filter <- find_redesign(orgdesign = prefilterdesign, targetdesign = list(Parts = ff$Filter), parameters = parameters)
+    filter_and_recode_table_duckdb(con = con, tablename = filegroup, redesign = redesign_filter, parameters = parameters)
   }
   
-  # GEOHARMONISERING, UTEN REKTANGULARISERING HER
-  do_harmonize_geo_duckdb(con = con, 
-                          tablename = filegroup, 
-                          vals = fileinfo$vals)
+  do_harmonize_geo_duckdb(con = con, tablename = filegroup, vals = fileinfo$vals)
   
   if(ff$rect){
-    # REKTANGULARISERING ETTER GEOHARM, om angitt i filfiltre
+    do_rectangularize_filfiltre_duckdb(con = con, tablename = filegroup, vals = fileinfo$vals, parameters = parameters)
   }
   
   if(!is.null(ff$nyekolrad)){
-    # NYEKOLRADLOGIKK
-    # compute_new_value_from_row_sum(dt = FIL, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
+    print_console_message(sprintf("\n** Henter data inn i R for å gjøre FILFILTRE::NYEKOL_RAD for %s, da denne funksjonen ikke er skrevet til sql enda", filegroup))
+    dt <- fetch_duckdb_table(con, filegroup)
+    compute_new_value_from_row_sum(dt = dt, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
+    DBI::dbWriteTable(conn = con, name = filegroup, value = dt, overwrite = TRUE)
   }
   
   if(!is.null(ff$ffrsynt)){
@@ -103,11 +93,9 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
                         parameters = parameters, duck = TRUE, tablename = filegroup)
   }
   
-  # Spesialfunksjoner (BEFVEKST)
-  
+  # Spesialfunksjoner
+  if(filegroup == "BEFVEKST") add_leadyear_befvekst_duckdb(con = con, tablename = filegroup)
 }
-
-
 
 # Innlesing og filtrering ----
 
@@ -262,7 +250,7 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
   tab_sql <- as.character(DBI::dbQuoteIdentifier(con, filegroup))
   allcols <- DBI::dbListFields(con, tab_sql)
   filters <- character()
-  
+  filtercols <- character()
   for(dim in c("KJONN", "UTDANN", "INNVKAT", "LANDBAK")){
     if(!dim %in% allcols) next
     keep <- trimws(strsplit(cubeinformation[[dim]], ",", fixed = TRUE)[[1]])
@@ -275,6 +263,7 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
       filters <- c(filters,
                    sprintf("%s IN (%s)",
                            DBI::dbQuoteIdentifier(con, dim),keep_sql))
+      filtercols <- c(filtercols, dim)
     }
   }
   
@@ -283,8 +272,14 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
   sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE %s",
     tab_sql, tab_sql,  paste(filters, collapse = " AND "))
+  print_console_message(sprintf("\nFiltrerer filen på %s:\n- %s", 
+                                paste(filtercols, collapse = ", "), filters))
   
+  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   invisible(DBI::dbExecute(con, sql))
+  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
+  print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
+  
 }
 
 #' @title read_filegroup_duckdb
@@ -314,6 +309,9 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
 # GEOharmonisering ----
 
 # FILFILTRE ----
+#' @title get_filefilterconds
+#' @description henter info fra FILFILTRE
+#' @noRd
 get_filefilterconds <- function(filefilter, fileinfo, parameters){
   out <- list("nyekolkolprerad" = NULL, 
               "kollapsdel" = NULL, 
@@ -334,7 +332,10 @@ get_filefilterconds <- function(filefilter, fileinfo, parameters){
   return(out)
 }
 
-
+#' @title do_filfiltre_kollapsdeler_duckdb
+#' @description Kollapser kolonner som angitt i filfiltre
+#' @family duckdb
+#' @noRd
 do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
   
   parts <- trimws(strsplit(parts, ",", fixed = TRUE)[[1]])
@@ -365,15 +366,140 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
   sql <- sprintf("UPDATE %s SET %s", 
                  tab_sql, paste(set_sql, collapse = ", "))
   
-  invisible(DBI::dbExecute(con, sql))
+  print_console_message(sprintf("\nKollapser kolonnene %s", paste(updatecols, collapse = ", ")))
   
+  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
+  invisible(DBI::dbExecute(con, sql))
   do_aggregate_file_duckdb(con = con, tablename = filegroup)
+  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
+  print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
 }
 
-
+#' @title do_rectangularize_filfiltre_duckdb
+#' @description Rektangulariserer filen dersom angitt i FILFILTRE
+#' @family duckdb
+#' @noRd
+do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), parameters){
+  on.exit({
+    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_rectangularized"))
+    tmp_design_tabs <- grep("^tmp_designgeo_", DBI::dbListTables(con), value = TRUE)
+    for(tab in tmp_design_tabs){
+        invisible(DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s",tab)))
+    }
+    }, add = TRUE)
+  
+  print_console_message("\n*** Rektangulariserer filfiltre")
+  design <- find_filedesign(file = NULL, filename = tablename, parameters = parameters)
+  year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
+  rect_table <- "tmp_rectangularized"
+  invisible(DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", rect_table)))
+  
+  create_sql <- character()
+  file_cols <- DBI::dbListFields(con, tablename)
+  design_cols <- intersect(file_cols, names(design$Design))
+  
+  for(Gn in design$Part[["Gn"]][["GEOniv"]]){
+    designgeo <- unique(design$Design[HAR == 1 & GEOniv == Gn, ..design_cols])
+    design_table <- sprintf("tmp_designgeo_%s", Gn)
+    
+    invisible(DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s",design_table)))
+    DBI::dbWriteTable(con, design_table, designgeo, temporary = TRUE, overwrite = TRUE)
+    
+    create_sql <- c(create_sql, sprintf(
+    "SELECT d.*, g.GEO FROM %s d
+    CROSS JOIN (SELECT GEO FROM GeoKoder WHERE GEOniv = '%s' AND FRA <= %s AND TIL > %s) g",
+    design_table, Gn, year, year))
+  }
+  
+  rectangularize_sql <- sprintf("CREATE TEMP TABLE %s AS %s", rect_table, paste(create_sql, collapse = "\nUNION ALL\n"))
+  
+  invisible(DBI::dbExecute(con, rectangularize_sql))
+  
+  join_cols <- intersect(DBI::dbListFields(con, "tmp_rectangularized"), DBI::dbListFields(con, tablename))
+  join_cols_sql <- paste(DBI::dbQuoteIdentifier(con, join_cols), collapse = ", ")
+  value_cols <- get_value_columns(DBI::dbListFields(con, tablename))
+  
+  table_cols <- setdiff(DBI::dbListFields(con, tablename), join_cols)
+  table_cols_sql <- paste(sprintf("f.%s", DBI::dbQuoteIdentifier(con, table_cols)),
+                          collapse = ",\n")
+  
+  merge_sql <- sprintf(
+    "CREATE OR REPLACE TABLE %s AS
+    SELECT r.*, %s
+    FROM tmp_rectangularized r
+    LEFT JOIN %s f USING (%s)",
+    tablename,
+    table_cols_sql,
+    tablename,
+    join_cols_sql
+  )
+  
+  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+  invisible(DBI::dbExecute(con, merge_sql))
+  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+  print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
+  set_implicit_null_after_merge_duckdb(table = tablename, implicitnull_defs = vals, con = con)
+  invisible(NULL)
+}
 
 # Spesialfunksjoner ----
 
+#' @title add_leadyear_befvekst_duckdb
+#' @description Adds lead year variables for filegroup BEFVEKST
+#' @family duckdb
+#' @keywords internal
+#' @noRd
+add_leadyear_befvekst_duckdb <- function(con, tablename){
+  tmp_table <- "tmp_leadyear_befvekst"
+  on.exit(invisible(DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", tmp_table))),add = TRUE)
+  
+  print_console_message("\n*** Legger til ledeår for å beregne befolkningsvekst")
+  table_cols <- DBI::dbListFields(con, tablename)
+  dims <- get_dimension_columns(table_cols)
+  
+  create_sql <- sprintf(
+  "CREATE OR REPLACE TEMP TABLE %s AS
+    SELECT * EXCLUDE (AARl, AARh), AARl - 1 AS AARl, AARh - 1 AS AARh
+  FROM %s",
+  tmp_table, tablename)
+  invisible(DBI::dbExecute(con, create_sql))
+  
+  dup_sql <- sprintf(
+    "SELECT MAX(N) AS N 
+    FROM (
+      SELECT %s, COUNT(*) AS N 
+      FROM %s GROUP BY %s
+    ) count_table",
+    paste(DBI::dbQuoteIdentifier(con, dims), collapse = ", "),
+    tmp_table,
+    paste(DBI::dbQuoteIdentifier(con, dims), collapse = ", ")
+  )
+  
+  max_n <- DBI::dbGetQuery(con, dup_sql)$N
+  if(max_n != 1) stop("Data for ledeår er ikke unike etter forskyving av AARl og AARh")
+  
+  join_sql <- paste(sprintf(
+    "t.%s = y.%s",
+    DBI::dbQuoteIdentifier(con, dims),
+    DBI::dbQuoteIdentifier(con, dims)
+    ), collapse = "\n  AND ")
+  
+  merge_sql <- sprintf(
+    "CREATE OR REPLACE TABLE %s AS
+    SELECT t.*, y.BEF0101 AS Yp1_A_BEF0101, y.%s AS %s, y.%s AS %s
+    FROM %s t 
+    LEFT JOIN %s y ON %s",
+    tablename,
+    DBI::dbQuoteIdentifier(con, "BEF0101.f"),
+    DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.f"),
+    DBI::dbQuoteIdentifier(con, "BEF0101.a"),
+    DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.a"),
+    tablename, tmp_table, join_sql)
+  
+  invisible(DBI::dbExecute(con, merge_sql))
+  
+  invisible(NULL)
+}
 
 
 # Old version ----

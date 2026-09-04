@@ -33,6 +33,210 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   return(invisible(dt))
 }
 
+compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post_moving_average = FALSE){
+  
+  if(is_empty(formulas)) return(invisible(NULL))
+  
+  cols <- DBI::dbListFields(con, tablename)
+  values <- get_value_columns(cols)
+  
+  formulas <- trimws(
+    unlist(
+      strsplit(formulas, ";", fixed = TRUE)
+    )
+  )
+  
+  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  
+  for(f in formulas){
+    
+    print_console_message(
+      paste0("\n*** Legger til nye kolonner: ", f)
+    )
+    
+    name <- sub(
+      "^(.*?)=(.*)$",
+      "\\1",
+      f
+    )
+    
+    formula <- sub(
+      "^(.*?)=\\{(.*)\\}$",
+      "\\2",
+      f
+    )
+    
+    included_columns <- values[
+      vapply(
+        values,
+        grepl,
+        logical(1),
+        x = formula,
+        fixed = TRUE
+      )
+    ]
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s DOUBLE",
+        table_sql,
+        DBI::dbQuoteIdentifier(con, name)
+      )
+    )
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s INTEGER",
+        table_sql,
+        DBI::dbQuoteIdentifier(con, paste0(name, ".f"))
+      )
+    )
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s INTEGER",
+        table_sql,
+        DBI::dbQuoteIdentifier(con, paste0(name, ".a"))
+      )
+    )
+    
+    if(post_moving_average){
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          "ALTER TABLE %s ADD COLUMN %s INTEGER",
+          table_sql,
+          DBI::dbQuoteIdentifier(con, paste0(name, ".n"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          DBI::dbQuoteIdentifier(con, paste0(name, ".fn1"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          DBI::dbQuoteIdentifier(con, paste0(name, ".fn3"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          DBI::dbQuoteIdentifier(con, paste0(name, ".fn9"))
+        )
+      )
+    }
+    
+    f_sql <- paste0(
+      DBI::dbQuoteIdentifier(
+        con,
+        paste0(included_columns, ".f")
+      ),
+      collapse = ", "
+    )
+    
+    a_sql <- paste0(
+      DBI::dbQuoteIdentifier(
+        con,
+        paste0(included_columns, ".a")
+      ),
+      collapse = ", "
+    )
+    
+    sql <- sprintf(
+      paste(
+        "UPDATE %s",
+        "SET",
+        "%s = %s,",
+        "%s = GREATEST(%s),",
+        "%s = GREATEST(%s)"
+      ),
+      table_sql,
+      
+      DBI::dbQuoteIdentifier(con, name),
+      formula,
+      
+      DBI::dbQuoteIdentifier(con, paste0(name, ".f")),
+      f_sql,
+      
+      DBI::dbQuoteIdentifier(con, paste0(name, ".a")),
+      a_sql
+    )
+    
+    DBI::dbExecute(con, sql)
+    
+    if(post_moving_average){
+      
+      n_sql <- paste0(
+        DBI::dbQuoteIdentifier(
+          con,
+          paste0(included_columns, ".n")
+        ),
+        collapse = ", "
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET %s = GREATEST(%s)"
+          ),
+          table_sql,
+          DBI::dbQuoteIdentifier(con, paste0(name, ".n")),
+          n_sql
+        )
+      )
+    }
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        paste(
+          "UPDATE %s",
+          "SET",
+          "%s = NULL,",
+          "%s = 2",
+          "WHERE",
+          "NOT ISFINITE(%s)",
+          "OR %s IS NULL"
+        ),
+        table_sql,
+        DBI::dbQuoteIdentifier(con, name),
+        DBI::dbQuoteIdentifier(con, paste0(name, ".f")),
+        DBI::dbQuoteIdentifier(con, name),
+        DBI::dbQuoteIdentifier(con, name)
+      )
+    )
+  }
+  
+  invisible(NULL)
+}
+
 #' @noRd
 add_crude_rate <- function(dt, parameters){
   if(!"NEVNER" %in% names(dt)){

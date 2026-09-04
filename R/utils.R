@@ -59,5 +59,6 @@ set_threads <- function(){
 
 print_console_message <- function(...) {
   base::cat(...)
+  base::cat("\n")
   utils::flush.console()
 }
