@@ -92,8 +92,8 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 estimate_predrate <- function(design, parameters){
   print_console_message("\n* Estimerer PREDRATE...")
   missyears <- parameters$MOVAVparameters$missyears
-  predrate <- data.table::data.table()
-  merge_teller_nevner(outdata = predrate, parameters = parameters, standardfiles = TRUE, design = design)
+  merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
+  predrate <- fetch_duckdb_table(parameters$duck, tablename = "standardTNF")
   if(missyears$n > 0 && any(missyears$years %in% unique(predrate$AARl))){
     problem <- intersect(missyears$years, unique(predrate$AARl))
     warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 

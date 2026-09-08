@@ -31,11 +31,10 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner
-  KUBE <- data.table::data.table()
   CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
-  # Kan lese kube direkte fra duckdb her i stedet for å oppdatere en tom dt i merge_teller_nevner
+  KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
 
-    # 3. Aggregering til flerårige tall
+  # 3. Aggregering til flerårige tall
   organize_file_for_moving_average(dt = KUBE)
   parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
   KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
