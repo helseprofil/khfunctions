@@ -72,35 +72,16 @@ KHerr <- function(error) {
 
 #' FinnFilGruppeFraKoblid (kb)
 #'
-#' @param koblid 
 #' @param globs global parameters, defaults to SettGlobs
 FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
 }
 
-#' SVcloneRecord (kb)
-#'
-#' @param dbh 
-#' @param table 
-#' @param koblid 
-SVcloneRecord <- function(dbh, table, koblid) {
-  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
-  felt <- paste(design, collapse = ",")
-  feltm <- sub("SV", "'V' AS SV", felt)
-  sql <- paste(
-    "INSERT INTO ", table, "(", felt, ")",
-    "SELECT ", feltm, "FROM ", table,
-    "WHERE KOBLID=", koblid, "AND SV='S'"
-  )
-  sqlQuery(dbh, sql)
-}
 
 
 
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 #' expand.grid.df (ybk)
-#'
-#' @param ... 
 expand.grid.df <- function(...) {
   DFs <- list(...)
   

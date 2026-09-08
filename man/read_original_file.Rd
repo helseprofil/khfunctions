@@ -14,14 +14,10 @@ read_original_file(filedescription, parameters, dumps = list())
 \item{dumps}{any file dumps requested}
 }
 \value{
-formatted original file, ready for further processing
+original file is read into duckdb as \code{temp_orgfile}
 }
 \description{
 Reads the original file, with specific methods to read XLS/XLSX/CSV/SPSS-files,
 all producing data.table for further processing. Excel/CSV-files are further formatted
 according to parameters set inn INNLESARGS (or default values).
-\itemize{
-\item Sets manual header as specified in MANHEADER
-\item Applies special handling if code provided to RSYNT1
-}
 }

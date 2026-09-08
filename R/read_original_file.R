@@ -264,7 +264,6 @@ handle_multihead <- function(file, args, filedescription){
 
 #' LesMultiHead (kb)
 #'
-#' @param mhstr 
 LesMultiHead <- function(mhstr) {
   # Leser parameterstreng for multihead og gjoer om til relevante variable
   # Velger aa kalle paa denne funksjonen ved behov for samme inputstreng heller enn aa porssessere strengen en gang og sende bitene rundt

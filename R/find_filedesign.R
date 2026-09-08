@@ -2,10 +2,9 @@
 #' @description
 #' Finds design parameters for a file
 #' 
-#' @param file file. If NULL, gets the file from BUFFER[[filename]]. 
+#' @param file file. If NULL, gets the file from duckdb
 #' @param filename filegroup name
 #' @param parameters global parameters
-#'
 #' @keywords internal
 #' @noRd
 find_filedesign <- function(file = NULL, filename = NULL, parameters){

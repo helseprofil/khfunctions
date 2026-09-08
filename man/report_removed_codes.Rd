@@ -4,7 +4,7 @@
 \alias{report_removed_codes}
 \title{get_removed_codes}
 \usage{
-report_removed_codes(file, cube)
+report_removed_codes(orgtable, recttable, parameters)
 }
 \description{
 fetches info on geo codes removed during rectangularization

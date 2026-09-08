@@ -1,3 +1,10 @@
+set_initial_spvtmp <- function(dt){
+  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(dt))
+  if (length(tncols) > 0L) {
+    dt[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
+  }
+}
+
 #' @keywords internal
 #' @noRd
 do_censor_cube <- function(dt, parameters){
@@ -80,7 +87,7 @@ do_censor_primary_secondary <- function(dt, parameters){
 #' og settes som unntak her. Kan settes som spesialgrense og inkluderes i limits.
 #' Dersom høye tall skal aksepteres, bør også nevner-teller-prikking kunne slås av.
 #' @keywords internal
-#' @noRD
+#' @noRd
 do_censor_primary <- function(dt, limits){
   if(is_not_empty(limits$TELLER)){
     print_console_message("\n*** Prikker på liten teller og teller-nevner")
@@ -257,7 +264,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
 #' @title get_censor_limits
 #' @description Fetch censor limits from access
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_censor_limits <- function(spec){
   limits <- list()
   limits[["TELLER"]] <- ifelse(is_not_empty(spec$Stata_PRIKK_T), spec$Stata_PRIKK_T, spec$PRIKK_T)
@@ -269,7 +276,7 @@ get_censor_limits <- function(spec){
 #' @title get_censor_triangles
 #' @description Fetch censor triangles from access
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_censor_triangles <- function(parameters){
   spec <- parameters$CUBEinformation
   naboprikkdims <- grep("nabopr", names(spec), value = T)
@@ -303,7 +310,7 @@ get_censor_triangles <- function(parameters){
 #' @title get_geonabotriangles
 #' @description Fetch geo triangles from options and filters to geolevels in file
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_geonabotriangles <- function(parameters){
   geolevels <- strsplit(parameters$CUBEinformation$GEOniv, ",")[[1]]
   alltriangles <- getOption("khfunctions.geoprikk")
@@ -320,7 +327,7 @@ get_geonabotriangles <- function(parameters){
 #' @description Converts triangles to list of values in each triangle, handling special variants aswell
 #' Written with assistance from copilot
 #' @keywords internal
-#' @noRD
+#' @noRd
 clean_triangles <- function(list){
   if(length(list) == 0) return(invisible(NULL))
   for(dim in names(list)){

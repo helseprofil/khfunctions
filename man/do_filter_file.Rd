@@ -7,10 +7,6 @@
 do_filter_file(file, design, parameters)
 }
 \arguments{
-\item{file}{}
-
-\item{design}{}
-
 \item{parameters}{global parameters}
 }
 \description{

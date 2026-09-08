@@ -11,7 +11,6 @@ LagKUBE(
   geonaboprikk = TRUE,
   year = getOption("khfunctions.year"),
   dumps = list(),
-  removebuffer = TRUE,
   qualcontrol = TRUE
 )
 }
@@ -27,8 +26,6 @@ LagKUBE(
 \item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")}
 
 \item{dumps}{list of required dumps, in the format list(dumpname = "format")}
-
-\item{removebuffer}{should original files in the buffer be removed when no longer needed to free memory?}
 
 \item{qualcontrol}{perform initial qualcontrol of data (default = FALSE for now)}
 }

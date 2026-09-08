@@ -143,7 +143,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     do_aggregate_file_duckdb(con = con, tablename = tablename)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
     partname <- as.character(parameters$DefDesign$DelKolN[part])
-    print_console_message(sprintf("\nOmkoding av %s: %s -> %s rader", partname, n_before, n_after))
+    print_console_message(sprintf("Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
   }
   
   invisible(NULL)
@@ -165,8 +165,8 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
   has_fylke <- "FYLKE" %in% DBI::dbListFields(con, tablename)
   fylke_sql <- if(has_fylke){
     "CASE
-      WHEN t.GEOniv_omk = 'L' THEN '00'
-      WHEN t.GEOniv_omk = 'B' AND b.GEO IS NULL THEN '99'
+      WHEN t.GEOniv = 'L' THEN '00'
+      WHEN t.GEOniv = 'B' AND b.GEO IS NULL THEN '99'
       ELSE t.FYLKE
     END AS FYLKE,"
   } else {
@@ -182,11 +182,11 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
   sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS SELECT
     CASE
-      WHEN t.GEOniv_omk = 'L' THEN '0'
-      WHEN t.GEOniv_omk = 'F' THEN SUBSTR(t.GEO, 1, 2)
-      WHEN t.GEOniv_omk = 'K' THEN SUBSTR(t.GEO, 1, 4)
-      WHEN t.GEOniv_omk = 'B' AND b.GEO IS NULL THEN '999999'
-      WHEN t.GEOniv_omk = 'H' AND h.HELSEREG IS NOT NULL THEN h.HELSEREG
+      WHEN t.GEOniv = 'L' THEN '0'
+      WHEN t.GEOniv = 'F' THEN SUBSTR(t.GEO, 1, 2)
+      WHEN t.GEOniv = 'K' THEN SUBSTR(t.GEO, 1, 4)
+      WHEN t.GEOniv = 'B' AND b.GEO IS NULL THEN '999999'
+      WHEN t.GEOniv = 'H' AND h.HELSEREG IS NOT NULL THEN h.HELSEREG
       ELSE t.GEO 
     END AS GEO,
     %s

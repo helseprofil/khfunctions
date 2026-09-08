@@ -263,7 +263,6 @@ add_crude_rate <- function(dt, parameters){
 #' Used to compute columns described in ACCESS columns
 #' - FILFILTRE::NYEKOL_RAD
 #' - TNP_PROD::NYEKOL_RAD
-#' @param dt 
 #' @keywords internal
 #' @noRd
 compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
@@ -355,27 +354,6 @@ merge_cols_by_reference <- function(orgdata, newdata){
   newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
   data.table::set(orgdata, j = newcols_names, value = newcols_vals)
 }
-
-#' #' @title set_lead_value
-#' #' @description 
-#' #' shifts year by `shift`, before merging to main table. 
-#' #' in prefix, m/p means plus/minus. Prefix need to include `_A_` as column names must match expected names later.  
-#' #' @keywords internal
-#' #' @noRd
-#' set_lead_year <- function(file, shift, vals = NULL){
-#'   if(is.null(vals)) stop("vals must be specified to generate lead values")
-#'   d <- data.table::copy(file)
-#'   data.table::set(d, j = c("AARl", "AARh"), 
-#'                   value = list(d[["AARl"]] + shift, NULL))
-#' 
-#'   tabcols <- get_dimension_columns(names(d))
-#'   prefix <- paste0("Y", ifelse(shift < 0, "p", "m"), abs(shift), "_A_") 
-#'   oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
-#'   newvals <- paste0(prefix, oldvals)
-#'   data.table::setnames(d, old = oldvals, new = newvals)
-#'   d <- d[, .SD, .SDcols = c(tabcols, newvals)]
-#'   return(d)
-#' }
 
 # Existing functions to be replaced and removed ---- 
 

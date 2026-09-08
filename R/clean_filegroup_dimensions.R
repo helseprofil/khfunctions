@@ -31,7 +31,7 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 }
 
 # GEO ----
-#' @Title do_clean_GEO_duckdb
+#' @title do_clean_GEO_duckdb
 #' @description
 #' Renser GEO-verdier. Bygger en geo_map-tabell som skrives til duckdb, som brukes til å overskrive GEO-kolonnen
 #' Legger til GEOniv og FYLKE
@@ -99,7 +99,7 @@ add_geoniv_fylke <- function(con, parameters){
   }
 }
 
-#' @Title build_geo_map
+#' @title build_geo_map
 #' @description Bygger mappingtabell for GEO
 #' @noRd
 build_geo_map <- function(con, parameters){
@@ -187,7 +187,7 @@ update_geo_cleanlog <- function(con, cleanlog){
 }
 
 # AAR ----
-#' @Title do_clean_AAR_duckdb
+#' @title do_clean_AAR_duckdb
 #' @description
 #' Renser AAR-verdier. Bygger en aar_map-tabell som skrives til duckdb, som brukes til å overskrive AAR-kolonnen
 #' Legger også til AARl og AARh
@@ -212,7 +212,7 @@ do_clean_AAR_duckdb <- function(con, cleanlog){
   invisible(NULL)
 }
 
-#' @Title build_aar_map
+#' @title build_aar_map
 #' @description Bygger mappingtabell for AAR
 #' @noRd
 build_aar_map <- function(con){
@@ -249,7 +249,7 @@ build_aar_map <- function(con){
 
 # ALDER ----
 
-#' @Title do_clean_ALDER_duckdb
+#' @title do_clean_ALDER_duckdb
 #' @description
 #' Renser ALDER-verdier. Bygger en alder_map-tabell som skrives til duckdb, som brukes til å overskrive ALDER-kolonnen
 #' Legger også til ALDERl og ALDERh
@@ -277,7 +277,7 @@ do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
   invisible(NULL)
 }
 
-#' @Title build_alder_map
+#' @title build_alder_map
 #' @description Bygger mappingtabell for ALDER
 #' @noRd
 build_alder_map <- function(con, parameters){
@@ -341,7 +341,7 @@ build_alder_map <- function(con, parameters){
 
 # KJONN, UTDANN, INNVKAT, LANDBAK ----
 
-#' @Title do_clean_dimension_duckdb
+#' @title do_clean_dimension_duckdb
 #' @description
 #' Renser KJONN, UTDANN, INNVKAT og LANDBAK. Disse følger samme logikk med å bare oppdatere en enkelt kolonne.
 #' @noRd

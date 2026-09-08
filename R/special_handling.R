@@ -229,10 +229,10 @@ fix_column_names_post_stata <- function(oldnames){
 
 #' @title can_use_parquet
 #' @description
-#' If the longest value of a character column contain [æøå], represented by unicode sequences.
+#' If the longest value of a character column contain `æøå`, represented by unicode sequences.
 #' STATA will crop the value when reading a .parquet file, as these characters are multibyte. 
 #' This function returns TRUE if this is not the case, indicating that .parquet can be used.
-#' If the longest value of any column contain [æøå], FALSE is returned, indicating that .dta-format should be used. 
+#' If the longest value of any column contain `æøå`, FALSE is returned, indicating that .dta-format should be used. 
 #' @param dt data
 #' @keywords internal
 #' @noRd

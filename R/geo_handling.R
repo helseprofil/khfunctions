@@ -186,8 +186,6 @@ get_deletestrata <- function(dt, dims, level){
 }
 
 #' @title add_missing_lks
-#' @param dt 
-#' @param parameters 
 #' @noRd
 add_missing_lks <- function(dt, parameters){
   # Legg til soner for kommuner med bare en sone

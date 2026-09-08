@@ -4,18 +4,36 @@
 \alias{do_special_handling}
 \title{do_special_handling}
 \usage{
-do_special_handling(name, dt, code, parameters, koblid = NULL, ...)
+do_special_handling(
+  name,
+  dt = NULL,
+  dt_name = NULL,
+  code,
+  parameters,
+  koblid = NULL,
+  duck = FALSE,
+  tablename = NULL,
+  filedescription = NULL
+)
 }
 \arguments{
 \item{name}{name of RSYNT point, refer to the column, to be used for filedump names}
 
-\item{dt}{data to be processed}
+\item{dt}{data to be processed, default is NULL as data should ideally be in duckdb}
+
+\item{dt_name}{name of data object, passed to code env}
 
 \item{code}{code to be performed, either R or STATA}
 
 \item{parameters}{global parameters}
 
 \item{koblid}{for RSYNT points applied to individual original files, koblid is needed for filedump names}
+
+\item{duck}{is data located in duckdb (TRUE) or in memory (FALSE)}
+
+\item{tablename}{name of table in duckdb}
+
+\item{filedescription}{filedescription object if relevant, default = NULL}
 
 \item{...}{additional objects passed to make them available for the evaluation environment (\code{code_env}) where the code is evaluated}
 }
