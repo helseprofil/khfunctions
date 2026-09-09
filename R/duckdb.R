@@ -27,6 +27,7 @@ merge_duckdb_table <- function(result, mergeto, mergefrom, con){
    ON ", join_cond
   )
   
+  print_console_message(sprintf("- Merger %s på %s. Skriver til %s", mergefrom, mergeto, result))
   invisible(DBI::dbExecute(con, query))
 }
 
@@ -38,7 +39,7 @@ merge_duckdb_table <- function(result, mergeto, mergefrom, con){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  print_console_message("\n*** Håndterer implisitte nuller")
+  print_console_message("*** Håndterer implisitte nuller")
   cols <- DBI::dbListFields(con, table)
   vals <- get_value_columns(cols)
   

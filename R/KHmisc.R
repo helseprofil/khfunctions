@@ -34,7 +34,7 @@ expand.grid.dt <- function(...){
 #' @keywords internal
 #' @noRd
 set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
-  print_console_message("\n*** Håndterer implisitte nuller")
+  print_console_message("*** Håndterer implisitte nuller")
   vals <- get_value_columns(names(dt))
   
   for (val in vals) {

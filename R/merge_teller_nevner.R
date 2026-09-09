@@ -36,16 +36,14 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   
   con <- parameters$duck
   
-  tellerfiltype <- ifelse(standardfiles, "standardtellerfil", "tellerfil")
   tablename_teller <- ifelse(standardfiles, "STANDARD_TELLER", "TELLER")
-  print_console_message("\n** Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
+  print_console_message("\n** Lager", tablename_teller, "fra", tellerfilnavn, "\n")
   do_redesign_file_duckdb(con = con, tablename = tablename_teller, orgfilename = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
-    nevnerfiltype <- ifelse(standardfiles, "standardnevnerfil", "nevnerfil")
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
-    print_console_message("\n* Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
+    print_console_message("\n* Lager", tablename_nevner, "fra", nevnerfilnavn, "\n")
     do_redesign_file_duckdb(con = con, tablename = tablename_nevner, orgfilename = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
   }
@@ -57,7 +55,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   
   if(length(KUBEdesign) > 0) {
     print_console_message("\n** Rektangulariserer")
-    set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tellerfiltype), 
+    set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tablename_teller), 
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
     report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
     merge_duckdb_table(result = tntype, mergeto = tntype, mergefrom = tablename_teller, con = con)
@@ -65,16 +63,16 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
       merge_duckdb_table(result = tntype, mergeto = tntype, mergefrom = tablename_nevner, con = con)
     }
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
-    print_console_message("\n*** Ferdig rektangularisert og merget teller-nevner-fil")
+    print_console_message("\n* Ferdig rektangularisert og merget", tntype)
   } else if (isnevnerfil) {
-    merge_duckdb_table(result = tntype, mergeto = tellerfiltype, mergefrom = nevnerfiltype, con = con)
+    merge_duckdb_table(result = tntype, mergeto = tablename_teller, mergefrom = tablename_nevner, con = con)
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
-    print_console_message("\n*** Ferdig merget teller-nevner-fil")
+    print_console_message("\n* Ferdig merget", tntype)
   } else {
     invisible(
-      DBI::dbExecute(con, paste0("CREATE OR REPLACE TABLE ", tntype, " AS SELECT * FROM ", tellerfiltype))
+      DBI::dbExecute(con, paste0("CREATE OR REPLACE TABLE ", tntype, " AS SELECT * FROM ", tablename_teller))
     )
-    print_console_message("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil")
+    print_console_message("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
@@ -248,7 +246,7 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
                                                    rektangularisert))
   }
   
-  print_console_message("\n*** Skriver", tnfname, "til duckdb...\n")
+  print_console_message("- Skriver rektangularisert", paste0(tnfname, "-design"), "til duckdb...")
   DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
 }
 

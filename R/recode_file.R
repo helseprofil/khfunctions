@@ -143,7 +143,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     do_aggregate_file_duckdb(con = con, tablename = tablename)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
     partname <- as.character(parameters$DefDesign$DelKolN[part])
-    print_console_message(sprintf("Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
+    print_console_message(sprintf("- Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
   }
   
   invisible(NULL)

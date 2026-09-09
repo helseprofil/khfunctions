@@ -19,19 +19,20 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
-  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
+  parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
+  if(parameters$write) sink(file = parameters$loggpath, split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   # 1. Laste inn filer og oppdatere parametre
-  load_and_format_files(parameters = parameters)
+  load_and_format_filegroups_to_duckdb(parameters = parameters)
   parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
   parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner
-  CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
+  CUBEdesign <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
   KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
 
   # 3. Aggregering til flerårige tall
@@ -45,7 +46,6 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 4. Standardisering 
   add_predteller(dt = KUBE, parameters = parameters)
   add_meisskala(dt = KUBE, parameters = parameters)
-  # if(parameters$removebuffer) remove_original_files_from_buffer()
   scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
 
   # 5. Redigere kolonner og filtrere ugyldige rader
@@ -121,11 +121,15 @@ get_lagkube_guardfile_path <- function(){
 }
 
 #' @keywords internal
+#' @description Rydder opp etter kubekjøring
 #' @noRd
 lagkube_cleanup <- function(parameters){
   guardfile <- get_lagkube_guardfile_path()
   if(file.exists(guardfile)) fs::file_delete(guardfile)
-  if(parameters$write) sink()
+  if(parameters$write){
+    sink()
+    if(is_not_empty(parameters$loggpath)) do_clean_sink_log(path = parameters$loggpath)
+  }
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   if(!is.null(parameters$duck)){
     DBI::dbDisconnect(parameters$duck)
@@ -136,13 +140,18 @@ lagkube_cleanup <- function(parameters){
     collapse::set_collapse(nthreads = parameters$threads$collapse)
   }
   RODBC::odbcCloseAll()
-}
+  }
 
 #' @keywords internal
+#' @description
+#' Fjerner alle rader med DuckDB Progress: x % fra loggen, og fjerner overflødige tomme rader
 #' @noRd
-remove_original_files_from_buffer <- function(){
-  .GlobalEnv$BUFFER <- NULL
-  gc()
+do_clean_sink_log <- function(path){
+  x <- readLines(path, warn = FALSE)
+  x <- x[!grepl("^DuckDB progress:", x)]
+  is_empty <- trimws(x) == ""
+  keep <- !is_empty | !data.table::shift(is_empty, fill = FALSE)
+  writeLines(x[keep],path)
 }
 
 #' LagKubeDatertCsv
