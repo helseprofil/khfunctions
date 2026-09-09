@@ -33,12 +33,15 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   # 2. Koble teller og nevner
   CUBEdesign <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
-  KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
 
   # 3. Aggregering til flerårige tall
-  organize_file_for_moving_average(dt = KUBE)
-  parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
+  # organize_file_for_moving_average(dt = KUBE)
+  parameters[["MOVAVparameters"]] <- get_movav_information(tablename = "KUBE", parameters = parameters)
+  # KUBE <- aggregate_to_periods_old(dt = KUBE, parameters = parameters)
+  aggregate_to_periods_duckdb(con = parameters$duck, tablename = "KUBE", parameters = parameters)
+  
+  # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
+  KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
   add_crude_rate(dt = KUBE, parameters = parameters)
   set_initial_spvtmp(dt = KUBE)
   parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = CUBEdesign, parameters = parameters)
