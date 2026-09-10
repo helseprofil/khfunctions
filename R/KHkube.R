@@ -31,20 +31,20 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
-  # 2. Koble teller og nevner
+  # 2. Koble teller og nevner, hente ut kubedesign
   CUBEdesign <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
 
-  # 3. Aggregering til flerårige tall
-  # organize_file_for_moving_average(dt = KUBE)
+  # 3. Aggregering til flerårige tall og oppdatere kubedesign
   parameters[["MOVAVparameters"]] <- get_movav_information(tablename = "KUBE", parameters = parameters)
-  # KUBE <- aggregate_to_periods_old(dt = KUBE, parameters = parameters)
   aggregate_to_periods_duckdb(con = parameters$duck, tablename = "KUBE", parameters = parameters)
+  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(con = parameters$duck, tablename = "KUBE", origdesign = CUBEdesign, parameters = parameters)
+
+  # - Legger til prikkeinfo-kolonner og crude RATE
+  add_censorinfo_cube(con = parameters$duck, tablename = "KUBE")
+  add_crude_rate(con = parameters$duck, tablename = "KUBE")
   
   # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
   KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
-  add_crude_rate(dt = KUBE, parameters = parameters)
-  set_initial_spvtmp(dt = KUBE)
-  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = CUBEdesign, parameters = parameters)
   
   # 4. Standardisering 
   add_predteller(dt = KUBE, parameters = parameters)

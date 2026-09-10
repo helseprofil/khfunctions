@@ -100,7 +100,7 @@ estimate_predrate <- function(design, parameters){
             "\n*** Dette vil påvirke landsraten i standardiseringsperioden!\n--\n", immediate. = TRUE)
     predrate <- predrate[!AARl %in% missyears$years]
   }
-  predrate <- aggregate_to_periods(dt = predrate, parameters = parameters)
+  predrate <- aggregate_to_periods_old(dt = predrate, parameters = parameters)
   predrate[, (parameters$PredFilter$Predfiltercolumns) := NULL]
   predrate[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
   predrate[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
@@ -139,7 +139,7 @@ estimate_prednevner <- function(design, parameters){
   data.table::setnames(prednevner, names(prednevner), PNnames)
   prednevner <- prednevner[, .SD, .SDcols = c(get_dimension_columns(names(prednevner)), grep("^PREDNEVNER", names(prednevner), value= T))]
   if(missyears$n > 0) prednevner <- prednevner[!AARl %in% missyears$years]
-  prednevner <- aggregate_to_periods(dt = prednevner, parameters = parameters)
+  prednevner <- aggregate_to_periods_old(dt = prednevner, parameters = parameters)
   return(prednevner)
 }
 

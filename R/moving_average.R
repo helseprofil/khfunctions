@@ -44,9 +44,12 @@ find_missing_year <- function(aarl){
 #' @param con duckdb-connection
 #' @param tablename Tabellnavn (KUBE, eller predrate om standardisering)
 #' @param parameters Globale parametre
-aggregate_to_periods_duckdb <- function(con, tablename, parameters){
-  save_filedump_if_requested(dumpname = "MOVAVpre", dt = NULL, parameters = parameters, duck = TRUE, tablename = tablename)
-  on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
+#' @param standard TRUE hvis standardfiler, hindrer uønsket fildump
+aggregate_to_periods_duckdb <- function(con, tablename, parameters, standard = FALSE){
+  if(!standard){
+    save_filedump_if_requested(dumpname = "MOVAVpre", dt = NULL, parameters = parameters, duck = TRUE, tablename = tablename)
+    on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
+  }
   
   print_console_message("\n* Aggregering til flerårige tall (hvis relevant)")
   do_balance_missing_teller_nevner(con = con, tablename = tablename)
@@ -347,7 +350,7 @@ aggregate_to_periods_old <- function(dt, parameters){
   
   if(parameters$MOVAVparameters$is_movav){
     dt <- do_aggregate_periods_old(dt = dt, parameters = parameters)
-    dt <- do_filter_periods_with_missing_original(dt)
+    dt <- do_filter_periods_with_missing_original_old(dt)
   } else {
     dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
   }

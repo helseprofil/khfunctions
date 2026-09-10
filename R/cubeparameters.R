@@ -263,11 +263,9 @@ set_predictionfilter <- function(parameters) {
 #' This is crucial when recoding predteller before merging onto cube. 
 #' @keywords internal
 #' @noRd
-#' @param dt cube
-#' @param origdesign Cubedesign after merging teller and nevner. 
-update_cubedesign_after_moving_average <- function(dt, origdesign, parameters){
+update_cubedesign_after_moving_average <- function(con, tablename, origdesign, parameters){
   if(!parameters$MOVAVparameters$is_movav) return(origdesign)
-  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
+  aar <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl, AARh FROM %s ORDER BY AARl", tablename))
   origdesign$Y <- aar
   return(origdesign)
 }
@@ -349,4 +347,19 @@ get_col <- function(var, num = TRUE){
 var_num <- function(x){
   if(!is.numeric(x)) x <- NA
   return(x)
+}
+
+# Deprecated ----
+#' @description
+#' updates cubedesign after aggregating to moving average. Changes the year part, to reflect periods. 
+#' This is crucial when recoding predteller before merging onto cube. 
+#' @keywords internal
+#' @noRd
+#' @param dt cube
+#' @param origdesign Cubedesign after merging teller and nevner. 
+update_cubedesign_after_moving_average_old <- function(dt, origdesign, parameters){
+  if(!parameters$MOVAVparameters$is_movav) return(origdesign)
+  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
+  origdesign$Y <- aar
+  return(origdesign)
 }

@@ -5,6 +5,46 @@ set_initial_spvtmp <- function(dt){
   }
 }
 
+
+#' @title add_censorinfo_cube
+#' @description
+#' Initierer prikkeinfo_koloner
+#' 
+#' @param con 
+#' @param tablename 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+add_censorinfo_cube <- function(con, tablename){
+  allcols <- DBI::dbListFields(con, tablename)
+  if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
+  censorcolumns <- DBI::dbQuoteIdentifier(con, c(getOption("khfunctions.prikkeinfo"), "spv_tmp"))
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  addcols <- sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s INTEGER DEFAULT 0", tbl_sql, censorcolumns)
+  sql_censor <- paste(addcols, collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql_censor))
+  
+  # Set initial spv_tmp
+  f_cols<- DBI::dbQuoteIdentifier(con, intersect(c("TELLER.f", "NEVNER.f"), allcols))
+  sql_spv <- NULL
+  if(length(f_cols) == 1L){
+    sql_spv <- sprintf(
+      "UPDATE %s SET spv_tmp = %s",
+      tbl_sql,f_cols)
+    invisible(DBI::dbExecute(con, sql_spv))
+  } else if(length(f_cols) > 1L){
+    sql_spv <- sprintf(
+      "UPDATE %s SET spv_tmp = GREATEST(%s)",
+      tbl_sql, paste(f_cols, collapse = ", "))
+    invisible(DBI::dbExecute(con, sql_spv))
+  }
+  if(!is.null(sql_spv)) invisible(DBI::dbExecute(con, sql_spv)) 
+    
+  invisible(NULL)
+}
+
 #' @keywords internal
 #' @noRd
 do_censor_cube <- function(dt, parameters){

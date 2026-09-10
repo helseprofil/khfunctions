@@ -237,26 +237,47 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
   invisible(NULL)
 }
 
+
+#' @title add_crude_rate
+#' @family duckdb
 #' @noRd
-add_crude_rate <- function(dt, parameters){
-  if(!"NEVNER" %in% names(dt)){
-    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+add_crude_rate <- function(con, tablename){
+  print_console_message("* Legger til crude RATE")
+  cols <- DBI::dbListFields(con, tablename)
+  if(!"NEVNER" %in% cols){
+    print_console_message("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  sql_addcols <- sprintf(
+    'ALTER TABLE %s ADD COLUMN IF NOT EXISTS RATE DOUBLE;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.f" INTEGER;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.a" INTEGER;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.n" INTEGER;',
+    tbl_sql, tbl_sql, tbl_sql, tbl_sql)
+  invisible(DBI::dbExecute(con, sql_addcols))
   
-  dt[, let(RATE = TELLER/NEVNER,
-           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
-           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
-           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  sql_rate <- sprintf(
+    'UPDATE %s SET
+    RATE = TELLER / NULLIF(NEVNER, 0),
+    "RATE.f" = GREATEST("TELLER.f", "NEVNER.f"),
+    "RATE.a" = GREATEST("TELLER.a", "NEVNER.a"),
+    "RATE.n" = GREATEST("TELLER.n", "NEVNER.n")',
+    tbl_sql)
   
-  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
-  # Sett .f = 2 dersom RATE ikke lar seg beregne og RATE.f ikke allerede er satt til max av TELLER.f/NEVNER.f
-  dt[is.na(RATE) & RATE.f == 0, let(TELLER.f = 2, NEVNER.f = 2, RATE.f = 2, spv_tmp = 2L)]
+  invisible(DBI::dbExecute(con, sql_rate))
   
-  if(parameters$MOVAVparameters$is_movav){
-    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
-  }
+  sql_ratemissing <- sprintf(
+    'UPDATE %s SET
+    "TELLER.f" = 2, "NEVNER.f" = 2, "RATE.f" = 2, spv_tmp = 2
+    WHERE RATE IS NULL AND "RATE.f" = 0',
+    tbl_sql)
+  
+  invisible(DBI::dbExecute(con, sql_ratemissing))
+  invisible(NULL)
 }
+
+
 
 #' @title compute_new_value_from_row_sum
 #' @description
@@ -414,4 +435,24 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
   return(dt)
 }
 
-
+# Deprecated ----
+#' @noRd
+add_crude_rate_old <- function(dt, parameters){
+  if(!"NEVNER" %in% names(dt)){
+    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+    return(invisible(NULL))
+  } 
+  
+  dt[, let(RATE = TELLER/NEVNER,
+           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
+           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
+           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  
+  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
+  # Sett .f = 2 dersom RATE ikke lar seg beregne og RATE.f ikke allerede er satt til max av TELLER.f/NEVNER.f
+  dt[is.na(RATE) & RATE.f == 0, let(TELLER.f = 2, NEVNER.f = 2, RATE.f = 2, spv_tmp = 2L)]
+  
+  if(parameters$MOVAVparameters$is_movav){
+    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
+  }
+}
