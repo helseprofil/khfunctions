@@ -5,7 +5,6 @@ SetKubeParameters <- function(cube){
                      dumps = list(),
                      write = FALSE,
                      geonaboprikk = TRUE,
-                     removebuffer = FALSE, 
                      qualcontrol = TRUE)
   parameters <<- get_cubeparameters(user_args = user_args)
 }

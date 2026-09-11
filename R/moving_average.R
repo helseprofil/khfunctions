@@ -4,11 +4,10 @@
 #' @description
 #' Extracts information needed for aggregation to moving averages
 #' @noRd
-get_movav_information <- function(tablename, parameters) {
+get_movav_information <- function(parameters) {
   con <- parameters$duck
   mapar <- list()
-  aar <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl, AARh FROM %s ", tablename))
-  
+  aar <- DBI::dbGetQuery(con, "SELECT DISTINCT AARl, AARh FROM KUBE")
   mapar[["int_lengde"]] <- unique(aar$AARh - aar$AARl + 1)
   if (length(mapar$int_lengde) > 1) stop("Inndata har ulike årsintervaller, kan ikke aggregeres!")
   mapar[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
@@ -18,7 +17,9 @@ get_movav_information <- function(tablename, parameters) {
   snitt_orgintmult <- ifelse(mapar$is_orig_snitt, mapar$int_lengde, 1)
   mapar[["orgintMult"]] <- ifelse(mapar$is_movav, 1, snitt_orgintmult)
   mapar[["missyears"]] <- find_missing_year(unique(aar$AARl))
-  return(mapar)
+  
+  parameters[["MOVAV"]] <- mapar
+  return(parameters)
 }
 
 #' @title find_missing_year
@@ -39,23 +40,24 @@ find_missing_year <- function(aarl){
 #' For anonymiserte tall tolereres missing så lenge andelen skjulte tall er under grensen definert i getOption("khfunctions.anon_tot_tol")
 #' Rapporterer variabelspesifikk VAL.n som angir antall aar brukt i summen naar NA holdt utenom
 #' Dersom is_movav = FALSE, legges val.n til for alle verdikolonner, satt til 1 dersom originale snitt
-#' eller intervall-lengden dersom originale summer. 
-#'
+#' eller intervall-lengden dersom originale summer.
+#' @family duckdb
 #' @param con duckdb-connection
 #' @param tablename Tabellnavn (KUBE, eller predrate om standardisering)
 #' @param parameters Globale parametre
 #' @param standard TRUE hvis standardfiler, hindrer uønsket fildump
-aggregate_to_periods_duckdb <- function(con, tablename, parameters, standard = FALSE){
+#' @noRd
+aggregate_to_periods_duckdb <- function(tablename, parameters, standard = FALSE){
   if(!standard){
     save_filedump_if_requested(dumpname = "MOVAVpre", dt = NULL, parameters = parameters, duck = TRUE, tablename = tablename)
     on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
   }
-  
+  con <- parameters$duck
   print_console_message("\n* Aggregering til flerårige tall (hvis relevant)")
   do_balance_missing_teller_nevner(con = con, tablename = tablename)
   
-  if(parameters$MOVAVparameters$is_movav){
-    period <- parameters$MOVAVparameters$movav
+  if(parameters$MOVAV$is_movav){
+    period <- parameters$MOVAV$movav
     print_console_message("- Aggregerer til ", period, "-årige tall", sep = "")
     do_aggregate_periods(con = con, tablename = tablename, parameters = parameters)
     do_filter_periods_with_missing_original(con = con, tablename = tablename)
@@ -109,7 +111,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   
   on.exit(drop_tables_duckdb(con = con, tables = c(tmp_tbl, tmp_periods)), add = TRUE)
           
-  period <- parameters$MOVAVparameters$movav
+  period <- parameters$MOVAV$movav
   n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", tbl_sql))$n
   if(n_multi > 0) stop(sprintf("Aggregering til %s-årige tall er ønsket, men originaldata inneholder allerede flerårige tall.", period))
   aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", tbl_sql))$AARh
@@ -171,7 +173,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   # Denne bør raffineres i fremtiden. Vi bør også vurdere hvorvidt vi skal ha andre
   # kriterier for å ikke lage en sum, kanskje basert på .n-kolonnene (må ha minst x % av årene for å lage sum)
   # For nå er denne beholdt som den var opprinnelig.
-  missing_year <- parameters$MOVAVparameters$missyears
+  missing_year <- parameters$MOVAV$missyears
   if (missing_year$n <= period) {
     for (val in values) {
       val_sql <- DBI::dbQuoteIdentifier(con, val)
@@ -280,7 +282,7 @@ do_filter_periods_with_missing_original <- function(con, tablename){
 #' @keywords internal
 #' @noRd
 do_handle_indata_periods <- function(con,tablename,parameters){
-  n <- as.integer(ifelse(parameters$MOVAVparameters$is_orig_snitt, 1L, parameters$MOVAVparameters$int_lengde))
+  n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
   cols <- DBI::dbListFields(con, tablename)
   values <- get_value_columns(cols)
   tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
@@ -345,7 +347,7 @@ aggregate_to_periods_old <- function(dt, parameters){
   on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = dt, parameters = parameters)}, add = TRUE)
   do_balance_missing_teller_nevner_old(dt = dt)
   
-  if(parameters$MOVAVparameters$is_movav){
+  if(parameters$MOVAV$is_movav){
     dt <- do_aggregate_periods_old(dt = dt, parameters = parameters)
     dt <- do_filter_periods_with_missing_original_old(dt)
   } else {
@@ -355,10 +357,10 @@ aggregate_to_periods_old <- function(dt, parameters){
 }
 
 do_aggregate_periods_old <- function(dt, parameters){
-  period <- parameters$MOVAVparameters$movav
+  period <- parameters$MOVAV$movav
   if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
   
-  aggregated_dt <- calculate_period_sums(dt = dt, period = period, missing_year = parameters$MOVAVparameters$missyears)
+  aggregated_dt <- calculate_period_sums(dt = dt, period = period, missing_year = parameters$MOVAV$missyears)
   return(aggregated_dt)
 }
 
@@ -421,7 +423,7 @@ do_filter_periods_with_missing_original_old <- function(dt){
 do_handle_indata_periods_old <- function(dt, parameters){
   # USIKKER PÅ OM DETTE HÅNDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
   # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
-  n <- ifelse(parameters$MOVAVparameters$is_orig_snitt, 1, parameters$MOVAVparameters$int_lengde) 
+  n <- ifelse(parameters$MOVAV$is_orig_snitt, 1, parameters$MOVAV$int_lengde) 
   dt[, paste0(names(.SD), ".n") := n, .SDcols = get_value_columns(names(dt))]
   return(dt)
 }

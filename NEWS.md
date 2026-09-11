@@ -17,6 +17,8 @@
       - Everything moved into one pipeline, with filefilter-functions included only when needed
       - Formatting and filefilter functionality moved to duckdb
   - do_harmonize_geo translated to sql, and add_fylke added as an argument
+  - Aggregation to moving average moved to duckdb
+  
 
 ## Other changes
 - `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.

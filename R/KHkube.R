@@ -26,18 +26,18 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   # 1. Laste inn filer og oppdatere parametre
   load_and_format_filegroups_to_duckdb(parameters = parameters)
-  parameters[["filedesign"]] <- get_filedesign(parameters = parameters)
-  parameters[["PredFilter"]] <- set_predictionfilter(parameters = parameters)
+  parameters <- get_filedesign(parameters = parameters)
+  parameters <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner, hente ut kubedesign
-  CUBEdesign <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
+  parameters <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
 
   # 3. Aggregering til flerårige tall og oppdatere kubedesign
-  parameters[["MOVAVparameters"]] <- get_movav_information(tablename = "KUBE", parameters = parameters)
-  aggregate_to_periods_duckdb(con = parameters$duck, tablename = "KUBE", parameters = parameters)
-  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(con = parameters$duck, tablename = "KUBE", origdesign = CUBEdesign, parameters = parameters)
+  parameters <- get_movav_information(parameters = parameters)
+  aggregate_to_periods_duckdb(tablename = "KUBE", parameters = parameters, standard = FALSE)
+  parameters <- update_cubedesign_after_moving_average(parameters = parameters)
 
   # - Legger til prikkeinfo-kolonner og crude RATE
   add_censorinfo_cube(con = parameters$duck, tablename = "KUBE")

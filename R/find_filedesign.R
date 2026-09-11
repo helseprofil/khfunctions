@@ -12,13 +12,11 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters){
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
   isduck <- is_duckdb_table(con = parameters$duck, tablename = filename)
+  if(is.null(file) && !isduck){
+    stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
+  }
   if(!is.null(filename)){
     fileparameters <- parameters$fileinformation[[filename]]
-    if(is.null(file) && !isduck && filename %in% .GlobalEnv$BUFFER){
-      file <- .GlobalEnv$BUFFER[[filename]]
-    } else if(!isduck) {
-      stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
-    }
   }
   designs <- list()
   if (data.table::is.data.table(file)) {

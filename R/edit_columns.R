@@ -30,7 +30,7 @@ get_maltall_column <- function(parameters){
 #' @noRd
 do_format_cube_columns <- function(dt, parameters){
   add_missing_columns(dt = dt)
-  add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
+  add_sumvalues(dt = dt, factor = parameters$MOVAV$orgintMult)
   set_nonsumvalues(dt = dt)
   set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)

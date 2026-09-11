@@ -57,7 +57,9 @@ drop_tables_duckdb <- function(con, tables){
 drop_tables_duckdb_prefix <- function(con, prefix){
   tabs <- DBI::dbListTables(con)
   drop <- grep(sprintf("^%s", prefix), tabs, value = TRUE)
-  drop_tables_duckdb(con, drop)
+  if(length(drop) > 0){
+    drop_tables_duckdb(con, drop)
+  }
   invisible(NULL)
 }
 

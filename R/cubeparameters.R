@@ -193,13 +193,16 @@ get_friskvik_information <- function(parameters){
 #' @param parameters global parameters
 get_filedesign <- function(parameters){
   files <- unique(parameters$files)
-  isfiles <- all(files %in% .GlobalEnv$BUFFER) || all(files %in% DBI::dbListTables(parameters$duck))
+  con <- parameters$duck
+  isfiles <- all(files %in% DBI::dbListTables(con))
   if(!isfiles) stop("Alle nødvendige filer er ikke lastet inn")
   filedesign <- list()
   for(file in files){
     filedesign[[file]] <- find_filedesign(filename = file, parameters = parameters)
   }
-  return(filedesign)
+  
+  parameters[["filedesign"]] <- filedesign
+  return(parameters)
 }
 
 #' @title set_predictionfilter (kb)
@@ -212,9 +215,7 @@ get_filedesign <- function(parameters){
 set_predictionfilter <- function(parameters) {
   refverdi <- parameters$CUBEinformation$REFVERDI
   tellerfile <- parameters$files$TELLER
-  maxaar <- ifelse(!is.null(.GlobalEnv$BUFFER[[tellerfile]]), 
-                   collapse::fmax(.GlobalEnv$BUFFER[[tellerfile]]$AARh),
-                   DBI::dbGetQuery(parameters$duck, paste0("SELECT MAX(AARh) AS maks_aar FROM ", tellerfile))$maks_aar)
+  maxaar <- DBI::dbGetQuery(parameters$duck, paste0("SELECT MAX(AARh) AS maks_aar FROM ", tellerfile))$maks_aar
                    
   movav <- ifelse(is_not_empty(parameters$CUBEinformation$MOVAV), parameters$CUBEinformation$MOVAV, 1) 
   if(is_empty(refverdi)) stop("Kolonnen KUBER::REFVERDI er tom, denne må settes!")
@@ -254,7 +255,8 @@ set_predictionfilter <- function(parameters) {
     }
   }
   out[["meisskalafilter"]] <- paste(meisskalafilter, collapse = " & ")
-  return(out)
+  parameters[["PredFilter"]] <- out
+  return(parameters)
 }
 
 #' @title update_cubedesign_after_moving_average
@@ -263,11 +265,11 @@ set_predictionfilter <- function(parameters) {
 #' This is crucial when recoding predteller before merging onto cube. 
 #' @keywords internal
 #' @noRd
-update_cubedesign_after_moving_average <- function(con, tablename, origdesign, parameters){
-  if(!parameters$MOVAVparameters$is_movav) return(origdesign)
-  aar <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl, AARh FROM %s ORDER BY AARl", tablename))
-  origdesign$Y <- aar
-  return(origdesign)
+update_cubedesign_after_moving_average <- function(parameters){
+  if(!parameters$MOVAV$is_movav) return(parameters)
+  aar <- DBI::dbGetQuery(parameters$duck, sprintf("SELECT DISTINCT AARl, AARh FROM KUBE ORDER BY AARl"))
+  parameters[["CUBEdesign"]]$Y <- aar
+  return(parameters)
 }
 
 #' @title get_geo_recoding
@@ -358,7 +360,7 @@ var_num <- function(x){
 #' @param dt cube
 #' @param origdesign Cubedesign after merging teller and nevner. 
 update_cubedesign_after_moving_average_old <- function(dt, origdesign, parameters){
-  if(!parameters$MOVAVparameters$is_movav) return(origdesign)
+  if(!parameters$MOVAV$is_movav) return(origdesign)
   aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
   origdesign$Y <- aar
   return(origdesign)
