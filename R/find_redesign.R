@@ -8,6 +8,8 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   FULL <- get_all_dimension_combinations_targetdesign(targetdesign = targetdesign)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
   TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
+  # KAN SKRIVES TIL DUCKDB i stedet for å skrive til tmp-fil på disk
+  # SLETTES on.exit, i tilfelle funksjonen kjøres flere ganger
   saveRDS(FULL, TempFile)
   FULL <- add_betcols_to_full(dt = FULL, orgdesign = orgdesign)
   targetdesign <- add_missing_parts_from_orgdesign(targetdesign, orgdesign)

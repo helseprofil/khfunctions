@@ -42,8 +42,9 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     if(fullmatch) next
     
     filter_table <- sprintf("tmp_filter_%s", part)
-    DBI::dbWriteTable(conn = con, name = filter_table, value = filter_unique, 
-                      temporary = TRUE,overwrite = TRUE)
+    # DBI::dbWriteTable(conn = con, name = filter_table, value = filter_unique, 
+    #                   temporary = TRUE,overwrite = TRUE)
+    write_duckdb_table(con, tablename = filter_table, data = filter_unique)
     filter_tables <- c(filter_tables, filter_table)
   }
   
@@ -90,8 +91,9 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     }
     
     recode_table <- sprintf("tmp_recode_%s",part)
-    DBI::dbWriteTable(conn = con, name = recode_table, value = recodebook,
-                      temporary = TRUE, overwrite = TRUE)
+    # DBI::dbWriteTable(conn = con, name = recode_table, value = recodebook,
+    #                   temporary = TRUE, overwrite = TRUE)
+    write_duckdb_table(con, tablename = recode_table, data = recodebook)
     
     table_cols <- DBI::dbListFields(con, tablename)
     
@@ -142,8 +144,11 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
     drop_tables_duckdb(con, c("temp_helsereg", "tmp_geokoder_b"))
     }, add = TRUE)
   
-  DBI::dbWriteTable(con, "tmp_helsereg", parameters$HELSEREG, temporary = TRUE, overwrite = TRUE)
-  DBI::dbWriteTable(con,"tmp_geokoder_b", unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]),temporary = TRUE,overwrite = TRUE)
+  write_duckdb_table(con, "tmp_helsereg", data = parameters$HELSEREG)
+  write_duckdb_table(con, "tmp_geokoder_b", data = unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]))
+  
+  # DBI::dbWriteTable(con, "tmp_helsereg", parameters$HELSEREG, temporary = TRUE, overwrite = TRUE)
+  # DBI::dbWriteTable(con,"tmp_geokoder_b", unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]),temporary = TRUE,overwrite = TRUE)
   
   has_fylke <- "FYLKE" %in% DBI::dbListFields(con, tablename)
   fylke_sql <- if(has_fylke){
@@ -193,8 +198,9 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   on.exit(drop_tables_duckdb(con, "tmp_udekk"), add = TRUE)
   if(is.null(udekk) || nrow(udekk) == 0) return(invisible(NULL))
   
-  DBI::dbWriteTable(conn = con, name = "tmp_udekk", value = udekk,
-                    temporary = TRUE, overwrite = TRUE)
+  # DBI::dbWriteTable(conn = con, name = "tmp_udekk", value = udekk,
+  #                   temporary = TRUE, overwrite = TRUE)
+  write_duckdb_table(con, "tmp_udekk", data = udekk)
   table_cols <- DBI::dbListFields(con, tablename)
   dims <- get_dimension_columns(table_cols)
   vals <- get_value_columns(table_cols)

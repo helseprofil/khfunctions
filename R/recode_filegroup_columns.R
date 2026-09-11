@@ -57,7 +57,8 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   if(n_recoded == 0) return(invisible(NULL))
   
   recode_dt[, kast := as.integer(rowSums(.SD == "-", na.rm = TRUE) > 0), .SDcols = recodecols]
-  DBI::dbWriteTable(con, "temp_recode", recode_dt, overwrite = TRUE)
+  # DBI::dbWriteTable(con, "temp_recode", recode_dt, overwrite = TRUE)
+  write_duckdb_table(con, "temp_recode", data = recode_dt)
   update_recoded_cols_db(con = con, recodecols = recodecols)
   
   n_remove <- recode_dt[, sum(kast, na.rm = T)]
@@ -189,8 +190,8 @@ do_recode_tknr_db <- function(tknr, parameters){
   
   on.exit(drop_tables_duckdb(con, "temp_tknr"), add = TRUE)
   print_console_message("\n* Omkoder fra TKNR")
-  DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
-  
+  # DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
+  write_duckdb_table(parameters$duck, "temp_tknr", data = parameters$TKNR)
   DBI::dbExecute(parameters$duck,
     "UPDATE temp_orgfile AS t SET GEO = x.NYKODE FROM temp_tknr AS x WHERE t.GEO = x.ORGKODE AND x.NYKODE IS NOT NULL"
   )

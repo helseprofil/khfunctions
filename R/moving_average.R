@@ -116,8 +116,8 @@ do_aggregate_periods <- function(con, tablename, parameters){
   aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", tbl_sql))$AARh
   allperiods <- find_periods(aarh = aarh, period = period)
   
-  DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
-  
+  # DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
+  write_duckdb_table(con, tablename = tmp_periods, data = allperiods)
   cols <- DBI::dbListFields(con, tablename)
   values <- get_value_columns(cols)
   dims <- get_dimension_columns(cols)
