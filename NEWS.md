@@ -18,6 +18,7 @@
       - Formatting and filefilter functionality moved to duckdb
   - do_harmonize_geo translated to sql, and add_fylke added as an argument
   - Aggregation to moving average moved to duckdb
+  - Standardization moved to duckdb
   
 
 ## Other changes
@@ -29,7 +30,7 @@
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
-- KnrHarm and GeoKoder written into duckdb for faster geo recoding
+- `KnrHarm` and `GeoKoder` tables written into duckdb for faster geo recoding
     
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
 

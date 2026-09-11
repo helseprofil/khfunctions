@@ -39,19 +39,19 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   aggregate_to_periods_duckdb(tablename = "KUBE", parameters = parameters, standard = FALSE)
   parameters <- update_cubedesign_after_moving_average(parameters = parameters)
 
-  # - Legger til prikkeinfo-kolonner og crude RATE
+  # 3b. Legger til prikkeinfo-kolonner og crude RATE etter aggregering
   add_censorinfo_cube(con = parameters$duck, tablename = "KUBE")
   add_crude_rate(con = parameters$duck, tablename = "KUBE")
   
+  # 4. Standardisering
+  add_predteller(parameters = parameters)
+  add_meisskala(parameters = parameters)
+  
+  # 5. Redigere kolonner og filtrere ugyldige rader
+  scale_rate_and_meisskala(parameters = parameters)
+  
   # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
   KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
-  
-  # 4. Standardisering 
-  add_predteller(dt = KUBE, parameters = parameters)
-  add_meisskala(dt = KUBE, parameters = parameters)
-  scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
-
-  # 5. Redigere kolonner og filtrere ugyldige rader
   parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   do_format_cube_columns(dt = KUBE, parameters = parameters)
   add_smr_and_meis(dt = KUBE, parameters = parameters)

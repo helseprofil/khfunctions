@@ -88,7 +88,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   set_teller_nevner_names_duckdb(con = con, tablename = tntype, TNPparameters = parameters$TNPinformation)
   do_clean_duckdb(con = parameters$duck)
   if(!standardfiles) parameters[["CUBEdesign"]] <- KUBEdesign$MAIN
-  return(parameters)
+  return(invisible(parameters))
 }
 
 #' @title get_initialdesign

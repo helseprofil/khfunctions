@@ -1,15 +1,27 @@
 #' @title scale_rate_and_meisskala
-#' @description
-#' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
+#' @description Skalerer RATE og MEISskala til verdi angitt i ACCESS::KUBER::RATESKALA
 #' @noRd
-scale_rate_and_meisskala <- function(dt, parameters){
+scale_rate_and_meisskala <- function(parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
-  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
   if(!is_rateskala) return(invisible(NULL))
-  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
   
-  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
-  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
+  con <- parameters$duck
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  
+  print_console_message("* Skalerer RATE til per", scalevalue)
+  tbl_sql <- DBI::dbQuoteIdentifier(con, "KUBE")
+  cols <- DBI::dbListFields(con, tbl_sql)
+  
+  update_cols <- character()
+  
+  if("RATE" %in% cols) update_cols <- c(update_cols, sprintf("RATE = RATE * %s", scalevalue))
+  if("MEISskala" %in% cols) update_cols <- c(update_cols, sprintf("MEISskala = MEISskala * %s", scalevalue))
+  
+  if(length(update_cols) > 0){
+    sql <- sprintf("UPDATE %s SET %s", tbl_sql, paste(update_cols, collapse = ", "))
+    invisible(DBI::dbExecute(con, sql))
+  }
+  invisible(NULL)
 }
 
 #' @title get_maltall_column
@@ -152,4 +164,20 @@ get_outvalues_allvis <- function(parameters){
     cols <- c(cols, extravalue)
   }
   return(cols)
+}
+
+# Deprecated ----
+
+#' @title scale_rate_and_meisskala
+#' @description
+#' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
+#' @noRd
+scale_rate_and_meisskala_old <- function(dt, parameters){
+  is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  if(!is_rateskala) return(invisible(NULL))
+  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
+  
+  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
+  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
 }

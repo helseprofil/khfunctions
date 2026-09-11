@@ -4,10 +4,12 @@
 #' 
 #' @param file file. If NULL, gets the file from duckdb
 #' @param filename filegroup name
+#' @param copy_fileinfo_from hvis filparametre skal hentes fra en annen fil
 #' @param parameters global parameters
+#'
 #' @keywords internal
 #' @noRd
-find_filedesign <- function(file = NULL, filename = NULL, parameters){
+find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_fileinfo_from = NULL){
   if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
@@ -16,7 +18,11 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters){
     stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
   }
   if(!is.null(filename)){
-    fileparameters <- parameters$fileinformation[[filename]]
+    if(!is.null(copy_fileinfo_from)){
+      fileparameters <- parameters$fileinformation[[copy_fileinfo_from]]
+    } else {
+      fileparameters <- parameters$fileinformation[[filename]]
+    }
   }
   designs <- list()
   if (data.table::is.data.table(file)) {

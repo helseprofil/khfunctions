@@ -19,7 +19,7 @@ get_movav_information <- function(parameters) {
   mapar[["missyears"]] <- find_missing_year(unique(aar$AARl))
   
   parameters[["MOVAV"]] <- mapar
-  return(parameters)
+  return(invisible(parameters))
 }
 
 #' @title find_missing_year
@@ -53,16 +53,15 @@ aggregate_to_periods_duckdb <- function(tablename, parameters, standard = FALSE)
     on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
   }
   con <- parameters$duck
-  print_console_message("\n* Aggregering til flerårige tall (hvis relevant)")
   do_balance_missing_teller_nevner(con = con, tablename = tablename)
   
   if(parameters$MOVAV$is_movav){
+    print_console_message("\n* Aggregering til flerårige tall")
     period <- parameters$MOVAV$movav
     print_console_message("- Aggregerer til ", period, "-årige tall", sep = "")
     do_aggregate_periods(con = con, tablename = tablename, parameters = parameters)
     do_filter_periods_with_missing_original(con = con, tablename = tablename)
   } else {
-    print_console_message("- Flerårige tall ikke etterspurt -> skippes")
     do_handle_indata_periods(con = con, tablename = tablename,parameters = parameters)
   }
   
@@ -351,7 +350,7 @@ aggregate_to_periods_old <- function(dt, parameters){
     dt <- do_aggregate_periods_old(dt = dt, parameters = parameters)
     dt <- do_filter_periods_with_missing_original_old(dt)
   } else {
-    dt <- do_handle_indata_periods(dt = dt, parameters = parameters)
+    dt <- do_handle_indata_periods_old(dt = dt, parameters = parameters)
   }
   return(dt)
 }

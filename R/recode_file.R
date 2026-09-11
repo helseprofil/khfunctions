@@ -68,7 +68,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     invisible(DBI::dbExecute(con, filter_sql))
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
     filterpartsname <- as.character(parameters$DefDesign$DelKolN[filterparts])
-    print_console_message(sprintf("Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
+    print_console_message(sprintf("- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
   }
 }
 

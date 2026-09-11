@@ -71,6 +71,17 @@ quote_col_duckdb <- function(x){
   paste0('"', x, '"')
 }
 
+#' @description
+#' oversetter enkle filter fra R til sql
+#' @noRd
+r_filter_to_sql <- function(filter_expr){
+  sql <- filter_expr
+  sql <- gsub("==", "=", sql, fixed = TRUE)
+  sql <- gsub("&", " AND ", sql, fixed = TRUE)
+  sql <- gsub("\\|", " OR ", sql)
+  sql
+}
+
 #' @title fetch_duckdb_table
 #' @description fetch table from duckdb
 #' @keywords duckdb
@@ -84,6 +95,8 @@ fetch_duckdb_table <- function(con, tablename){
                         )
   data.table::setDT(dt)
 }
+
+
 
 #' @title write_duckdb_table
 #' @description (over)write table to duckdb
