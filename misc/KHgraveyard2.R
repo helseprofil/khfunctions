@@ -1,5 +1,7 @@
 # Old functions deprecated when switching to duckdb processing
+# Sorted by where the functions were defined originally (filename)
 
+# KHfilgruppe ----
 #' @keywords internal
 #' @noRd
 do_set_fg_column_order <- function(dt){
