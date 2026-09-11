@@ -4,13 +4,12 @@
 #' @family duckdb
 #' @noRd
 filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters){
-  drop_tmp_tables(con, "tmp_filter_")
-  drop_tmp_tables(con, "tmp_recode_")
+  drop_tables_duckdb_prefix(con, prefix = "tmp_filter_")
+  drop_tables_duckdb_prefix(con, prefix = "tmp_recode_")
   on.exit({
-    drop_tmp_tables(con, "tmp_filter_")
-    drop_tmp_tables(con, "tmp_recode_")
+    drop_tables_duckdb_prefix(con, prefix = "tmp_filter_")
+    drop_tables_duckdb_prefix(con, prefix = "tmp_recode_")
   }, add = TRUE)
-  
   
   do_filter_dimensions_duckdb(con = con, tablename = tablename, 
                               filters = redesign$Filters)
@@ -21,22 +20,7 @@ filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters)
   invisible(NULL)
 }
 
-#' @title drop_tmp_tables
-#' @description helper function to remove tmp_filter and tmp_recode tables
-#' @keywords internal
-#' @family duckdb
-#' @noRd
-drop_tmp_tables <- function(con, prefix){
-  tabs <- DBI::dbListTables(con)
-  drop <- grep(sprintf("^%s", prefix), tabs, value = TRUE)
-  if(length(drop)){
-    sql <- sprintf("DROP TABLE IF EXISTS %s", drop)
-    for(s in sql){ 
-      invisible(DBI::dbExecute(con, s)) 
-    }
-  }
-  invisible(NULL)
-}
+
 
 #' @title do_filter_dimensions_duckdb
 #' @description Filters table based on filters, generated with find_redesign
@@ -68,7 +52,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     filter_all_sql <- sprintf("CREATE TEMP TABLE tmp_filter_all AS SELECT * FROM %s",
                               paste(filter_tables, collapse = "\nCROSS JOIN "))
     
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_filter_all"))
+    drop_tables_duckdb(con, "tmp_filter_all")
     invisible(DBI::dbExecute(con, filter_all_sql))
     filter_cols <- DBI::dbListFields(con, "tmp_filter_all")
     join_condition <- paste(sprintf("t.%s = f.%s",filter_cols,filter_cols), collapse = "\n  AND ")
@@ -155,8 +139,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
 #' @noRd
 fix_recode_geo_duckdb <- function(con, tablename, parameters){
   on.exit({
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_helsereg"))
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_geokoder_b"))
+    drop_tables_duckdb(con, c("temp_helsereg", "tmp_geokoder_b"))
     }, add = TRUE)
   
   DBI::dbWriteTable(con, "tmp_helsereg", parameters$HELSEREG, temporary = TRUE, overwrite = TRUE)
@@ -207,7 +190,7 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
 #' @family duckdb
 #' @noRd
 add_udekk_duckdb <- function(con, tablename, udekk){
-  on.exit(invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_udekk")), add = TRUE)
+  on.exit(drop_tables_duckdb(con, "tmp_udekk"), add = TRUE)
   if(is.null(udekk) || nrow(udekk) == 0) return(invisible(NULL))
   
   DBI::dbWriteTable(conn = con, name = "tmp_udekk", value = udekk,

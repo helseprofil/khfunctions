@@ -278,7 +278,7 @@ get_geo_recoding <- function(parameters){
   KnrHarm <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   out <- data.table::rbindlist(list(KnrHarm, KnrHarmS))[, .SD, .SDcols = c("GEO", "GEO_omk")]
-  invisible(DBI::dbExecute(parameters$duck, "DROP TABLE IF EXISTS KnrHarm"))
+  drop_tables_duckdb(con = parameters$duck, tables = "KnrHarm")
   DBI::dbWriteTable(parameters$duck, name = "KnrHarm", value = out)
   return(out)
 }

@@ -17,7 +17,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   save_filedump_if_requested(dumpname = "KODEBOKpre", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
   on.exit({
     save_filedump_if_requested(dumpname = "KODEBOKpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_recode"))
+    drop_tables_duckdb(con, "temp_recode")
     if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) {
       invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
     }
@@ -30,8 +30,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
                           DBI::dbListFields(con, "temp_orgfile"))
   if(nrow(codebook) == 0) return(invisible(NULL))
   
-  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_recode"))
-  
+  drop_tables_duckdb(con, "temp_recode")
   if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
   
   invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile ADD COLUMN ROWID_KH BIGINT"))
@@ -188,9 +187,7 @@ do_remove_deleted_rows <- function(dt, cols){
 do_recode_tknr_db <- function(tknr, parameters){
   if (is_empty(tknr) || tknr != "1") return(invisible(NULL))
   
-  on.exit({
-    invisible(DBI::dbExecute(parameters$duck, "DROP TABLE IF EXISTS temp_tknr"))
-  }, add = TRUE)
+  on.exit(drop_tables_duckdb(con, "temp_tknr"), add = TRUE)
   print_console_message("\n* Omkoder fra TKNR")
   DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
   

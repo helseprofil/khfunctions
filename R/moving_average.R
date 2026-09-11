@@ -107,10 +107,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   tmp_tbl <- DBI::dbQuoteIdentifier(con, paste0(tablename, "_MOVAV"))
   tmp_periods <- "tmp_movav_periods"
   
-  on.exit({
-    for(tab in c(tmp_tbl, tmp_periods))
-    DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", tab))
-  }, add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = c(tmp_tbl, tmp_periods)), add = TRUE)
           
   period <- parameters$MOVAVparameters$movav
   n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", tbl_sql))$n

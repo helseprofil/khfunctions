@@ -3,7 +3,8 @@
 #' Merges 2 tables in duckdb into a third table. If result = mergeto, mergefrom is merged into mergeto. If result != mergto, a new table is generated. 
 #' @keywords duckdb
 #' @noRd
-merge_duckdb_table <- function(result, mergeto, mergefrom, con){
+merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
+  if(is.null(result)) result <- mergeto
   to_cols <- DBI::dbListFields(con, mergeto)
   from_cols <- DBI::dbListFields(con, mergefrom)
   commoncols <- intersect(to_cols, from_cols)

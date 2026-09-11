@@ -147,8 +147,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
 #' @family duckdb
 #' @noRd
 do_reshape_var_duckdb <- function(filedescription, con){
-  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_orgfile_reshape"))
-  
+  drop_tables_duckdb(con, "temp_orgfile_reshape")
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
   allcols <- DBI::dbListFields(con, "temp_orgfile")
@@ -188,9 +187,9 @@ do_reshape_var_duckdb <- function(filedescription, con){
                  measure_sql
   )
   
-  DBI::dbExecute(con, sql)
-  DBI::dbExecute(con, "DROP TABLE IF EXISTS temp_orgfile")
-  DBI::dbExecute(con, "ALTER TABLE temp_orgfile_reshape RENAME TO temp_orgfile")
+  invisible(DBI::dbExecute(con, sql))
+  drop_tables_duckdb(con, "temp_orgfile")
+  invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile_reshape RENAME TO temp_orgfile"))
   invisible(NULL)
 }
 
@@ -361,9 +360,8 @@ identify_columns_in_file <- function(filedescription){
 }
 
 clean_tempfiles <- function(con){
-  for(tab in c("temp_orgfile", "temp_orgfile_reshape", "temp_recode")){
-    DBI::dbExecute(con, paste0("DROP TABLE IF EXISTS ", tab))
-  }
+  tabs <- c("temp_orgfile", "temp_orgfile_reshape", "temp_recode")
+  drop_tables_duckdb(con, tabs)
 }
 
 # Process data.table deprecated ----

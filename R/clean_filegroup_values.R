@@ -76,7 +76,7 @@ scale_value_duckdb <- function(con, parameters, val){
   print_console_message("\n*** Skalerer ", val, " med ", scalecol, sep = "")
   
   DBI::dbWriteTable(con, "tmp_scale", scales, temporary = TRUE, overwrite = TRUE)
-  on.exit(invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS tmp_scale")),add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = "tmp_scale"), add = TRUE)
   
   invisible(DBI::dbExecute(con, sprintf(
       "UPDATE FILGRUPPE AS f

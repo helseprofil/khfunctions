@@ -38,10 +38,7 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 #' @noRd
 do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
   print_console_message("\n** Renser GEO og legger til GEOniv og FYLKE")
-  on.exit({
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS sone6"))
-    invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS geo_map"))
-    },add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = c("sone6", "geo_map")), add = TRUE)
   
   build_geo_map(con = con, parameters = parameters)
   update <- DBI::dbGetQuery(con, "SELECT EXISTS(SELECT 1 FROM geo_map WHERE GEO_ORG != GEO_CLEAN) AS update")[["update"]]
@@ -112,7 +109,7 @@ build_geo_map <- function(con, parameters){
   set_unknown_geo_99_map(dt = geo_map, parameters = parameters)
   # set_geoniv_map(dt = geo_map)
   # set_fylke_map(dt = geo_map)
-  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS geo_map"))
+  drop_tables_duckdb(con = con, tables = "geo_map")
   DBI::dbWriteTable(con, "geo_map",
                     value = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)],
                     temporary = TRUE, overwrite = TRUE)
@@ -194,7 +191,7 @@ update_geo_cleanlog <- function(con, cleanlog){
 #' @noRd
 do_clean_AAR_duckdb <- function(con, cleanlog){
   print_console_message("\n** Renser AAR og legger til AARl/AARh")
-  on.exit(invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS aar_map")), add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = "aar_map"), add = TRUE)
   build_aar_map(con = con)
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARl VARCHAR"))
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARh VARCHAR"))
@@ -239,7 +236,7 @@ build_aar_map <- function(con){
   aar_map[valid & !is.na(AARl) & !is.na(AARh) & as.integer(AARl) > as.integer(AARh), AAR := aar_illegal]
   aar_map[AAR == aar_illegal, c("AARl", "AARh") := aar_illegal_split]
   
-  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS aar_map"))
+  drop_tables_duckdb(con = con, tables = "geo_map")
   DBI::dbWriteTable(con, "aar_map", 
                     value = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)],
                     temporary = TRUE, overwrite = TRUE)
@@ -256,8 +253,7 @@ build_aar_map <- function(con){
 #' @noRd
 do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
   print_console_message("\n** Renser ALDER og legger til ALDERl/ALDERh")
-  
-  on.exit(invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS alder_map")), add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = "alder_map"), add = TRUE)
   
   build_alder_map(con = con, parameters = parameters)
   
@@ -329,7 +325,7 @@ build_alder_map <- function(con, parameters){
   alder_map[valid &!is.na(ALDERl) &!is.na(ALDERh) & as.integer(ALDERl) > as.integer(ALDERh), ALDER := alder_illegal]
   alder_map[ALDER == alder_illegal,c("ALDERl", "ALDERh") := alder_illegal_split]
   
-  invisible(DBI::dbExecute(con, "DROP TABLE IF EXISTS alder_map"))
+  drop_tables_duckdb(con = con, tables = "alder_map")
   DBI::dbWriteTable(con, "alder_map",
                     value = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)],
                     temporary = TRUE,overwrite = TRUE)
@@ -350,7 +346,7 @@ do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
   print_console_message("\n** Renser", col)
   
   map_table_name <- paste0(tolower(col), "_map")
-  on.exit(invisible(DBI::dbExecute(con, paste0("DROP TABLE IF EXISTS ", map_table_name))), add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = map_table_name), add = TRUE)
   build_dimension_map(con = con, col = col, map_table_name = map_table_name)
   
   update <- DBI::dbGetQuery(con, 
@@ -389,7 +385,7 @@ build_dimension_map <- function(con, col, map_table_name){
   clean_fun(map)
 
   data.table::setnames(map, col, "CLEAN")
-  invisible(DBI::dbExecute(con,paste0("DROP TABLE IF EXISTS ", map_table_name)))
+  drop_tables_duckdb(con = con, tables = map_table_name)
   DBI::dbWriteTable(con, map_table_name,
                     value = map[, .(ORG, CLEAN)],
                     temporary = TRUE, overwrite = TRUE)

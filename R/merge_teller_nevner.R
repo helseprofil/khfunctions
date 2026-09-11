@@ -8,7 +8,7 @@
 #' @param design Design list
 merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    print_console_message("\n\n* Merger standardteller- og standardnevnerfil\n")
+    print_console_message("\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
@@ -37,13 +37,13 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   con <- parameters$duck
   
   tablename_teller <- ifelse(standardfiles, "STANDARD_TELLER", "TELLER")
-  print_console_message("\n** Lager", tablename_teller, "fra", tellerfilnavn, "\n")
+  print_console_message("** Lager", tablename_teller, "fra", tellerfilnavn)
   do_redesign_file_duckdb(con = con, tablename = tablename_teller, orgfilename = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
-    print_console_message("\n* Lager", tablename_nevner, "fra", nevnerfilnavn, "\n")
+    print_console_message("\n** Lager", tablename_nevner, "fra", nevnerfilnavn)
     do_redesign_file_duckdb(con = con, tablename = tablename_nevner, orgfilename = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
   }
@@ -51,7 +51,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
   if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, parameters$fileinformation[[nevnerfilnavn]]$vals)
   
-  tntype <- ifelse(standardfiles, "standardTNF", "KUBE")
+  tntype <- ifelse(standardfiles, "STANDARD_KUBE", "KUBE")
   
   if(length(KUBEdesign) > 0) {
     print_console_message("\n** Rektangulariserer")
@@ -87,7 +87,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN)
   set_teller_nevner_names_duckdb(con = con, tablename = tntype, TNPparameters = parameters$TNPinformation)
   do_clean_duckdb(con = parameters$duck)
-  return(KUBEdesign$MAIN)
+  return(invisible(KUBEdesign$MAIN))
 }
 
 #' @title get_initialdesign

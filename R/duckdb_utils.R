@@ -40,6 +40,27 @@ is_duckdb_table <- function(con, tablename){
   DBI::dbIsValid(con) && tablename %in% DBI::dbListTables(con)
 }
 
+drop_tables_duckdb <- function(con, tables){
+  tables <- DBI::dbQuoteIdentifier(con, tables)
+  sql <- paste(
+    sprintf("DROP TABLE IF EXISTS %s", tables),
+    collapse = ";\n"
+  )
+  invisible(DBI::dbExecute(con, sql))
+}
+
+#' @title drop_tables_duckdb_prefix
+#' @description helper function to remove all tables with a specific prefix
+#' @keywords internal
+#' @family duckdb
+#' @noRd
+drop_tables_duckdb_prefix <- function(con, prefix){
+  tabs <- DBI::dbListTables(con)
+  drop <- grep(sprintf("^%s", prefix), tabs, value = TRUE)
+  drop_tables_duckdb(con, drop)
+  invisible(NULL)
+}
+
 #' @title quote_col_duckdb
 #' @description quotes column names to allow ".", e.g. "VAL1.a" in queries.
 #' @keywords duckdb
