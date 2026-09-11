@@ -166,18 +166,4 @@ get_outvalues_allvis <- function(parameters){
   return(cols)
 }
 
-# Deprecated ----
-
-#' @title scale_rate_and_meisskala
-#' @description
-#' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
-#' @noRd
-scale_rate_and_meisskala_old <- function(dt, parameters){
-  is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
-  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
-  if(!is_rateskala) return(invisible(NULL))
-  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
-  
-  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
-  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
-}
+# TO DELETE ----

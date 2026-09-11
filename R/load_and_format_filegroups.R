@@ -85,7 +85,8 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
     print_console_message(sprintf("\n** Henter data inn i R for å gjøre FILFILTRE::NYEKOL_RAD for %s, da denne funksjonen ikke er skrevet til sql enda", filegroup))
     dt <- fetch_duckdb_table(con, filegroup)
     compute_new_value_from_row_sum(dt = dt, formulas = filefilter$NYEKOL_RAD, fileinfo = fileinfo, parameters = parameters)
-    DBI::dbWriteTable(conn = con, name = filegroup, value = dt, overwrite = TRUE)
+    # DBI::dbWriteTable(conn = con, name = filegroup, value = dt, overwrite = TRUE)
+    write_duckdb_table(con, filegroup, data = dt, temp = FALSE)
   }
   
   if(!is.null(ff$ffrsynt)){
@@ -392,7 +393,8 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
     design_table <- sprintf("tmp_designgeo_%s", Gn)
     
     drop_tables_duckdb(con, design_table)
-    DBI::dbWriteTable(con, design_table, designgeo, temporary = TRUE, overwrite = TRUE)
+    write_duckdb_table(con, design_table, designgeo)
+    # DBI::dbWriteTable(con, design_table, designgeo, temporary = TRUE, overwrite = TRUE)
     
     create_sql <- c(create_sql, sprintf(
     "SELECT d.*, g.GEO FROM %s d
@@ -588,7 +590,8 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters, duck 
 
   if(duck){
     print_console_message("\n*** Skriver til duckdb...\n")
-    DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
+    write_duckdb_table(parameters$duck, filegroup, FIL, temp = FALSE, overwrite = TRUE)
+    # DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
   } else {
     print_console_message("\n*** Skriver til lokalt minne...")
     .GlobalEnv$BUFFER[[filegroup]] <- FIL
@@ -935,19 +938,4 @@ add_leadyear_befvekst <- function(dt){
   
   newval_vals <- d[dt, on = tabcols, ..newval_names]
   data.table::set(dt, j = newval_names, value = newval_vals)
-}
-
-# Deprecated ----
-
-#' @title fetch_filegroup_from_buffer
-#' @description
-#' fetches filegroup already loaded into buffer. 
-#' @keywords internal
-#' @noRd
-fetch_filegroup_from_buffer <- function(filegroup){
-  if(exists("BUFFER", envir = .GlobalEnv) && filegroup %in% names(.GlobalEnv$BUFFER)){
-    print_console_message("\n** Henter FIL", filegroup, "fra BUFFER")
-    return(data.table::copy(.GlobalEnv$BUFFER[[filegroup]]))
-  }
-  stop("Filgruppe ", filegroup, " ikke funnet i BUFFER")
 }

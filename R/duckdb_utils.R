@@ -102,13 +102,13 @@ fetch_duckdb_table <- function(con, tablename){
 #' @description (over)write table to duckdb
 #' @keywords duckdb
 #' @noRd
-write_duckdb_table <- function(dt, con, tablename){
+write_duckdb_table <- function(con, tablename, data, temp = TRUE, overwrite = TRUE){
   DBI::dbWriteTable(
     conn = con,
     name = tablename,
-    value = dt,
-    overwrite = TRUE,
-    temporary = TRUE
+    value = data,
+    overwrite = overwrite,
+    temporary = temp
   )
   invisible(NULL)
 }

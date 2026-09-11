@@ -458,3 +458,460 @@ write_population_filegroup <- function(table, root){
                          gsub("\\\\", "/", path_aargeo)))
 }
 
+# Merge teller nevner ----
+#' @title do_redesign_file
+#'
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+do_redesign_file <- function(filename, filedesign, tndesign, parameters, name){
+  redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
+  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  filter_and_recode_table_duckdb(con = parameters$duck, 
+                                 tablename = )
+  file <- do_filter_and_recode_to_redesign(dt = fetch_duckdb_table(tablename = filename, con = parameters$duck),
+                                           redesign = redesign, parameters = parameters)
+  print_console_message("\n*** Skriver", name, "til duckdb...\n")
+  DBI::dbWriteTable(parameters$duck, name = name, value = file, overwrite = T)
+}
+
+#' @title set_teller_nevner_names
+#' @description Sets name of teller and nevner column to TELLER and NEVNER by reference
+set_teller_nevner_names <- function(file, TNPparameters){
+  newnames <- gsub(paste0("^", TNPparameters$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
+  newnames <- gsub(paste0("^", TNPparameters$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
+  # warn_duplicated_teller_nevner_names(TNPparameters$TELLERKOL, TNPparameters$NEVNERKOL, names(file))
+  data.table::setnames(file, names(file), newnames)
+  warn_duplicated_column_names(names(file))
+  return(file)
+}
+
+warn_duplicated_column_names <- function(columnnames){
+  if(any(duplicated(columnnames))){
+    message(paste0("\nNB!!! DUPLICATED COLUMN NAMES!",
+                   "\nThe following column names were duplicated when trying to set TELLER and NEVNER according to what is provided in TNP_PROD:\n", 
+                   paste(" -", columnnames[duplicated(columnnames)], collapse = "\n"),
+                   "\nAre you trying to e.g. add a separate NEVNER file to a file already containing NEVNER?"))
+  } 
+}
+
+#' @title do_filter_file
+#'
+#' @param parameters global parameters
+do_filter_file <- function(file, design, parameters){
+  for (del in names(design)) {
+    cols <- parameters$DefDesign$DelKols[[del]]
+    if (all(cols %in% names(file))) {
+      file <- collapse::join(file, design[[del]][, ..cols], on = cols, how = "right", multiple = T, overid = 0, verbose = 0)
+    }
+  }
+  return(file)
+}
+
+# cubeparameters ----
+#' @description
+#' updates cubedesign after aggregating to moving average. Changes the year part, to reflect periods. 
+#' This is crucial when recoding predteller before merging onto cube. 
+#' @keywords internal
+#' @noRd
+#' @param dt cube
+#' @param origdesign Cubedesign after merging teller and nevner. 
+update_cubedesign_after_moving_average_old <- function(dt, origdesign, parameters){
+  if(!parameters$MOVAV$is_movav) return(origdesign)
+  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
+  origdesign$Y <- aar
+  return(origdesign)
+}
+
+# edit_columns ----
+#' @title scale_rate_and_meisskala
+#' @description
+#' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
+#' @noRd
+scale_rate_and_meisskala_old <- function(dt, parameters){
+  is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  if(!is_rateskala) return(invisible(NULL))
+  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
+  
+  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
+  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
+}
+
+# load and format filegroups ----
+#' @title fetch_filegroup_from_buffer
+#' @description
+#' fetches filegroup already loaded into buffer. 
+#' @keywords internal
+#' @noRd
+fetch_filegroup_from_buffer <- function(filegroup){
+  if(exists("BUFFER", envir = .GlobalEnv) && filegroup %in% names(.GlobalEnv$BUFFER)){
+    print_console_message("\n** Henter FIL", filegroup, "fra BUFFER")
+    return(data.table::copy(.GlobalEnv$BUFFER[[filegroup]]))
+  }
+  stop("Filgruppe ", filegroup, " ikke funnet i BUFFER")
+}
+
+# make table from file ----
+  
+#' @title do_reshape_var
+#' @description
+#' Reshapes the data to collect columns representing the same variable into long format
+#' @noRd
+do_reshape_var <- function(dt, filedescription, parameters){
+  save_filedump_if_requested(dumpname = "RESHAPEpre", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
+  on.exit({save_filedump_if_requested(dumpname = "RESHAPEpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")}, add = TRUE)
+  if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
+  
+  cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = names(dt))
+  if(!is.null(cols$id) && !all(cols$id %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
+  if(!is.null(cols$measure) && !all(cols$measure %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
+  if(!is.null(cols$id) && is.null(cols$measure)) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
+  reshape <- data.table::melt(dt, id.vars = cols$id, measure.vars = cols$measure, variable.name = cols$var, value.name = cols$val)
+  dt[, names(dt) := NULL]
+  dt[, (names(reshape)) := reshape]
+  convert_all_columns_to_character(dt = dt)
+}
+
+#' @title do_set_default_values
+#' @description
+#' Sets default values for columns where the default value are provided in ACCESS::INNLESING within <...>
+#' @noRd
+do_set_default_values <- function(dt, filedescription, defaultcolumns){
+  default <- filedescription[, ..defaultcolumns]
+  default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
+  dt[, names(default) := default]
+}
+
+#' @title convert_all_columns_to_character
+#' @description
+#' Make sure all columns are of type character
+#' @param dt data
+#' @noRd
+convert_all_columns_to_character <- function(dt){
+  non_char_cols <- names(dt)[!vapply(dt, is.character, FUN.VALUE = logical(1))]
+  for (j in non_char_cols) {
+    data.table::set(dt, j = j, value = as.character(dt[[j]]))
+  }
+}
+
+#' @noRd
+do_convert_na_to_empty <- function(dt){
+  dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
+}
+
+# moving average ----
+
+#' @title organize_file_for_moving_average
+#' @description
+#' Make sure dt is arranged according to AARl and AARh last
+organize_file_for_moving_average <- function(dt){
+  tabcols_minus_aar <- grep("^AARl$|^AARh$", get_dimension_columns(names(dt)), value = T, invert = T)
+  key <- c(tabcols_minus_aar, "AARl", "AARh")
+  if(!identical(data.table::key(dt), key)) data.table::setkeyv(dt, key)
+}
+
+get_movav_information_old <- function(dt, parameters){
+  mapar <- list()
+  mapar[["aar"]] <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
+  mapar[["int_lengde"]] <- unique(mapar$aar[, AARh - AARl + 1])
+  if(length(mapar$int_lengde) > 1) stop("Inndata har ulike årsintervaller!")
+  mapar[["is_movav"]] <- parameters$CUBEinformation$MOVAV > 1
+  mapar[["movav"]] <- parameters$CUBEinformation$MOVAV
+  mapar[["snitt"]] <- parameters$fileinformation[[parameters$files$TELLER]]$ValErAarsSnitt
+  mapar[["is_orig_snitt"]] <- !is.na(mapar$snitt) && mapar$snitt != 0
+  snitt_orgintmult <- ifelse(mapar$is_orig_snitt, mapar$int_lengde, 1)
+  mapar[["orgintMult"]] <- ifelse(mapar$is_movav, 1, snitt_orgintmult)
+  mapar[["missyears"]] <- find_missing_year(unique(dt$AARl))
+  return(mapar)
+}
+
+#' @title aggregate_to_moving_average
+#' @description
+#' Finn "snitt" for ma-aar.
+#' DVs, egentlig lages forloepig bare summer, snitt settes etter prikking under
+#' Snitt tolerer missing av type .f=1 ("random"), men bare noen faa anonyme .f>1, se KHaggreger
+#' Rapporterer variabelspesifikk VAL.n som angir antall aar brukt i summen naar NA holdt utenom
+#' 
+#' Dersom is_movav = FALSE, legges val.n til for alle verdikolonner, satt til 1 dersom originale snitt
+#' og satt til antall år dersom originale summer. 
+#'
+#' @param dt KUBE to be aggregated 
+#' @param reset_rate Reset RATE after aggregating to periods?
+#' @param parameters cube parameters
+aggregate_to_periods_old <- function(dt, parameters){
+  save_filedump_if_requested(dumpname = "MOVAVpre", dt = dt, parameters = parameters)
+  on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = dt, parameters = parameters)}, add = TRUE)
+  do_balance_missing_teller_nevner_old(dt = dt)
+  
+  if(parameters$MOVAV$is_movav){
+    dt <- do_aggregate_periods_old(dt = dt, parameters = parameters)
+    dt <- do_filter_periods_with_missing_original_old(dt)
+  } else {
+    dt <- do_handle_indata_periods_old(dt = dt, parameters = parameters)
+  }
+  return(dt)
+}
+
+do_aggregate_periods_old <- function(dt, parameters){
+  period <- parameters$MOVAV$movav
+  if(any(dt$AARl != dt$AARh)) stop(paste0("Aggregering til ", movav, "-årige tall er ønsket, men originaldata inneholder allerede flerårige tall og kan derfor ikke aggregeres!"))
+  
+  aggregated_dt <- calculate_period_sums(dt = dt, period = period, missing_year = parameters$MOVAV$missyears)
+  return(aggregated_dt)
+}
+
+#' @title calculate_period_sums
+#' @description
+#' Aggregates value columns to period sums for periods defined in ACCESS::KUBER::MOVAV
+#' @noRd
+calculate_period_sums <- function(dt, period, missing_year){
+  # print_console_message("\n* Aggregerer til ", period, "-årige tall\n", sep = "")
+  allperiods <- find_periods(aarh = unique(dt$AARh), period = period)
+  dt <- extend_to_periods(dt = dt, periods = allperiods)
+  values <- get_value_columns(names(dt))
+  dt[, paste0(rep(values, each = 4), c(".fn1", ".fn3", ".fn9", ".n")) := NA_integer_]
+  dims <- get_dimension_columns(names(dt))
+  colorder <- dims
+  for(val in values){
+    dt[is.na(dt[[val]]) | dt[[val]] == 0, paste0(val, ".a") := 0]
+    dt[dt[[paste0(val, ".f")]] %in% c(1,2), paste0(val, ".fn1") := 1]
+    dt[dt[[paste0(val, ".f")]] == 3, paste0(val, ".fn3") := 1]
+    dt[dt[[paste0(val, ".f")]] == 9, paste0(val, ".fn9") := 1]
+    dt[dt[[paste0(val, ".f")]] == 0, paste0(val, ".n") := 1]
+    colorder <- c(colorder, paste0(val, c("", ".f", ".a", ".fn1",".fn3", ".fn9", ".n")))
+  }
+  g <- collapse::GRP(dt, dims)
+  aggdt <- collapse::add_vars(g[["groups"]],
+                              collapse::fsum(collapse::get_vars(dt, values), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".a")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn1")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn3")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".fn9")), g = g, fill = T),
+                              collapse::fsum(collapse::get_vars(dt, paste0(values, ".n")), g = g, fill = T))
+  aggdt[, (paste0(values, ".f")) := 0]
+  data.table::setcolorder(aggdt, colorder)
+  
+  # add_n_missing_year(dt = aggdt, periods = allperiods, missing_year = missing_year)
+  # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1.
+  # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
+  if(missing_year$n <= period){
+    for(val in values) aggdt[aggdt[[paste0(val, ".fn9")]] > missing_year$n, (c(val, paste0(val, ".f"))) := list(NA, 9)]
+  }
+  
+  f9s <- names(aggdt)[grepl(".f9$", names(aggdt))]
+  if (length(f9s) > 0) aggdt[, (f9s) := NULL]
+  
+  return(aggdt)
+}
+
+do_filter_periods_with_missing_original_old <- function(dt){
+  values <- get_value_columns(names(dt))
+  anonymous_tolerance <- getOption("khfunctions.anon_tot_tol") 
+  for(val in values){
+    val.f <- paste0(val, ".f")
+    val.n <- paste0(val, ".n")
+    val.fn3 <- paste0(val, ".fn3")
+    if(val.n %in% names(dt)) dt[dt[[val.n]] > 0 & dt[[val.fn3]]/dt[[val.n]] >= anonymous_tolerance, c(val, val.f) := list(NA, 3)]
+  }
+  return(dt)
+}
+
+do_handle_indata_periods_old <- function(dt, parameters){
+  # USIKKER PÅ OM DETTE HÅNDTERES KORREKT, SJEKK MED EN FIL SOM INNEHOLDER FLERÅRIGE SNITT ELLER SUMMER
+  # Må legge til VAL.n når originale summer, VAL.n = 1 om originale snit
+  n <- ifelse(parameters$MOVAV$is_orig_snitt, 1, parameters$MOVAV$int_lengde) 
+  dt[, paste0(names(.SD), ".n") := n, .SDcols = get_value_columns(names(dt))]
+  return(dt)
+}
+
+#' @title do_balance_missing_teller_nevner
+#' @description
+#' Maa "balansere" NA i teller og nevner slik sumrate og sumnevner balanserer.
+#' Kunne med god grunn satt SPVFLAGG her og saa bare operert med denne som en egenskap for hele linja i det som kommer
+#' Men for aa ha muligheten for aa haandtere de forskjellige variablene ulikt og i full detalj lar jeg det staa mer generelt
+#' Slik at dataflyten stoetter en slik endring
+#' 
+#' Om enkeltobservasjoner ikke skal brukes, men samtidig tas ut av alle summeringer
+#' kan man ha satt VAL=0,VAL.f=-1
+#' Dette vil ikke oedelegge summer der tallet inngaar. Tallet selv, eller sumemr av kun slike tall, settes naa til NA
+#' Dette brukes f.eks naar SVANGERROYK ekskluderer Oslo, Akershus. Dette er skjuling, saa VAL.f=3
+#' 
+#' @param dt data
+do_balance_missing_teller_nevner_old <- function(dt){
+  vals <- intersect(c("TELLER", "NEVNER"), names(dt))
+  valsF <- paste0(vals, ".f")
+  if(length(vals) == 0) return(dt)
+  dt[, maxF := do.call(pmax, .SD), .SDcols = valsF]
+  dt[maxF != 0, (valsF) := maxF]
+  dt[maxF != 0, (vals) := NA]
+  dt[, maxF := NULL]
+}
+
+extend_to_periods <- function(dt, periods){
+  out <- data.table::copy(dt)[0, ]
+  for(i in 1:nrow(periods)){
+    aarl <- periods[i, AARl]
+    aarh <- periods[i, AARh]
+    newperiod <- dt[AARl >= aarl & AARh <= aarh][, let(AARl = aarl, AARh = aarh)]
+    out <- data.table::rbindlist(list(out, newperiod))
+  }
+  return(out)
+}
+
+# Standardization ----
+#' @title add_predteller
+#' @description
+#' Adds predicted teller for age- and gender standardization
+#' 
+#' PREDRATE
+#' Maa JUKSE DET TIL LITT MED NEVNER 0. Bruken her er jo slik at dette er tomme celler, 
+#' og ikke minst vil raten nesten garantert skulle ganges med et PREDTELLER=0
+#' Tillater TELLER<=2 for aa unngaa evt numeriske problemer. Virker helt uskyldig gitt bruken
+#'
+#' @param TNF merged teller-nevner file
+#' @param parameters cube parameters
+#' @keywords internal
+#' @noRd
+add_predteller_old <- function(dt, parameters){
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
+  print_console_message("\n* Skal estimere PREDTELLER for standardisering")
+  designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
+  predrate <- estimate_predrate(design = designlist$STNdesign, parameters = parameters)
+  prednevner <- estimate_prednevner(design = designlist$STNPdesign, parameters = parameters)
+  predteller <- estimate_predteller(predrate = predrate, prednevner = prednevner, parameters = parameters)
+  
+  print_console_message("\n* Merger PREDTELLER med KUBE")
+  commontabs <- intersect(get_dimension_columns(names(dt)), names(predteller))
+  dt[predteller, on = commontabs, let(PREDTELLER = i.PREDTELLER, 
+                                      PREDTELLER.f = i.PREDTELLER.f, 
+                                      PREDTELLER.a = i.PREDTELLER.a,
+                                      PREDTELLER.n = TELLER.n)]
+  set_implicit_null_after_merge(dt = dt, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals)
+  print_console_message("\n\n*** FERDIG MED Å ESTIMERE PREDTELLER\n")
+}
+
+#' @title estimate_predrate
+#' @description finds predrate to be used to calculate predteller
+#' @keywords internal
+#' @noRd
+estimate_predrate <- function(design, parameters){
+  print_console_message("\n* Estimerer PREDRATE...")
+  missyears <- parameters$MOVAV$missyears
+  merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
+  predrate <- fetch_duckdb_table(parameters$duck, tablename = "STANDARD_KUBE")
+  if(missyears$n > 0 && any(missyears$years %in% unique(predrate$AARl))){
+    problem <- intersect(missyears$years, unique(predrate$AARl))
+    warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 
+            "\n*** Dette vil påvirke landsraten i standardiseringsperioden!\n--\n", immediate. = TRUE)
+    predrate <- predrate[!AARl %in% missyears$years]
+  }
+  predrate <- aggregate_to_periods_old(dt = predrate, parameters = parameters)
+  predrate[, (parameters$PredFilter$Predfiltercolumns) := NULL]
+  predrate[NEVNER != 0 & NEVNER.f == 0, let(PREDRATE = TELLER/NEVNER, PREDRATE.f = pmax(TELLER.f, NEVNER.f))]
+  predrate[NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = pmax(TELLER.f, 2))]
+  predrate[TELLER <= 2 & TELLER.f == 0 & NEVNER == 0 & NEVNER.f == 0, let(PREDRATE = 0, PREDRATE.f = 0)]
+  predrate[, let(PREDRATE.a = pmax(TELLER.a, NEVNER.a))]
+  
+  ukurante <- predrate[is.na(TELLER) | is.na(NEVNER)]
+  if (ukurante[, .N] > 0){
+    print_console_message(paste0("\n\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
+    print_console_message("\nDette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
+    print_console_message("\nDersom det faktisk mangler tall kan det være behov for å justere startår")
+    print_console_message("\nFølgende unike verdier for ulike dimensjonene er påvirket: ")
+    for(dim in get_dimension_columns(names(predrate))){
+      print_console_message(paste0("\n- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))
+    }
+  }
+  predrate <- predrate[, .SD, .SDcols = c(get_dimension_columns(names(predrate)), paste0("PREDRATE", c("", ".f", ".a")))]
+  return(predrate)
+}
+
+#' @title estimate_prednevner
+#' @description finds prednevner, to be used to calculate predteller
+#' @keywords internal
+#' @noRd
+estimate_prednevner <- function(design, parameters){
+  print_console_message("\n\n* Estimerer PREDNEVNER...\n")
+  missyears <- parameters$MOVAV$missyears
+  redesign <- find_redesign(orgdesign = parameters$filedesign[[parameters$files$PREDNEVNER]], targetdesign = design, parameters = parameters)
+  prednevner <- fetch_duckdb_table(tablename = parameters$files$PREDNEVNER, con = parameters$duck)
+  prednevner <- do_filter_and_recode_to_redesign(dt = prednevner, redesign = redesign, parameters = parameters)
+  PredNevnerKol <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
+  if(is_empty(PredNevnerKol)) PredNevnerKol <- parameters$TNPinformation$NEVNERKOL
+  PNnames <- gsub(paste0("^", PredNevnerKol, "(\\.f|\\.a|)$"), "PREDNEVNER\\1", names(prednevner))
+  data.table::setnames(prednevner, names(prednevner), PNnames)
+  prednevner <- prednevner[, .SD, .SDcols = c(get_dimension_columns(names(prednevner)), grep("^PREDNEVNER", names(prednevner), value= T))]
+  if(missyears$n > 0) prednevner <- prednevner[!AARl %in% missyears$years]
+  prednevner <- aggregate_to_periods_old(dt = prednevner, parameters = parameters)
+  return(prednevner)
+}
+
+#' @title estimate_predteller
+#' @description estimates predteller, used for age standardization
+#' @keywords internal
+#' @noRd
+estimate_predteller <- function(predrate, prednevner, parameters){
+  print_console_message("\n\n* Estimerer PREDTELLER...\n")
+  commondims <- intersect(get_dimension_columns(names(prednevner)), get_dimension_columns(names(predrate)))
+  mismatch <- collapse::join(predrate, prednevner, how = "anti", multiple = T, on = commondims, overid = 2, verbose = 0)[, .N]
+  if(mismatch > 0) print_console_message("!!!!!ADVARSEL:", mismatch, "strata i predrate finnes ikke i prednevner!!!\n")
+  
+  predteller <- collapse::join(prednevner, predrate, how = "l", on = commondims, multiple = T, overid = 2, verbose = 0)
+  predteller[, let(PREDTELLER = PREDRATE * PREDNEVNER,
+                   PREDTELLER.f = pmax(PREDRATE.f, PREDNEVNER.f),
+                   PREDTELLER.a = pmax(PREDRATE.a, PREDNEVNER.a))]
+  predteller <- predteller[, .SD, .SDcols = c(get_dimension_columns(names(predteller)), paste0("PREDTELLER", c("", ".f", ".a")))]
+  
+  filename <- parameters$files$PREDNEVNER
+  prednevnerdesign <- find_filedesign(file = prednevner, filename = filename, parameters = parameters)
+  cubedesign <- list(Part = parameters$CUBEdesign)
+  redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
+  predteller <- do_filter_and_recode_to_redesign(dt = predteller, redesign = redesign, parameters = parameters)
+  return(predteller)
+}
+
+#' @title add_meisskala
+#' @description
+#' Adds scale to standardize MEIS
+#' @keywords internal
+#' @noRd
+add_meisskala_old <- function(dt, parameters){
+  if(parameters$PredFilter$ref_year_type != "Specific") return(invisible(NULL))
+  print_console_message("\n* Legger til MEISskala for standardisering\n")
+  
+  if(parameters$CUBEinformation$REFVERDI_VP != "P"){
+    data.table::set(dt, j = "MEISskala", value = NA_real_)
+    return(invisible(NULL))
+  }
+  subset_meisskala <- dt[x, env = list(x = str2lang(parameters$PredFilter$meisskalafilter))]
+  if (nrow(subset_meisskala) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
+  subset_meisskala[, MEISskala := RATE]
+  joincolumns <- setdiff(intersect(names(subset_meisskala), parameters$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns)
+  dt[subset_meisskala, on = joincolumns, MEISskala := i.MEISskala]
+}
+
+# Compute columns----
+
+#' @noRd
+add_crude_rate_old <- function(dt, parameters){
+  if(!"NEVNER" %in% names(dt)){
+    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+    return(invisible(NULL))
+  } 
+  
+  dt[, let(RATE = TELLER/NEVNER,
+           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
+           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
+           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  
+  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
+  # Sett .f = 2 dersom RATE ikke lar seg beregne og RATE.f ikke allerede er satt til max av TELLER.f/NEVNER.f
+  dt[is.na(RATE) & RATE.f == 0, let(TELLER.f = 2, NEVNER.f = 2, RATE.f = 2, spv_tmp = 2L)]
+  
+  if(parameters$MOVAV$is_movav){
+    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
+  }
+}
+
+

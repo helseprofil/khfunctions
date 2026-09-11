@@ -364,53 +364,6 @@ clean_tempfiles <- function(con){
   drop_tables_duckdb(con, tabs)
 }
 
-# Process data.table deprecated ----
-
-#' @title do_reshape_var
-#' @description
-#' Reshapes the data to collect columns representing the same variable into long format
-#' @noRd
-do_reshape_var <- function(dt, filedescription, parameters){
-  save_filedump_if_requested(dumpname = "RESHAPEpre", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
-  on.exit({save_filedump_if_requested(dumpname = "RESHAPEpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")}, add = TRUE)
-  if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
-  
-  cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = names(dt))
-  if(!is.null(cols$id) && !all(cols$id %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
-  if(!is.null(cols$measure) && !all(cols$measure %in% names(dt))) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
-  if(!is.null(cols$id) && is.null(cols$measure)) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
-  reshape <- data.table::melt(dt, id.vars = cols$id, measure.vars = cols$measure, variable.name = cols$var, value.name = cols$val)
-  dt[, names(dt) := NULL]
-  dt[, (names(reshape)) := reshape]
-  convert_all_columns_to_character(dt = dt)
-}
-
-#' @title do_set_default_values
-#' @description
-#' Sets default values for columns where the default value are provided in ACCESS::INNLESING within <...>
-#' @noRd
-do_set_default_values <- function(dt, filedescription, defaultcolumns){
-  default <- filedescription[, ..defaultcolumns]
-  default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
-  dt[, names(default) := default]
-}
-
-#' @title convert_all_columns_to_character
-#' @description
-#' Make sure all columns are of type character
-#' @param dt data
-#' @noRd
-convert_all_columns_to_character <- function(dt){
-  non_char_cols <- names(dt)[!vapply(dt, is.character, FUN.VALUE = logical(1))]
-  for (j in non_char_cols) {
-    data.table::set(dt, j = j, value = as.character(dt[[j]]))
-  }
-}
-
-#' @noRd
-do_convert_na_to_empty <- function(dt){
-  dt[, names(.SD) := lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x))]
-}
 
 # TO BE DELETED ---- 
 
@@ -435,7 +388,7 @@ do_split_multihead <- function(dt, filedescription, con){
   dt <- fetch_duckdb_table(con = con, tablename = "temp_orgfile")
   mhl <- LesMultiHead(filedescription$MULTIHEAD)
   dt[, (mhl$colnames) := data.table::tstrsplit(mhl$varname, mhl$sep)]
-  write_duckdb_table(dt = dt, con = parameters$duck, tablename = "temp_orgfile")
+  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = dt)
   rm(dt)
   invisible(gc())
 }
@@ -455,7 +408,7 @@ do_handle_fylltab <- function(filedescription, con){
     dt[dt[[col]] == "", (col) := NA]
     dt[, names(.SD) := zoo::na.locf(.SD, na.rm = FALSE), .SDcols = col]
   }
-  write_duckdb_table(dt = dt, con = con, tablename = "temp_orgfile")
+  write_duckdb_table(con = con, tablename = "temp_orgfile", data = dt)
   rm(dt)
   invisible(gc())
 }

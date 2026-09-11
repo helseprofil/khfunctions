@@ -83,9 +83,10 @@ add_geoniv_fylke <- function(con, parameters){
   # SETT GEOniv S dersom nødvendig, gjelder for spesifikke KOBLID - sjekk om nødvendig
   sone6 <- parameters$read_parameters[grepl("6", SONER), unique(KOBLID)]
   if(length(sone6) > 0){
-    DBI::dbWriteTable(con, "sone6", 
-                      data.table::data.table(KOBLID = sone6),
-                      temporary = TRUE, overwrite = TRUE)
+    write_duckdb_table(con, "sone6", data = data.table::data.table(KOBLID = sone6))
+    # DBI::dbWriteTable(con, "sone6", 
+    #                   data.table::data.table(KOBLID = sone6),
+    #                   temporary = TRUE, overwrite = TRUE)
     
     invisible(DBI::dbExecute(con,
                    "UPDATE FILGRUPPE AS f SET GEOniv = 'S' FROM sone6 AS s
@@ -107,12 +108,11 @@ build_geo_map <- function(con, parameters){
   recode_geo_from_name(dt = geo_map, parameters = parameters)
   geo_map[GEO != "0" & nchar(GEO) %in% c(1,3,5,7,9), GEO := paste0("0", GEO)]
   set_unknown_geo_99_map(dt = geo_map, parameters = parameters)
-  # set_geoniv_map(dt = geo_map)
-  # set_fylke_map(dt = geo_map)
   drop_tables_duckdb(con = con, tables = "geo_map")
-  DBI::dbWriteTable(con, "geo_map",
-                    value = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)],
-                    temporary = TRUE, overwrite = TRUE)
+  write_duckdb_table(con, "geo_map", data = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)])
+  # DBI::dbWriteTable(con, "geo_map",
+  #                   value = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)],
+  #                   temporary = TRUE, overwrite = TRUE)
   invisible(NULL)
 }
 
@@ -237,9 +237,10 @@ build_aar_map <- function(con){
   aar_map[AAR == aar_illegal, c("AARl", "AARh") := aar_illegal_split]
   
   drop_tables_duckdb(con = con, tables = "geo_map")
-  DBI::dbWriteTable(con, "aar_map", 
-                    value = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)],
-                    temporary = TRUE, overwrite = TRUE)
+  write_duckdb_table(con, "geo_map", data = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)])
+  # DBI::dbWriteTable(con, "aar_map", 
+  #                   value = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)],
+  #                   temporary = TRUE, overwrite = TRUE)
   
   invisible(NULL)
 }
@@ -326,9 +327,10 @@ build_alder_map <- function(con, parameters){
   alder_map[ALDER == alder_illegal,c("ALDERl", "ALDERh") := alder_illegal_split]
   
   drop_tables_duckdb(con = con, tables = "alder_map")
-  DBI::dbWriteTable(con, "alder_map",
-                    value = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)],
-                    temporary = TRUE,overwrite = TRUE)
+  write_duckdb_table(con, "alder_map", data = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)])
+  # DBI::dbWriteTable(con, "alder_map",
+  #                   value = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)],
+  #                   temporary = TRUE,overwrite = TRUE)
   
   invisible(NULL)
 }
@@ -386,9 +388,10 @@ build_dimension_map <- function(con, col, map_table_name){
 
   data.table::setnames(map, col, "CLEAN")
   drop_tables_duckdb(con = con, tables = map_table_name)
-  DBI::dbWriteTable(con, map_table_name,
-                    value = map[, .(ORG, CLEAN)],
-                    temporary = TRUE, overwrite = TRUE)
+  write_duckdb_table(con, tablename = map_table_name, data = map[, .(ORG, CLEAN)])
+  # DBI::dbWriteTable(con, map_table_name,
+  #                   value = map[, .(ORG, CLEAN)],
+  #                   temporary = TRUE, overwrite = TRUE)
   invisible(NULL)
 }
 

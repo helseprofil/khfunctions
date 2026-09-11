@@ -75,7 +75,7 @@ do_read_org_spss <- function(filedescription, con){
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   repair_colnames(file)
-  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
   invisible(gc())
 }
 
@@ -94,7 +94,7 @@ do_read_org_csv <- function(filedescription, read_arg_list, con){
   }
   
   repair_colnames(file)
-  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
   invisible(gc())
 }
 
@@ -147,7 +147,7 @@ do_read_org_excel <- function(filedescription, read_arg_list, con){
   data.table::setDT(file)
   file <- do.call(format_excel_and_csv_files, c(list(file = file, filedescription = filedescription), read_arg_list))
   repair_colnames(file)
-  write_duckdb_table(dt = file, con = parameters$duck, tablename = "temp_orgfile")
+  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
   invisible(gc())
 }
 

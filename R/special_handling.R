@@ -66,7 +66,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     if(length(extracols) > 0) dt[, (extracols) := NULL]
     print_console_message("\n** Ferdig i STATA")
     if(use_duck){
-      write_duckdb_table(dt = dt, con = con, tablename = tablename)
+      write_duckdb_table(con = con, tablename = tablename, data = dt)
       do_clean_duckdb(con = parameters$duck)
       return(invisible(NULL))
     }
@@ -91,7 +91,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   if(length(extracols) > 0) dt[, (extracols) := NULL]
   print_console_message("\n** R-snutt ferdig")
   if(use_duck){
-    write_duckdb_table(dt = dt, con = con, tablename = tablename)
+    write_duckdb_table(con = con, tablename = tablename, data = dt)
     do_clean_duckdb(con = con)
     return(invisible(NULL))
   }

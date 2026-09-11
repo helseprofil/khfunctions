@@ -9,7 +9,8 @@ get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
-  DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
+  write_duckdb_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
+  # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
@@ -281,7 +282,8 @@ get_geo_recoding <- function(parameters){
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   out <- data.table::rbindlist(list(KnrHarm, KnrHarmS))[, .SD, .SDcols = c("GEO", "GEO_omk")]
   drop_tables_duckdb(con = parameters$duck, tables = "KnrHarm")
-  DBI::dbWriteTable(parameters$duck, name = "KnrHarm", value = out)
+  write_duckdb_table(parameters$duck, "KnrHarm", data = out, temp = FALSE)
+  # DBI::dbWriteTable(parameters$duck, name = "KnrHarm", value = out)
   return(out)
 }
 
@@ -349,19 +351,4 @@ get_col <- function(var, num = TRUE){
 var_num <- function(x){
   if(!is.numeric(x)) x <- NA
   return(x)
-}
-
-# Deprecated ----
-#' @description
-#' updates cubedesign after aggregating to moving average. Changes the year part, to reflect periods. 
-#' This is crucial when recoding predteller before merging onto cube. 
-#' @keywords internal
-#' @noRd
-#' @param dt cube
-#' @param origdesign Cubedesign after merging teller and nevner. 
-update_cubedesign_after_moving_average_old <- function(dt, origdesign, parameters){
-  if(!parameters$MOVAV$is_movav) return(origdesign)
-  aar <- unique(dt[, .SD, .SDcols = c("AARl", "AARh")])
-  origdesign$Y <- aar
-  return(origdesign)
 }

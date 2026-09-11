@@ -435,24 +435,4 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
   return(dt)
 }
 
-# Deprecated ----
-#' @noRd
-add_crude_rate_old <- function(dt, parameters){
-  if(!"NEVNER" %in% names(dt)){
-    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
-    return(invisible(NULL))
-  } 
-  
-  dt[, let(RATE = TELLER/NEVNER,
-           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
-           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
-           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
-  
-  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
-  # Sett .f = 2 dersom RATE ikke lar seg beregne og RATE.f ikke allerede er satt til max av TELLER.f/NEVNER.f
-  dt[is.na(RATE) & RATE.f == 0, let(TELLER.f = 2, NEVNER.f = 2, RATE.f = 2, spv_tmp = 2L)]
-  
-  if(parameters$MOVAV$is_movav){
-    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
-  }
-}
+# TO DELETE ---- 

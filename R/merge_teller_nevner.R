@@ -81,7 +81,8 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     dt <- fetch_duckdb_table(con = con, tablename = tntype)
     if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
     if(isNYEKOL_KOL) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
-    DBI::dbWriteTable(conn = con, name = tntype, value = dt, overwrite = TRUE)
+    # DBI::dbWriteTable(conn = con, name = tntype, value = dt, overwrite = TRUE)
+    write_duckdb_table(con, tablename = tntype, data = dt)
   }
   
   do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN)
@@ -248,7 +249,8 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
   }
   
   print_console_message("- Skriver rektangularisert", paste0(tnfname, "-design"), "til duckdb...")
-  DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
+  write_duckdb_table(parameters$duck, tablename = tnfname, data = rektangularisert)
+  # DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
 }
 
 #' @title get_removed_codes
@@ -296,52 +298,3 @@ set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
   invisible(NULL)
 }
 
-# Deprecated ---- 
-#' @title do_redesign_file
-#'
-#' @param parameters global parameters
-#' @keywords internal
-#' @noRd
-do_redesign_file <- function(filename, filedesign, tndesign, parameters, name){
-  redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
-  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
-  filter_and_recode_table_duckdb(con = parameters$duck, 
-                                 tablename = )
-  file <- do_filter_and_recode_to_redesign(dt = fetch_duckdb_table(tablename = filename, con = parameters$duck),
-                                           redesign = redesign, parameters = parameters)
-  print_console_message("\n*** Skriver", name, "til duckdb...\n")
-  DBI::dbWriteTable(parameters$duck, name = name, value = file, overwrite = T)
-}
-
-#' @title set_teller_nevner_names
-#' @description Sets name of teller and nevner column to TELLER and NEVNER by reference
-set_teller_nevner_names <- function(file, TNPparameters){
-  newnames <- gsub(paste0("^", TNPparameters$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
-  newnames <- gsub(paste0("^", TNPparameters$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
-  # warn_duplicated_teller_nevner_names(TNPparameters$TELLERKOL, TNPparameters$NEVNERKOL, names(file))
-  data.table::setnames(file, names(file), newnames)
-  warn_duplicated_column_names(names(file))
-  return(file)
-}
-
-warn_duplicated_column_names <- function(columnnames){
-  if(any(duplicated(columnnames))){
-    message(paste0("\nNB!!! DUPLICATED COLUMN NAMES!",
-                   "\nThe following column names were duplicated when trying to set TELLER and NEVNER according to what is provided in TNP_PROD:\n", 
-                   paste(" -", columnnames[duplicated(columnnames)], collapse = "\n"),
-                   "\nAre you trying to e.g. add a separate NEVNER file to a file already containing NEVNER?"))
-  } 
-}
-
-#' @title do_filter_file
-#'
-#' @param parameters global parameters
-do_filter_file <- function(file, design, parameters){
-  for (del in names(design)) {
-    cols <- parameters$DefDesign$DelKols[[del]]
-    if (all(cols %in% names(file))) {
-      file <- collapse::join(file, design[[del]][, ..cols], on = cols, how = "right", multiple = T, overid = 0, verbose = 0)
-    }
-  }
-  return(file)
-}
