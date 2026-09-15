@@ -25,13 +25,18 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
     select_sql <- paste(c("COALESCE(k.GEO_omk, f.GEO) AS GEO",
                           paste0("f.",cols_sql)), collapse = ", ")
   
+    result_tmp <- paste0(tablename, "__tmp")
+    drop_tables_duckdb(con, result_tmp)
+    result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+    
     sql <- sprintf(
       paste("CREATE OR REPLACE TABLE %s AS",
             "SELECT %s FROM %s f",
             "LEFT JOIN KnrHarm k ON f.GEO = k.GEO"),
-      table_sql, select_sql, table_sql)
-  
+      result_tmp_sql, select_sql, table_sql)
     invisible(DBI::dbExecute(con, sql))
+    
+    replace_table_duckdb(con, target = tablename, source = result_tmp)
   } else {
     print_console_message(paste0("\n*** Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
@@ -49,22 +54,21 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
 #' @noRd 
 add_fylke_duckdb <- function(con, tablename){
   table_sql <- DBI::dbQuoteIdentifier(con, tablename)
-    sql <- sprintf(
-      paste(
-        "CREATE OR REPLACE TABLE %s AS",
-        "SELECT *,",
-        "CASE",
-        "  WHEN GEOniv IN ('H','L') THEN '00'",
-        "  ELSE SUBSTR(GEO,1,2)",
-        "END AS FYLKE",
-        "FROM %s"
-      ),
-      table_sql,table_sql)
-    
-    DBI::dbExecute(con, sql)
+  
+  DBI::dbExecute(con, sprintf("ALTER TABLE %s ADD COLUMN FYLKE VARCHAR",table_sql))
+  
+  DBI::dbExecute(con,sprintf(
+    "UPDATE %s 
+       SET FYLKE = CASE
+         WHEN GEOniv IN ('H', 'L') THEN '00'
+         ELSE SUBSTR(GEO, 1, 2)
+       END",
+      table_sql
+    )
+  )
+  
+  invisible(NULL)
 }
-
-
 
 #' @title fix_geo_special
 #' @description Manually handle bydel startaar, DK2020 and Aalesund/Haram

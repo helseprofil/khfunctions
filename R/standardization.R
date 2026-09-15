@@ -141,11 +141,15 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
     for(dim in dims){print_console_message(paste0("- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))}
   }
   
+  cleanup_tmp <- paste0(gentable, "__tmp")
+  drop_tables_duckdb(con, cleanup_tmp)
+  cleanup_tmp_sql <- DBI::dbQuoteIdentifier(con, cleanup_tmp)
+  
   sql_cleanup <- sprintf(
   'CREATE OR REPLACE TABLE %s AS SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
-  tmp_tbl_sql, paste(dims_sql, collapse = ", "), tmp_tbl_sql)
-  
+  cleanup_tmp_sql, paste(dims_sql, collapse = ", "), tmp_tbl_sql)
   invisible(DBI::dbExecute(con, sql_cleanup))
+  replace_table_duckdb(con, target = gentable, source = cleanup_tmp)
   invisible(NULL)
 }
 

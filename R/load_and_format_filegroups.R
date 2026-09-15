@@ -57,7 +57,11 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   filter <- paste0(c(tabfilter, alderfilter, yearfilter, lksfilter), collapse = " AND ")
   readcols <- identify_readcols(allcols = allcols, bef = isbef, parameters = parameters)
   
-  print_console_message(paste0("\n** Leser inn filgruppe ", filegroup, " til duckdb med filter ", filter))
+  if(length(filter) == 0){
+    print_console_message(paste0("\n** Leser inn filgruppe ", filegroup, " til duckdb"))
+  } else {
+    print_console_message(paste0("\n** Leser inn filgruppe ", filegroup, " til duckdb med filter ", filter))
+  }
   read_filegroup_duckdb(con = con, tablename = filegroup, filepath = orgfilepath, filter = filter, readcols = readcols)
   
   do_filter_KUIL_duckdb(con = con, filegroup = filegroup, cubeinformation = parameters$CUBEinformation)
@@ -242,8 +246,8 @@ identify_readcols <- function(allcols, bef = FALSE,  parameters){
 #' (if all needed levels are present and not have to be aggregated from sublevels)
 #' @noRd
 do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
-  tab_sql <- as.character(DBI::dbQuoteIdentifier(con, filegroup))
-  allcols <- DBI::dbListFields(con, tab_sql)
+  tab_sql <- DBI::dbQuoteIdentifier(con, filegroup)
+  allcols <- DBI::dbListFields(con, filegroup)
   filters <- character()
   filtercols <- character()
   for(dim in c("KJONN", "UTDANN", "INNVKAT", "LANDBAK")){
@@ -264,17 +268,23 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
   
   if(length(filters) == 0) return(invisible(NULL))
   
+  table_tmp <- paste0(filegroup, "__tmp")
+  drop_tables_duckdb(con, table_tmp)
+  table_tmp_sql <- DBI::dbQuoteIdentifier(con, table_tmp)
+  
   sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE %s",
-    tab_sql, tab_sql,  paste(filters, collapse = " AND "))
+    table_tmp_sql, tab_sql,  paste(filters, collapse = " AND "))
   print_console_message(sprintf("\nFiltrerer filen på %s:\n- %s", 
-                                paste(filtercols, collapse = ", "), filters))
+                                paste(filtercols, collapse = ", "), 
+                                paste(filters, collapse = "\n-")))
   
   n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   invisible(DBI::dbExecute(con, sql))
+  replace_table_duckdb(con, target = filegroup, source = table_tmp)
   n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
-  
+  invisible(NULL)
 }
 
 #' @title read_filegroup_duckdb
@@ -406,29 +416,36 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   
   invisible(DBI::dbExecute(con, rectangularize_sql))
   
-  join_cols <- intersect(DBI::dbListFields(con, "tmp_rectangularized"), DBI::dbListFields(con, tablename))
+  join_cols <- intersect(DBI::dbListFields(con, rect_table), DBI::dbListFields(con, tablename))
   join_cols_sql <- paste(DBI::dbQuoteIdentifier(con, join_cols), collapse = ", ")
-  value_cols <- get_value_columns(DBI::dbListFields(con, tablename))
   
   table_cols <- setdiff(DBI::dbListFields(con, tablename), join_cols)
   table_cols_sql <- paste(sprintf("f.%s", DBI::dbQuoteIdentifier(con, table_cols)),
                           collapse = ",\n")
+  
+  result_tmp <- paste0(tablename, "__tmp")
+  drop_tables_duckdb(con, result_tmp)
+  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+  tab_sql <- DBI::dbQuoteIdentifier(con, tablename)
   
   merge_sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS
     SELECT r.*, %s
     FROM tmp_rectangularized r
     LEFT JOIN %s f USING (%s)",
-    tablename,
+    result_tmp_sql,
     table_cols_sql,
-    tablename,
+    tab_sql,
     join_cols_sql
   )
   
-  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   invisible(DBI::dbExecute(con, merge_sql))
-  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+  replace_table_duckdb(con, target = tablename, source = result_tmp)
+  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
+  
+  
   set_implicit_null_after_merge_duckdb(table = tablename, implicitnull_defs = vals, con = con)
   invisible(NULL)
 }
@@ -444,15 +461,19 @@ add_leadyear_befvekst_duckdb <- function(con, tablename){
   tmp_table <- "tmp_leadyear_befvekst"
   on.exit(drop_tables_duckdb(con, tmp_table), add = TRUE)
   
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  tmp_tbl_sql <- DBI::dbQuoteIdentifier(con, tmp_table)
+  
   print_console_message("\n*** Legger til ledeår for å beregne befolkningsvekst")
   table_cols <- DBI::dbListFields(con, tablename)
   dims <- get_dimension_columns(table_cols)
+  dims_sql <- DBI::dbQuoteIdentifier(con, dims)
   
   create_sql <- sprintf(
   "CREATE OR REPLACE TEMP TABLE %s AS
     SELECT * EXCLUDE (AARl, AARh), AARl - 1 AS AARl, AARh - 1 AS AARh
   FROM %s",
-  tmp_table, tablename)
+  tmp_tbl_sql, tbl_sql)
   invisible(DBI::dbExecute(con, create_sql))
   
   dup_sql <- sprintf(
@@ -461,34 +482,34 @@ add_leadyear_befvekst_duckdb <- function(con, tablename){
       SELECT %s, COUNT(*) AS N 
       FROM %s GROUP BY %s
     ) count_table",
-    paste(DBI::dbQuoteIdentifier(con, dims), collapse = ", "),
-    tmp_table,
-    paste(DBI::dbQuoteIdentifier(con, dims), collapse = ", ")
+    paste(dims_sql, collapse = ", "),
+    tmp_tbl_sql,
+    paste(dims_sql, collapse = ", ")
   )
   
   max_n <- DBI::dbGetQuery(con, dup_sql)$N
-  if(max_n != 1) stop("Data for ledeår er ikke unike etter forskyving av AARl og AARh")
+  if(is.na(max_n) || max_n != 1) stop("Data for ledeår er ikke unike (eller gir tom tabell) etter forskyving av AARl og AARh")
   
-  join_sql <- paste(sprintf(
-    "t.%s = y.%s",
-    DBI::dbQuoteIdentifier(con, dims),
-    DBI::dbQuoteIdentifier(con, dims)
-    ), collapse = "\n  AND ")
+  result_tmp <- paste0(tablename, "__tmp")
+  drop_tables_duckdb(con, result_tmp)
+  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+  
+  join_sql <- paste(sprintf("t.%s = y.%s", dims_sql, dims_sql), collapse = "\n  AND ")
   
   merge_sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS
     SELECT t.*, y.BEF0101 AS Yp1_A_BEF0101, y.%s AS %s, y.%s AS %s
     FROM %s t 
     LEFT JOIN %s y ON %s",
-    tablename,
+    result_tmp_sql,
     DBI::dbQuoteIdentifier(con, "BEF0101.f"),
     DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.f"),
     DBI::dbQuoteIdentifier(con, "BEF0101.a"),
     DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.a"),
-    tablename, tmp_table, join_sql)
+    tbl_sql, tmp_tbl_sql, join_sql)
   
   invisible(DBI::dbExecute(con, merge_sql))
-  
+  replace_table_duckdb(con, target = tablename, source = result_tmp)
   invisible(NULL)
 }
 

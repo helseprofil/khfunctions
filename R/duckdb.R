@@ -7,29 +7,48 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
   if(is.null(result)) result <- mergeto
   to_cols <- DBI::dbListFields(con, mergeto)
   from_cols <- DBI::dbListFields(con, mergefrom)
+  newcols_names <- setdiff(from_cols, to_cols)
   commoncols <- intersect(to_cols, from_cols)
-  newcols_names <- setdiff(from_cols, commoncols)
   
-  join_cond <- paste0(
-    "org.", quote_col_duckdb(commoncols), " = new.", quote_col_duckdb(commoncols),
-    collapse = " AND "
-  )
+  join_cols <- get_dimension_columns(commoncols)
   
-  add_cols <- paste0(
-    "new.", quote_col_duckdb(newcols_names),
-    collapse = ", "
-  )
+  if(length(newcols_names) == 0L) {
+    print_console_message(sprintf("- Ingen nye kolonner å merge fra %s til %s, kan det ha gått galt i innlesing?", mergefrom, mergeto))
+    return(invisible(NULL))
+  }
   
-  query <- paste0(
-    "CREATE OR REPLACE TABLE ", result, " AS
-   SELECT org.*, ", add_cols, "
-   FROM ", mergeto, " AS org
-   LEFT JOIN ", mergefrom, " AS new
-   ON ", join_cond
-  )
+  if(length(join_cols) == 0L) {
+    print_console_message(sprintf("- Forsøker å merge %s på %s, men finner ingen felles dimensjoner", mergefrom, mergeto))
+    return(invisible(NULL))
+  }
   
-  print_console_message(sprintf("- Merger %s på %s. Skriver til %s", mergefrom, mergeto, result))
+  tmp <- paste0(result, "__tmp")
+  drop_tables_duckdb(con, tmp)
+  
+  tmp_sql <- DBI::dbQuoteIdentifier(con, tmp)
+  mergeto_sql <- DBI::dbQuoteIdentifier(con, mergeto)
+  mergefrom_sql <- DBI::dbQuoteIdentifier(con, mergefrom)
+  
+  join_cond <- paste0("org.", DBI::dbQuoteIdentifier(con, join_cols), " = new.", DBI::dbQuoteIdentifier(con, join_cols), 
+                      collapse = " AND ")
+  
+  add_cols <- paste0("new.", DBI::dbQuoteIdentifier(con, newcols_names), collapse = ", ")
+  
+  
+  query <- sprintf(
+  "CREATE OR REPLACE TABLE %s AS SELECT org.*, %s 
+   FROM %s AS org LEFT JOIN %s AS new ON %s", 
+  tmp_sql, add_cols, mergeto_sql, mergefrom_sql, join_cond)
+  
+  
+  print_console_message(sprintf("\n- Merger %s til %s\n-- Nye kolonner: %s\n-- Join-kolonner: %s\n--- Resultattabell: %s", 
+                                mergefrom, mergeto, 
+                                paste(newcols_names, collapse = ", "), 
+                                paste(join_cols, collapse = ", "),
+                                result))
+  
   invisible(DBI::dbExecute(con, query))
+  replace_table_duckdb(con = con, target = result, source = tmp)
 }
 
 #' @title set_implicit_null_after_merge_duckdb
@@ -43,6 +62,7 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
   print_console_message("*** Håndterer implisitte nuller")
   cols <- DBI::dbListFields(con, table)
   vals <- get_value_columns(cols)
+  tbl_sql <- DBI::dbQuoteIdentifier(con, table)
   
   if("BEF" %in% names(implicitnull_defs) && any(grepl("^BEF", vals))){
     correctval <- grep("^BEF", vals, value = T)
@@ -67,18 +87,22 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
     }
     
     valF <- paste0(val, ".f")
-    valA <- paste0(val, ".a")
-    
-    # hopp over hvis .f ikke finnes
     if (!(valF %in% cols)) next
+    # hopp over hvis .f ikke finnes
     
-    cond <- paste0("(", quote_col_duckdb(val), " IS NULL AND ", quote_col_duckdb(valF), " = 0) OR ", quote_col_duckdb(valF), " IS NULL" )
+    val_sql <- DBI::dbQuoteIdentifier(con, val)
+    valF_sql <- DBI::dbQuoteIdentifier(con, valF)
+    valA_sql <- DBI::dbQuoteIdentifier(con, paste0(val, ".a"))
     
-    query <- paste0("UPDATE ", table, " SET ",
-      quote_col_duckdb(val), " = ", replacemissing[1], ",
-       ", quote_col_duckdb(valF), " = ", replacemissing[2], ",
-       ", quote_col_duckdb(valA), " = ", replacemissing[3], "
-       WHERE ", cond
+    cond <- sprintf("(%s IS NULL AND %s = 0) OR %s IS NULL", val_sql, valF_sql, valF_sql)
+    
+    query <- sprintf(
+      "UPDATE %s SET %s = %s, %s = %s, %s = %s WHERE %s",
+      tbl_sql, 
+      val_sql, replacemissing[1],
+      valF_sql, replacemissing[2],
+      valA_sql, replacemissing[3],
+      cond
     )
     
     invisible(DBI::dbExecute(con, query))
@@ -105,13 +129,18 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
             val, val, vala, vala))
         }))
   
+  result_tmp <- paste0(tablename, "_tmp")
+  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+  drop_tables_duckdb(con, result_tmp)
+  
   sql <- sprintf(paste("CREATE OR REPLACE TABLE %s AS",
                        "SELECT %s FROM %s",
                        "GROUP BY %s"),
-                 table_sql,
+                 result_tmp_sql,
                  paste(c(dims_sql, aggcols_sql),collapse = ", "),
                  table_sql,
                  paste(dims_sql,collapse = ", "))
+  
   
   invisible(DBI::dbExecute(con, sql))
   

@@ -58,9 +58,9 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tablename_teller), 
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
     report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
-    merge_duckdb_table(result = tntype, mergeto = tntype, mergefrom = tablename_teller, con = con)
+    merge_duckdb_table(con = con, mergeto = tntype, mergefrom = tablename_teller)
     if(isnevnerfil){
-      merge_duckdb_table(result = tntype, mergeto = tntype, mergefrom = tablename_nevner, con = con)
+      merge_duckdb_table(con = con, mergeto = tntype, mergefrom = tablename_nevner)
     }
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     print_console_message("\n* Ferdig rektangularisert og merget", tntype)
@@ -81,7 +81,6 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     dt <- fetch_duckdb_table(con = con, tablename = tntype)
     if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
     if(isNYEKOL_KOL) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
-    # DBI::dbWriteTable(conn = con, name = tntype, value = dt, overwrite = TRUE)
     write_duckdb_table(con, tablename = tntype, data = dt)
   }
   
@@ -210,6 +209,10 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   return(Deler)
 }
 
+#' @title do_redesign_file_duckdb
+#' @description
+#' Tar originalfilgruppene som er lest inn, og bruker ønsket design til å filtrere og kode om verdier for videre bruk
+#' @noRd
 do_redesign_file_duckdb <- function(con, tablename, orgfilename, filedesign, targetdesign, parameters){
   invisible(DBI::dbExecute(con, sprintf("CREATE OR REPLACE TABLE %s AS SELECT * FROM %s", tablename, orgfilename)))
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = targetdesign, parameters = parameters)
@@ -249,6 +252,7 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
   }
   
   print_console_message("- Skriver rektangularisert", paste0(tnfname, "-design"), "til duckdb...")
+  drop_tables_duckdb(parameters$duck, tnfname)
   write_duckdb_table(parameters$duck, tablename = tnfname, data = rektangularisert)
   # DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
 }

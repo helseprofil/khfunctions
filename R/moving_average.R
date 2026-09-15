@@ -105,10 +105,11 @@ do_balance_missing_teller_nevner <- function(con, tablename){
 #' @param parameters cube parameters
 do_aggregate_periods <- function(con, tablename, parameters){
   tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
-  tmp_tbl <- DBI::dbQuoteIdentifier(con, paste0(tablename, "_MOVAV"))
+  tmp_tbl <- paste0(tablename, "_MOVAV")
+  tmp_tbl_sql <- DBI::dbQuoteIdentifier(con, tmp_tbl)
   tmp_periods <- "tmp_movav_periods"
   
-  on.exit(drop_tables_duckdb(con = con, tables = c(tmp_tbl, tmp_periods)), add = TRUE)
+  on.exit(drop_tables_duckdb(con = con, tables = tmp_periods), add = TRUE)
           
   period <- parameters$MOVAV$movav
   n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", tbl_sql))$n
@@ -158,7 +159,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
     INNER JOIN %s p ON d.AARl >= p.AARl AND d.AARh <= p.AARh
     GROUP BY 
     %s",
-    tmp_tbl,
+    tmp_tbl_sql,
     paste(select_parts, collapse = ",\n"),
     tbl_sql,
     tmp_periods,
@@ -184,7 +185,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
         %s = NULL,
         %s = 9
       WHERE %s > %s",
-        tmp_tbl,
+        tmp_tbl_sql,
         val_sql,
         val_f,
         val_fn9,
@@ -193,11 +194,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
     }
   }
   
-  
-  DBI::dbWithTransaction(con, {
-    DBI::dbExecute(con, sprintf("DROP TABLE %s", tbl_sql))
-    DBI::dbExecute(con, sprintf("ALTER TABLE %s RENAME TO %s", tmp_tbl, tbl_sql))
-  })
+  replace_table_duckdb(con, target = tablename, source = tmp_tbl)
   
   invisible(NULL)
 } 

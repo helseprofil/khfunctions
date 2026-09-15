@@ -42,8 +42,6 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     if(fullmatch) next
     
     filter_table <- sprintf("tmp_filter_%s", part)
-    # DBI::dbWriteTable(conn = con, name = filter_table, value = filter_unique, 
-    #                   temporary = TRUE,overwrite = TRUE)
     write_duckdb_table(con, tablename = filter_table, data = filter_unique)
     filter_tables <- c(filter_tables, filter_table)
   }
@@ -58,16 +56,22 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     filter_cols <- DBI::dbListFields(con, "tmp_filter_all")
     join_condition <- paste(sprintf("t.%s = f.%s",filter_cols,filter_cols), collapse = "\n  AND ")
     
+    filter_tmp <- "filter__tmp"
+    drop_tables_duckdb(con, filter_tmp)
+    filter_tmp_sql <- DBI::dbQuoteIdentifier(con, filter_tmp)
+    tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+    
     filter_sql <- sprintf(
       "CREATE OR REPLACE TABLE %s AS
     SELECT t.* FROM %s t
     SEMI JOIN tmp_filter_all f
     ON %s",
-      tablename, tablename, join_condition)
+      filter_tmp_sql, tbl_sql, join_condition)
     
-    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
     invisible(DBI::dbExecute(con, filter_sql))
-    n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+    replace_table_duckdb(con, target = tablename, source = filter_tmp)
+    n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
     filterpartsname <- as.character(parameters$DefDesign$DelKolN[filterparts])
     print_console_message(sprintf("- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
   }
@@ -82,6 +86,8 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
   recodeparts <- names(recode)
   if(length(recodeparts) == 0) return(invisible(NULL)) 
   
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  
   for(part in recodeparts){
     partinfo <- get_part_info(part = part,parameters = parameters)
     recodebook <- recode[[part]]
@@ -90,15 +96,10 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
       next
     }
     
-    recode_table <- sprintf("tmp_recode_%s",part)
-    # DBI::dbWriteTable(conn = con, name = recode_table, value = recodebook,
-    #                   temporary = TRUE, overwrite = TRUE)
+    recode_table <- sprintf("tmp_recode_%s", part)
     write_duckdb_table(con, tablename = recode_table, data = recodebook)
-    
     table_cols <- DBI::dbListFields(con, tablename)
-    
     join_condition <- paste(sprintf("t.%s = r.%s", partinfo$cols, partinfo$cols), collapse = "\n  AND ")
-    
     select_cols <- character()
     
     for(col in table_cols){
@@ -113,19 +114,27 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
       }
     }
     
+    
+    recode_tmp <- "recode__tmp"
+    drop_tables_duckdb(con, recode_tmp)
+    recode_tmp_sql <- DBI::dbQuoteIdentifier(con, recode_tmp)
+    
+    
     recode_sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS 
     SELECT %s FROM %s t INNER JOIN %s r ON %s",
-      tablename,
+      recode_tmp,
       paste(select_cols, collapse = ",\n"),
-      tablename,
+      tbl_sql,
       recode_table,
       join_condition
     )
     
-    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
+    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
     invisible(DBI::dbExecute(con, recode_sql))
-    if(part == "Gn") fix_recode_geo_duckdb(con = con, tablename = tablename, parameters = parameters)
+    if(part == "Gn") fix_recode_geo_duckdb(con = con, tablename = recode_tmp, parameters = parameters)
+    replace_table_duckdb(con, target = tablename, source = recode_tmp)
+    
     do_aggregate_file_duckdb(con = con, tablename = tablename)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tablename))$N
     partname <- as.character(parameters$DefDesign$DelKolN[part])
@@ -147,9 +156,6 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
   write_duckdb_table(con, "tmp_helsereg", data = parameters$HELSEREG)
   write_duckdb_table(con, "tmp_geokoder_b", data = unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]))
   
-  # DBI::dbWriteTable(con, "tmp_helsereg", parameters$HELSEREG, temporary = TRUE, overwrite = TRUE)
-  # DBI::dbWriteTable(con,"tmp_geokoder_b", unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]),temporary = TRUE,overwrite = TRUE)
-  
   has_fylke <- "FYLKE" %in% DBI::dbListFields(con, tablename)
   fylke_sql <- if(has_fylke){
     "CASE
@@ -167,6 +173,11 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
     "t.* EXCLUDE (GEO)"
   }
   
+  result_tmp <- paste0(tablename, "__tmp")
+  drop_tables_duckdb(con, result_tmp)
+  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  
   sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS SELECT
     CASE
@@ -181,13 +192,15 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
     %s FROM %s t
     LEFT JOIN tmp_helsereg h ON t.GEO = h.FYLKE
     LEFT JOIN tmp_geokoder_b b ON t.GEO = b.GEO",
-    tablename,
+    result_tmp_sql,
     fylke_sql,
     exclude_sql,
-    tablename
+    tbl_sql
   )
   
   invisible(DBI::dbExecute(con, sql))
+  replace_table_duckdb(con, target = tablename, source = result_tmp)
+  invisible(NULL)
 }
 
 #' @title add_udekk_duckdb
@@ -198,8 +211,6 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   on.exit(drop_tables_duckdb(con, "tmp_udekk"), add = TRUE)
   if(is.null(udekk) || nrow(udekk) == 0) return(invisible(NULL))
   
-  # DBI::dbWriteTable(conn = con, name = "tmp_udekk", value = udekk,
-  #                   temporary = TRUE, overwrite = TRUE)
   write_duckdb_table(con, "tmp_udekk", data = udekk)
   table_cols <- DBI::dbListFields(con, tablename)
   dims <- get_dimension_columns(table_cols)
@@ -231,17 +242,22 @@ add_udekk_duckdb <- function(con, tablename, udekk){
                              DBI::dbQuoteIdentifier(con, table_cols)), 
                      collapse = ",\n ")
   
+  result_tmp <- paste0(tablename, "__tmp")
+  drop_tables_duckdb(con, result_tmp)
+  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  
   sql <- sprintf(
     "CREATE OR REPLACE TABLE %s AS 
   SELECT %s FROM %s t
   ANTI JOIN tmp_udekk u ON %s
   UNION ALL BY NAME
   SELECT %s FROM %s",
-    tablename, keep_cols, tablename, anti_join_sql, 
+    result_tmp, keep_cols, tbl_sql, anti_join_sql, 
     paste(newrow_select, collapse = ",\n "), newrow_from_sql)
   
   invisible(DBI::dbExecute(con, sql))
-  
+  replace_table_duckdb(con, target = tablename, source = result_tmp)
   invisible(NULL)
 }
 

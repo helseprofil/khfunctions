@@ -63,12 +63,38 @@ drop_tables_duckdb_prefix <- function(con, prefix){
   invisible(NULL)
 }
 
-#' @title quote_col_duckdb
-#' @description quotes column names to allow ".", e.g. "VAL1.a" in queries.
-#' @keywords duckdb
+
+#' @title replace_table_duckdb
+#' @description
+#' Erstatter en tabell med en annen i duckdb. Ved bearbeiding av en tabell kan resultatet
+#' skrives til en tmp-tabell, og så kan hovedtabellen erstattes med denne etterpå. Da slipper
+#' vi CREATE TABLE TABELL AS SELECT * FROM TABELL ..., altså å overskrive tabellen med seg selv. Vi kan 
+#' i stedet bruke CREATE TABLE tmp AS SELECT * FROM TABELL, og deretter bruke 
+#' replace_table_duckdb(con, target = TABELL, source = tmp). Dette vil først generere ny tabell
+#' tmp, og deretter erstatte originaltabellen med denne. 
+#' @family duckdb
 #' @noRd
-quote_col_duckdb <- function(x){
-  paste0('"', x, '"')
+replace_table_duckdb <- function(con, target, source){
+  
+  if(identical(target, source)) stop("'target' og 'source' kan ikke være samme tabell")
+  stopifnot(DBI::dbExistsTable(con, target))
+  stopifnot(DBI::dbExistsTable(con, source))
+
+  backup <- paste0(target, "__replace__table__backup")
+  backup_sql <- DBI::dbQuoteIdentifier(con, backup)
+  target_sql <- DBI::dbQuoteIdentifier(con, target)
+  source_sql <- DBI::dbQuoteIdentifier(con, source)
+  
+  drop_tables_duckdb(con, backup)
+  
+  DBI::dbWithTransaction(con, {
+    DBI::dbExecute(con, sprintf("ALTER TABLE %s RENAME TO %s", target_sql, backup_sql))
+    DBI::dbExecute(con, sprintf("ALTER TABLE %s RENAME TO %s", source_sql, target_sql))
+  })
+  
+  drop_tables_duckdb(con, backup)
+  
+  invisible(NULL)
 }
 
 #' @description
