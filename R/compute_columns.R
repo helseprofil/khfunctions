@@ -46,7 +46,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     )
   )
   
-  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  table_sql <- sqlquote(con, tablename)
   
   for(f in formulas){
     
@@ -81,7 +81,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s DOUBLE",
         table_sql,
-        DBI::dbQuoteIdentifier(con, name)
+        sqlquote(con, name)
       )
     )
     
@@ -90,7 +90,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s INTEGER",
         table_sql,
-        DBI::dbQuoteIdentifier(con, paste0(name, ".f"))
+        sqlquote(con, paste0(name, ".f"))
       )
     )
     
@@ -99,7 +99,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s INTEGER",
         table_sql,
-        DBI::dbQuoteIdentifier(con, paste0(name, ".a"))
+        sqlquote(con, paste0(name, ".a"))
       )
     )
     
@@ -110,7 +110,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
         sprintf(
           "ALTER TABLE %s ADD COLUMN %s INTEGER",
           table_sql,
-          DBI::dbQuoteIdentifier(con, paste0(name, ".n"))
+          sqlquote(con, paste0(name, ".n"))
         )
       )
       
@@ -122,7 +122,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          DBI::dbQuoteIdentifier(con, paste0(name, ".fn1"))
+          sqlquote(con, paste0(name, ".fn1"))
         )
       )
       
@@ -134,7 +134,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          DBI::dbQuoteIdentifier(con, paste0(name, ".fn3"))
+          sqlquote(con, paste0(name, ".fn3"))
         )
       )
       
@@ -146,13 +146,13 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          DBI::dbQuoteIdentifier(con, paste0(name, ".fn9"))
+          sqlquote(con, paste0(name, ".fn9"))
         )
       )
     }
     
     f_sql <- paste0(
-      DBI::dbQuoteIdentifier(
+      sqlquote(
         con,
         paste0(included_columns, ".f")
       ),
@@ -160,7 +160,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     )
     
     a_sql <- paste0(
-      DBI::dbQuoteIdentifier(
+      sqlquote(
         con,
         paste0(included_columns, ".a")
       ),
@@ -177,13 +177,13 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       ),
       table_sql,
       
-      DBI::dbQuoteIdentifier(con, name),
+      sqlquote(con, name),
       formula,
       
-      DBI::dbQuoteIdentifier(con, paste0(name, ".f")),
+      sqlquote(con, paste0(name, ".f")),
       f_sql,
       
-      DBI::dbQuoteIdentifier(con, paste0(name, ".a")),
+      sqlquote(con, paste0(name, ".a")),
       a_sql
     )
     
@@ -192,7 +192,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     if(post_moving_average){
       
       n_sql <- paste0(
-        DBI::dbQuoteIdentifier(
+        sqlquote(
           con,
           paste0(included_columns, ".n")
         ),
@@ -207,7 +207,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "SET %s = GREATEST(%s)"
           ),
           table_sql,
-          DBI::dbQuoteIdentifier(con, paste0(name, ".n")),
+          sqlquote(con, paste0(name, ".n")),
           n_sql
         )
       )
@@ -226,10 +226,10 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
           "OR %s IS NULL"
         ),
         table_sql,
-        DBI::dbQuoteIdentifier(con, name),
-        DBI::dbQuoteIdentifier(con, paste0(name, ".f")),
-        DBI::dbQuoteIdentifier(con, name),
-        DBI::dbQuoteIdentifier(con, name)
+        sqlquote(con, name),
+        sqlquote(con, paste0(name, ".f")),
+        sqlquote(con, name),
+        sqlquote(con, name)
       )
     )
   }
@@ -248,7 +248,7 @@ add_crude_rate <- function(con, tablename){
     print_console_message("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
-  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  tbl_sql <- sqlquote(con, tablename)
   sql_addcols <- sprintf(
     'ALTER TABLE %s ADD COLUMN IF NOT EXISTS RATE DOUBLE;
     ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.f" INTEGER;

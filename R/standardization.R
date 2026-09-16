@@ -89,22 +89,21 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
   missyears <- parameters$MOVAV$missyears
   merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
   standardkube_name <- "STANDARD_KUBE"
-  standardkube_sql <- DBI::dbQuoteIdentifier(con, standardkube_name)
-  tmp_tbl_sql <- DBI::dbQuoteIdentifier(con, gentable)
+  if(!is_duckdb_table(con, standardkube_name)) stop("Prøver å standardisere, men STANDARD_KUBE har ikke blitt skrevet til duckdb")
   
-  aar_exist <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl AS AAR FROM %s", standardkube_sql))$AAR
+  aar_exist <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl AS AAR FROM %s", sqlquote(con, standardkube_name)))$AAR
   if(missyears$n > 0 && any(missyears$years %in% aar_exist)){
     problem <- intersect(missyears$years, aar_exist)
     warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 
             "\n*** Dette vil påvirke landsraten i standardiseringsperioden!\n--\n", immediate. = TRUE)
-    sql <- sprintf('DELETE FROM %s WHERE AARl IN (%s)', standardkube_sql, paste(missyears$years, collapse = ", "))
+    sql <- sprintf('DELETE FROM %s WHERE AARl IN (%s)', sqlquote(con, standardkube_name), paste(missyears$years, collapse = ", "))
     invisible(DBI::dbExecute(con, sql))
   }
   
   aggregate_to_periods_duckdb(tablename = standardkube_name, parameters = parameters)
   allcols <- DBI::dbListFields(con, standardkube_name)
   dims <- setdiff(get_dimension_columns(allcols), parameters$PredFilter$Predfiltercolumns)
-  dims_sql <- DBI::dbQuoteIdentifier(con, dims)
+  dims_sql <- sqlquote(con, dims)
   
   sql_generate <- sprintf(
     'CREATE TABLE %s AS 
@@ -126,7 +125,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
       WHEN TELLER IS NULL OR NEVNER IS NULL THEN 1 ELSE 0
     END AS ukurant
     FROM %s',
-    tmp_tbl_sql, paste(dims_sql, collapse = ", "), standardkube_sql)
+    sqlquote(con, gentable), paste(dims_sql, collapse = ", "), sqlquote(con, standardkube_name))
   
   invisible(DBI::dbExecute(con, sql_generate))
   
@@ -141,15 +140,13 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
     for(dim in dims){print_console_message(paste0("- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))}
   }
   
-  cleanup_tmp <- paste0(gentable, "__tmp")
-  drop_tables_duckdb(con, cleanup_tmp)
-  cleanup_tmp_sql <- DBI::dbQuoteIdentifier(con, cleanup_tmp)
+  tmp_gentable <- prepare_tmp_result_table(con, gentable)
   
   sql_cleanup <- sprintf(
-  'CREATE OR REPLACE TABLE %s AS SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
-  cleanup_tmp_sql, paste(dims_sql, collapse = ", "), tmp_tbl_sql)
+  'CREATE TABLE %s AS SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
+  sqlquote(con, tmp_gentable), paste(dims_sql, collapse = ", "), sqlquote(con, gentable))
   invisible(DBI::dbExecute(con, sql_cleanup))
-  replace_table_duckdb(con, target = gentable, source = cleanup_tmp)
+  replace_table_duckdb(con, target = gentable, source = tmp_gentable)
   invisible(NULL)
 }
 
@@ -160,9 +157,9 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
 generate_tmp_prednevner <- function(con, gentable, design, parameters){
   print_console_message("\n* Henter ut NEVNER som grunnlag for PREDTELLER\n")
   missyears <- parameters$MOVAV$missyears
-  tmp_prednevner_sql <- DBI::dbQuoteIdentifier(con, gentable)
+  tmp_prednevner_sql <- sqlquote(con, gentable)
   prednevnerfile <- parameters$files$PREDNEVNER
-  prednevnerfile_sql <- DBI::dbQuoteIdentifier(con, prednevnerfile)
+  prednevnerfile_sql <- sqlquote(con, prednevnerfile)
   
   # UBRUKT KOLONNE, BRUKER ALLTID NEVNER, aldri PREDNEVNERFIL/PREDNEVNERCOL
   prednevner_col <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
@@ -170,10 +167,10 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
   
   allcols <- DBI::dbListFields(con, prednevnerfile_sql)
   dims <- get_dimension_columns(allcols)
-  dims_sql <- DBI::dbQuoteIdentifier(con, dims)
+  dims_sql <- sqlquote(con, dims)
   pred_cols <- grep(sprintf("^%s(\\.f|.a|)$", prednevner_col),allcols, value = TRUE)
   rename_cols <- gsub(sprintf("^%s(\\.f|.a|)$", prednevner_col),"PREDNEVNER\\1",pred_cols)
-  predvalue_sql <- sprintf("%s AS %s", DBI::dbQuoteIdentifier(con, pred_cols), DBI::dbQuoteIdentifier(con, rename_cols))
+  predvalue_sql <- sprintf("%s AS %s", sqlquote(con, pred_cols), sqlquote(con, rename_cols))
   
   sql_generate <- sprintf("CREATE TABLE %s AS SELECT %s, %s FROM %s", 
                           tmp_prednevner_sql, 
@@ -197,18 +194,18 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
 
 generate_tmp_predteller <- function(con, tables, parameters){
   print_console_message("\n* Beregner PREDTELLER\n")
-  tmp_predrate_sql <- DBI::dbQuoteIdentifier(con, tables[["PREDRATE"]])
-  tmp_prednevner_sql <- DBI::dbQuoteIdentifier(con, tables[["PREDNEVNER"]])
-  tmp_predteller_sql <- DBI::dbQuoteIdentifier(con, tables[["PREDTELLER"]])
+  tmp_predrate_sql <- sqlquote(con, tables[["PREDRATE"]])
+  tmp_prednevner_sql <- sqlquote(con, tables[["PREDNEVNER"]])
+  tmp_predteller_sql <- sqlquote(con, tables[["PREDTELLER"]])
   
   predrate_dims <- get_dimension_columns(DBI::dbListFields(con, tables[["PREDRATE"]]))
   prednevner_dims <- get_dimension_columns(DBI::dbListFields(con, tables[["PREDNEVNER"]]))
-  commondims <- DBI::dbQuoteIdentifier(con, intersect(prednevner_dims, predrate_dims))
+  commondims <- sqlquote(con, intersect(prednevner_dims, predrate_dims))
   
   all_dims <- union(prednevner_dims, predrate_dims)
   dim_select <- c(
-    sprintf("pn.%s", DBI::dbQuoteIdentifier(con, intersect(all_dims, prednevner_dims))),
-    sprintf("pr.%s", DBI::dbQuoteIdentifier(con, setdiff(all_dims, prednevner_dims)))
+    sprintf("pn.%s", sqlquote(con, intersect(all_dims, prednevner_dims))),
+    sprintf("pr.%s", sqlquote(con, setdiff(all_dims, prednevner_dims)))
   )
   
   join_condition <- paste(sprintf("pn.%s = pr.%s", commondims, commondims),collapse = "\n  AND ")
@@ -252,7 +249,7 @@ add_meisskala <- function(parameters){
   print_console_message("* Legger til MEISskala for standardisering\n")
   
   con <- parameters$duck
-  tbl_sql <- DBI::dbQuoteIdentifier(con, "KUBE")
+  tbl_sql <- sqlquote(con, "KUBE")
   
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
     sql <- sprintf('ALTER TABLE %s 
@@ -263,7 +260,7 @@ add_meisskala <- function(parameters){
   }
   
   subset_table <- "tmp_meisskala"
-  subset_sql <- DBI::dbQuoteIdentifier(con, subset_table)
+  subset_sql <- sqlquote(con, subset_table)
   drop_tables_duckdb(con, subset_table)
   
   filter_sql <- r_filter_to_sql(parameters$PredFilter$meisskalafilter)
@@ -276,7 +273,7 @@ add_meisskala <- function(parameters){
   
   subset_cols <- DBI::dbListFields(con, subset_table)
   
-  joincolumns <- DBI::dbQuoteIdentifier(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
+  joincolumns <- sqlquote(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
                                                      parameters$PredFilter$Predfiltercolumns))
   
   join_sql <- paste(sprintf("k.%s = m.%s", joincolumns, joincolumns), collapse = "\n AND ")

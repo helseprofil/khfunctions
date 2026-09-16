@@ -7,9 +7,9 @@
 do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = TRUE){
     
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
-                                       DBI::dbQuoteIdentifier(con, tablename))))
+                                       sqlquote(con, tablename))))
   cols <- DBI::dbListFields(con, tablename)
-  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  table_sql <- sqlquote(con, tablename)
   
   nharm <- DBI::dbGetQuery(con,sprintf(
       paste("SELECT COUNT(DISTINCT f.GEO) AS n",
@@ -20,23 +20,21 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
   
   if(nharm > 0){
     print_console_message(paste0("\n*** Recoding ", nharm, " geo-koder"))
-    cols_sql <- DBI::dbQuoteIdentifier(con, setdiff(cols, "GEO"))
+    cols_sql <- sqlquote(con, setdiff(cols, "GEO"))
 
     select_sql <- paste(c("COALESCE(k.GEO_omk, f.GEO) AS GEO",
                           paste0("f.",cols_sql)), collapse = ", ")
   
-    result_tmp <- paste0(tablename, "__tmp")
-    drop_tables_duckdb(con, result_tmp)
-    result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
+    tmp_result <- prepare_tmp_result_table(con, tablename)
     
     sql <- sprintf(
-      paste("CREATE OR REPLACE TABLE %s AS",
+      paste("CREATE TABLE %s AS",
             "SELECT %s FROM %s f",
             "LEFT JOIN KnrHarm k ON f.GEO = k.GEO"),
-      result_tmp_sql, select_sql, table_sql)
+      sqlquote(con, tmp_result), 
+      select_sql, table_sql)
     invisible(DBI::dbExecute(con, sql))
-    
-    replace_table_duckdb(con, target = tablename, source = result_tmp)
+    replace_table_duckdb(con, target = tablename, source = tmp_result)
   } else {
     print_console_message(paste0("\n*** Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
@@ -53,7 +51,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
 #' @family duckdb
 #' @noRd 
 add_fylke_duckdb <- function(con, tablename){
-  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  table_sql <- sqlquote(con, tablename)
   
   DBI::dbExecute(con, sprintf("ALTER TABLE %s ADD COLUMN FYLKE VARCHAR",table_sql))
   

@@ -40,8 +40,12 @@ is_duckdb_table <- function(con, tablename){
   DBI::dbIsValid(con) && tablename %in% DBI::dbListTables(con)
 }
 
+#' @title drop_tables_duckdb
+#' @description drops tables if they exist
+#' @keywords duckdb
+#' @noRd
 drop_tables_duckdb <- function(con, tables){
-  tables <- DBI::dbQuoteIdentifier(con, tables)
+  tables <- sqlquote(con, tables)
   sql <- paste(
     sprintf("DROP TABLE IF EXISTS %s", tables),
     collapse = ";\n"
@@ -63,13 +67,39 @@ drop_tables_duckdb_prefix <- function(con, prefix){
   invisible(NULL)
 }
 
+#' @description genererer navn til tmp_tabell for midlertidige resultater
+#' @family duckdb
+#' @noRd
+set_tmp_result_table_name <- function(table){
+  sprintf("%s___tmp_result", table)
+}
+
+#' @description genererer navn til tmp_tabell for midlertidige resultater. Sletter tabellen om den finnes.
+#' @family duckdb
+#' @noRd
+prepare_tmp_result_table <- function(con, table){
+  tmp_table <- set_tmp_result_table_name(table)
+  
+  if(DBI::dbExistsTable(con, tmp_table)){
+      warning(sprintf("Tmp-tabellen '%s' fantes allerede og ble slettet",tmp_table))
+  }
+  drop_tables_duckdb(con, tmp_table)
+  
+  tmp_table
+}
+
+#' @description wrapper rundt dbquoteidentifier, for renere kode da denne brukes mange steder
+#' @noRd
+sqlquote <- function(con, x){
+  DBI::dbQuoteIdentifier(con, x)
+}
 
 #' @title replace_table_duckdb
 #' @description
 #' Erstatter en tabell med en annen i duckdb. Ved bearbeiding av en tabell kan resultatet
 #' skrives til en tmp-tabell, og så kan hovedtabellen erstattes med denne etterpå. Da slipper
-#' vi CREATE TABLE TABELL AS SELECT * FROM TABELL ..., altså å overskrive tabellen med seg selv. Vi kan 
-#' i stedet bruke CREATE TABLE tmp AS SELECT * FROM TABELL, og deretter bruke 
+#' vi CREATE TABLE TABELL AS SELECT * FROM TABELL ..., altså å overskrive tabellen med seg selv som kan være ustabilt. 
+#' Vi kan i stedet bruke CREATE TABLE tmp AS SELECT * FROM TABELL, og deretter bruke 
 #' replace_table_duckdb(con, target = TABELL, source = tmp). Dette vil først generere ny tabell
 #' tmp, og deretter erstatte originaltabellen med denne. 
 #' @family duckdb
@@ -81,9 +111,10 @@ replace_table_duckdb <- function(con, target, source){
   stopifnot(DBI::dbExistsTable(con, source))
 
   backup <- paste0(target, "__replace__table__backup")
-  backup_sql <- DBI::dbQuoteIdentifier(con, backup)
-  target_sql <- DBI::dbQuoteIdentifier(con, target)
-  source_sql <- DBI::dbQuoteIdentifier(con, source)
+  on.exit(drop_tables_duckdb(con, backup), add =)
+  backup_sql <- sqlquote(con, backup)
+  target_sql <- sqlquote(con, target)
+  source_sql <- sqlquote(con, source)
   
   drop_tables_duckdb(con, backup)
   
@@ -91,8 +122,6 @@ replace_table_duckdb <- function(con, target, source){
     DBI::dbExecute(con, sprintf("ALTER TABLE %s RENAME TO %s", target_sql, backup_sql))
     DBI::dbExecute(con, sprintf("ALTER TABLE %s RENAME TO %s", source_sql, target_sql))
   })
-  
-  drop_tables_duckdb(con, backup)
   
   invisible(NULL)
 }
@@ -117,7 +146,7 @@ fetch_duckdb_table <- function(con, tablename){
   if(!exist) stop(tablename, " finnes ikke i duckdb")
   dt <- DBI::dbGetQuery(con, 
                         sprintf("SELECT * FROM %s", 
-                                DBI::dbQuoteIdentifier(con, tablename))
+                                sqlquote(con, tablename))
                         )
   data.table::setDT(dt)
 }
@@ -161,13 +190,13 @@ convert_duckdb_cols_to_string <- function(con, table_name) {
            WHERE %1$s IS NOT NULL
              AND %1$s <> FLOOR(%1$s)
          ) = 0 AS c%2$s",
-        DBI::dbQuoteIdentifier(con, cols_to_convert),
+        sqlquote(con, cols_to_convert),
         seq_along(cols_to_convert)
       ),
       collapse = ",\n"
     ),
     "\nFROM ",
-    DBI::dbQuoteIdentifier(con, table_name)
+    sqlquote(con, table_name)
   )
   
   check_res <- DBI::dbGetQuery(con, check_sql)
@@ -175,16 +204,16 @@ convert_duckdb_cols_to_string <- function(con, table_name) {
   
   for(col in integer_like_cols) {
     DBI::dbExecute(con, sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE BIGINT",
-                                DBI::dbQuoteIdentifier(con, table_name),
-                                DBI::dbQuoteIdentifier(con, col)))
+                                sqlquote(con, table_name),
+                                sqlquote(con, col)))
   }
   
   # Konverter ALLE cols_to_convert til varchar
   
   for(col in cols_to_convert) {
     DBI::dbExecute(con, sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE VARCHAR",
-                                DBI::dbQuoteIdentifier(con, table_name),
-                                DBI::dbQuoteIdentifier(con, col)))
+                                sqlquote(con, table_name),
+                                sqlquote(con, col)))
   }
  
   invisible(NULL)

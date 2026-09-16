@@ -10,14 +10,15 @@
 read_original_file <- function(filedescription, parameters, dumps = list()){
   print_console_message("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
+  outtable <- "temp_orgfile"
   switch(toupper(filedescription$FORMAT),
-         "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = parameters$duck),
-         "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
-         "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
-         "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck),
+         "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = parameters$duck, outtable = outtable),
+         "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
+         "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
+         "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
          "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck))
   
-  invisible(DBI::dbExecute(parameters$duck, "ALTER TABLE temp_orgfile DROP COLUMN IF EXISTS LEVEL"))
+  invisible(DBI::dbExecute(parameters$duck, sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS LEVEL", outtable)))
   invisible(NULL)
 }
 
@@ -57,9 +58,10 @@ format_innlesarg_as_list <- function(args){
 #' Reads .parquet files. As orgfiles must be read as character only, read_parquet cannot be used here.
 #' @keywords internal
 #' @noRd
-do_read_org_parquet <- function(filedescription, con){
+do_read_org_parquet <- function(filedescription, con, outtable){
   path <- normalizePath(filedescription$filepath, winslash = "/")
-  sql <- sprintf("CREATE OR REPLACE TABLE temp_orgfile AS SELECT * FROM read_parquet('%s')", path)
+  drop_tables_duckdb(con, outtable)
+  sql <- sprintf("CREATE TABLE %s AS SELECT * FROM read_parquet('%s')", sqlquote(con, outtable), path)
   tryCatch(
     invisible(DBI::dbExecute(con, sql)),
     error = function(e) {
@@ -70,17 +72,19 @@ do_read_org_parquet <- function(filedescription, con){
 }
 
 #' @noRd
-do_read_org_spss <- function(filedescription, con){
+do_read_org_spss <- function(filedescription, con, outtable){
+  drop_tables_duckdb(con, outtable)
   file <-try(foreign::read.spss(file = filedescription$filepath, use.value.labels = FALSE, max.value.labels = 0, as.data.frame = T), silent = T)
   if(inherits(file, "try-error")) stop("Error when reading file: ", filedescription$FILNAVN)
   data.table::setDT(file)
   repair_colnames(file)
-  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
+  write_duckdb_table(con = con, tablename = outtable, data = file)
   invisible(gc())
 }
 
 #' @noRd
-do_read_org_csv <- function(filedescription, read_arg_list, con){
+do_read_org_csv <- function(filedescription, read_arg_list, con, outtable){
+  drop_tables_duckdb(con, outtable)
   if(is_not_empty(read_arg_list$encoding) && read_arg_list$encoding == "latin1") read_arg_list$encoding <- "Latin-1"
   sep <- ifelse("sep" %in% names(read_arg_list), read_arg_list$sep, ";")
   encoding <- ifelse("encoding" %in% names(read_arg_list), read_arg_list$encoding, "unknown")
@@ -94,7 +98,7 @@ do_read_org_csv <- function(filedescription, read_arg_list, con){
   }
   
   repair_colnames(file)
-  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
+  write_duckdb_table(con = con, tablename = outtable, data = file)
   invisible(gc())
 }
 
@@ -136,7 +140,8 @@ try_fix_invalid_utf8 <- function(dt){
 }
 
 #' @noRd
-do_read_org_excel <- function(filedescription, read_arg_list, con){
+do_read_org_excel <- function(filedescription, read_arg_list, con, outtable){
+  drop_tables_duckdb(con, outtable)
   sheets <- gsub("\'|\\$", "", readxl::excel_sheets(filedescription$filepath))
   sheet <- sheets[1]
   if(is_not_empty(read_arg_list$ark)){
@@ -147,7 +152,7 @@ do_read_org_excel <- function(filedescription, read_arg_list, con){
   data.table::setDT(file)
   file <- do.call(format_excel_and_csv_files, c(list(file = file, filedescription = filedescription), read_arg_list))
   repair_colnames(file)
-  write_duckdb_table(con = parameters$duck, tablename = "temp_orgfile", data = file)
+  write_duckdb_table(con = con, tablename = outtable, data = file)
   invisible(gc())
 }
 

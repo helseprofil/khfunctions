@@ -59,8 +59,8 @@ set_manheader_duckdb <- function(manheader, con){
   
   for(i in seq_along(old)){
     invisible(DBI::dbExecute(con,sprintf("ALTER TABLE temp_orgfile RENAME COLUMN %s TO %s",
-                                         DBI::dbQuoteIdentifier(con, old[i]),
-                                         DBI::dbQuoteIdentifier(con, new[i]))))
+                                        sqlquote(con, old[i]),
+                                        sqlquote(con, new[i]))))
   }
 }
 
@@ -114,8 +114,8 @@ give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
   
   for(i in seq_along(old)){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile RENAME COLUMN %s TO %s",
-                                          DBI::dbQuoteIdentifier(con, old[i]),
-                                          DBI::dbQuoteIdentifier(con, new[i]))))
+                                         sqlquote(con, old[i]),
+                                         sqlquote(con, new[i]))))
   }
 }
 
@@ -137,7 +137,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
   
   for(col in cols_remove){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s",
-                                          DBI::dbQuoteIdentifier(con, col))))
+                                         sqlquote(con, col))))
   }
   invisible(NULL)
 }
@@ -160,7 +160,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
   if(!is.null(cols$measure) && !all(cols$measure %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
   if(length(cols$measure) == 0) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
   
-  measure_sql <- paste(DBI::dbQuoteIdentifier(con, cols$measure), collapse = ", ")
+  measure_sql <- paste(sqlquote(con, cols$measure), collapse = ", ")
   
   out_cols <- c(cols$id, cols$var, cols$val)
   if(anyDuplicated(out_cols) > 0) stop("RESHAPE genererer dublerte kolonnenavn")
@@ -168,13 +168,13 @@ do_reshape_var_duckdb <- function(filedescription, con){
   select_sql <- paste(
     sprintf(
       "\nCAST(%s AS VARCHAR) AS %s",
-      DBI::dbQuoteIdentifier(con, out_cols),
-      DBI::dbQuoteIdentifier(con, out_cols)
+     sqlquote(con, out_cols),
+     sqlquote(con, out_cols)
     ),
     collapse = ","
   )
   
-  sql <- sprintf("CREATE OR REPLACE TABLE temp_orgfile_reshape 
+  sql <- sprintf("CREATE TABLE temp_orgfile_reshape 
                  AS SELECT %s 
                  FROM (
                   SELECT * 
@@ -182,14 +182,13 @@ do_reshape_var_duckdb <- function(filedescription, con){
                   UNPIVOT INCLUDE NULLS (%s FOR %s IN (%s))
                  )",
                  select_sql,
-                 DBI::dbQuoteIdentifier(con, cols$val),
-                 DBI::dbQuoteIdentifier(con, cols$var),
+                 sqlquote(con, cols$val),
+                 sqlquote(con, cols$var),
                  measure_sql
   )
   
   invisible(DBI::dbExecute(con, sql))
-  drop_tables_duckdb(con, "temp_orgfile")
-  invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile_reshape RENAME TO temp_orgfile"))
+  replace_table_duckdb(con, target = "temp_orgfile", source = "temp_orgfile_reshape")
   invisible(NULL)
 }
 
@@ -226,7 +225,7 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
   if(length(cols_to_add) > 0){
     for(col in cols_to_add){
       DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR DEFAULT %s",
-                                  as.character(DBI::dbQuoteIdentifier(con, col)),
+                                  as.character(sqlquote(con, col)),
                                   as.character(DBI::dbQuoteString(con, default[[col]][1]))))
     }
   }
@@ -234,7 +233,7 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
   if(length(cols_to_update) > 0){
     set_clause <- paste(vapply(cols_to_update, function(col) {
       sprintf("%s = %s", 
-              as.character(DBI::dbQuoteIdentifier(con, col)),
+              as.character(sqlquote(con, col)),
               as.character(DBI::dbQuoteString(con, default[[col]][1]))
           )
         },
@@ -258,7 +257,7 @@ drop_unwanted_columns_duckdb <- function(con){
   if(length(cols_to_drop) == 0) return(invisible(NULL))
   
   for (col in cols_to_drop) {
-    DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s", as.character(DBI::dbQuoteIdentifier(con, col))))
+    DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s", as.character(sqlquote(con, col))))
   }
   invisible(NULL)
 }
@@ -271,8 +270,8 @@ drop_unwanted_columns_duckdb <- function(con) {
   cols <- DBI::dbListFields(con, "temp_orgfile")
   
   set_clause <- paste(sprintf("%s = COALESCE(%s, '')",
-                              DBI::dbQuoteIdentifier(con, cols),
-                              DBI::dbQuoteIdentifier(con, cols)),
+                             sqlquote(con, cols),
+                             sqlquote(con, cols)),
                       collapse = ", ")
   
   DBI::dbExecute(con, sprintf("UPDATE temp_orgfile SET %s", set_clause))
@@ -317,7 +316,7 @@ append_temp_orgfil_to_filgruppe <- function(con){
     if(length(missing_cols) > 0) {
       for(col in missing_cols) {
         invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN %s VARCHAR default ''", 
-                                              as.character(DBI::dbQuoteIdentifier(con, col)))))
+                                              as.character(sqlquote(con, col)))))
       }
     }
   }
@@ -325,7 +324,7 @@ append_temp_orgfil_to_filgruppe <- function(con){
   missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
   for(col in missing_in_temp_orgfile){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 
-                                          as.character(DBI::dbQuoteIdentifier(con, col)))))
+                                          as.character(sqlquote(con, col)))))
   }
   
   invisible(DBI::dbExecute(con, "INSERT INTO FILGRUPPE BY NAME SELECT * FROM temp_orgfile"))

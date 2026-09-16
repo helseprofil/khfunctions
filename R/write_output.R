@@ -130,15 +130,14 @@ sort_bef_gkny_duckdb <- function(con){
   sortdims <- union(sort, dims)
   sortdims_sql <- paste(sortdims, collapse = ", ")
   
-  sql <- sprintf(
-    "CREATE OR REPLACE TABLE FILGRUPPE AS
-    SELECT *
-    FROM FILGRUPPE
-    ORDER BY %s",
-    sortdims_sql
-  )
+  orgtabell <- "FILGRUPPE"
+  tmp_tabell <- prepare_tmp_result_table(con, orgtabell)
+  
+  sql <- sprintf("CREATE TABLE %s AS SELECT * FROM %s ORDER BY %s", 
+                 sqlquote(con, tmp_tabell), sqlquote(con, orgtabell), sortdims_sql)
   
   invisible(DBI::dbExecute(con, sql))
+  replace_table_duckdb(con, target = orgtabell, source = tmp_tabell)
 }
 
 

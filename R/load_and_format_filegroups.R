@@ -152,7 +152,7 @@ set_filter_age_sql <- function(con, parameters){
         "for å sikre ønsket avgrensning."
       )
       a <- DBI::dbGetQuery(con, paste0("SELECT MIN(ALDERl) as min, MAX(ALDERh) as max FROM ", 
-                                       DBI::dbQuoteIdentifier(con, tellerfile)))
+                                       sqlquote(con, tellerfile)))
       amin <- a$min
       amax <- a$max
     } else {
@@ -195,7 +195,7 @@ set_filter_year_sql <- function(con, parameters){
   isduck <- is_duckdb_table(con = con, tablename = tellerfile)
   if(isduck && "AARl" %in% DBI::dbListFields(con, tellerfile)){
     min_teller_aar <- DBI::dbGetQuery(con, paste0("SELECT MIN(AARl) FROM ", 
-                                                  DBI::dbQuoteIdentifier(con, tellerfile)))[[1]]
+                                                  sqlquote(con, tellerfile)))[[1]]
   }
   
   min_aar <- max(aarstart, min_teller_aar, na.rm = TRUE)
@@ -246,7 +246,7 @@ identify_readcols <- function(allcols, bef = FALSE,  parameters){
 #' (if all needed levels are present and not have to be aggregated from sublevels)
 #' @noRd
 do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
-  tab_sql <- DBI::dbQuoteIdentifier(con, filegroup)
+  tab_sql <- sqlquote(con, filegroup)
   allcols <- DBI::dbListFields(con, filegroup)
   filters <- character()
   filtercols <- character()
@@ -254,34 +254,33 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
     if(!dim %in% allcols) next
     keep <- trimws(strsplit(cubeinformation[[dim]], ",", fixed = TRUE)[[1]])
     exist <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT %s FROM %s", 
-                             DBI::dbQuoteIdentifier(con, dim), tab_sql))[[1]]
+                             sqlquote(con, dim), tab_sql))[[1]]
     
    
     if(all(keep %in% exist) && any(!exist %in% keep)){
       keep_sql <- paste0("'",keep,"'",collapse = ", ")
       filters <- c(filters,
                    sprintf("%s IN (%s)",
-                           DBI::dbQuoteIdentifier(con, dim),keep_sql))
+                           sqlquote(con, dim),keep_sql))
       filtercols <- c(filtercols, dim)
     }
   }
   
   if(length(filters) == 0) return(invisible(NULL))
   
-  table_tmp <- paste0(filegroup, "__tmp")
-  drop_tables_duckdb(con, table_tmp)
-  table_tmp_sql <- DBI::dbQuoteIdentifier(con, table_tmp)
+  tmp_filegroup <- prepare_tmp_result_table(filegroup)
   
   sql <- sprintf(
-    "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE %s",
-    table_tmp_sql, tab_sql,  paste(filters, collapse = " AND "))
+    "CREATE TABLE %s AS SELECT * FROM %s WHERE %s",
+    sqlquote(con, tmp_filegroup), 
+    tab_sql, paste(filters, collapse = " AND "))
   print_console_message(sprintf("\nFiltrerer filen på %s:\n- %s", 
                                 paste(filtercols, collapse = ", "), 
                                 paste(filters, collapse = "\n-")))
   
   n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   invisible(DBI::dbExecute(con, sql))
-  replace_table_duckdb(con, target = filegroup, source = table_tmp)
+  replace_table_duckdb(con, target = filegroup, source = tmp_filegroup)
   n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
   invisible(NULL)
@@ -296,14 +295,12 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
 #' @param readcols vector of columns to read
 #' @noRd
 read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readcols){
-  tab_sql <- as.character(DBI::dbQuoteIdentifier(con, tablename))
-  cols_sql <- paste(DBI::dbQuoteIdentifier(con, readcols), collapse = ", ")
+  tab_sql <- as.character(sqlquote(con, tablename))
+  cols_sql <- paste(sqlquote(con, readcols), collapse = ", ")
   
-  sql <- sprintf("CREATE OR REPLACE TABLE %s AS SELECT %s
-                 FROM read_parquet(%s)", 
-                 tab_sql, 
-                 cols_sql,
-                 DBI::dbQuoteString(con, filepath))
+  drop_tables_duckdb(con, tablename)
+  sql <- sprintf("CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)", 
+                 tab_sql, cols_sql, DBI::dbQuoteString(con, filepath))
   
   if(is_not_empty(filter)) sql <- paste0(sql, "\nWHERE ", filter) 
   
@@ -344,14 +341,14 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
   parts <- trimws(strsplit(parts, ",", fixed = TRUE)[[1]])
   columns <- as.character(unlist(parameters$DefDesign$DelKolsF[parts]))
   totals <- as.character(unlist(parameters$TotalKoder[parts]))
-  tab_sql <- as.character(DBI::dbQuoteIdentifier(con, filegroup))
+  tab_sql <- as.character(sqlquote(con, filegroup))
   
   for(i in seq_along(columns)){
     
     exists_total <- DBI::dbGetQuery(con,
                                     sprintf("SELECT * FROM %s WHERE %s = '%s' LIMIT 1", 
                                             tab_sql, 
-                                            DBI::dbQuoteIdentifier(con, columns[i]), 
+                                            sqlquote(con, columns[i]), 
                                             totals[i]))
     
     if(nrow(exists_total) > 0){
@@ -361,7 +358,7 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
       }
   }
   
-  updatecols <- DBI::dbQuoteIdentifier(con, columns)
+  updatecols <- sqlquote(con, columns)
   updatetotals <- DBI::dbQuoteString(con, totals)
   
   set_sql <- sprintf("%s = %s", 
@@ -417,34 +414,24 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   invisible(DBI::dbExecute(con, rectangularize_sql))
   
   join_cols <- intersect(DBI::dbListFields(con, rect_table), DBI::dbListFields(con, tablename))
-  join_cols_sql <- paste(DBI::dbQuoteIdentifier(con, join_cols), collapse = ", ")
+  join_cols_sql <- paste(sqlquote(con, join_cols), collapse = ", ")
   
   table_cols <- setdiff(DBI::dbListFields(con, tablename), join_cols)
-  table_cols_sql <- paste(sprintf("f.%s", DBI::dbQuoteIdentifier(con, table_cols)),
-                          collapse = ",\n")
+  table_cols_sql <- paste(sprintf("f.%s", sqlquote(con, table_cols)),collapse = ",\n")
   
-  result_tmp <- paste0(tablename, "__tmp")
-  drop_tables_duckdb(con, result_tmp)
-  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
-  tab_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  tmp_result <- prepare_tmp_result_table(con, tablename)
   
   merge_sql <- sprintf(
-    "CREATE OR REPLACE TABLE %s AS
-    SELECT r.*, %s
-    FROM tmp_rectangularized r
-    LEFT JOIN %s f USING (%s)",
-    result_tmp_sql,
-    table_cols_sql,
-    tab_sql,
-    join_cols_sql
+    "CREATE TABLE %s AS SELECT r.*, %s
+    FROM tmp_rectangularized r LEFT JOIN %s f USING (%s)",
+    sqlquote(con, tmp_result), table_cols_sql, sqlquote(con, tablename), join_cols_sql
   )
   
-  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
+  n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", sqlquote(con, tablename)))$N
   invisible(DBI::dbExecute(con, merge_sql))
-  replace_table_duckdb(con, target = tablename, source = result_tmp)
-  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
+  replace_table_duckdb(con, target = tablename, source = tmp_result)
+  n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", sqlquote(con, tablename)))$N
   print_console_message(sprintf("- %s -> %s rader", n_before, n_after))
-  
   
   set_implicit_null_after_merge_duckdb(table = tablename, implicitnull_defs = vals, con = con)
   invisible(NULL)
@@ -460,20 +447,19 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
 add_leadyear_befvekst_duckdb <- function(con, tablename){
   tmp_table <- "tmp_leadyear_befvekst"
   on.exit(drop_tables_duckdb(con, tmp_table), add = TRUE)
-  
-  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
-  tmp_tbl_sql <- DBI::dbQuoteIdentifier(con, tmp_table)
+  drop_tables_duckdb(con, tmp_table)
   
   print_console_message("\n*** Legger til ledeår for å beregne befolkningsvekst")
   table_cols <- DBI::dbListFields(con, tablename)
   dims <- get_dimension_columns(table_cols)
-  dims_sql <- DBI::dbQuoteIdentifier(con, dims)
+  dims_sql <- sqlquote(con, dims)
   
   create_sql <- sprintf(
-  "CREATE OR REPLACE TEMP TABLE %s AS
+  "CREATE TEMP TABLE %s AS 
     SELECT * EXCLUDE (AARl, AARh), AARl - 1 AS AARl, AARh - 1 AS AARh
   FROM %s",
-  tmp_tbl_sql, tbl_sql)
+  sqlquote(con, tmp_table), 
+  sqlquote(con, tablename))
   invisible(DBI::dbExecute(con, create_sql))
   
   dup_sql <- sprintf(
@@ -483,33 +469,30 @@ add_leadyear_befvekst_duckdb <- function(con, tablename){
       FROM %s GROUP BY %s
     ) count_table",
     paste(dims_sql, collapse = ", "),
-    tmp_tbl_sql,
+    sqlquote(con, tmp_table),
     paste(dims_sql, collapse = ", ")
   )
   
   max_n <- DBI::dbGetQuery(con, dup_sql)$N
   if(is.na(max_n) || max_n != 1) stop("Data for ledeår er ikke unike (eller gir tom tabell) etter forskyving av AARl og AARh")
   
-  result_tmp <- paste0(tablename, "__tmp")
-  drop_tables_duckdb(con, result_tmp)
-  result_tmp_sql <- DBI::dbQuoteIdentifier(con, result_tmp)
-  
   join_sql <- paste(sprintf("t.%s = y.%s", dims_sql, dims_sql), collapse = "\n  AND ")
   
+  tmp_result <- prepare_tmp_result_table(con, tablename)
+  
   merge_sql <- sprintf(
-    "CREATE OR REPLACE TABLE %s AS
-    SELECT t.*, y.BEF0101 AS Yp1_A_BEF0101, y.%s AS %s, y.%s AS %s
-    FROM %s t 
-    LEFT JOIN %s y ON %s",
-    result_tmp_sql,
-    DBI::dbQuoteIdentifier(con, "BEF0101.f"),
-    DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.f"),
-    DBI::dbQuoteIdentifier(con, "BEF0101.a"),
-    DBI::dbQuoteIdentifier(con, "Yp1_A_BEF0101.a"),
-    tbl_sql, tmp_tbl_sql, join_sql)
+    'CREATE TABLE %s AS SELECT t.*, 
+    y.BEF0101 AS Yp1_A_BEF0101, 
+    y."BEF0101.f" AS "Yp1_A_BEF0101.f", 
+    y."BEF0101.a" AS "Yp1_A_BEF0101.a"
+    FROM %s t LEFT JOIN %s y ON %s',
+    sqlquote(con, tmp_result), 
+    sqlquote(con, tablename), 
+    sqlquote(con, tmp_table), 
+    join_sql) 
   
   invisible(DBI::dbExecute(con, merge_sql))
-  replace_table_duckdb(con, target = tablename, source = result_tmp)
+  replace_table_duckdb(con, target = tablename, source = tmp_result)
   invisible(NULL)
 }
 

@@ -77,7 +77,7 @@ do_balance_missing_teller_nevner <- function(con, tablename){
   if (!all(c("TELLER", "NEVNER") %in% cols)) return(invisible(NULL))
   
   print_console_message("- Balanserer missing teller og nevner slik at sumNEVNER og sumTELLER er basert på likt antall år")
-  table_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  table_sql <- sqlquote(con, tablename)
   maxf <- 'GREATEST("TELLER.f", "NEVNER.f")'
   
   sql <- sprintf(
@@ -104,11 +104,8 @@ do_balance_missing_teller_nevner <- function(con, tablename){
 #' @param dt data
 #' @param parameters cube parameters
 do_aggregate_periods <- function(con, tablename, parameters){
-  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
-  tmp_tbl <- paste0(tablename, "_MOVAV")
-  tmp_tbl_sql <- DBI::dbQuoteIdentifier(con, tmp_tbl)
+  tbl_sql <- sqlquote(con, tablename)
   tmp_periods <- "tmp_movav_periods"
-  
   on.exit(drop_tables_duckdb(con = con, tables = tmp_periods), add = TRUE)
           
   period <- parameters$MOVAV$movav
@@ -122,7 +119,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   cols <- DBI::dbListFields(con, tablename)
   values <- get_value_columns(cols)
   dims <- get_dimension_columns(cols)
-  dims_no_year <- DBI::dbQuoteIdentifier(con, setdiff(dims,c("AARl", "AARh")))
+  dims_no_year <- sqlquote(con, setdiff(dims,c("AARl", "AARh")))
 
   # Bygge sql som velger og aggregerer kolonner, og setter år til periods$AARl/AARh
   select_parts <- c(
@@ -132,34 +129,36 @@ do_aggregate_periods <- function(con, tablename, parameters){
   )
   
   for(val in values){
-    val_sql <- DBI::dbQuoteIdentifier(con, val)
-    val_f <- DBI::dbQuoteIdentifier(con, paste0(val, ".f"))
-    val_a <- DBI::dbQuoteIdentifier(con, paste0(val, ".a"))
+    val_sql <- sqlquote(con, val)
+    val_f <- sqlquote(con, paste0(val, ".f"))
+    val_a <- sqlquote(con, paste0(val, ".a"))
     select_parts <- c(
       select_parts,
       sprintf('SUM(d.%s) AS %s', val_sql, val_sql),
       sprintf('0 AS %s', val_f),
       sprintf('SUM(d.%s) AS %s', val_a, val_a),
       sprintf('SUM(CASE WHEN d.%s IN (1,2) THEN 1 ELSE 0 END) AS %s',
-              val_f, DBI::dbQuoteIdentifier(con, paste0(val, ".fn1"))),
+              val_f, sqlquote(con, paste0(val, ".fn1"))),
       sprintf('SUM(CASE WHEN d.%s = 3 THEN 1 ELSE 0 END) AS %s',
-              val_f, DBI::dbQuoteIdentifier(con, paste0(val, ".fn3"))),
+              val_f, sqlquote(con, paste0(val, ".fn3"))),
       sprintf('SUM(CASE WHEN d.%s = 9 THEN 1 ELSE 0 END) AS %s',
-              val_f, DBI::dbQuoteIdentifier(con, paste0(val, ".fn9"))),
+              val_f, sqlquote(con, paste0(val, ".fn9"))),
       sprintf('SUM(CASE WHEN d.%s = 0 THEN 1 ELSE 0 END) AS %s',
-              val_f, DBI::dbQuoteIdentifier(con, paste0(val, ".n")))
+              val_f, sqlquote(con, paste0(val, ".n")))
     )
   }
   
   group_by <- c("p.AARl", "p.AARh", sprintf("d.%s", dims_no_year))
 
+  tmp_result <- prepare_tmp_result_table(con, tablename)
+  
   sql <- sprintf(
-    "CREATE OR REPLACE TABLE %s AS
+    "CREATE TABLE %s AS
     SELECT %s FROM %s d
     INNER JOIN %s p ON d.AARl >= p.AARl AND d.AARh <= p.AARh
     GROUP BY 
     %s",
-    tmp_tbl_sql,
+    sqlquote(con, tmp_result),
     paste(select_parts, collapse = ",\n"),
     tbl_sql,
     tmp_periods,
@@ -176,16 +175,16 @@ do_aggregate_periods <- function(con, tablename, parameters){
   missing_year <- parameters$MOVAV$missyears
   if (missing_year$n <= period) {
     for (val in values) {
-      val_sql <- DBI::dbQuoteIdentifier(con, val)
-      val_f <- DBI::dbQuoteIdentifier(con, paste0(val, ".f"))
-      val_fn9 <- DBI::dbQuoteIdentifier(con, paste0(val, ".fn9"))
+      val_sql <- sqlquote(con, val)
+      val_f <- sqlquote(con, paste0(val, ".f"))
+      val_fn9 <- sqlquote(con, paste0(val, ".fn9"))
       sql <- sprintf(
         "UPDATE %s
       SET
         %s = NULL,
         %s = 9
       WHERE %s > %s",
-        tmp_tbl_sql,
+        sqlquote(con, tmp_result),
         val_sql,
         val_f,
         val_fn9,
@@ -194,7 +193,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
     }
   }
   
-  replace_table_duckdb(con, target = tablename, source = tmp_tbl)
+  replace_table_duckdb(con, target = tablename, source = tmp_result)
   
   invisible(NULL)
 } 
@@ -223,13 +222,13 @@ do_filter_periods_with_missing_original <- function(con, tablename){
   values <- get_value_columns(cols)
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol")
   
-  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  tbl_sql <- sqlquote(con, tablename)
   
   for(val in values){
-    val_sql <- DBI::dbQuoteIdentifier(con, val)
-    val_f   <- DBI::dbQuoteIdentifier(con, paste0(val, ".f"))
-    val_n   <- DBI::dbQuoteIdentifier(con, paste0(val, ".n"))
-    val_fn3 <- DBI::dbQuoteIdentifier(con, paste0(val, ".fn3"))
+    val_sql <- sqlquote(con, val)
+    val_f   <- sqlquote(con, paste0(val, ".f"))
+    val_n   <- sqlquote(con, paste0(val, ".n"))
+    val_fn3 <- sqlquote(con, paste0(val, ".fn3"))
     
     if (!paste0(val, ".n") %in% cols) next
     
@@ -258,12 +257,12 @@ do_handle_indata_periods <- function(con,tablename,parameters){
   n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
   cols <- DBI::dbListFields(con, tablename)
   values <- get_value_columns(cols)
-  tbl_sql <- DBI::dbQuoteIdentifier(con, tablename)
+  tbl_sql <- sqlquote(con, tablename)
   
   val_n_cols <- vector("character", length(values))
     
   for(i in seq_along(values)){
-    val_n <- DBI::dbQuoteIdentifier(con, paste0(values[i], ".n"))
+    val_n <- sqlquote(con, paste0(values[i], ".n"))
     val_n_cols[i] <- sprintf("%s = %s", val_n, n)
     if(!paste0(values[i], ".n") %in% cols) {
         DBI::dbExecute(con, sprintf("ALTER TABLE %s ADD COLUMN %s INTEGER",

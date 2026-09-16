@@ -38,13 +38,13 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   
   tablename_teller <- ifelse(standardfiles, "STANDARD_TELLER", "TELLER")
   print_console_message("** Lager", tablename_teller, "fra", tellerfilnavn)
-  do_redesign_file_duckdb(con = con, tablename = tablename_teller, orgfilename = tellerfilnavn,
+  do_redesign_table_duckdb(con = con, newtable = tablename_teller, orgtable = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
     print_console_message("\n** Lager", tablename_nevner, "fra", nevnerfilnavn)
-    do_redesign_file_duckdb(con = con, tablename = tablename_nevner, orgfilename = nevnerfilnavn,
+    do_redesign_table_duckdb(con = con, newtable = tablename_nevner, orgtable = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
   }
   
@@ -65,13 +65,12 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     print_console_message("\n* Ferdig rektangularisert og merget", tntype)
   } else if (isnevnerfil) {
-    merge_duckdb_table(result = tntype, mergeto = tablename_teller, mergefrom = tablename_nevner, con = con)
+    merge_duckdb_table(con = con, mergeto = tablename_teller, mergefrom = tablename_nevner, result = tntype)
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     print_console_message("\n* Ferdig merget", tntype)
   } else {
-    invisible(
-      DBI::dbExecute(con, paste0("CREATE OR REPLACE TABLE ", tntype, " AS SELECT * FROM ", tablename_teller))
-    )
+    drop_tables_duckdb(con, tntype)
+    invisible(DBI::dbExecute(con, paste0("CREATE TABLE ", tntype, " AS SELECT * FROM ", tablename_teller)))
     print_console_message("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
   
@@ -209,15 +208,17 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   return(Deler)
 }
 
-#' @title do_redesign_file_duckdb
+#' @title do_redesign_table_duckdb
 #' @description
 #' Tar originalfilgruppene som er lest inn, og bruker ønsket design til å filtrere og kode om verdier for videre bruk
+#' Skriver ferdig redesignet til ny tabell, beholder originaltabellen slik at denne kan være
 #' @noRd
-do_redesign_file_duckdb <- function(con, tablename, orgfilename, filedesign, targetdesign, parameters){
-  invisible(DBI::dbExecute(con, sprintf("CREATE OR REPLACE TABLE %s AS SELECT * FROM %s", tablename, orgfilename)))
+do_redesign_table_duckdb <- function(con, newtable, orgtable, filedesign, targetdesign, parameters){
+  drop_tables_duckdb(con, newtable)
+  invisible(DBI::dbExecute(con, sprintf("CREATE TABLE %s AS SELECT * FROM %s", newtable, orgtable)))
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = targetdesign, parameters = parameters)
   if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
-  filter_and_recode_table_duckdb(con = con, tablename = tablename, redesign = redesign, parameters = parameters)
+  filter_and_recode_table_duckdb(con = con, tablename = newtable, redesign = redesign, parameters = parameters)
 }
 
 
@@ -254,7 +255,6 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
   print_console_message("- Skriver rektangularisert", paste0(tnfname, "-design"), "til duckdb...")
   drop_tables_duckdb(parameters$duck, tnfname)
   write_duckdb_table(parameters$duck, tablename = tnfname, data = rektangularisert)
-  # DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
 }
 
 #' @title get_removed_codes
@@ -292,11 +292,11 @@ set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
   }
   
   idx <- which(cols != newnames)
-  cols <- DBI::dbQuoteIdentifier(con, cols)
-  newnames <- DBI::dbQuoteIdentifier(con, newnames)
+  renamecols <- sqlquote(con, cols[idx])
+  renamenewnames <- sqlquote(con, newnames[idx])
   
   sql <- sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s",
-                 tablename, cols[idx], newnames[idx])
+                 tablename, renamecols, renamenewnames)
   sql <- paste(sql, collapse = ";\n")
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)

@@ -9,7 +9,7 @@ scale_rate_and_meisskala <- function(parameters){
   scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
   
   print_console_message("* Skalerer RATE til per", scalevalue)
-  tbl_sql <- DBI::dbQuoteIdentifier(con, "KUBE")
+  tbl_sql <- sqlquote(con, "KUBE")
   cols <- DBI::dbListFields(con, tbl_sql)
   
   update_cols <- character()
