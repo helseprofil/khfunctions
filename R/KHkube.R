@@ -19,7 +19,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
-  parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
+  parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), 
+                                        getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
   if(parameters$write) sink(file = parameters$loggpath, split = TRUE)
   if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
@@ -36,7 +37,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
 
   # 3. Aggregering til flerårige tall og oppdatere kubedesign
   parameters <- get_movav_information(parameters = parameters)
-  aggregate_to_periods_duckdb(tablename = "KUBE", parameters = parameters, standard = FALSE)
+  aggregate_to_periods(tablename = "KUBE", parameters = parameters, standard = FALSE)
   parameters <- update_cubedesign_after_moving_average(parameters = parameters)
 
   # 3b. Legger til prikkeinfo-kolonner og crude RATE etter aggregering
@@ -49,13 +50,19 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   
   # 5. Redigere kolonner og filtrere ugyldige rader
   scale_rate_and_meisskala(parameters = parameters)
+  do_format_cube_columns(parameters = parameters)
+  
+  ## MÅ SKRIVES OM TIL SQL
+  add_smr_and_meis(dt = KUBE, parameters = parameters)
+  ##
+  
+  # do_filter_invalid_geo_alder_kjonn(con = con)
   
   # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
   KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
-  parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
-  do_format_cube_columns(dt = KUBE, parameters = parameters)
-  add_smr_and_meis(dt = KUBE, parameters = parameters)
-  KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
+  
+  
+  
   fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
   set_etab_names(dt = KUBE, etablist = parameters$etabs)

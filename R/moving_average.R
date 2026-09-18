@@ -33,7 +33,7 @@ find_missing_year <- function(aarl){
 
 # Aggregate ----
 
-#' @title aggregate_to_moving_average_duckdb
+#' @title aggregate_to_periods
 #' @description
 #' Aggregerer tabellen til flerårige tall
 #' Flerårige tall tolerer missing av type .f=1 ("random")
@@ -47,7 +47,7 @@ find_missing_year <- function(aarl){
 #' @param parameters Globale parametre
 #' @param standard TRUE hvis standardfiler, hindrer uønsket fildump
 #' @noRd
-aggregate_to_periods_duckdb <- function(tablename, parameters, standard = FALSE){
+aggregate_to_periods <- function(tablename, parameters, standard = FALSE){
   if(!standard){
     save_filedump_if_requested(dumpname = "MOVAVpre", dt = NULL, parameters = parameters, duck = TRUE, tablename = tablename)
     on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
@@ -58,13 +58,14 @@ aggregate_to_periods_duckdb <- function(tablename, parameters, standard = FALSE)
   if(parameters$MOVAV$is_movav){
     print_console_message("\n* Aggregering til flerårige tall")
     period <- parameters$MOVAV$movav
-    print_console_message("- Aggregerer til ", period, "-årige tall", sep = "")
+    print_console_message("- Aggregerer ", tablename, " til ", period, "-årige tall", sep = "")
     do_aggregate_periods(con = con, tablename = tablename, parameters = parameters)
     do_filter_periods_with_missing_original(con = con, tablename = tablename)
   } else {
     do_handle_indata_periods(con = con, tablename = tablename,parameters = parameters)
   }
   
+  do_clean_duckdb(con = con)
   invisible(NULL)
 }
 
@@ -73,7 +74,7 @@ aggregate_to_periods_duckdb <- function(tablename, parameters, standard = FALSE)
 #' Balanserer missing i teller og nevner slik at sumteller og sumnevner er balansert. 
 #' @noRd
 do_balance_missing_teller_nevner <- function(con, tablename){
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   if (!all(c("TELLER", "NEVNER") %in% cols)) return(invisible(NULL))
   
   print_console_message("- Balanserer missing teller og nevner slik at sumNEVNER og sumTELLER er basert på likt antall år")
@@ -104,19 +105,18 @@ do_balance_missing_teller_nevner <- function(con, tablename){
 #' @param dt data
 #' @param parameters cube parameters
 do_aggregate_periods <- function(con, tablename, parameters){
-  tbl_sql <- sqlquote(con, tablename)
   tmp_periods <- "tmp_movav_periods"
   on.exit(drop_tables_duckdb(con = con, tables = tmp_periods), add = TRUE)
           
   period <- parameters$MOVAV$movav
-  n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", tbl_sql))$n
+  n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", sqlquote(con, tablename)))$n
   if(n_multi > 0) stop(sprintf("Aggregering til %s-årige tall er ønsket, men originaldata inneholder allerede flerårige tall.", period))
-  aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", tbl_sql))$AARh
+  aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", sqlquote(con, tablename)))$AARh
   allperiods <- find_periods(aarh = aarh, period = period)
   
   # DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
   write_duckdb_table(con, tablename = tmp_periods, data = allperiods)
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   values <- get_value_columns(cols)
   dims <- get_dimension_columns(cols)
   dims_no_year <- sqlquote(con, setdiff(dims,c("AARl", "AARh")))
@@ -160,12 +160,13 @@ do_aggregate_periods <- function(con, tablename, parameters){
     %s",
     sqlquote(con, tmp_result),
     paste(select_parts, collapse = ",\n"),
-    tbl_sql,
+    sqlquote(con, tablename),
     tmp_periods,
     paste(group_by, collapse = ",\n")
   )
   
   invisible(DBI::dbExecute(con, sql))
+  replace_table_duckdb(con, target = tablename, source = tmp_result)
   
   # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1.
   # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
@@ -184,7 +185,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
         %s = NULL,
         %s = 9
       WHERE %s > %s",
-        sqlquote(con, tmp_result),
+        sqlquote(con, tablename),
         val_sql,
         val_f,
         val_fn9,
@@ -192,8 +193,6 @@ do_aggregate_periods <- function(con, tablename, parameters){
       invisible(DBI::dbExecute(con, sql))
     }
   }
-  
-  replace_table_duckdb(con, target = tablename, source = tmp_result)
   
   invisible(NULL)
 } 
@@ -218,7 +217,7 @@ find_periods <- function(aarh, period){
 #' @noRd
 do_filter_periods_with_missing_original <- function(con, tablename){
   
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   values <- get_value_columns(cols)
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol")
   
@@ -255,7 +254,7 @@ do_filter_periods_with_missing_original <- function(con, tablename){
 #' @noRd
 do_handle_indata_periods <- function(con,tablename,parameters){
   n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   values <- get_value_columns(cols)
   tbl_sql <- sqlquote(con, tablename)
   

@@ -11,6 +11,7 @@ filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters)
     drop_tables_duckdb_prefix(con, prefix = "tmp_recode_")
   }, add = TRUE)
   
+  print_console_message("\n- Filtrerer og omkoder", tablename)
   do_filter_dimensions_duckdb(con = con, tablename = tablename, 
                               filters = redesign$Filters)
   do_recode_dimensions_duckdb(con = con, tablename = tablename, 
@@ -51,7 +52,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     
     drop_tables_duckdb(con, "tmp_filter_all")
     invisible(DBI::dbExecute(con, filter_all_sql))
-    filter_cols <- DBI::dbListFields(con, "tmp_filter_all")
+    filter_cols <- get_duckdb_cols(con, "tmp_filter_all")
     join_condition <- paste(sprintf("t.%s = f.%s",filter_cols,filter_cols), collapse = "\n  AND ")
     
     tmp_result <- prepare_tmp_result_table(con, tablename)
@@ -68,7 +69,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters){
     replace_table_duckdb(con, target = tablename, source = tmp_result)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s",  sqlquote(con, tablename)))$N
     filterpartsname <- as.character(parameters$DefDesign$DelKolN[filterparts])
-    print_console_message(sprintf("- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
+    print_console_message(sprintf("-- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
   }
 }
 
@@ -93,7 +94,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     
     recode_table <- sprintf("tmp_recode_%s", part)
     write_duckdb_table(con, tablename = recode_table, data = recodebook)
-    table_cols <- DBI::dbListFields(con, tablename)
+    table_cols <- get_duckdb_cols(con, tablename)
     join_condition <- paste(sprintf("t.%s = r.%s", partinfo$cols, partinfo$cols), collapse = "\n  AND ")
     select_cols <- character()
     
@@ -109,7 +110,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
       }
     }
     
-    tmp_recode <- prepare_tmp_result_table(tablename)
+    tmp_recode <- prepare_tmp_result_table(con, tablename)
     
     recode_sql <- sprintf(
     "CREATE TABLE %s AS SELECT %s FROM %s t INNER JOIN %s r ON %s",
@@ -127,7 +128,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     do_aggregate_file_duckdb(con = con, tablename = tablename)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
     partname <- as.character(parameters$DefDesign$DelKolN[part])
-    print_console_message(sprintf("- Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
+    print_console_message(sprintf("-- Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
   }
   
   invisible(NULL)
@@ -145,7 +146,7 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
   write_duckdb_table(con, "tmp_helsereg", data = parameters$HELSEREG)
   write_duckdb_table(con, "tmp_geokoder_b", data = unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]))
   
-  has_fylke <- "FYLKE" %in% DBI::dbListFields(con, tablename)
+  has_fylke <- "FYLKE" %in% get_duckdb_cols(con, tablename)
   fylke_sql <- if(has_fylke){
     "CASE
       WHEN t.GEOniv = 'L' THEN '00'
@@ -198,7 +199,7 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   write_duckdb_table(con, "tmp_udekk", data = udekk)
   on.exit(drop_tables_duckdb(con, "tmp_udekk"), add = TRUE)
 
-  table_cols <- DBI::dbListFields(con, tablename)
+  table_cols <- get_duckdb_cols(con, tablename)
   dims <- get_dimension_columns(table_cols)
   vals <- get_value_columns(table_cols)
   

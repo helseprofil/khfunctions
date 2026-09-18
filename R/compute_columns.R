@@ -37,7 +37,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
   
   if(is_empty(formulas)) return(invisible(NULL))
   
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   values <- get_value_columns(cols)
   
   formulas <- trimws(
@@ -243,7 +243,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
 #' @noRd
 add_crude_rate <- function(con, tablename){
   print_console_message("* Legger til crude RATE")
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   if(!"NEVNER" %in% cols){
     print_console_message("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))

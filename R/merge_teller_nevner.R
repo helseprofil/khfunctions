@@ -40,12 +40,14 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   print_console_message("** Lager", tablename_teller, "fra", tellerfilnavn)
   do_redesign_table_duckdb(con = con, newtable = tablename_teller, orgtable = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
+  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tablename_teller)
   
   if(isnevnerfil) {
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
     print_console_message("\n** Lager", tablename_nevner, "fra", nevnerfilnavn)
     do_redesign_table_duckdb(con = con, newtable = tablename_nevner, orgtable = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
+    do_filter_invalid_geo_alder_kjonn(con = con, tablename = tablename_nevner)
   }
   
   implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
@@ -55,7 +57,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   
   if(length(KUBEdesign) > 0) {
     print_console_message("\n** Rektangulariserer")
-    set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tablename_teller), 
+    set_rectangularized_cube_design(colnames = get_duckdb_cols(con, tablename_teller), 
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
     report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
     merge_duckdb_table(con = con, mergeto = tntype, mergefrom = tablename_teller)
@@ -80,7 +82,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     dt <- fetch_duckdb_table(con = con, tablename = tntype)
     if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
     if(isNYEKOL_KOL) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
-    write_duckdb_table(con, tablename = tntype, data = dt)
+    write_to_tmp_and_replace_table(con = con, tablename = tntype, data = dt)
   }
   
   do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN)
@@ -89,6 +91,42 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   if(!standardfiles) parameters[["CUBEdesign"]] <- KUBEdesign$MAIN
   return(invisible(parameters))
 }
+
+#' @title do_filter_invalid_geo_alder_kjonn
+#' @description remove GEO codes not listed in ACCESS:GEOkoder, as well as invalid KJONN AND ALDER
+#' @keywords internal
+#' @noRd
+do_filter_invalid_geo_alder_kjonn <- function(con, tablename){
+  cols <- get_duckdb_cols(con, tablename)
+  
+  where <- c("EXISTS (SELECT 1 FROM GEOkoder g WHERE g.GEO = t.GEO AND g.TYP = 'O' AND g.TIL = 9999)")
+  vars <- "GEO"
+  if ("ALDERl" %in% cols) {
+    illegal <- strsplit(getOption("khfunctions.alder_illegal"), "_", fixed = T)[[1]][1]
+    ukjent <- strsplit(getOption("khfunctions.alder_ukjent"), "_", fixed = T)[[1]][1]
+    verdier <- paste(DBI::dbQuoteString(con, c(illegal, ukjent)), collapse = ", ")
+    where <- c(where, sprintf("CAST(t.ALDERl AS VARCHAR) NOT IN (%s)", verdier))
+  }
+  
+  if ("KJONN" %in% cols){
+    verdier <- paste(DBI::dbQuoteString(con, c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))), collapse = ", ")
+    where <- c(where, sprintf("CAST(t.KJONN AS VARCHAR) NOT IN (%s)", verdier))
+  }
+  
+  where_sql <- paste(where, collapse = "\n AND ")
+  sql_feil <- sprintf("SELECT COUNT(*) AS n FROM %s t WHERE NOT (%s)", sqlquote(con, tablename), where_sql)
+  n_fjernes <- DBI::dbGetQuery(con, sql_feil)$n
+  if(n_fjernes > 0){
+    print_console_message("-Fjerner", n_fjernes, "rader med ugyldig GEO, ALDER eller KJONN")
+    tmp <- prepare_tmp_result_table(con, tablename)
+    sql <- sprintf("CREATE TABLE %s AS SELECT t.* FROM %s t WHERE %s",
+                   sqlquote(con, tmp), sqlquote(con, tablename), where_sql)
+    invisible(DBI::dbExecute(con, sql))
+    replace_table_duckdb(con = con, target = tablename, source = tmp)
+  }
+  invisible(NULL)
+}
+
 
 #' @title get_initialdesign
 #' @param parameters global parameters
@@ -111,7 +149,7 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, paramete
 #' FinnFellesTab (kb)
 #' @param parameters global parameters
 FinnFellesTab <- function(DF1, DF2, parameters) {
-  print_console_message("Starter i FinnFellesTab.")
+  # print_console_message("- Finner fellestab for", DF1, "og", DF2)
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
@@ -126,7 +164,6 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   gc()
   data.table::setnames(Dekk, old = names(Dekk), new = gsub("_omk$", "", names(Dekk)))
   FDes <- find_filedesign(Dekk, parameters = parameters)
-  print_console_message(" Ferdig i FinnFellesTab\n")
   return(FDes)
 }
 
@@ -217,7 +254,7 @@ do_redesign_table_duckdb <- function(con, newtable, orgtable, filedesign, target
   drop_tables_duckdb(con, newtable)
   invisible(DBI::dbExecute(con, sprintf("CREATE TABLE %s AS SELECT * FROM %s", newtable, orgtable)))
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = targetdesign, parameters = parameters)
-  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", orgtable, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   filter_and_recode_table_duckdb(con = con, tablename = newtable, redesign = redesign, parameters = parameters)
 }
 
@@ -278,7 +315,7 @@ report_removed_codes <- function(orgtable, recttable, parameters){
 
 set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
   
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$TELLERKOL), "TELLER\\1", cols)
   newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$NEVNERKOL), "NEVNER\\1", newnames)
   

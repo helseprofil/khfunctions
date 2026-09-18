@@ -11,10 +11,9 @@ add_predteller <- function(parameters){
   generate_tmp_prednevner(con = con, gentable = tmp_tables[["PREDNEVNER"]], design = designlist$STNPdesign, parameters = parameters) # lag tmp_prednevner og skriv til duckdb
   generate_tmp_predteller(con = con, tables = tmp_tables, parameters = parameters) # Merge sammen tmp_predrate og tmp_prednevner, og lag predteller. Kod om til kubedesign
   
-  print_console_message("\n")
   merge_duckdb_table(con = con, mergeto = "KUBE",  mergefrom = "tmp_predteller")
   set_implicit_null_after_merge_duckdb(con = con, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals, table = "KUBE")
-  
+  do_clean_duckdb(con = con)
   invisible(NULL)
 }
 
@@ -85,7 +84,7 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @family duckdb
 #' @noRd
 generate_tmp_predrate <- function(con, gentable, design, parameters){
-  print_console_message("\n* Henter ut RATE å standardisere mot\n")
+  print_console_message("* Henter ut RATE å standardisere mot")
   missyears <- parameters$MOVAV$missyears
   merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
   standardkube_name <- "STANDARD_KUBE"
@@ -100,8 +99,8 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
     invisible(DBI::dbExecute(con, sql))
   }
   
-  aggregate_to_periods_duckdb(tablename = standardkube_name, parameters = parameters)
-  allcols <- DBI::dbListFields(con, standardkube_name)
+  aggregate_to_periods(tablename = standardkube_name, parameters = parameters)
+  allcols <- get_duckdb_cols(con, standardkube_name)
   dims <- setdiff(get_dimension_columns(allcols), parameters$PredFilter$Predfiltercolumns)
   dims_sql <- sqlquote(con, dims)
   
@@ -129,7 +128,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
   
   invisible(DBI::dbExecute(con, sql_generate))
   
-  sql_ukurante <- sprintf('SELECT %s FROM %s WHERE ukurant = 1', paste(dims_sql, collapse = ", "), tmp_tbl_sql)
+  sql_ukurante <- sprintf('SELECT %s FROM %s WHERE ukurant = 1', paste(dims_sql, collapse = ", "), sqlquote(con, gentable))
   ukurante <- data.table::setDT(DBI::dbGetQuery(con, sql_ukurante))
   
   if(ukurante[, .N] > 0){
@@ -165,7 +164,7 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
   prednevner_col <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(prednevner_col)) prednevner_col <- parameters$TNPinformation$NEVNERKOL
   
-  allcols <- DBI::dbListFields(con, prednevnerfile_sql)
+  allcols <- get_duckdb_cols(con, prednevnerfile_sql)
   dims <- get_dimension_columns(allcols)
   dims_sql <- sqlquote(con, dims)
   pred_cols <- grep(sprintf("^%s(\\.f|.a|)$", prednevner_col),allcols, value = TRUE)
@@ -188,7 +187,7 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
     invisible(DBI::dbExecute(con, sql_delete))
   }
   
-  aggregate_to_periods_duckdb(tablename = tmp_prednevner_sql, parameters = parameters)
+  aggregate_to_periods(tablename = tmp_prednevner_sql, parameters = parameters)
   invisible(NULL)
 }
 
@@ -198,8 +197,8 @@ generate_tmp_predteller <- function(con, tables, parameters){
   tmp_prednevner_sql <- sqlquote(con, tables[["PREDNEVNER"]])
   tmp_predteller_sql <- sqlquote(con, tables[["PREDTELLER"]])
   
-  predrate_dims <- get_dimension_columns(DBI::dbListFields(con, tables[["PREDRATE"]]))
-  prednevner_dims <- get_dimension_columns(DBI::dbListFields(con, tables[["PREDNEVNER"]]))
+  predrate_dims <- get_dimension_columns(get_duckdb_cols(con, tables[["PREDRATE"]]))
+  prednevner_dims <- get_dimension_columns(get_duckdb_cols(con, tables[["PREDNEVNER"]]))
   commondims <- sqlquote(con, intersect(prednevner_dims, predrate_dims))
   
   all_dims <- union(prednevner_dims, predrate_dims)
@@ -230,7 +229,6 @@ generate_tmp_predteller <- function(con, tables, parameters){
     tmp_predrate_sql,
     join_condition
   )
-  
   
   invisible(DBI::dbExecute(con, sql_generate))
   print_console_message("- Redesigner for å matche KUBE")
@@ -271,7 +269,7 @@ add_meisskala <- function(parameters){
   n_subset <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", subset_sql))$N
   if(n_subset == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   
-  subset_cols <- DBI::dbListFields(con, subset_table)
+  subset_cols <- get_duckdb_cols(con, subset_table)
   
   joincolumns <- sqlquote(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
                                                      parameters$PredFilter$Predfiltercolumns))

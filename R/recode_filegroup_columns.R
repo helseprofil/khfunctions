@@ -18,7 +18,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   on.exit({
     save_filedump_if_requested(dumpname = "KODEBOKpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
     drop_tables_duckdb(con, "temp_recode")
-    if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) {
+    if("ROWID_KH" %in% get_duckdb_cols(con, "temp_orgfile")) {
       invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
     }
   }, add = TRUE)
@@ -27,11 +27,11 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   
   codebook <- parameters$codebook[DELID %in% c(filedescription$DELID, "FELLES")]
   recodecols <- intersect(unique(codebook$FELTTYPE), 
-                          DBI::dbListFields(con, "temp_orgfile"))
+                          get_duckdb_cols(con, "temp_orgfile"))
   if(nrow(codebook) == 0) return(invisible(NULL))
   
   drop_tables_duckdb(con, "temp_recode")
-  if("ROWID_KH" %in% DBI::dbListFields(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
+  if("ROWID_KH" %in% get_duckdb_cols(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
   
   invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile ADD COLUMN ROWID_KH BIGINT"))
   invisible(DBI::dbExecute(con, "UPDATE temp_orgfile SET ROWID_KH = rowid"))

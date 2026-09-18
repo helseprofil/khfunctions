@@ -4,7 +4,7 @@
 clean_filegroup_values_duckdb <- function(parameters, cleanlog){
   print_console_message("\n* Starter rensing av verdikolonner...")
   con <- parameters$duck
-  cols <- intersect(c("VAL1", "VAL2", "VAL3"), DBI::dbListFields(con, "FILGRUPPE"))
+  cols <- intersect(c("VAL1", "VAL2", "VAL3"), get_duckdb_cols(con, "FILGRUPPE"))
   for(val in cols){
     print_console_message("\n** ", val, sep = "")
     clean_value_column_duckdb(con = con, parameters = parameters, cleanlog = cleanlog, val = val)

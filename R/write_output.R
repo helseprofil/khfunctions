@@ -125,7 +125,7 @@ add_lks_filter <- function(con) {
 sort_bef_gkny_duckdb <- function(con){
   print_console_message("\n Sorterer befolkningsfilgruppe")
   
-  dims <- khfunctions:::get_dimension_columns(DBI::dbListFields(con, "FILGRUPPE"))
+  dims <- khfunctions:::get_dimension_columns(get_duckdb_cols(con, "FILGRUPPE"))
   sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
   sortdims <- union(sort, dims)
   sortdims_sql <- paste(sortdims, collapse = ", ")
@@ -259,7 +259,7 @@ melt_access_spec <- function(dscr, name = NULL){
 #' @keywords internal
 #' @noRd
 LagQCKube <- function(data, allvistabs){
-  qcvals <- getOption("khfunctions.qcvals")
+  qcvals <- intersect(getOption("khfunctions.qcvals"), names(data[["KUBE"]]))
   prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
   uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
   data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))

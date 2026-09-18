@@ -37,7 +37,8 @@ do_clean_duckdb <- function(con){
 #' @keywords duckdb
 #' @noRd
 is_duckdb_table <- function(con, tablename){
-  DBI::dbIsValid(con) && tablename %in% DBI::dbListTables(con)
+  if(is_empty(tablename)) return(FALSE)
+  DBI::dbIsValid(con) && DBI::dbExistsTable(con, tablename)
 }
 
 #' @title drop_tables_duckdb
@@ -94,6 +95,32 @@ sqlquote <- function(con, x){
   DBI::dbQuoteIdentifier(con, x)
 }
 
+get_duckdb_cols <- function(con, tablename){
+  DBI::dbListFields(con, tablename)
+}
+
+init_new_duckdb_cols <- function(con, table, cols){
+  sql <- paste(
+    sprintf(
+      "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s",
+      table, sqlquote(con, names(cols)), unname(cols)), 
+    collapse = ";\n")
+  
+  sql <- paste0(sql, ";")
+  invisible(DBI::dbExecute(con, sql))
+}
+
+#' @title write_to_tmp_and_replace_table
+#' @description wrapper used when table has been processed in R and is written back to duckdb.
+#' @family duckdb
+#' @noRd
+write_to_tmp_and_replace_table <- function(con, tablename, data){
+  tmp_table <- prepare_tmp_result_table(con, tablename)
+  write_duckdb_table(con,tablename = tmp_table,data = data)
+  replace_table_duckdb(con,target = tablename, source = tmp_table)
+  invisible(NULL)
+}
+
 #' @title replace_table_duckdb
 #' @description
 #' Erstatter en tabell med en annen i duckdb. Ved bearbeiding av en tabell kan resultatet
@@ -141,14 +168,19 @@ r_filter_to_sql <- function(filter_expr){
 #' @description fetch table from duckdb
 #' @keywords duckdb
 #' @noRd
-fetch_duckdb_table <- function(con, tablename){
-  exist <- tablename %in% DBI::dbListTables(con)
+fetch_duckdb_table <- function(con, tablename, limit = NULL){
+  exist <- is_duckdb_table(con, tablename)
   if(!exist) stop(tablename, " finnes ikke i duckdb")
-  dt <- DBI::dbGetQuery(con, 
-                        sprintf("SELECT * FROM %s", 
-                                sqlquote(con, tablename))
-                        )
+  
+  sql <- if(is.null(limit)){
+    sprintf("SELECT * FROM %s", sqlquote(con, tablename))
+  } else {
+    sprintf("SELECT * FROM %s LIMIT %s", sqlquote(con, tablename), as.integer(limit))
+  }
+  
+  dt <- DBI::dbGetQuery(con, sql)
   data.table::setDT(dt)
+  dt[]
 }
 
 

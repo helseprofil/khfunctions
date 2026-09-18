@@ -18,7 +18,7 @@ set_initial_spvtmp <- function(dt){
 #'
 #' @examples
 add_censorinfo_cube <- function(con, tablename){
-  allcols <- DBI::dbListFields(con, tablename)
+  allcols <- get_duckdb_cols(con, tablename)
   if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
   censorcolumns <- sqlquote(con, c(getOption("khfunctions.prikkeinfo"), "spv_tmp"))
   tbl_sql <- sqlquote(con, tablename)

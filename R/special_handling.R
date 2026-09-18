@@ -19,17 +19,17 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   is_code <- is_not_empty(code)
   if(!is_code) return(dt)
   invisible(gc()) # Sikre at minnet er ryddet før snutt
+  con <- parameters$duck
   
   code <- clean_rsynt_code(code = code, name = name)
   is_stata <- grepl("<STATA>", code)
   is_sql <- grepl("<SQL>", code)
   
   use_duck <- isTRUE(duck) && is_not_empty(tablename)
-  if(use_duck && !tablename %in% DBI::dbListTables(parameters$duck)){
+  if(use_duck && !is_duckdb_table(con, tablename)){
     stop("do_special_handling forsøker å bruke duckdb, men tabellen finnes ikke")
   }
   
-  con <- parameters$duck
   
   if(is_sql){
     if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
@@ -54,7 +54,6 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     dt <- fetch_duckdb_table(con = con, tablename = tablename)
   }
   
-  
   if(is_stata){
     if(name == "RSYNT1"){
       dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
@@ -66,7 +65,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     if(length(extracols) > 0) dt[, (extracols) := NULL]
     print_console_message("\n** Ferdig i STATA")
     if(use_duck){
-      write_duckdb_table(con = con, tablename = tablename, data = dt)
+      write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
       do_clean_duckdb(con = parameters$duck)
       return(invisible(NULL))
     }

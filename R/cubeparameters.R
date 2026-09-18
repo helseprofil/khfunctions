@@ -25,10 +25,29 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  
+  parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
   return(parameters)
 }
 
+#' @title get_maltall_column
+#' @description gets the column containing maltall
+#' @keywords internal
+#' @noRd
+get_maltall_column <- function(parameters){
+  if(is_not_empty(parameters$CUBEinformation$MTKOL)) return(parameters$CUBEinformation$MTKOL)
+  if(parameters$TNPinformation$NEVNERKOL == "-") return("TELLER")
+  return("RATE")
+}
+
+
+#' Title
+#'
+#' @param parameters 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 get_lks_startaar <- function(parameters){
   lks_start <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
                                                  query = paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0"), 

@@ -13,7 +13,8 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
-  isduck <- is_duckdb_table(con = parameters$duck, tablename = filename)
+  con <- parameters$duck
+  isduck <- is_duckdb_table(con = con, tablename = filename)
   if(is.null(file) && !isduck){
     stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
   }
@@ -28,7 +29,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   if (data.table::is.data.table(file)) {
     cols <- names(file)
   } else if (isduck) {
-    cols <- DBI::dbListFields(parameters$duck, filename)
+    cols <- get_duckdb_cols(con, filename)
   } else {
     stop("Fant ikke kolonner: verken data.table eller duckdb-tabell")
   }
@@ -36,7 +37,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   args <- get_filedesign_args(parameters = parameters, columns_in_file = cols)
   if(is.null(file)){
     designs[["observed"]] <- data.table::setDT(
-      DBI::dbGetQuery(parameters$duck, paste0("SELECT DISTINCT ", paste(args$design_columns, collapse = ", "), " FROM ", filename))
+      DBI::dbGetQuery(con, paste0("SELECT DISTINCT ", paste(args$design_columns, collapse = ", "), " FROM ", filename))
       )
   } else {
     designs[["observed"]] <- unique(file[, .SD, .SDcols = args$design_columns])

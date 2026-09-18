@@ -6,8 +6,8 @@
 merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
   if(is.null(result)) result <- mergeto
   if(identical(result, mergefrom)) stop("Måltabellen kan ikke være == mergefrom")
-  to_cols <- DBI::dbListFields(con, mergeto)
-  from_cols <- DBI::dbListFields(con, mergefrom)
+  to_cols <- get_duckdb_cols(con, mergeto)
+  from_cols <- get_duckdb_cols(con, mergefrom)
   newcols_names <- setdiff(from_cols, to_cols)
   commoncols <- intersect(to_cols, from_cols)
   
@@ -60,7 +60,7 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
     replace_table_duckdb(con, target = result, source = target_table_merge)
   }
   
-  actual_cols <- DBI::dbListFields(con, result)
+  actual_cols <- get_duckdb_cols(con, result)
   missing_new_cols <- setdiff(newcols_names, actual_cols)
   if(length(missing_new_cols) > 0) stop(sprintf("Merge feilet. Mangler kolonner i %s: %s", result, paste(missing_new_cols, collapse = ", ")))
   invisible(NULL)
@@ -74,8 +74,8 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  print_console_message("*** Håndterer implisitte nuller")
-  cols <- DBI::dbListFields(con, table)
+  print_console_message("\n*** Håndterer implisitte nuller")
+  cols <- get_duckdb_cols(con, table)
   vals <- get_value_columns(cols)
   tbl_sql <- sqlquote(con, table)
   
@@ -131,7 +131,7 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
 #' @noRd
 do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
   
-  cols <- DBI::dbListFields(con, tablename)
+  cols <- get_duckdb_cols(con, tablename)
   dimcols <- get_dimension_columns(cols)
   valcols <- get_value_columns(cols)
   
