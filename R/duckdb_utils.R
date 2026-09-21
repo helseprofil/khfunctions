@@ -89,16 +89,26 @@ prepare_tmp_result_table <- function(con, table){
   tmp_table
 }
 
+
+# WRAPPER-funksjoner ---- 
+# For å slippe å skrive fullt DBI-funksjonsnavn hver gang på vanlige operasjoner
+
 #' @description wrapper rundt dbquoteidentifier, for renere kode da denne brukes mange steder
 #' @noRd
 sqlquote <- function(con, x){
   DBI::dbQuoteIdentifier(con, x)
 }
 
+#' DBI::dblistFields
+#' @noRd
 get_duckdb_cols <- function(con, tablename){
   DBI::dbListFields(con, tablename)
 }
 
+#' Legge til nye kolonner
+#' @param cols Må legges til som en navngitt vektor på formatet c(KOL = "TYPE", KOL2 = "TYPE")
+#' for eksempel (RATE = "DOUBLE", spvtmp = "INTEGER", TAB = "VARCHAR")
+#' @noRd
 init_new_duckdb_cols <- function(con, table, cols){
   sql <- paste(
     sprintf(

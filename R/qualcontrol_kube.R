@@ -229,7 +229,7 @@ report_n_unique_geoniv <- function(d){
 control_meis_rate <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
   print_console_message("\n\n* Sjekker forholdet mellom MEIS og RATE")
-  cols <- c(parameters$outdimensions, "MEIS", "RATE")
+  cols <- c(parameters$outdimensions, "MEIS", "RATE", "SPVFLAGG")
   d <- dt[!is.na(MEIS), .SD, .SDcols = cols]
   
   for(dim in setdiff(parameters$outdimensions, c("GEO", "AAR"))){

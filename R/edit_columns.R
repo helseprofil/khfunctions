@@ -10,7 +10,7 @@ scale_rate_and_meisskala <- function(parameters){
   
   print_console_message("* Skalerer RATE til per", scalevalue)
   tbl_sql <- sqlquote(con, "KUBE")
-  cols <- get_duckdb_cols(con, tbl_sql)
+  cols <- DBI::dbListFields(con, tbl_sql)
   
   update_cols <- character()
   
@@ -37,7 +37,7 @@ do_format_cube_columns <- function(parameters){
   print_console_message("\n* Formatterer kolonner i KUBE")
   con = parameters$duck
   tablename <- "KUBE"
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- DBI::dbListFields(con, tablename)
   tbl_sql <- sqlquote(con, tablename)
   
   obligcolumns <- c("TELLER","NEVNER","RATE")
@@ -57,19 +57,11 @@ do_format_cube_columns <- function(parameters){
   
   if(length(missing_cols) > 0){
     print_console_message("- Initierer manglende kolonner:", paste(missing_cols, collapse = ", "))
-    sql <- paste(
-      sprintf("ALTER TABLE %s ADD COLUMN %s %s", 
-              sqlquote(con, tablename), 
-              sqlquote(con, missing_cols),
-              required_cols[missing_cols]
-      ),
-      collapse = "; "
-    )
-    invisible(DBI::dbExecute(con, sql))
+    init_new_duckdb_cols(con, "KUBE", required_cols[missing_cols])
   }
   
   # Oppdater kolonner (sumkolonner, nonsumkolonner, ALDER, AAR og MALTALL)
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- DBI::dbListFields(con, tablename)
   update <- character()
   factor <- parameters$MOVAV$orgintMult
   
@@ -78,7 +70,7 @@ do_format_cube_columns <- function(parameters){
               sprintf("sumNEVNER = %s * NEVNER", factor),
               sprintf("sumPREDTELLER = %s * PREDTELLER", factor))
   
-  nonsumvalues <- setdiff(get_value_columns(get_duckdb_cols(con, tablename)), c("RATE", "SMR"))
+  nonsumvalues <- setdiff(get_value_columns(DBI::dbListFields(con, tablename)), c("RATE", "SMR"))
   
   for(val in nonsumvalues){
     # PREDTELLER bruker TELLER.n for å lage årlige tall, 
@@ -111,6 +103,41 @@ do_format_cube_columns <- function(parameters){
   
   invisible(NULL)
 }
+
+
+
+
+#' #' @title do_filter_invalid_geo_alder_kjonn
+#' #' @description remove GEO codes not listed in ACCESS:GEOkoder, as well as invalid KJONN AND ALDER
+#' #' @keywords internal
+#' #' @noRd
+#' do_filter_invalid_geo_alder_kjonn <- function(con){
+#'   tablename = "KUBE"
+#'   cols <- get_duckdb_cols(con, tablename)
+#'   tmp <- prepare_tmp_result_table(con, tablename)
+#'   
+#'   
+#'   where <- c("EXISTS (SELECT 1 FROM GEOkoder g WHERE g.GEO = t.GEO AND g.TYP = 'O' AND g.TIL = 9999)")
+#'   
+#'   if ("ALDER" %in% cols) {
+#'     where <- c(where, 
+#'                sprintf("t.ALDER NOT IN ('%s', '%s')", getOption("khfunctions.alder_illegal"), getOption("khfunctions.ukjent")))
+#'   }
+#'   
+#'   if ("KJONN" %in% cols){
+#'     where <- c(where,
+#'                sprintf("t.KJONN NOT IN ('%s', '%s')", getOption("khfunctions.illegal"), getOption("khfunctions.ukjent")))
+#'   }
+#'   
+#'   
+#'   sql <- sprintf("CREATE TABLE %s AS SELECT t.* FROM %s t WHERE %s",
+#'                  sqlquote(con, tmp), sqlquote(con, tablename), paste(where, collapse = "\n AND ")
+#'   )
+#'   
+#'   invisible(DBI::dbExecute(con, sql))
+#'   replace_table_duckdb(con = con, target = tablename, source = tmp)
+#' }
+
 
 #' @keywords internal
 #' @noRd

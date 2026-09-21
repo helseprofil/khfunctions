@@ -181,3 +181,14 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
   
   invisible(NULL)
 }
+
+set_integer_columns_duckdb <- function(con){
+  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
+  cols <- intersect(integers,get_duckdb_cols(con, "FILGRUPPE"))
+  
+  sql <- paste(sprintf(
+    "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
+    cols,cols),collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}

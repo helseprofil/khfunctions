@@ -40,14 +40,12 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   print_console_message("** Lager", tablename_teller, "fra", tellerfilnavn)
   do_redesign_table_duckdb(con = con, newtable = tablename_teller, orgtable = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
-  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tablename_teller)
   
   if(isnevnerfil) {
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
     print_console_message("\n** Lager", tablename_nevner, "fra", nevnerfilnavn)
     do_redesign_table_duckdb(con = con, newtable = tablename_nevner, orgtable = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
-    do_filter_invalid_geo_alder_kjonn(con = con, tablename = tablename_nevner)
   }
   
   implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
@@ -75,6 +73,8 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     invisible(DBI::dbExecute(con, paste0("CREATE TABLE ", tntype, " AS SELECT * FROM ", tablename_teller)))
     print_console_message("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
+  
+  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)

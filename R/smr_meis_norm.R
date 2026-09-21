@@ -1,6 +1,91 @@
+#' @title add_smr_and_meis
+#' @description
+#' Beregner SMR og MEIS
+#' Hvis kuben standardiseres, beregnes MEIS som
+#' sumTELLER / sumPREDTELLER * meisskala (raten for strataet fra standardiseringsutvalget/landstall)
+#' SMR settes deretter til MEIS / MEIS fra standardiseringsutvalget * 100
+#' 
+#' For kuber som ikke standardiseres, settes MEIS = MALTALL (ofte RATE), 
+#' mens SMR settes til MALTALL relativt til MALTALL på landsnivå slik at lands-SMR alltid blir 100.
+#' 
+#' @family duckdb
+#' @noRd
+add_smr_and_meis <- function(parameters){
+  con <- parameters$duck
+  ref_year_type <- parameters$PredFilter$ref_year_type
+  refverdi_vp <- parameters$CUBEinformation$REFVERDI_VP
+  
+  if(ref_year_type == "Specific") {
+    init_new_duckdb_cols(con = con, table = "KUBE", cols = c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    
+    if(refverdi_vp == "P") {
+      invisible(DBI::dbExecute(con,
+      "UPDATE KUBE SET MEIS = CASE WHEN sumPREDTELLER = 0 THEN NULL ELSE sumTELLER * 1.0 / sumPREDTELLER * MEISskala END"))
+    }
+    
+    drop_tables_duckdb(con, "normsubset")
+    design_cols <- intersect(get_duckdb_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    keep_cols <- c(setdiff(design_cols, c("GEOniv", "GEO", "FYLKE")), "LANDSNORMAL")
+    keep_sql <- paste(sqlquote(con, keep_cols), collapse = ", ")
+    
+    sql_norm <- sprintf(
+      "CREATE TABLE normsubset AS SELECT %s FROM 
+      (SELECT *, MEIS AS LANDSNORMAL FROM KUBE WHERE GEOniv = 'L')",
+      keep_sql
+    )
+    
+    invisible(DBI::dbExecute(con, sql_norm))
+    merge_duckdb_table(con = con, mergeto = "KUBE", mergefrom = "normsubset")
+    invisible(DBI::dbExecute(con, "UPDATE KUBE SET SMR = MEIS / LANDSNORMAL * 100.0"))
+    
+  } else { # Moving
+    
+    normsmr_expr <- if(refverdi_vp == "P"){
+      "sumTELLER * 100.0 / sumPREDTELLER"
+    } else if(refverdi_vp == "V"){
+      "100.0"
+    }
+    
+    drop_tables_duckdb(con, "normsubset")
+    
+    design_cols <- intersect(get_duckdb_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    keep_cols <- c(setdiff(design_cols, parameters$PredFilter$Predfiltercolumns), "NORM", "NORMSMR")
+    keep_sql <- paste(sqlquote(con, keep_cols), collapse = ", ")
+    
+    sql_norm <- sprintf(
+      "CREATE TABLE normsubset AS SELECT %s FROM 
+      (SELECT *, %s AS NORMSMR, %s AS NORM FROM KUBE WHERE %s) x",
+      keep_sql, normsmr_expr, sqlquote(con, parameters$MALTALL),
+      r_filter_to_sql(parameters$PredFilter$meisskalafilter))
+    
+    invisible(DBI::dbExecute(con, sql_norm))
+    
+    merge_duckdb_table(con = con, mergeto = "KUBE", mergefrom = "normsubset")
+    init_new_duckdb_cols(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    
+    smr0_expr <- if(refverdi_vp == "P") {
+      "sumTELLER * 100.0 / sumPREDTELLER"
+    } else if(refverdi_vp == "V") {
+      sprintf("%s * 100.0 / NORM", sqlquote(con, parameters$MALTALL))
+    }
+    
+    sql <- sprintf(
+    "UPDATE KUBE SET
+    SMR = 100.0 * ((%s) / NORMSMR),
+    MEIS = ((%s) / NORMSMR) * NORM",
+    smr0_expr, smr0_expr)
+    
+    invisible(DBI::dbExecute(con, sql))
+    
+  }
+}
+    
+
+# Deprecated ---- 
+
 #' @keywords internal
 #' @noRd
-add_smr_and_meis <- function(dt, parameters){
+add_smr_and_meis_old <- function(dt, parameters){
   if(parameters$PredFilter$ref_year_type == "Specific") calculate_smr_and_meis(dt = dt, parameters = parameters)
   if(parameters$PredFilter$ref_year_type == "Moving") calculate_smrtmp(dt = dt, parameters = parameters)
   adjust_smr_and_meis_to_country_normal(dt = dt, parameters = parameters)
@@ -32,10 +117,6 @@ calculate_smrtmp <- function(dt, parameters){
 adjust_smr_and_meis_to_country_normal <- function(dt, parameters){
   normsubset <- get_normsubset(dt = dt, parameters = parameters)
   merge_cols_by_reference(orgdata = dt, newdata = normsubset)
-  # commondims <- intersect(names(normsubset), names(dt))
-  # newcols <- setdiff(names(normsubset), commondims)
-  # newvals <- normsubset[dt, on = commondims, ..newcols]
-  # data.table::set(dt, j = newcols, value = newvals)
   do_adjust_smr_and_meis(dt = dt, parameters = parameters)
 }
 
