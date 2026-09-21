@@ -294,18 +294,75 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
 #' @param readcols vector of columns to read
 #' @noRd
 read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readcols){
+  schema <- data.table::setDT(DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", DBI::dbQuoteString(con, filepath))))
+  integer_cols <- intersect(c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT"), readcols)
+  
+  needs_cast <- schema[column_name %in% integer_cols & !toupper(column_type) %in% c("INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT")]$column_name
+  
+  select_cols <- vapply(readcols,
+    function(col){
+      col_sql <- sqlquote(con, col)
+      if(col %in% needs_cast){
+        sprintf("TRY_CAST(%s AS INTEGER) AS %s", col_sql, col_sql)
+      } else {
+        col_sql
+      }
+  }, character(1))
+  
   tab_sql <- as.character(sqlquote(con, tablename))
-  cols_sql <- paste(sqlquote(con, readcols), collapse = ", ")
+  cols_sql <- paste(select_cols, collapse = ", ")
+  
+  where_sql <- if(is_not_empty(filter)) {
+    sprintf(" WHERE %s", filter)
+    } else { 
+      ""
+    }
+  
+  sql <- sprintf(
+    "CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)%s",
+    tab_sql, cols_sql, DBI::dbQuoteString(con, filepath), where_sql)
   
   drop_tables_duckdb(con, tablename)
-  sql <- sprintf("CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)", 
-                 tab_sql, cols_sql, DBI::dbQuoteString(con, filepath))
-  
-  if(is_not_empty(filter)) sql <- paste0(sql, "\nWHERE ", filter) 
-  
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }
+
+#' 
+# read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readcols){
+#   tab_sql <- as.character(sqlquote(con, tablename))
+#   cols_sql <- paste(sqlquote(con, readcols), collapse = ", ")
+#   
+#   drop_tables_duckdb(con, tablename)
+#   sql <- sprintf("CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)", 
+#                  tab_sql, cols_sql, DBI::dbQuoteString(con, filepath))
+#   
+#   if(is_not_empty(filter)) sql <- paste0(sql, "\nWHERE ", filter) 
+#   
+#   invisible(DBI::dbExecute(con, sql))
+#   invisible(NULL)
+# }
+
+
+integer_cols <- c("AARl","AARh","ALDERl","ALDERh",
+                  "KJONN","UTDANN","LANDBAK","INNVKAT")
+
+select_cols <- vapply(
+  readcols,
+  function(col){
+    if(col %in% integer_cols){
+      sprintf(
+        "TRY_CAST(%s AS INTEGER) AS %s",
+        sqlquote(con, col),
+        sqlquote(con, col)
+      )
+    } else {
+      as.character(sqlquote(con, col))
+    }
+  },
+  character(1)
+)
+
+cols_sql <- paste(select_cols, collapse = ", ")
 
 # FILFILTRE ----
 #' @title get_filefilterconds
@@ -909,17 +966,6 @@ set_integer_columns <- function(dt){
   non_int_cols <- names(dt)[!sapply(dt, is.integer)]
   to_integer <- intersect(non_int_cols, integers)
   dt[, names(.SD) := lapply(.SD, as.integer), .SDcols = to_integer]
-}
-
-set_integer_columns_duckdb <- function(con){
-  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
-  cols <- intersect(integers,get_duckdb_cols(con, "FILGRUPPE"))
-  
-  sql <- paste(sprintf(
-    "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
-    cols,cols),collapse = ";\n")
-  invisible(DBI::dbExecute(con, sql))
-  invisible(NULL)
 }
 
 #' @title add_leadyear_befvekst
