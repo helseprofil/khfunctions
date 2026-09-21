@@ -19,7 +19,6 @@
   - do_harmonize_geo translated to sql, and add_fylke added as an argument
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
-  
 
 ## Other changes
 - `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
@@ -31,6 +30,10 @@
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
 - `KnrHarm` and `GeoKoder` tables written into duckdb for faster geo recoding
+- `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
+
+## Bugfix
+- LKS startaar was not running if neither bydelsstart nor DK2020 were set. 
     
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
 

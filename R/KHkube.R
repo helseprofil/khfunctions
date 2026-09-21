@@ -51,17 +51,10 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 5. Redigere kolonner og filtrere ugyldige rader
   scale_rate_and_meisskala(parameters = parameters)
   do_format_cube_columns(parameters = parameters)
-  
-  ## MÅ SKRIVES OM TIL SQL
-  add_smr_and_meis(dt = KUBE, parameters = parameters)
-  ##
-  
-  # do_filter_invalid_geo_alder_kjonn(con = con)
+  add_smr_and_meis(parameters = parameters)
   
   # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
   KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
-  
-  
   
   fix_geo_special(dt = KUBE, parameters = parameters)
   parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
