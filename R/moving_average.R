@@ -94,9 +94,6 @@ do_balance_missing_teller_nevner <- function(con, tablename){
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }
-  
-
-
 
 #' @title do_aggregate_periods
 #' @description
@@ -168,7 +165,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   invisible(DBI::dbExecute(con, sql))
   replace_table_duckdb(con, target = tablename, source = tmp_result)
   
-  # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1.
+  # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1. 
   # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
   # Denne bør raffineres i fremtiden. Vi bør også vurdere hvorvidt vi skal ha andre
   # kriterier for å ikke lage en sum, kanskje basert på .n-kolonnene (må ha minst x % av årene for å lage sum)
@@ -201,8 +198,8 @@ find_periods <- function(aarh, period){
   start_max <- min(aarh) + period - 1
   end_max <- max(aarh)
   if(start_max > end_max) stop("Aggregering til ", period, "-årige tall feilet pga utilstrekkelig antall årganger")
-  max_aar <- start_max:end_max
-  min_aar <- max_aar - period + 1
+  max_aar <- as.integer(start_max:end_max)
+  min_aar <- as.integer(max_aar - period + 1)
   return(data.table::data.table(AARl = min_aar, AARh = max_aar))
 }
 

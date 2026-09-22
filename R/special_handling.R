@@ -17,7 +17,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)
   on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
   is_code <- is_not_empty(code)
-  if(!is_code) return(dt)
+  if(!is_code) return(invisible(dt))
   invisible(gc()) # Sikre at minnet er ryddet før snutt
   con <- parameters$duck
   
@@ -90,7 +90,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   if(length(extracols) > 0) dt[, (extracols) := NULL]
   print_console_message("\n** R-snutt ferdig")
   if(use_duck){
-    write_duckdb_table(con = con, tablename = tablename, data = dt)
+    write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
     do_clean_duckdb(con = con)
     return(invisible(NULL))
   }

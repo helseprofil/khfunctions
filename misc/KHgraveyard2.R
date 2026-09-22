@@ -540,6 +540,25 @@ scale_rate_and_meisskala_old <- function(dt, parameters){
   if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
 }
 
+
+#' @keywords internal
+#' @noRd
+get_etabs <- function(columnnames, parameters){
+  spec <- parameters$fileinformation[[parameters$files$TELLER]]
+  tabcols <- grep("^TAB\\d+$", columnnames, value = T)
+  tabnames <- character(0)
+  for(tab in tabcols){
+    tabnames <- c(tabnames, spec[[tab]])
+  }
+  return(list(tabcols = tabcols, tabnames = tabnames))
+}
+
+#' @keywords internal
+#' @noRd
+set_etab_names <- function(dt, etablist){
+  data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
+}
+
 # load and format filegroups ----
 #' @title fetch_filegroup_from_buffer
 #' @description
@@ -916,4 +935,93 @@ add_crude_rate_old <- function(dt, parameters){
   }
 }
 
+
+# Geohandling
+
+fix_geo_special_old <- function(dt, parameters){
+  geonivs <- unique(dt[["GEOniv"]])
+  specs <- parameters$fileinformation[[parameters$files$TELLER]] 
+  vals <- get_value_columns(names(dt))
+  flags <- intersect(c("spv_tmp", grep("\\.f$", names(dt), value = T)), names(dt))
+  bydelstart <- specs[["B_STARTAAR"]]
+  dk2020 <- as.character(c(5055, 5056, 5059, 1806, 1875))
+  dk2020start <- specs[["DK2020_STARTAAR"]]
+  isbydelstart <- !is.na(bydelstart) && bydelstart > 0 & any(geonivs %in% c("B", "V"))
+  isdk2020 <- !is.na(dk2020start) && dk2020start > 0 & "K" %in% geonivs
+  
+  # if(!isbydelstart && !isdk2020) return(invisible(NULL))
+  
+  if (isbydelstart) {
+    print_console_message("\n* Håndterer bydelsstartår (bydeler og levekårssoner)\n")
+    print_console_message(" - Sletter tall for år før ", bydelstart, " dersom de finnes\n", sep = "")
+    idx <- which(dt[["GEOniv"]] %in% c("B", "V") & dt[["AARl"]] < bydelstart)
+    data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
+  }
+  
+  # Fjerner tall før startår for LKS, som definert i tabell ACCESS::LKS_STARTAAR
+  # Dette gjøres uansett om bydelstart er satt i access eller ikke, dersom kuben har levekårssonedata. 
+  if("V" %in% unique(dt[["GEOniv"]])){
+    print_console_message("\n* Håndterer startår for levekårssoner\n")
+    dt[parameters$LKS_STARTAAR, lks_startaar := i.lks_startaar, on = "GEO"]
+    idx <- which(dt[["AARl"]] < dt[["lks_startaar"]])
+    data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
+    data.table::set(dt, j = "lks_startaar", value = NULL)
+  }
+  
+  if (isdk2020) {
+    print_console_message("\n* Håndterer delingskommuner 2020 (DK2020) \n")
+    print_console_message(" - Sletter kommunetall for delingskommuner for år før ", dk2020start, "\n", sep = "")
+    idx <- which(dt[["GEOniv"]] == "K" & dt[["GEO"]] %chin% dk2020 & dt[["AARl"]] < dk2020start)
+    data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
+    
+    # Add fix for AAlesund/Haram split, which should not get data in 2020-2023, except for VALGDELTAKELSE
+    print_console_message(" - Håndterer Ålesund/Haram for årene 2020-2023\n")
+    ystart <- ifelse(parameters$name == "VALGDELTAKELSE", 2019, 2020)
+    ystop <- ystart + 3
+    idx <- which(dt[["GEO"]] %in% c("1508", "1580") & (dt[["AARl"]] <= ystop & dt[["AARh"]] >= ystart))
+    data.table::set(dt, i = idx, j = flags, value = 9L)
+    data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
+  }
+  
+  # idx <- which(dt[["spv_tmp"]] == 9)
+  # data.table::set(dt, i = idx, j = "geoprikket", value = 1L)
+  return(invisible(NULL))
+}
+
+#' @title add_missing_lks
+#' @noRd
+add_missing_lks_old <- function(dt, parameters){
+  # Legg til soner for kommuner med bare en sone
+  single <- data.table::data.table(lks = parameters$GeoKoder[GEOniv == "V", unique(GEO)])
+  single[, overniv := sub("00$", "", substr(lks, 1, 6))]
+  single[, N := .N, by = overniv]
+  single <- single[N == 1]
+  if(nrow(single) > 0){
+    add_single <- dt[GEO %in% single$overniv]
+    data.table::set(add_single, j = "GEOniv", value = "V")
+    add_single[single, on = setNames("overniv", "GEO"), GEO := lks]
+  } else {
+    add_single <- dt[0]
+  }
+  
+  # Legg til ugyldige soner, som skal eksistere men være prikket
+  invalid <- data.table::data.table(lks = parameters$GeoKoder[GEOniv == "V" & TYP == "U" & !GEO %in% unique(add_single[["GEO"]]), unique(GEO)])
+  if(nrow(invalid) > 0){
+    invalid[, overniv := sub("00$", "", substr(lks, 1, 6))]
+    add_invalid <- dt[GEO %in% invalid$overniv]
+    data.table::set(add_invalid, j = "GEOniv", value = "V")
+    add_invalid[invalid, on = setNames("overniv", "GEO"), GEO := lks]
+    add_invalid[, let(spv_tmp = 2, geoprikket = 1)]
+    vals <- union(get_value_columns(names(dt)), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR"))
+    data.table::set(add_invalid, j = vals, value = NA)
+  } else {
+    add_invalid <- dt[0]
+  }
+  
+  dt <- data.table::rbindlist(list(dt, add_single, add_invalid))
+  return(dt)
+}
 

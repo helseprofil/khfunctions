@@ -14,6 +14,7 @@ add_smr_and_meis <- function(parameters){
   con <- parameters$duck
   ref_year_type <- parameters$PredFilter$ref_year_type
   refverdi_vp <- parameters$CUBEinformation$REFVERDI_VP
+  on.exit(drop_tables_duckdb(con, "normsubset"), add = TRUE)
   
   if(ref_year_type == "Specific") {
     init_new_duckdb_cols(con = con, table = "KUBE", cols = c(SMR = "DOUBLE", MEIS = "DOUBLE"))

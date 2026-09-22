@@ -16,6 +16,7 @@
   - `load_and_format_files()` now reads filegroups directly into duckdb for further processing
       - Everything moved into one pipeline, with filefilter-functions included only when needed
       - Formatting and filefilter functionality moved to duckdb
+      - Ensures integer columns when reading
   - do_harmonize_geo translated to sql, and add_fylke added as an argument
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
@@ -29,7 +30,7 @@
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
-- `KnrHarm` and `GeoKoder` tables written into duckdb for faster geo recoding
+- `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb for faster geo recoding
 - `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
 
 ## Bugfix

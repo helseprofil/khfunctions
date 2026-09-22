@@ -342,28 +342,6 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
 #   invisible(NULL)
 # }
 
-
-integer_cols <- c("AARl","AARh","ALDERl","ALDERh",
-                  "KJONN","UTDANN","LANDBAK","INNVKAT")
-
-select_cols <- vapply(
-  readcols,
-  function(col){
-    if(col %in% integer_cols){
-      sprintf(
-        "TRY_CAST(%s AS INTEGER) AS %s",
-        sqlquote(con, col),
-        sqlquote(con, col)
-      )
-    } else {
-      as.character(sqlquote(con, col))
-    }
-  },
-  character(1)
-)
-
-cols_sql <- paste(select_cols, collapse = ", ")
-
 # FILFILTRE ----
 #' @title get_filefilterconds
 #' @description henter info fra FILFILTRE
