@@ -52,31 +52,35 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   scale_rate_and_meisskala(parameters = parameters)
   do_format_cube_columns(parameters = parameters)
   add_smr_and_meis(parameters = parameters)
-  
-  # Skrevet om til duckdb hit, henter ut tabellen og fortsetter i R
-  KUBE <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
-  
-  fix_geo_special(dt = KUBE, parameters = parameters)
-  parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
-  set_etab_names(dt = KUBE, etablist = parameters$etabs)
+  fix_geo_special(parameters = parameters)
+  tabnames <- rename_tab_columns(parameters = parameters)
   parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
-  parameters[["outdimensions"]] <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
+  parameters[["outdimensions"]] <- get_outdimensions(parameters = parameters)
   
   # 6. Prikking og dekningsgrad bydel/lks
-  KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
-  do_handle_coverage(dt = KUBE, geolevel = "B", parameters = parameters)
-  do_handle_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
+  # - Dette skjer i R fortsatt, kan oversettes på et senere tidspunkt
+  dt <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
+  dt <- do_censor_cube(dt = dt, parameters = parameters)
+  do_handle_coverage(dt = dt, geolevel = "B", parameters = parameters)
+  do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
+  write_to_tmp_and_replace_table(con = parameters$duck, data = dt, tablename = "KUBE")r
+  rm(dt)
+  gc()
   
   # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
-  KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
-  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
-  if("V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))){
-    KUBE <- add_missing_lks(dt = KUBE, parameters = parameters)
-  }
+  do_special_handling(name = "RSYNT_POSTPROSESS", dt = NULL, dt_name = "KUBE", 
+                      code = parameters$CUBEinformation$RSYNT_POSTPROSESS, 
+                      parameters = parameters, duck = TRUE, tablename = "KUBE")
+  do_special_handling(name = "SLUTTREDIGER", dt = NULL, dt_name = "KUBE", 
+                      code = parameters$CUBEinformation$SLUTTREDIGER, 
+                      parameters = parameters, duck = TRUE, tablename = "KUBE")
+  
+  add_missing_lks_duckdb(parameters = parameters)
   
   # 8. Slicing av outputfiler
-  RESULTAT <- list(KUBE = KUBE)
-  RESULTAT[["ALLVIS"]] <- data.table::copy(RESULTAT[["KUBE"]])
+  RESULTAT <- list()
+  RESULTAT[["KUBE"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
+  RESULTAT[["ALLVIS"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
   do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
   generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
   RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]

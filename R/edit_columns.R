@@ -87,8 +87,8 @@ do_format_cube_columns <- function(parameters){
                         valn_sql))
   }
   
-  if("AAR" %in% cols) update <- c(update, "AAR = CAST(AARl AS VARCHAR) || '_' || CAST(AARh AS VARCHAR)")
-  if("ALDER" %in% cols) update <- c(update, "ALDER = CAST(ALDERl AS VARCHAR) || '_' || CAST(ALDERh AS VARCHAR)")
+  if("AAR" %in% cols) update <- c(update, "AAR = printf('%d_%d', AARl, AARh)")
+  if("ALDER" %in% cols) update <- c(update, "ALDER = printf('%d_%d', ALDERl, ALDERh)")
   update <- c(update, sprintf("%s = %s", sqlquote(con, "MALTALL"), sqlquote(con, parameters$MALTALL)))
   update_sql <- sprintf("UPDATE %s SET %s", 
                         sqlquote(con, tablename), 
@@ -105,68 +105,41 @@ do_format_cube_columns <- function(parameters){
 }
 
 
-
-
-#' #' @title do_filter_invalid_geo_alder_kjonn
-#' #' @description remove GEO codes not listed in ACCESS:GEOkoder, as well as invalid KJONN AND ALDER
-#' #' @keywords internal
-#' #' @noRd
-#' do_filter_invalid_geo_alder_kjonn <- function(con){
-#'   tablename = "KUBE"
-#'   cols <- get_duckdb_cols(con, tablename)
-#'   tmp <- prepare_tmp_result_table(con, tablename)
-#'   
-#'   
-#'   where <- c("EXISTS (SELECT 1 FROM GEOkoder g WHERE g.GEO = t.GEO AND g.TYP = 'O' AND g.TIL = 9999)")
-#'   
-#'   if ("ALDER" %in% cols) {
-#'     where <- c(where, 
-#'                sprintf("t.ALDER NOT IN ('%s', '%s')", getOption("khfunctions.alder_illegal"), getOption("khfunctions.ukjent")))
-#'   }
-#'   
-#'   if ("KJONN" %in% cols){
-#'     where <- c(where,
-#'                sprintf("t.KJONN NOT IN ('%s', '%s')", getOption("khfunctions.illegal"), getOption("khfunctions.ukjent")))
-#'   }
-#'   
-#'   
-#'   sql <- sprintf("CREATE TABLE %s AS SELECT t.* FROM %s t WHERE %s",
-#'                  sqlquote(con, tmp), sqlquote(con, tablename), paste(where, collapse = "\n AND ")
-#'   )
-#'   
-#'   invisible(DBI::dbExecute(con, sql))
-#'   replace_table_duckdb(con = con, target = tablename, source = tmp)
-#' }
-
-
-#' @keywords internal
+#' @title rename_tab_columns
+#' @description
+#' Omdøper TAB-kolonnene til sitt faktiske navn, angitt i ACCESS::FILGRUPPER
 #' @noRd
-get_etabs <- function(columnnames, parameters){
+rename_tab_columns <- function(parameters){
+  con <- parameters$duck
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  tabcols <- grep("^TAB\\d+$", columnnames, value = T)
-  tabnames <- character(0)
-  for(tab in tabcols){
-    tabnames <- c(tabnames, spec[[tab]])
-  }
-  return(list(tabcols = tabcols, tabnames = tabnames))
-}
+  cols <- get_duckdb_cols(con, "KUBE")
+  tabcols <- grep("^TAB\\d+$", cols, value = TRUE)
+  if(length(tabcols) == 0) return(invisible(NULL))
+  tabnames <- vapply(tabcols, function(x) spec[[x]], character(1))
   
-#' @keywords internal
-#' @noRd
-set_etab_names <- function(dt, etablist){
-  data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
+  sql <- paste(
+    sprintf(
+      "ALTER TABLE KUBE RENAME COLUMN %s TO %s",
+      sqlquote(con, tabcols), sqlquote(con, tabnames)
+    ), collapse = ";\n")
+  
+  invisible(DBI::dbExecute(con, sql))
+  return(tabnames)
 }
 
 #' @keywords internal
 #' @noRd
-get_outdimensions <- function(dt, etabs, parameters){
-  dims <- c(getOption("khfunctions.khtabs"), etabs)
+get_outdimensions <- function(parameters){
+  con <- parameters$duck
+  dims <- c(getOption("khfunctions.khtabs"), as.character(parameters$tabnames))
   if(is_not_empty(parameters$CUBEinformation$DIMDROPP)){
     dimdropp <- unlist(strsplit(parameters$CUBEinformation$DIMDROPP, ","))
     dims <- setdiff(dims, dimdropp)
   }
-  if("ALDER" %notin% names(dt)) dims <- setdiff(dims, "ALDER")
-  if("KJONN" %notin% names(dt)) dims <- setdiff(dims, "KJONN")
+  
+  cols <- get_duckdb_cols(con, "KUBE")
+  if("ALDER" %notin% cols) dims <- setdiff(dims, "ALDER")
+  if("KJONN" %notin% cols) dims <- setdiff(dims, "KJONN")
   return(dims)
 }
 

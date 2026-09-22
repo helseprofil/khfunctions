@@ -40,18 +40,13 @@ get_maltall_column <- function(parameters){
 }
 
 
-#' Title
-#'
-#' @param parameters 
-#'
-#' @returns
-#' @export
-#'
-#' @examples
+#' @title get_lks_startaar
+#' @noRd
 get_lks_startaar <- function(parameters){
   lks_start <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
                                                  query = paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0"), 
                                                  as.is = TRUE))
+  write_duckdb_table(con = parameters$duck, data = lks_start, tablename = "LKS_STARTAAR")
   return(lks_start)
 }
 
