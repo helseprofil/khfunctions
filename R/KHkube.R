@@ -49,6 +49,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   add_meisskala(parameters = parameters)
   
   # 5. Redigere kolonner og filtrere ugyldige rader
+  do_filter_invalid_geo_alder_kjonn(parameters$duck, "KUBE")
   scale_rate_and_meisskala(parameters = parameters)
   do_format_cube_columns(parameters = parameters)
   add_smr_and_meis(parameters = parameters)

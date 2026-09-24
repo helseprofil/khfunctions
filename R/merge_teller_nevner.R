@@ -74,7 +74,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     print_console_message("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
   
-  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
+  # do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
