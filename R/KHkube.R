@@ -63,7 +63,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   dt <- do_censor_cube(dt = dt, parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "B", parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
-  write_to_tmp_and_replace_table(con = parameters$duck, data = dt, tablename = "KUBE")r
+  write_to_tmp_and_replace_table(con = parameters$duck, data = dt, tablename = "KUBE")
   rm(dt)
   gc()
   
