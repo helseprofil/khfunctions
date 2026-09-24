@@ -66,7 +66,7 @@ do_censor_cube <- function(dt, parameters){
     # print_console_message("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
     # do_censor_primary_secondary(dt = dt, parameters = parameters)
     # Ready to replace the rows below
-    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
+    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
@@ -101,7 +101,7 @@ do_censor_primary_secondary <- function(dt, parameters){
   alltriangles <- get_censor_triangles(parameters = parameters)
   # CHECK TRIANGLE VALUES - verdiene i et triangel må eksistere i kuben
   # Trenger ikke sjekke geotriangler som er maskinelle, men manuelt angitte triangler bør sjekkes for feil. 
-  dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
+  dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$tabnames), names(dt))
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
@@ -155,6 +155,8 @@ do_censor_primary <- function(dt, limits){
 #' @noRd
 do_censor_serie <- function(dt, limits, dims){
   seriedims <- setdiff(dims, "AAR")
+  data.table::uniqueN(dt[, ..seriedims])
+  
   primary_limit <- getOption("khfunctions.anon_hullandel")
   weak_limit <- getOption("khfunctions.anon_svakandel")
   helper_columns <- c("weak", "propweak", "propprimary")
@@ -552,8 +554,8 @@ save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktr
 #' Helper function for kube_spec, finding dimensions in KUBE
 #' @keywords internal
 #' @noRd
-find_dims_for_stataprikk <- function(dt, etabs){
-  alldims <- c(getOption("khfunctions.khtabs"), etabs$tabnames)
+find_dims_for_stataprikk <- function(dt, parameters){
+  alldims <- c(getOption("khfunctions.khtabs"), parameters$tabnames)
   alldims[alldims %in% names(dt)]
 }
 

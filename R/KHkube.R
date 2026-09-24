@@ -54,7 +54,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   do_format_cube_columns(parameters = parameters)
   add_smr_and_meis(parameters = parameters)
   fix_geo_special(parameters = parameters)
-  tabnames <- rename_tab_columns(parameters = parameters)
+  parameters[["tabnames"]] <- rename_tab_columns(parameters = parameters)
   parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
   parameters[["outdimensions"]] <- get_outdimensions(parameters = parameters)
   
