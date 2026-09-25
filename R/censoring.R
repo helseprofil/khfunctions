@@ -53,8 +53,6 @@ do_censor_cube <- function(dt, parameters){
   if(is_empty(parameters$Censor_type)) return(dt)
   
   if(parameters$Censor_type == "R"){
-    # data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
-    print_console_message("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
@@ -63,9 +61,6 @@ do_censor_cube <- function(dt, parameters){
     vals <- get_value_columns(names(dt))
     idx <- which(dt[["spv_tmp"]] == 9)
     data.table::set(dt, i = idx, j = vals, value = NA)
-    # print_console_message("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
-    # do_censor_primary_secondary(dt = dt, parameters = parameters)
-    # Ready to replace the rows below
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
@@ -105,14 +100,14 @@ do_censor_primary_secondary <- function(dt, parameters){
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
-  print_console_message("\n* Starter personvernhåndtering")
+  print_console_message("* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   if(length(alltriangles) > 0){
-    print_console_message("\n* NABOPRIKKING på:", names(alltriangles), "\n")
+    print_console_message("\n** NABOPRIKKING på:", names(alltriangles))
     do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
   } else {
-    print_console_message("\n* Ingen naboprikking satt opp\n")
+    print_console_message("** Ingen naboprikking satt opp")
   }
   valuesF <- paste0(get_value_columns(names(dt)), ".f")
   dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
@@ -129,18 +124,19 @@ do_censor_primary_secondary <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_censor_primary <- function(dt, limits){
+    print_console_message("\n** Primærprikking:")
   if(is_not_empty(limits$TELLER)){
-    print_console_message("\n*** Prikker på liten teller og teller-nevner")
+    print_console_message("*** Teller og teller-nevner <=", limits$TELLER)
     idx <- which(dt[["spv_tmp"]] == 0 & 
                    (dt[["sumTELLER"]] <= limits$TELLER | dt[["sumNEVNER"]] - dt[["sumTELLER"]] <= limits$TELLER))
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
   if(is_not_empty(limits$NEVNER)){
-    print_console_message("\n*** Prikker på liten nevner")
+    print_console_message("*** Nevner <=", limits$NEVNER)
     idx <- which(dt[["spv_tmp"]] == 0 & dt[["sumNEVNER"]] <= limits$NEVNER)
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
-  print_console_message("\n** Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
+  print_console_message("- Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
 }
 
 #' @title do_censor_serie
@@ -168,8 +164,9 @@ do_censor_serie <- function(dt, limits, dims){
   
   idx <- which(dt[["spv_tmp"]] == 0 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
   data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
-  print_console_message(paste0("\n** Serieprikker ", dt[serieprikket == 1, .N], " rader fordi tidsserien har en andel personvernprikker > ", primary_limit, 
-             " eller at andelen sumTELLER <= ", limits$STATTOL, " > ", weak_limit))
+  print_console_message("\n** Serieprikker dersom tidsserien har\n*** Andel personvernprikker >", primary_limit, 
+             "\n*** Andel sumTELLER <=", limits$STATTOL, ">", weak_limit)
+  print_console_message("- Antall serieprikker: ", dt[serieprikket == 1, .N])
   data.table::set(dt, j = helper_columns, value = NULL)
 }
 
@@ -296,7 +293,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
     }
     nyeprikker <- collapse::fsum(dt[[itcol]])
     onlyserie <- ifelse(iteration <= max_serie_rounds, " (bare serieprikker brukt)", "")
-    print_console_message(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie, "\n"))
+    print_console_message(paste0("- Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie))
     force_runde <- iteration <= max_serie_rounds
     iteration <- iteration + 1L
   }
@@ -454,9 +451,9 @@ warn_if_special_triangles <- function(alltriangles) {
   }, logical(1L))]
   
   if (length(special_dims) > 0L) {
-    print_console_message("\n**** Spesialstrata oppdaget for dimensjonene: ",
+    print_console_message("*** Spesialstrata oppdaget for dimensjonene: ",
         paste(special_dims, collapse = ", "),
-        "\n**** Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
+        "\n- Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
   } 
 }
 
