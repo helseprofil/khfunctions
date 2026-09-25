@@ -88,7 +88,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   dt <- code_env[[dt_name]]
   extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
   if(length(extracols) > 0) dt[, (extracols) := NULL]
-  print_console_message("\n** R-snutt ferdig")
+  print_console_message("- R-snutt ferdig")
   if(use_duck){
     write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
     do_clean_duckdb(con = con)

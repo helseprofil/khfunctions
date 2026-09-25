@@ -1,6 +1,6 @@
 add_predteller <- function(parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
-  print_console_message("* Estimerer forventet teller (PREDTELLER) for standardisering")
+  new_section_header("Standardisering")
   con <- parameters$duck
   tmp_tables <- c(PREDRATE = "tmp_predrate", PREDNEVNER = "tmp_prednevner", PREDTELLER = "tmp_predteller")
   drop_tables_duckdb(con, tmp_tables)
@@ -24,7 +24,7 @@ add_predteller <- function(parameters){
 #' @keywords internal
 #' @noRd
 find_common_standard_teller_nevner_prednevner_design <- function(parameters){
-  print_console_message("\n** Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
+  print_console_message("* Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
   
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {
@@ -84,7 +84,7 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @family duckdb
 #' @noRd
 generate_tmp_predrate <- function(con, gentable, design, parameters){
-  print_console_message("* Henter ut RATE å standardisere mot")
+  print_console_message("\n* Henter ut RATE å standardisere mot")
   missyears <- parameters$MOVAV$missyears
   merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
   standardkube_name <- "STANDARD_KUBE"
@@ -154,7 +154,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
 #' @family duckdb
 #' @noRd
 generate_tmp_prednevner <- function(con, gentable, design, parameters){
-  print_console_message("\n* Henter ut NEVNER som grunnlag for PREDTELLER\n")
+  print_console_message("\n* Henter ut NEVNER som grunnlag for PREDTELLER")
   missyears <- parameters$MOVAV$missyears
   tmp_prednevner_sql <- sqlquote(con, gentable)
   prednevnerfile <- parameters$files$PREDNEVNER
@@ -192,7 +192,7 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
 }
 
 generate_tmp_predteller <- function(con, tables, parameters){
-  print_console_message("\n* Beregner PREDTELLER\n")
+  print_console_message("\n* Beregner forventet teller (PREDTELLER)")
   tmp_predrate_sql <- sqlquote(con, tables[["PREDRATE"]])
   tmp_prednevner_sql <- sqlquote(con, tables[["PREDNEVNER"]])
   tmp_predteller_sql <- sqlquote(con, tables[["PREDTELLER"]])
@@ -244,7 +244,7 @@ generate_tmp_predteller <- function(con, tables, parameters){
 #' @noRd
 add_meisskala <- function(parameters){
   if(parameters$PredFilter$ref_year_type != "Specific") return(invisible(NULL))
-  print_console_message("* Legger til MEISskala for standardisering\n")
+  print_console_message("- Legger til MEISskala for å justere MEIS\n")
   
   con <- parameters$duck
   tbl_sql <- sqlquote(con, "KUBE")

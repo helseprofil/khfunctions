@@ -242,7 +242,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
 #' @family duckdb
 #' @noRd
 add_crude_rate <- function(con, tablename){
-  print_console_message("* Legger til crude RATE")
+  print_console_message("- Legger til crude RATE")
   cols <- get_duckdb_cols(con, tablename)
   if(!"NEVNER" %in% cols){
     print_console_message("- Har ikke NEVNER, kan ikke beregne crude RATE")

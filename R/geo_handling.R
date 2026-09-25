@@ -5,7 +5,7 @@
 #' @family duckdb
 #' @noRd 
 do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = TRUE){
-    
+  print_console_message("\n** Geo-harmonisering")
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
                                        sqlquote(con, tablename))))
   cols <- get_duckdb_cols(con, tablename)
@@ -19,7 +19,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
       table_sql))$n
   
   if(nharm > 0){
-    print_console_message(paste0("\n*** Recoding ", nharm, " geo-koder"))
+    print_console_message("- Rekoder", nharm, "geo-koder")
     cols_sql <- sqlquote(con, setdiff(cols, "GEO"))
 
     select_sql <- paste(c("COALESCE(k.GEO_omk, f.GEO) AS GEO",
@@ -36,7 +36,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
     invisible(DBI::dbExecute(con, sql))
     replace_table_duckdb(con, target = tablename, source = tmp_result)
   } else {
-    print_console_message(paste0("\n*** Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
+    print_console_message(paste0("- Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
     
   do_aggregate_file_duckdb(con = con, tablename = tablename, vals = vals)
@@ -84,7 +84,7 @@ fix_geo_special <- function(parameters){
   
   where <- character()
   
-  print_console_message("* Spesialprikking for GEO")
+  print_console_message("\n* Spesialprikking for GEO")
   if(!is.na(bydelstart) && bydelstart > 0 && any(geonivs %in% c("B", "V"))){
     print_console_message("- Sletter tall for bydel og levekårssoner før ", bydelstart, " dersom de finnes", sep = "")
     where <- c(
@@ -128,7 +128,7 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
   geolevel <- match.arg(geolevel)
   if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))
   print_console_message(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
-  print_console_message("\n*** Originalt", dt[GEOniv == geolevel, .N], "rader")
+  print_console_message("- Originalt", dt[GEOniv == geolevel, .N], "rader")
   # Sette inn kommentar om kriteriene?
   dims <- parameters$outdimensions
   flags <- c(grep("\\.f$", names(dt), value = T))
@@ -137,9 +137,9 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
     dt[skjul, dekningprikket := 1L, on = dims]
     n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
     dt[spv_tmp == 0 & dekningprikket == 1L, (c(flags, "spv_tmp")) := 1L]
-    print_console_message("\n***", n_new, "rader skjules")
+    print_console_message("-", n_new, "rader skjules")
   } else {
-    print_console_message("\n*** Ingen rader skjules")
+    print_console_message("- Ingen rader skjules")
   }
 }
 

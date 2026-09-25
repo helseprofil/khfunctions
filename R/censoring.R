@@ -50,8 +50,12 @@ add_censorinfo_cube <- function(con, tablename){
 do_censor_cube <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "PRIKKpre", dt = dt, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
-  if(is_empty(parameters$Censor_type)) return(dt)
-  
+  if(is_empty(parameters$Censor_type)){
+    new_section_header("Ingen prikking")
+    return(dt)
+  }
+
+  new_section_header("Starter personvernhåndtering (prikking)")  
   if(parameters$Censor_type == "R"){
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
@@ -100,7 +104,6 @@ do_censor_primary_secondary <- function(dt, parameters){
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
-  print_console_message("* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   if(length(alltriangles) > 0){
@@ -124,7 +127,7 @@ do_censor_primary_secondary <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_censor_primary <- function(dt, limits){
-    print_console_message("\n** Primærprikking:")
+  print_console_message("** Primærprikking:")
   if(is_not_empty(limits$TELLER)){
     print_console_message("*** Teller og teller-nevner <=", limits$TELLER)
     idx <- which(dt[["spv_tmp"]] == 0 & 
@@ -164,7 +167,7 @@ do_censor_serie <- function(dt, limits, dims){
   
   idx <- which(dt[["spv_tmp"]] == 0 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
   data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
-  print_console_message("\n** Serieprikker dersom tidsserien har\n*** Andel personvernprikker >", primary_limit, 
+  print_console_message("\n** Serieprikker dersom tidsserien har:\n*** Andel personvernprikker >", primary_limit, 
              "\n*** Andel sumTELLER <=", limits$STATTOL, ">", weak_limit)
   print_console_message("- Antall serieprikker: ", dt[serieprikket == 1, .N])
   data.table::set(dt, j = helper_columns, value = NULL)

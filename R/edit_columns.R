@@ -8,7 +8,7 @@ scale_rate_and_meisskala <- function(parameters){
   con <- parameters$duck
   scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
   
-  print_console_message("* Skalerer RATE til per", scalevalue)
+  print_console_message("- Skalerer RATE til per", scalevalue)
   tbl_sql <- sqlquote(con, "KUBE")
   cols <- DBI::dbListFields(con, tbl_sql)
   
@@ -34,7 +34,6 @@ scale_rate_and_meisskala <- function(parameters){
 #' Eventuelt lage ny kolonne basert på ACCESS::TNP_PROD::NYEKOL_RAD_postMA
 #' @noRd
 do_format_cube_columns <- function(parameters){
-  print_console_message("\n* Formatterer kolonner i KUBE")
   con = parameters$duck
   tablename <- "KUBE"
   cols <- DBI::dbListFields(con, tablename)

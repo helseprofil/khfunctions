@@ -33,10 +33,12 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner, hente ut kubedesign
+  new_section_header("Merger teller- og nevnerfil")
   parameters <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
 
   # 3. Aggregering til flerårige tall og oppdatere kubedesign
   parameters <- get_movav_information(parameters = parameters)
+  if(parameters$MOVAV$is_movav) new_section_header("Aggregering til flerårige tall")
   aggregate_to_periods(tablename = "KUBE", parameters = parameters, standard = FALSE)
   parameters <- update_cubedesign_after_moving_average(parameters = parameters)
 
@@ -49,7 +51,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   add_meisskala(parameters = parameters)
   
   # 5. Redigere kolonner og filtrere ugyldige rader
-  do_filter_invalid_geo_alder_kjonn(parameters$duck, "KUBE")
+  new_section_header("Formatterer kolonner i KUBE")
+  # do_filter_invalid_geo_alder_kjonn(parameters$duck, "KUBE")
   scale_rate_and_meisskala(parameters = parameters)
   do_format_cube_columns(parameters = parameters)
   add_smr_and_meis(parameters = parameters)
@@ -76,7 +79,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
                       code = parameters$CUBEinformation$SLUTTREDIGER, 
                       parameters = parameters, duck = TRUE, tablename = "KUBE")
   
-  add_missing_lks_duckdb(parameters = parameters)
+  add_missing_lks(parameters = parameters)
   
   # 8. Slicing av outputfiler
   RESULTAT <- list()

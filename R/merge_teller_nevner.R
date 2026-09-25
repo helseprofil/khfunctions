@@ -8,11 +8,9 @@
 #' @param design Design list
 merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    print_console_message("\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    print_console_message("\n* Merger teller- og nevnerfil")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }
@@ -37,13 +35,13 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   con <- parameters$duck
   
   tablename_teller <- ifelse(standardfiles, "STANDARD_TELLER", "TELLER")
-  print_console_message("** Lager", tablename_teller, "fra", tellerfilnavn)
+  print_console_message("* Lager", tablename_teller, "fra", tellerfilnavn)
   do_redesign_table_duckdb(con = con, newtable = tablename_teller, orgtable = tellerfilnavn,
                           filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
     tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
-    print_console_message("\n** Lager", tablename_nevner, "fra", nevnerfilnavn)
+    print_console_message("\n* Lager", tablename_nevner, "fra", nevnerfilnavn)
     do_redesign_table_duckdb(con = con, newtable = tablename_nevner, orgtable = nevnerfilnavn,
                             filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
   }
@@ -54,7 +52,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
   tntype <- ifelse(standardfiles, "STANDARD_KUBE", "KUBE")
   
   if(length(KUBEdesign) > 0) {
-    print_console_message("\n** Rektangulariserer")
+    print_console_message("\n* Rektangulariserer")
     set_rectangularized_cube_design(colnames = get_duckdb_cols(con, tablename_teller), 
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
     report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
@@ -74,7 +72,7 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     print_console_message("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
   
-  # do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
+  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
@@ -85,8 +83,9 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     write_to_tmp_and_replace_table(con = con, tablename = tntype, data = dt)
   }
   
-  do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN)
+  do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN, parameters = parameters)
   set_teller_nevner_names_duckdb(con = con, tablename = tntype, TNPparameters = parameters$TNPinformation)
+  do_balance_missing_teller_nevner(con = con, tablename = tntype)
   do_clean_duckdb(con = parameters$duck)
   if(!standardfiles) parameters[["CUBEdesign"]] <- KUBEdesign$MAIN
   return(invisible(parameters))
@@ -117,7 +116,7 @@ do_filter_invalid_geo_alder_kjonn <- function(con, tablename){
   sql_feil <- sprintf("SELECT COUNT(*) AS n FROM %s t WHERE NOT (%s)", sqlquote(con, tablename), where_sql)
   n_fjernes <- DBI::dbGetQuery(con, sql_feil)$n
   if(n_fjernes > 0){
-    print_console_message("-Fjerner", n_fjernes, "rader med ugyldig GEO, ALDER eller KJONN")
+    print_console_message("- Fjerner", n_fjernes, "rader med ugyldig GEO, ALDER eller KJONN")
     tmp <- prepare_tmp_result_table(con, tablename)
     sql <- sprintf("CREATE TABLE %s AS SELECT t.* FROM %s t WHERE %s",
                    sqlquote(con, tmp), sqlquote(con, tablename), where_sql)
@@ -254,7 +253,7 @@ do_redesign_table_duckdb <- function(con, newtable, orgtable, filedesign, target
   drop_tables_duckdb(con, newtable)
   invisible(DBI::dbExecute(con, sprintf("CREATE TABLE %s AS SELECT * FROM %s", newtable, orgtable)))
   redesign <- find_redesign(orgdesign = filedesign, targetdesign = targetdesign, parameters = parameters)
-  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", orgtable, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  if(nrow(redesign$Udekk) > 0) print_console_message("\n-- Filen", orgtable, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
   filter_and_recode_table_duckdb(con = con, tablename = newtable, redesign = redesign, parameters = parameters)
 }
 
@@ -314,7 +313,7 @@ report_removed_codes <- function(orgtable, recttable, parameters){
 }
 
 set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
-  
+  print_console_message("- Setter teller- og nevnernavn")
   cols <- get_duckdb_cols(con, tablename)
   newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$TELLERKOL), "TELLER\\1", cols)
   newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$NEVNERKOL), "NEVNER\\1", newnames)
@@ -335,6 +334,32 @@ set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
   sql <- sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s",
                  tablename, renamecols, renamenewnames)
   sql <- paste(sql, collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}
+
+#' @title do_balance_missing_teller_nevner
+#' @description
+#' Balanserer missing i teller og nevner slik at sumteller og sumnevner er balansert. 
+#' @noRd
+do_balance_missing_teller_nevner <- function(con, tablename){
+  cols <- get_duckdb_cols(con, tablename)
+  if (!all(c("TELLER", "NEVNER") %in% cols)) return(invisible(NULL))
+  
+  print_console_message("- Balanserer missing teller og nevner slik at sumNEVNER og sumTELLER er basert på likt antall år")
+  table_sql <- sqlquote(con, tablename)
+  maxf <- 'GREATEST("TELLER.f", "NEVNER.f")'
+  
+  sql <- sprintf(
+    'UPDATE %s 
+    SET
+      "TELLER.f" = %s,
+      "NEVNER.f" = %s,
+      TELLER = NULL,
+      NEVNER = NULL
+    WHERE %s <> 0',
+    table_sql, maxf, maxf, maxf
+  )
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }

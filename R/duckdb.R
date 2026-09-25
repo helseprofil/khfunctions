@@ -74,7 +74,7 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  print_console_message("\n*** Håndterer implisitte nuller")
+  print_console_message("\n- Håndterer implisitte nuller")
   cols <- get_duckdb_cols(con, table)
   vals <- get_value_columns(cols)
   tbl_sql <- sqlquote(con, table)

@@ -13,7 +13,7 @@ filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters)
   
   print_console_message("\n- Filtrerer og omkoder", tablename)
   do_filter_dimensions_duckdb(con = con, tablename = tablename, 
-                              filters = redesign$Filters)
+                              filters = redesign$Filters, parameters = parameters)
   do_recode_dimensions_duckdb(con = con, tablename = tablename, 
                               recode = redesign$KBs[intersect(redesign$order, names(redesign$KBs))],
                               parameters = parameters)
@@ -27,7 +27,7 @@ filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters)
 #' @description Filters table based on filters, generated with find_redesign
 #' @family duckdb
 #' @noRd
-do_filter_dimensions_duckdb <- function(con, tablename, filters){
+do_filter_dimensions_duckdb <- function(con, tablename, filters, parameters){
   if(length(filters) == 0) return(invisible(NULL))
   filter_tables <- character()
   for(part in names(filters)){

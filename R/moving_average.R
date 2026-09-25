@@ -53,12 +53,10 @@ aggregate_to_periods <- function(tablename, parameters, standard = FALSE){
     on.exit({save_filedump_if_requested(dumpname = "MOVAVpost", dt = NULL, parameters = parameters, , duck = TRUE, tablename = tablename)}, add = TRUE)
   }
   con <- parameters$duck
-  do_balance_missing_teller_nevner(con = con, tablename = tablename)
   
   if(parameters$MOVAV$is_movav){
-    print_console_message("\n* Aggregering til flerårige tall")
     period <- parameters$MOVAV$movav
-    print_console_message("- Aggregerer ", tablename, " til ", period, "-årige tall", sep = "")
+    print_console_message("* Aggregerer ", tablename, " til ", period, "-årige tall", sep = "")
     do_aggregate_periods(con = con, tablename = tablename, parameters = parameters)
     do_filter_periods_with_missing_original(con = con, tablename = tablename)
   } else {
@@ -66,32 +64,6 @@ aggregate_to_periods <- function(tablename, parameters, standard = FALSE){
   }
   
   do_clean_duckdb(con = con)
-  invisible(NULL)
-}
-
-#' @title do_balance_missing_teller_nevner
-#' @description
-#' Balanserer missing i teller og nevner slik at sumteller og sumnevner er balansert. 
-#' @noRd
-do_balance_missing_teller_nevner <- function(con, tablename){
-  cols <- get_duckdb_cols(con, tablename)
-  if (!all(c("TELLER", "NEVNER") %in% cols)) return(invisible(NULL))
-  
-  print_console_message("- Balanserer missing teller og nevner slik at sumNEVNER og sumTELLER er basert på likt antall år")
-  table_sql <- sqlquote(con, tablename)
-  maxf <- 'GREATEST("TELLER.f", "NEVNER.f")'
-  
-  sql <- sprintf(
-    'UPDATE %s 
-    SET
-      "TELLER.f" = %s,
-      "NEVNER.f" = %s,
-      TELLER = NULL,
-      NEVNER = NULL
-    WHERE %s <> 0',
-    table_sql, maxf, maxf, maxf
-  )
-  invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }
 

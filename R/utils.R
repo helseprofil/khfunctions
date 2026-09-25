@@ -51,14 +51,18 @@ set_threads <- function(){
   use_dt <- pmax(old_dt, use)
   data.table::setDTthreads(use_dt)
   collapse::set_collapse(nthreads = use)
-  print_console_message("\n* Antall kjerner brukt\n** data.table:", use_dt, "\n** collapse: ", use)
+  print_console_message("* Antall kjerner brukt\n- data.table:", use_dt, "\n- collapse: ", use)
   
   return(list(dt = old_dt,
               collapse = old_collapse))
 }
 
-print_console_message <- function(...) {
+print_console_message <- function(...){
   base::cat(...)
   base::cat("\n")
   utils::flush.console()
+}
+
+new_section_header <- function(msg){
+  print_console_message("\n# --", msg, "-- #\n")
 }
