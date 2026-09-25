@@ -143,6 +143,86 @@ sort_bef_gkny_duckdb <- function(con){
 
 # Kube ----
 
+#' @title generate_allvis_base
+#' @description
+#' Lager grunnlaget for ALLVIS og QC-output
+#' @noRd
+generate_allvis_base <- function(parameters){
+  
+  con <- parameters$duck
+  cols <- DBI::dbListFields(con, "KUBE")
+  cols <- cols[!grepl("\\.(f|a|n|fn[0-9]+)$|^naboprikketIomg*", cols)]
+  qcvals <- intersect(getOption("khfunctions.qcvals"), cols)
+  
+  select_expr <- c(cols, "SPVFLAGG")
+  
+  censorvalues <- intersect(unique(c(parameters$outvalues, "MEIS")), cols)
+  
+  select_expr[match(censorvalues, cols)] <- sprintf(
+    "CASE WHEN SPVFLAGG > 0 THEN NULL ELSE %s END AS %s",
+    outvalues, outvalues
+  )
+  
+  select_expr <- c(select_expr, sprintf("%s AS %s_uprikk", qcvals, qcvals))
+  
+  sql <- sprintf(
+    "CREATE OR REPLACE TABLE ALLVIS_base AS
+    WITH base AS (
+      SELECT *,
+        CASE
+            WHEN spv_tmp IS NULL THEN 0
+            WHEN spv_tmp IN (-1, 4) THEN 3
+            WHEN spv_tmp = 9 THEN 1
+            ELSE spv_tmp
+        END AS SPVFLAGG
+      FROM KUBE
+    )
+    SELECT %s FROM base",
+    paste(select_expr, collapse = ",\n        ")
+  )
+  
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}
+
+#' @title generate_allvis_export_table
+#' @description
+#' Lager endelig ALLVIS-fil
+#' @noRd
+generate_allvis_export_table <- function(parameters){
+  cols <- c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")
+  sql <- sprintf("CREATE OR REPLACE TABLE ALLVIS AS SELECT %s FROM ALLVIS_base", 
+                 paste(cols, collapse = ", "))
+  invisible(DBI::dbExecute(parameters$duck, sql))
+  invisible(NULL)
+}
+
+#' @title generate_qc_table
+#' @description
+#' Lager QC-fil med nødvendige hjelpekolonner
+#' @noRd
+generate_qc_table <- function(parameters){
+  
+  con <- parameters$duck
+  qcvals <- intersect(getOption("khfunctions.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
+  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
+  
+  cols <- unique(c(
+    parameters$outdimensions,
+    parameters$outvalues,
+    "SPVFLAGG",
+    paste0(qcvals, "_uprikk"),
+    prikkvals
+  ))
+  
+  sql <- sprintf("CREATE OR REPLACE TABLE QC AS SELECT %s FROM ALLVIS_base", paste(cols, collapse = ", "))
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}
+
+
+
+
 #' @title write_cube_output
 #' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
 #' @param outputlist list of output to write

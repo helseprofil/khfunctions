@@ -21,6 +21,7 @@
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
   - Clean up console messages
+  - All output files generated directly in duckdb and written to disk
 
 ## Other changes
 - `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.

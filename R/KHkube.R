@@ -69,7 +69,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
   write_to_tmp_and_replace_table(con = parameters$duck, data = dt, tablename = "KUBE")
   rm(dt)
-  gc()
+  invisible(gc())
   
   # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
   do_special_handling(name = "RSYNT_POSTPROSESS", dt = NULL, dt_name = "KUBE", 
@@ -82,18 +82,36 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   add_missing_lks(parameters = parameters)
   
   # 8. Slicing av outputfiler
-  RESULTAT <- list()
-  RESULTAT[["KUBE"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
-  RESULTAT[["ALLVIS"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
-  do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
-  generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
-  RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
-  RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
-  RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = RESULTAT[["ALLVIS"]], dt_name = "ALLVIS", code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
-  write_cube_output(outputlist = RESULTAT, parameters = parameters)
+  new_section_header("Genererer og eksporterer resultatfiler")
+  generate_allvis_base(parameters = parameters)
+  generate_qc_table(parameters = parameters)
+  # generate_and_export_all_friskvik_indicators(parameters = parameters)
+  generate_allvis_export_table(parameters = parameters)
+  do_special_handling(name = "ALLVISFILTER", dt = NULL, dt_name = "ALLVIS", 
+                      code = parameters$CUBEinformation$ALLVISFILTER, 
+                      parameters = parameters, duck = TRUE, tablename = "ALLVIS")
+  # write_cube_output(parameters = parameters)
+  RESULTAT <- list(
+    KUBE = fetch_duckdb_table(parameters$duck, "KUBE"),
+    ALLVIS = fetch_duckdb_table(parameters$duck, "ALLVIS"),
+    QC = fetch_duckdb_table(parameters$duck, "QC")
+  )
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
-  if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
+  
+  
+  # RESULTAT <- list()
+  # RESULTAT[["KUBE"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
+  # RESULTAT[["ALLVIS"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
+  # do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
+  # generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
+  # RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
+  # RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
+  # RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = RESULTAT[["ALLVIS"]], dt_name = "ALLVIS", code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
+  # write_cube_output(outputlist = RESULTAT, parameters = parameters)
+  # assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
+  # if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   print_console_message("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
+  new_section_header(paste0("KUBE ", parameters$name, " er ferdig"))
   print_console_message("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
