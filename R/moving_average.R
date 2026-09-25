@@ -131,7 +131,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
     val_a <- sqlquote(con, paste0(val, ".a"))
     select_parts <- c(
       select_parts,
-      sprintf('SUM(d.%s) AS %s', val_sql, val_sql),
+      sprintf('COALESCE(SUM(d.%s), 0) AS %s', val_sql, val_sql),
       sprintf('0 AS %s', val_f),
       sprintf('SUM(d.%s) AS %s', val_a, val_a),
       sprintf('SUM(CASE WHEN d.%s IN (1,2) THEN 1 ELSE 0 END) AS %s',
