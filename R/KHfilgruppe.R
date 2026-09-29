@@ -69,7 +69,7 @@ lagfilgruppe_cleanup <- function(parameters){
 #' Initiates log for filegroup cleaning
 #' @noRd
 initiate_cleanlog_db <- function(codebooklog, parameters){
-  if(!"FILGRUPPE" %in% DBI::dbListTables(parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
+  if(!"FILGRUPPE" %in% get_duckdb_tables(con = parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
   koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
   log <- parameters$read_parameters[KOBLID %in% koblids, .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
   n_rows <- data.table::setDT(DBI::dbGetQuery(parameters$duck, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))

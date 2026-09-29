@@ -416,7 +416,7 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
 #' @noRd
 do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), parameters){
   on.exit({
-    tmp_design_tabs <- grep("^tmp_designgeo_", DBI::dbListTables(con), value = TRUE)
+    tmp_design_tabs <- grep("^tmp_designgeo_", get_duckdb_tables(con = con), value = TRUE)
     drop_tables_duckdb(con, c("tmp_rectangularized", tmp_design_tabs))
     }, add = TRUE)
   
@@ -630,7 +630,6 @@ load_filegroup_to_buffer <- function(filegroup, filter = NULL, parameters, duck 
   if(duck){
     print_console_message("\n*** Skriver til duckdb...\n")
     write_duckdb_table(parameters$duck, filegroup, FIL, temp = FALSE, overwrite = TRUE)
-    # DBI::dbWriteTable(parameters$duck, name = filegroup, value = FIL, overwrite = TRUE)
   } else {
     print_console_message("\n*** Skriver til lokalt minne...")
     .GlobalEnv$BUFFER[[filegroup]] <- FIL

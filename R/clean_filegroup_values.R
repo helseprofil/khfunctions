@@ -75,7 +75,6 @@ scale_value_duckdb <- function(con, parameters, val){
   
   print_console_message("\n*** Skalerer ", val, " med ", scalecol, sep = "")
   
-  # DBI::dbWriteTable(con, "tmp_scale", scales, temporary = TRUE, overwrite = TRUE)
   write_duckdb_table(con, "tmp_scale", scales)
   on.exit(drop_tables_duckdb(con = con, tables = "tmp_scale"), add = TRUE)
   

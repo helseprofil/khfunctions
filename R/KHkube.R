@@ -11,7 +11,7 @@
 #' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
@@ -91,7 +91,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   do_special_handling(name = "ALLVISFILTER", dt = NULL, dt_name = "ALLVIS", 
                       code = parameters$CUBEinformation$ALLVISFILTER, 
                       parameters = parameters, duck = TRUE, tablename = "ALLVIS")
-  # write_cube_output(parameters = parameters)
+  write_cube_output(parameters = parameters)
   RESULTAT <- list(
     KUBE = fetch_duckdb_table(parameters$duck, "KUBE"),
     ALLVIS = fetch_duckdb_table(parameters$duck, "ALLVIS"),
@@ -99,19 +99,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   )
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   
-  
-  # RESULTAT <- list()
-  # RESULTAT[["KUBE"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
-  # RESULTAT[["ALLVIS"]] <- fetch_duckdb_table(parameters$duck, "KUBE")
-  # do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
-  # generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
-  # RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
-  # RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
-  # RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = RESULTAT[["ALLVIS"]], dt_name = "ALLVIS", code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
-  # write_cube_output(outputlist = RESULTAT, parameters = parameters)
-  # assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
-  # if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
-  print_console_message("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
+  if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   new_section_header(paste0("KUBE ", parameters$name, " er ferdig"))
   print_console_message("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))

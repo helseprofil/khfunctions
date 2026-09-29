@@ -8,7 +8,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
-  write_duckdb_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
+  write_duckdb_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
@@ -208,7 +208,7 @@ get_friskvik_information <- function(parameters){
 get_filedesign <- function(parameters){
   files <- unique(parameters$files)
   con <- parameters$duck
-  isfiles <- all(files %in% DBI::dbListTables(con))
+  isfiles <- all(files %in% get_duckdb_tables(con = con))
   if(!isfiles) stop("Alle nødvendige filer er ikke lastet inn")
   filedesign <- list()
   for(file in files){

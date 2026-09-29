@@ -14,7 +14,7 @@ init_duckdb <- function(dbname){
   fs::dir_create(temp_dir)
   DBI::dbExecute(con, sprintf("SET temp_directory='%s'", gsub("\\\\", "/", temp_dir)))
   
-  tabs <- DBI::dbListTables(con)
+  tabs <- get_duckdb_tables(con = con)
   for(i in seq_along(tabs)){
     invisible(DBI::dbExecute(con, paste0("DROP TABLE IF EXISTS ", tabs[[i]], " CASCADE;")))
   }
@@ -31,6 +31,8 @@ do_clean_duckdb <- function(con){
     invisible(try(DBI::dbExecute(con, "VACUUM"), silent = TRUE))
   }
 }
+
+# Helpers ----
 
 #' @title is_duckdb_table
 #' @description Checks if table exists in duckdb
@@ -60,7 +62,7 @@ drop_tables_duckdb <- function(con, tables){
 #' @family duckdb
 #' @noRd
 drop_tables_duckdb_prefix <- function(con, prefix){
-  tabs <- DBI::dbListTables(con)
+  tabs <- get_duckdb_tables(con = con)
   drop <- grep(sprintf("^%s", prefix), tabs, value = TRUE)
   if(length(drop) > 0){
     drop_tables_duckdb(con, drop)
@@ -103,6 +105,10 @@ sqlquote <- function(con, x){
 #' @noRd
 get_duckdb_cols <- function(con, tablename){
   DBI::dbListFields(con, tablename)
+}
+
+get_duckdb_tables <- function(con){
+  DBI::dbListTables(con = con)
 }
 
 #' Legge til nye kolonner
@@ -199,13 +205,14 @@ fetch_duckdb_table <- function(con, tablename, limit = NULL){
 #' @description (over)write table to duckdb
 #' @keywords duckdb
 #' @noRd
-write_duckdb_table <- function(con, tablename, data, temp = TRUE, overwrite = TRUE){
+write_duckdb_table <- function(con, tablename, data, temp = TRUE, overwrite = TRUE, ...){
   DBI::dbWriteTable(
     conn = con,
     name = tablename,
     value = data,
     overwrite = overwrite,
-    temporary = temp
+    temporary = temp,
+    ...
   )
   invisible(NULL)
 }
