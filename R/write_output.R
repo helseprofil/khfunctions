@@ -1,53 +1,3 @@
-#' @title convert_dt_to_arrow_table
-#' @description
-#' Removes attributes except column names before converting to an arrow table (for writing)
-#' @param dt data.table
-#' @noRd
-convert_dt_to_arrow_table <- function(dt){
-  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
-  for(att in attremove) data.table::setattr(dt, att, NULL)
-  table <- arrow::as_arrow_table(dt)
-  return(table)
-}
-
-#' @title do_write_parquet
-#' @description
-#' Wrapper around arrow::write_parquet, which first applies convert_dt_to_arrow_table() to generate a arrow table for writing.
-#' @param dt data.table
-#' @param filepath filepath to save file
-#' @keywords internal
-#' @noRd
-do_write_parquet <- function(dt, filepath){
-  table <- convert_dt_to_arrow_table(dt)
-  arrow::write_parquet(table, sink = filepath, compression = "snappy")
-}
-
-#' @title do_write_parquet_duckdb
-#' @description
-#' Skriver parquet-fil fra tabell i duckdb
-#' 
-#' @param con duckdb connection
-#' @param tablename tabellen som skal skrives
-#' @param filepath sti til der filen skal skrives til
-do_write_parquet_duckdb <- function(con, tablename, filepath){
-  invisible(DBI::dbExecute(
-    con,
-    sprintf(
-      "COPY %s TO '%s' 
-      (
-        FORMAT PARQUET, 
-        COMPRESSION ZSTD, 
-        ROW_GROUP_SIZE 1000000
-      )",
-      tablename,
-      gsub("\\\\", "/", filepath)
-    )))
-}
-
-# do_write_csv_duckdb <- function(){
-#   
-# }
-
 # Filgruppe ----
 
 #' @title write_filegroup_output
@@ -67,7 +17,7 @@ write_filegroup_output <- function(parameters){
     sort_bef_gkny_duckdb(con = con)
   } 
   print_console_message("\n Skriver:\n", parquet,"\n", datert)
-  do_write_parquet_duckdb(con = con, tablename = "FILGRUPPE", filepath = parquet)
+  do_write_output_duckdb(con = con, source = "FILGRUPPE", filepath = parquet, format = "parquet")
   file.copy(from = parquet, to = datert)
 }
 
@@ -148,25 +98,29 @@ sort_bef_gkny_duckdb <- function(con){
 #' Lager grunnlaget for ALLVIS og QC-output
 #' @noRd
 generate_allvis_base <- function(parameters){
-  
   con <- parameters$duck
   cols <- DBI::dbListFields(con, "KUBE")
-  cols <- cols[!grepl("\\.(f|a|n|fn[0-9]+)$|^naboprikketIomg*", cols)]
+  cols <- cols[!grepl("\\.(f|a|n|fn[0-9]+)$|^naboprikketIomg\\d+$|^spv_tmp$", cols) | cols == "RATE.n"]
   qcvals <- intersect(getOption("khfunctions.qcvals"), cols)
   
-  select_expr <- c(cols, "SPVFLAGG")
+  qcols <- as.character(sqlquote(con, cols))
+  select_expr <- c(qcols, "SPVFLAGG")
   
   censorvalues <- intersect(unique(c(parameters$outvalues, "MEIS")), cols)
-  
+  qcensor <- as.character(sqlquote(con, censorvalues))
   select_expr[match(censorvalues, cols)] <- sprintf(
     "CASE WHEN SPVFLAGG > 0 THEN NULL ELSE %s END AS %s",
-    outvalues, outvalues
+    qcensor, qcensor
   )
   
-  select_expr <- c(select_expr, sprintf("%s AS %s_uprikk", qcvals, qcvals))
+  quprikk <- as.character(sqlquote(con, qcvals))
+  quprikk_alias <- as.character(sqlquote(con, paste0(qcvals, "_uprikk")))
+  select_expr <- c(select_expr, sprintf("%s AS %s", quprikk, quprikk_alias))
   
+  drop_tables_duckdb(con, "ALLVIS_base")
+ 
   sql <- sprintf(
-    "CREATE OR REPLACE TABLE ALLVIS_base AS
+    "CREATE TABLE ALLVIS_base AS
     WITH base AS (
       SELECT *,
         CASE
@@ -190,8 +144,11 @@ generate_allvis_base <- function(parameters){
 #' Lager endelig ALLVIS-fil
 #' @noRd
 generate_allvis_export_table <- function(parameters){
+  con <- parameters$duck
+  drop_tables_duckdb(con, "ALLVIS")
   cols <- c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")
-  sql <- sprintf("CREATE OR REPLACE TABLE ALLVIS AS SELECT %s FROM ALLVIS_base", 
+  cols <- as.character(sqlquote(con, cols))
+  sql <- sprintf("CREATE TABLE ALLVIS AS SELECT %s FROM ALLVIS_base", 
                  paste(cols, collapse = ", "))
   invisible(DBI::dbExecute(parameters$duck, sql))
   invisible(NULL)
@@ -214,141 +171,110 @@ generate_qc_table <- function(parameters){
     paste0(qcvals, "_uprikk"),
     prikkvals
   ))
+  cols <- as.character(sqlquote(con, cols))
   
-  sql <- sprintf("CREATE OR REPLACE TABLE QC AS SELECT %s FROM ALLVIS_base", paste(cols, collapse = ", "))
+  drop_tables_duckdb(con, "QC")
+  sql <- sprintf("CREATE TABLE QC AS SELECT %s FROM ALLVIS_base", paste(cols, collapse = ", "))
   invisible(DBI::dbExecute(con, sql))
   invisible(NULL)
 }
 
-
-
-
-#' @title write_cube_output
-#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
-#' @param outputlist list of output to write
-#' @param parameters global parameters
-#' @keywords internal
+#' @title do_write_cube_output
+#' @description
+#' Skriver alle outputfiler fra LagKUBE.
 #' @noRd
-write_cube_output <- function(outputlist, parameters){
+do_write_cube_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
-  name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
+  name <- parameters$name
   datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
-  datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
-  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
+  allvis_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
+  allvis_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   
-  print_console_message("\nSAVING OUTPUT FILES:\n")
-  # Full cube .parquet format
-  do_write_parquet(outputlist$KUBE, filepath = datert_parquet_full)
-  print_console_message("\n", datert_parquet_full)
-  # Main output file for stat bank (csv and parquet)
-  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
-  do_write_parquet_allvis(dt = outputlist$ALLVIS, filepath = datert_parquet, parameters = parameters)
-  print_console_message("\n", datert_csv, "\n", datert_parquet)
+  con <- parameters$duck
+  # Skriv KUBE
+  print_console_message("-", datert_parquet_full)
+  do_write_output_duckdb(con, source = "KUBE", filepath = datert_parquet_full, format = "parquet")
   
-  # QC files (parquet and csv)
-  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";")
-  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
+  # Skriv ALLVIS
+  print_console_message("-", allvis_parquet)
+  allvis_source <- generate_allvis_select(parameters = parameters)
+  do_write_output_duckdb(con, source = allvis_source, filepath = allvis_parquet, format = "parquet")
+  
+  print_console_message("-", allvis_csv)
+  do_write_output_duckdb(con, source = "ALLVIS", filepath = allvis_csv, format = "csv")
+  
+  # Skriv QC
+  print_console_message("-", qc_parquet)
+  do_write_output_duckdb(con, source = "QC", filepath = qc_parquet, format = "parquet")
+  print_console_message("-", qc_csv)
+  do_write_output_duckdb(con, source = "QC", filepath = qc_csv, format = "csv")
 }
 
-#' @title do_write_parquet_allvis
-#' @description Saves allvis file with correct column types for statbank
-#' @param dt data.table
-#' @param filepath filepath
-#' @keywords internal
-#' @noRd
-do_write_parquet_allvis <- function(dt, filepath, parameters){
-  table <- convert_dt_to_arrow_table(dt)
-  schema <- generate_allvis_schema(table = table, parameters = parameters)
-  arrow::write_parquet(table$cast(schema), sink = filepath, compression = "snappy")
-}
-
-
-generate_allvis_schema <- function(table, parameters) {
-  tmp_sch <- table$schema
-  
-  fields <- lapply(names(table), function(name){
-    if (name %in% parameters$outdimensions) {
-    arrow::field(name, arrow::utf8())
-      } else if (name %in% parameters$outvalues) {
-        arrow::field(name, arrow::float64())
-        } else {
-          f <- tmp_sch$GetFieldByName(name)
-          arrow::field(name, f$type)
-        }
-    }
-  ) 
-  do.call(arrow::schema, fields)
-}
-
-
-#' @title write_access_specs
-#' @param parameters global parameters
-#' @keywords internal
-#' @noRd
-write_access_specs <- function(parameters){
-  if(!parameters$write) return(invisible(NULL))
-  specs <- data.table::rbindlist(list(melt_access_spec(parameters$CUBEinformation, name = "KUBER"),
-                                      melt_access_spec(parameters$TNPinformation, name = "TNP_PROD")))
-  if(parameters$CUBEinformation$REFVERDI_VP == "P") specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$STNPinformation, name = "STANDARD TNP")))
-  
-  for(i in names(parameters$fileinformation)){
-    fgp <- parameters$fileinformation[[i]]
-    end = which(names(fgp) == "vals")-1
-    specs <- data.table::rbindlist(list(specs, melt_access_spec(fgp[1:end], name = paste0("FILGRUPPER: ", i))))
-    if(i %in% parameters$FILFILTRE$FILVERSJON){
-      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$FILFILTRE[FILVERSJON == i], name = paste0("FILFILTRE: ", i))))
-    }
-  }
-  
-  if(length(parameters$friskvik$INDIKATOR) > 0){
-    for(i in parameters$friskvik$ID){
-      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$friskvik[ID == i], name = paste0("FRISKVIK:ID-", i))))
-    }
-  }
-  
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
-  data.table::fwrite(specs, file = file, sep = ";")
-}
-
-#' @title melt_access_spec
+#' @title generate_allvis_select
 #' @description
-#' helper function for save_access_specs
-#' @keywords internal
+#' Genererer et uttrekk til ALLVIS, som sørger for riktige kolonnetyper i parquetfilen
 #' @noRd
-melt_access_spec <- function(dscr, name = NULL){
-  if(is.null(name)){
-    name <- deparse(substitute(dscr))
-  }
-  d <- data.table::as.data.table(dscr)
-  d[, names(d) := lapply(.SD, as.character)]
-  d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
-  d[, Tabell := name]
-  data.table::setcolorder(d, "Tabell")
+generate_allvis_select <- function(parameters){
+  con <- parameters$duck
+  qdims <- as.character(sqlquote(con, parameters$outdimensions))
+  qvals <- as.character(sqlquote(con, parameters$outvalues))
+  dim_expr <- sprintf("CAST(%s AS VARCHAR) AS %s",qdims,qdims)
+  val_expr <- sprintf("CAST(%s AS DOUBLE) AS %s",qvals,qvals)
+  sprintf("(SELECT %s, %s, CAST(SPVFLAGG AS INTEGER) AS SPVFLAGG FROM ALLVIS)",
+          paste(dim_expr, collapse = ",\n"),
+          paste(val_expr, collapse = ",\n")
+  )
 }
 
-#' @title LagQCKube (vl)
+# MISC ----
+
+#' @title do_write_output_duckdb
 #' @description
-#' Adds uncensored columns sumTELLER/sumNEVNER/RATE.n to the ALLVISkube
-#' @param allvis Censored ALLVIs kube
-#' @param uprikk Uncensored KUBE
-#' @param allvistabs Dimensions included in ALLVIS kube
-#' @param allvisvals All columns 
-#' @keywords internal
+#' Skriver outputfiler fra duckdb som parquet eller CSV-format
+#' @param con connection
+#' @param source kildetabell eller selectuttrykk
+#' @param filepath hvor skal filen lagres
+#' @param format hvilket format, støtter parquet og csv, default er parquet
 #' @noRd
-LagQCKube <- function(data, allvistabs){
-  qcvals <- intersect(getOption("khfunctions.qcvals"), names(data[["KUBE"]]))
-  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
-  uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
-  data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
+do_write_output_duckdb <- function(con, source, filepath, format = c("parquet", "csv")){
   
-  QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
-  return(QC)
+  format <- match.arg(format)
+  if((format == "parquet" && !grepl("\\.parquet$", filepath, ignore.case = TRUE)) ||
+     (format == "csv" && !grepl("\\.csv$", filepath, ignore.case = TRUE))){
+    stop("mismatch mellom format og filsti")
+  }
+  
+  options <- switch(
+    format,
+    parquet = "
+      FORMAT PARQUET,
+      COMPRESSION ZSTD,
+      ROW_GROUP_SIZE 1000000
+    ",
+    csv = "
+      HEADER,
+      DELIMITER ';'
+    "
+  )
+  
+  invisible(
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "COPY %s TO %s (%s)",
+        source,
+        DBI::dbQuoteString(con, filepath),
+        options
+      )
+    )
+  )
+  
+  invisible(NULL)
 }
 
-# Fildumper ----
 
 #' @title save_filedump_if_requested
 #' @description
@@ -404,3 +330,156 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
   }
   invisible(gc())
 }
+
+
+#' @title write_access_specs
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+write_access_specs <- function(parameters){
+  if(!parameters$write) return(invisible(NULL))
+  specs <- data.table::rbindlist(list(melt_access_spec(parameters$CUBEinformation, name = "KUBER"),
+                                      melt_access_spec(parameters$TNPinformation, name = "TNP_PROD")))
+  if(parameters$CUBEinformation$REFVERDI_VP == "P") specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$STNPinformation, name = "STANDARD TNP")))
+  
+  for(i in names(parameters$fileinformation)){
+    fgp <- parameters$fileinformation[[i]]
+    end = which(names(fgp) == "vals")-1
+    specs <- data.table::rbindlist(list(specs, melt_access_spec(fgp[1:end], name = paste0("FILGRUPPER: ", i))))
+    if(i %in% parameters$FILFILTRE$FILVERSJON){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$FILFILTRE[FILVERSJON == i], name = paste0("FILFILTRE: ", i))))
+    }
+  }
+  
+  if(length(parameters$friskvik$INDIKATOR) > 0){
+    for(i in parameters$friskvik$ID){
+      specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$friskvik[ID == i], name = paste0("FRISKVIK:ID-", i))))
+    }
+  }
+  
+  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
+  data.table::fwrite(specs, file = file, sep = ";")
+}
+
+#' @title melt_access_spec
+#' @description
+#' helper function for save_access_specs
+#' @keywords internal
+#' @noRd
+melt_access_spec <- function(dscr, name = NULL){
+  if(is.null(name)){
+    name <- deparse(substitute(dscr))
+  }
+  d <- data.table::as.data.table(dscr)
+  d[, names(d) := lapply(.SD, as.character)]
+  d <- data.table::melt(d, measure.vars = names(d), variable.name = "Kolonne", value.name = "Innhold")
+  d[, Tabell := name]
+  data.table::setcolorder(d, "Tabell")
+}
+
+# Deprecated ----
+
+#' @title LagQCKube (vl)
+#' @description
+#' Adds uncensored columns sumTELLER/sumNEVNER/RATE.n to the ALLVISkube
+#' @param allvis Censored ALLVIs kube
+#' @param uprikk Uncensored KUBE
+#' @param allvistabs Dimensions included in ALLVIS kube
+#' @param allvisvals All columns 
+#' @keywords internal
+#' @noRd
+LagQCKube <- function(data, allvistabs){
+  qcvals <- intersect(getOption("khfunctions.qcvals"), names(data[["KUBE"]]))
+  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
+  uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
+  data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
+  
+  QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
+  return(QC)
+}
+
+
+#' @title convert_dt_to_arrow_table
+#' @description
+#' Removes attributes except column names before converting to an arrow table (for writing)
+#' @param dt data.table
+#' @noRd
+convert_dt_to_arrow_table <- function(dt){
+  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
+  table <- arrow::as_arrow_table(dt)
+  return(table)
+}
+
+#' @title do_write_parquet
+#' @description
+#' Wrapper around arrow::write_parquet, which first applies convert_dt_to_arrow_table() to generate a arrow table for writing.
+#' @param dt data.table
+#' @param filepath filepath to save file
+#' @keywords internal
+#' @noRd
+do_write_parquet <- function(dt, filepath){
+  table <- convert_dt_to_arrow_table(dt)
+  arrow::write_parquet(table, sink = filepath, compression = "snappy")
+}
+
+#' @title write_cube_output
+#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
+#' @param outputlist list of output to write
+#' @param parameters global parameters
+#' @keywords internal
+#' @noRd
+write_cube_output_old <- function(outputlist, parameters){
+  if(!parameters$write) return(invisible(NULL))
+  basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
+  name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
+  datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
+  datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
+  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
+  qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
+  qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
+  
+  print_console_message("\nSAVING OUTPUT FILES:\n")
+  # Full cube .parquet format
+  do_write_parquet(outputlist$KUBE, filepath = datert_parquet_full)
+  print_console_message("\n", datert_parquet_full)
+  # Main output file for stat bank (csv and parquet)
+  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
+  do_write_parquet_allvis(dt = outputlist$ALLVIS, filepath = datert_parquet, parameters = parameters)
+  print_console_message("\n", datert_csv, "\n", datert_parquet)
+  
+  # QC files (parquet and csv)
+  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";")
+  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
+}
+
+#' @title do_write_parquet_allvis
+#' @description Saves allvis file with correct column types for statbank
+#' @param dt data.table
+#' @param filepath filepath
+#' @keywords internal
+#' @noRd
+do_write_parquet_allvis <- function(dt, filepath, parameters){
+  table <- convert_dt_to_arrow_table(dt)
+  schema <- generate_allvis_schema(table = table, parameters = parameters)
+  arrow::write_parquet(table$cast(schema), sink = filepath, compression = "snappy")
+}
+
+
+generate_allvis_schema <- function(table, parameters) {
+  tmp_sch <- table$schema
+  
+  fields <- lapply(names(table), function(name){
+    if (name %in% parameters$outdimensions) {
+      arrow::field(name, arrow::utf8())
+    } else if (name %in% parameters$outvalues) {
+      arrow::field(name, arrow::float64())
+    } else {
+      f <- tmp_sch$GetFieldByName(name)
+      arrow::field(name, f$type)
+    }
+  }
+  ) 
+  do.call(arrow::schema, fields)
+}
+
