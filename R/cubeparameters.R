@@ -5,7 +5,6 @@
 #' @param args arguments passed to LagKUBE
 #' @return A list of relevant parameters
 get_cubeparameters <- function(user_args = list()) {
-  new_section_header(paste0("Starter kubekjøring: ", user_args$name))
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 

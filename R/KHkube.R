@@ -16,6 +16,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   check_connection_folders()
   check_if_lagkube_available()
   
+  new_section_header(paste0("Starter kubekjøring: ", name))
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
@@ -84,8 +85,8 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year
   # 8. Slicing av outputfiler
   new_section_header("Genererer og eksporterer resultatfiler")
   generate_allvis_base(parameters = parameters)
+  generate_and_export_all_friskvik_indicators(parameters = parameters)
   generate_qc_table(parameters = parameters)
-  # generate_and_export_all_friskvik_indicators(parameters = parameters)
   generate_allvis_export_table(parameters = parameters)
   do_special_handling(name = "ALLVISFILTER", dt = NULL, dt_name = "ALLVIS", 
                       code = parameters$CUBEinformation$ALLVISFILTER, 
@@ -169,7 +170,7 @@ lagkube_cleanup <- function(parameters){
     collapse::set_collapse(nthreads = parameters$threads$collapse)
   }
   RODBC::odbcCloseAll()
-  }
+}
 
 #' @keywords internal
 #' @description
