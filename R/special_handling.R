@@ -26,14 +26,14 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   is_sql <- grepl("<SQL>", code)
   
   use_duck <- isTRUE(duck) && is_not_empty(tablename)
-  if(use_duck && !is_duckdb_table(con, tablename)){
+  if(use_duck && !khtools::duckdb_table_exists(con, tablename)){
     stop("do_special_handling forsøker å bruke duckdb, men tabellen finnes ikke")
   }
   
   
   if(is_sql){
     if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
-    print_console_message("\n** Starter SQL-snutt:", name)
+    khtools::msg("\n** Starter SQL-snutt:", name)
     code <- gsub("<SQL>[ \n]*(.*)", "\\1", code)
     code <- ensure_correct_url(code, name)
     code_env <- new.env(parent = parent.frame())
@@ -46,34 +46,34 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
       print(sqlsynterr)
       stop("Noe gikk galt i SQL-snutten")
     }
-    do_clean_duckdb(con = con)
+    khtools::duckdb_clean(con = con)
     return(invisible(NULL))
   }
   
   if(is.null(dt) && use_duck){
-    dt <- fetch_duckdb_table(con = con, tablename = tablename)
+    dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
   }
   
   if(is_stata){
     if(name == "RSYNT1"){
       dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
     }
-    print_console_message("\n** Starter STATA-snutt:", name)
+    khtools::msg("\n** Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
     if(length(extracols) > 0) dt[, (extracols) := NULL]
-    print_console_message("\n** Ferdig i STATA")
+    khtools::msg("\n** Ferdig i STATA")
     if(use_duck){
-      write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
-      do_clean_duckdb(con = parameters$duck)
+      khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+      khtools::duckdb_clean(con = parameters$duck)
       return(invisible(NULL))
     }
     return(dt)
   }
   
   code <- ensure_correct_url(code, name)
-  print_console_message("\n** Starter R-snutt:", name)
+  khtools::msg("\n** Starter R-snutt:", name)
   code_env <- new.env()
   assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
@@ -88,10 +88,10 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   dt <- code_env[[dt_name]]
   extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
   if(length(extracols) > 0) dt[, (extracols) := NULL]
-  print_console_message("- R-snutt ferdig")
+  khtools::msg("- R-snutt ferdig")
   if(use_duck){
-    write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
-    do_clean_duckdb(con = con)
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+    khtools::duckdb_clean(con = con)
     return(invisible(NULL))
   }
   return(dt)
@@ -191,7 +191,7 @@ do_stata_processing <- function(dt, script, parameters){
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
-  print_console_message("\n*** Sletter midlertidige datafiler")
+  khtools::msg("\n*** Sletter midlertidige datafiler")
   gc()
   for(file in c("parquet_in", "parquet_out", "dta")){
     path <- statafiles[[file]]
@@ -206,7 +206,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
-  print_console_message("\n*** Fikser kolonnenavn pre stata")
+  khtools::msg("\n*** Fikser kolonnenavn pre stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -219,7 +219,7 @@ fix_column_names_pre_stata <- function(oldnames){
 
 #' @noRd
 fix_column_names_post_stata <- function(oldnames){
-  print_console_message("\n*** Leser filen inn igjen og fikser kolonnenavn")
+  khtools::msg("\n*** Leser filen inn igjen og fikser kolonnenavn")
   fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
@@ -271,7 +271,7 @@ set_stata_filenames <- function(batchdate, tmpdir){
 #' @keywords internal
 #' @noRd
 do_write_stata_file <- function(dt, statafiles, use_parquet){
-  print_console_message("\n*** Skriver STATA-fil")
+  khtools::msg("\n*** Skriver STATA-fil")
   if(use_parquet){
     do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
   } else {
@@ -330,7 +330,7 @@ generate_stata_do_file <- function(script, statafiles, use_parquet){
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
-  print_console_message("\n*** Running STATA-script...")
+  khtools::msg("\n*** Running STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }

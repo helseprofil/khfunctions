@@ -27,7 +27,8 @@ Imports:
     dplyr (>= 1.1.4),
     duckdb (>= 1.5.5),
     DBI (>= 1.2.3),
-    parallel
+    parallel,
+    khtools (>= 0.0.0.9000)
 Suggests: 
     methods,
     testthat (>= 3.0.0),

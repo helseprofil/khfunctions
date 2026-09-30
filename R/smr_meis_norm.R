@@ -14,20 +14,20 @@ add_smr_and_meis <- function(parameters){
   con <- parameters$duck
   ref_year_type <- parameters$PredFilter$ref_year_type
   refverdi_vp <- parameters$CUBEinformation$REFVERDI_VP
-  on.exit(drop_tables_duckdb(con, "normsubset"), add = TRUE)
+  on.exit(khtools::duckdb_drop_tables(con, "normsubset"), add = TRUE)
   
   if(ref_year_type == "Specific") {
-    init_new_duckdb_cols(con = con, table = "KUBE", cols = c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    khtools::duckdb_ensure_columns(con = con, table = "KUBE", cols = c(SMR = "DOUBLE", MEIS = "DOUBLE"))
     
     if(refverdi_vp == "P") {
       invisible(DBI::dbExecute(con,
       "UPDATE KUBE SET MEIS = CASE WHEN sumPREDTELLER = 0 THEN NULL ELSE sumTELLER * 1.0 / sumPREDTELLER * MEISskala END"))
     }
     
-    drop_tables_duckdb(con, "normsubset")
-    design_cols <- intersect(get_duckdb_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    khtools::duckdb_drop_tables(con, "normsubset")
+    design_cols <- intersect(khtools::duckdb_get_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
     keep_cols <- c(setdiff(design_cols, c("GEOniv", "GEO", "FYLKE")), "LANDSNORMAL")
-    keep_sql <- paste(sqlquote(con, keep_cols), collapse = ", ")
+    keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
     
     sql_norm <- sprintf(
       "CREATE TABLE normsubset AS SELECT %s FROM 
@@ -47,27 +47,27 @@ add_smr_and_meis <- function(parameters){
       "100.0"
     }
     
-    drop_tables_duckdb(con, "normsubset")
+    khtools::duckdb_drop_tables(con, "normsubset")
     
-    design_cols <- intersect(get_duckdb_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    design_cols <- intersect(khtools::duckdb_get_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
     keep_cols <- c(setdiff(design_cols, parameters$PredFilter$Predfiltercolumns), "NORM", "NORMSMR")
-    keep_sql <- paste(sqlquote(con, keep_cols), collapse = ", ")
+    keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
     
     sql_norm <- sprintf(
       "CREATE TABLE normsubset AS SELECT %s FROM 
       (SELECT *, %s AS NORMSMR, %s AS NORM FROM KUBE WHERE %s) x",
-      keep_sql, normsmr_expr, sqlquote(con, parameters$MALTALL),
+      keep_sql, normsmr_expr, khtools::sql_quote_I(con, parameters$MALTALL),
       r_filter_to_sql(parameters$PredFilter$meisskalafilter))
     
     invisible(DBI::dbExecute(con, sql_norm))
     
     merge_duckdb_table(con = con, mergeto = "KUBE", mergefrom = "normsubset")
-    init_new_duckdb_cols(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    khtools::duckdb_ensure_columns(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
     
     smr0_expr <- if(refverdi_vp == "P") {
       "sumTELLER * 100.0 / sumPREDTELLER"
     } else if(refverdi_vp == "V") {
-      sprintf("%s * 100.0 / NORM", sqlquote(con, parameters$MALTALL))
+      sprintf("%s * 100.0 / NORM", khtools::sql_quote_I(con, parameters$MALTALL))
     }
     
     sql <- sprintf(

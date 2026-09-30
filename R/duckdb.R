@@ -6,38 +6,38 @@
 merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
   if(is.null(result)) result <- mergeto
   if(identical(result, mergefrom)) stop("Måltabellen kan ikke være == mergefrom")
-  to_cols <- get_duckdb_cols(con, mergeto)
-  from_cols <- get_duckdb_cols(con, mergefrom)
+  to_cols <- khtools::duckdb_get_cols(con, mergeto)
+  from_cols <- khtools::duckdb_get_cols(con, mergefrom)
   newcols_names <- setdiff(from_cols, to_cols)
   commoncols <- intersect(to_cols, from_cols)
   
   join_cols <- get_dimension_columns(commoncols)
   
   if(length(newcols_names) == 0L) {
-    print_console_message(sprintf("- Ingen nye kolonner å merge fra %s til %s, kan det ha gått galt i innlesing?", mergefrom, mergeto))
+    khtools::msg(sprintf("- Ingen nye kolonner å merge fra %s til %s, kan det ha gått galt i innlesing?", mergefrom, mergeto))
     return(invisible(NULL))
   }
   
   if(length(join_cols) == 0L) {
-    print_console_message(sprintf("- Forsøker å merge %s på %s, men finner ingen felles dimensjoner", mergefrom, mergeto))
+    khtools::msg(sprintf("- Forsøker å merge %s på %s, men finner ingen felles dimensjoner", mergefrom, mergeto))
     return(invisible(NULL))
   }
   
   
-  join_cond <- paste0("org.", sqlquote(con, join_cols), " = new.", sqlquote(con, join_cols), 
+  join_cond <- paste0("org.", khtools::sql_quote_I(con, join_cols), " = new.", khtools::sql_quote_I(con, join_cols), 
                       collapse = " AND ")
   
-  add_cols <- paste0("new.", sqlquote(con, newcols_names), collapse = ", ")
+  add_cols <- paste0("new.", khtools::sql_quote_I(con, newcols_names), collapse = ", ")
   
-  print_console_message(sprintf("\n- Merger %s til %s\n-- Nye kolonner: %s\n-- Join-kolonner: %s\n--- Resultattabell: %s", 
+  khtools::msg(sprintf("\n- Merger %s til %s\n-- Nye kolonner: %s\n-- Join-kolonner: %s\n--- Resultattabell: %s", 
                                 mergefrom, mergeto, 
                                 paste(newcols_names, collapse = ", "), 
                                 paste(join_cols, collapse = ", "),
                                 result))
   
-  result_sql <- sqlquote(con, result)
-  mergeto_sql <- sqlquote(con, mergeto)
-  mergefrom_sql <- sqlquote(con, mergefrom)
+  result_sql <- khtools::sql_quote_I(con, result)
+  mergeto_sql <- khtools::sql_quote_I(con, mergeto)
+  mergefrom_sql <- khtools::sql_quote_I(con, mergefrom)
   updatetab <- identical(result, mergeto)
   
   target_table_merge <- if(updatetab) {
@@ -46,21 +46,21 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
     result
   }
   
-  drop_tables_duckdb(con, target_table_merge)
+  khtools::duckdb_drop_tables(con, target_table_merge)
     
   query <- sprintf(
     "CREATE TABLE %s AS SELECT org.*, %s 
     FROM %s AS org LEFT JOIN %s AS new ON %s", 
-    sqlquote(con, target_table_merge), 
+    khtools::sql_quote_I(con, target_table_merge), 
     add_cols, mergeto_sql, mergefrom_sql, join_cond)
  
   invisible(DBI::dbExecute(con, query))
   
   if(updatetab){
-    replace_table_duckdb(con, target = result, source = target_table_merge)
+    khtools::duckdb_replace_table(con, target = result, source = target_table_merge)
   }
   
-  actual_cols <- get_duckdb_cols(con, result)
+  actual_cols <- khtools::duckdb_get_cols(con, result)
   missing_new_cols <- setdiff(newcols_names, actual_cols)
   if(length(missing_new_cols) > 0) stop(sprintf("Merge feilet. Mangler kolonner i %s: %s", result, paste(missing_new_cols, collapse = ", ")))
   invisible(NULL)
@@ -74,10 +74,10 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  print_console_message("\n- Håndterer implisitte nuller")
-  cols <- get_duckdb_cols(con, table)
+  khtools::msg("\n- Håndterer implisitte nuller")
+  cols <- khtools::duckdb_get_cols(con, table)
   vals <- get_value_columns(cols)
-  tbl_sql <- sqlquote(con, table)
+  tbl_sql <- khtools::sql_quote_I(con, table)
   
   if("BEF" %in% names(implicitnull_defs) && any(grepl("^BEF", vals))){
     correctval <- grep("^BEF", vals, value = T)
@@ -105,9 +105,9 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
     if (!(valF %in% cols)) next
     # hopp over hvis .f ikke finnes
     
-    val_sql <- sqlquote(con, val)
-    valF_sql <- sqlquote(con, valF)
-    valA_sql <- sqlquote(con, paste0(val, ".a"))
+    val_sql <- khtools::sql_quote_I(con, val)
+    valF_sql <- khtools::sql_quote_I(con, valF)
+    valA_sql <- khtools::sql_quote_I(con, paste0(val, ".a"))
     
     cond <- sprintf("(%s IS NULL AND %s = 0) OR %s IS NULL", val_sql, valF_sql, valF_sql)
     
@@ -131,33 +131,29 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
 #' @noRd
 do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
   
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- khtools::duckdb_get_cols(con, tablename)
   dimcols <- get_dimension_columns(cols)
   valcols <- get_value_columns(cols)
   
-  dims_sql <- sqlquote(con, dimcols)
+  dims_sql <- khtools::sql_quote_I(con, dimcols)
   
   aggcols_sql <- unlist(lapply(valcols,
       function(val){
-        valf <- sqlquote(con, paste0(val, ".f"))
-        vala <- sqlquote(con, paste0(val, ".a"))
-        val <- sqlquote(con, val)
+        valf <- khtools::sql_quote_I(con, paste0(val, ".f"))
+        vala <- khtools::sql_quote_I(con, paste0(val, ".a"))
+        val <- khtools::sql_quote_I(con, val)
         c(sprintf("SUM(%s) AS %s", val, val),
           sprintf("MAX(%s) AS %s", valf, valf),
           sprintf("SUM(CASE WHEN %s IS NULL OR %s = 0 THEN 0 ELSE %s END) AS %s",
             val, val, vala, vala))
         }))
   
-  tmp_result <- prepare_tmp_result_table(con, tablename)
-  
-  sql <- sprintf("CREATE TABLE %s AS SELECT %s FROM %s GROUP BY %s",
-                 sqlquote(con, tmp_result),
+  sql <- sprintf("SELECT %s FROM %s GROUP BY %s",
                  paste(c(dims_sql, aggcols_sql),collapse = ", "),
-                 sqlquote(con, tablename),
+                 khtools::sql_quote_I(con, tablename),
                  paste(dims_sql,collapse = ", "))
   
-  invisible(DBI::dbExecute(con, sql))
-  replace_table_duckdb(con, source = tmp_result, target = tablename)
+  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
   
   nonsum <- intersect(
     valcols,
@@ -170,11 +166,11 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
   
   if(length(nonsum) > 0){
     for(val in nonsum){
-      valf <- sqlquote(con, paste0(val, ".f"))
-      vala <- sqlquote(con, paste0(val, ".a"))
-      val <- sqlquote(con, val)
+      valf <- khtools::sql_quote_I(con, paste0(val, ".f"))
+      vala <- khtools::sql_quote_I(con, paste0(val, ".a"))
+      val <- khtools::sql_quote_I(con, val)
       sql_nonsum <- sprintf("UPDATE %s SET %s = NULL, %s = 2 WHERE %s > 1",
-                            sqlquote(con, tablename), val, valf, vala)
+                            khtools::sql_quote_I(con, tablename), val, valf, vala)
       invisible(DBI::dbExecute(con, sql_nonsum))
     }
   }
@@ -184,7 +180,7 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
 
 set_integer_columns_duckdb <- function(con){
   integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
-  cols <- intersect(integers,get_duckdb_cols(con, "FILGRUPPE"))
+  cols <- intersect(integers,khtools::duckdb_get_cols(con, "FILGRUPPE"))
   
   sql <- paste(sprintf(
     "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",

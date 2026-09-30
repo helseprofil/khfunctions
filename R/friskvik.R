@@ -7,11 +7,11 @@ generate_and_export_all_friskvik_indicators <- function(parameters) {
   if(!parameters$write) return(invisible(NULL))
   indikatorer <- parameters$friskvik[, .SD, .SDcols = c("INDIKATOR", "ID")]
   if (nrow(indikatorer) == 0){
-    print_console_message("\n** INGEN FRISKVIKFILER SATT OPP")
+    khtools::msg("\n** INGEN FRISKVIKFILER SATT OPP")
     return(invisible(NULL))
   }
   
-  print_console_message("* Lager Friskvikfil(er):")
+  khtools::msg("* Lager Friskvikfil(er):")
   for(i in seq_len(nrow(indikatorer))){ 
     generate_and_export_friskvik_indicator(id = indikatorer[i, ID], parameters = parameters)
   }
@@ -29,7 +29,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   if(nrow(FVdscr) != 1) stop("Fant ikke unik FRISKVIK-definisjon for ID = ", id)
   
   if(!FVdscr$MODUS %in% c("K", "F", "B")){
-    print_console_message("\n*** ADVARSEL: modus ", FVdscr$MODUS, " støttes ikke for FRISKVIK")
+    khtools::msg("\n*** ADVARSEL: modus ", FVdscr$MODUS, " støttes ikke for FRISKVIK")
     return(invisible(NULL))
   }
   FriskVDir <- switch(FVdscr$MODUS,
@@ -42,7 +42,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
                        "K" = c("K", "F", "L"),
                        "B" = c("B", "K", "F", "L"),
                        "F" = c("F", "L"))
-  geovals <- paste(DBI::dbQuoteString(con, geo_filter),collapse = ", ")
+  geovals <- paste(khtools::sql_quote_s(con, geo_filter),collapse = ", ")
   
   where <- sprintf("GEOniv IN (%s)", geovals)
   
@@ -106,7 +106,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   nrows_sql <- sprintf("SELECT COUNT(*) AS N FROM ALLVIS_base WHERE %s", where_sql)
   nrows <- DBI::dbGetQuery(con, nrows_sql)$N
   if(nrows == 0){
-    print_console_message("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:",msgpath)
+    khtools::msg("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:",msgpath)
     return(invisible(NULL))
   }
   
@@ -126,7 +126,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   if(!fs::dir_exists(setPath)) fs::dir_create(setPath)
   filename <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", parameters$batchdate,".csv"))
   msgpath <- paste0("- ", FriskVDir, "/", parameters$year, "/csv/", basename(filename))
-  print_console_message(msgpath)
+  khtools::msg(msgpath)
   
   export_sql <- sprintf(
     "COPY (
@@ -169,12 +169,12 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   valid_cube <- read_kubestatus(parameters$dbh, year)[KUBE_NAVN == cubename]
   
   if(nrow(valid_cube) == 0){
-    print_console_message("*** Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
+    khtools::msg("*** Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
     return(invisible(NULL))
   }
   
   if(nrow(valid_cube) > 1){
-    print_console_message("*** > 1 godkjent kube funnet i KUBESTATUS som matchet cubename, kan ikke lage friskvikfiler")
+    khtools::msg("*** > 1 godkjent kube funnet i KUBESTATUS som matchet cubename, kan ikke lage friskvikfiler")
     return(invisible(NULL))
   }
   
@@ -194,7 +194,7 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
     names <- indicators[ID %in% friskvik_id]$INDIKATOR
   }
  
-  print_console_message("* Lager følgende friskvikfiler, FRISKVIK-ID(er):",
+  khtools::msg("* Lager følgende friskvikfiler, FRISKVIK-ID(er):",
                         paste0("\n- INDIKATOR: ",names, ", ID: ", ids), overwritewarning)
   
   cube_name <- sprintf("%s_%s.parquet", valid_cube$KUBE_NAVN, valid_cube$DATOTAG_KUBE)
@@ -203,10 +203,10 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
   
   con <- parameters$duck
-  DBI::dbExecute(con, sprintf("CREATE TABLE KUBE AS SELECT * FROM read_parquet(%s)", DBI::dbQuoteString(con, kubepath)))
+  DBI::dbExecute(con, sprintf("CREATE TABLE KUBE AS SELECT * FROM read_parquet(%s)", khtools::sql_quote_s(con, kubepath)))
   generate_allvis_base(parameters = parameters)
   
-  print_console_message("\n* Skriver filer: ")
+  khtools::msg("\n* Skriver filer: ")
   for(i in ids){
     generate_and_export_friskvik_indicator(id = i, parameters = parameters)
   }

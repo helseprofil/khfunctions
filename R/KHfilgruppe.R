@@ -4,9 +4,11 @@
 #'
 #' @param gruppe name of filegroup
 #' @param write save output files? default = TRUE
+#' @param ramlimit max RAM allocation for duckdb. If NULL, default value is 8GB
 #' @param dumps list of intermediate files to save, used for debugging and development. 
+#' @param qualcontrol perform initial qualcontrol of data
 #' @export
-LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE) {
+LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   user_args = as.list(environment())
@@ -17,7 +19,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  print_console_message("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
+  khtools::msg("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
   if(parameters$n_files == 1){
     make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
@@ -26,15 +28,15 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
     }
   }
   clean_tempfiles(con = parameters$duck)
-  do_clean_duckdb(con = parameters$duck)
-  print_console_message("-----\n* Alle originalfiler lest og stablet")
+  khtools::duckdb_clean(con = parameters$duck)
+  khtools::msg("-----\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
   clean_filegroup_dimensions_duckdb(parameters = parameters, cleanlog = cleanlog)
   clean_filegroup_values_duckdb(parameters = parameters, cleanlog = cleanlog)
   
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
-  print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+  khtools::msg("\n-----\n* Alle dimensjoner og verdikolonner vasket")
   rename_fg_value_columns_duckdb(parameters = parameters)
   set_integer_columns_duckdb(con = parameters$duck)
   
@@ -45,8 +47,8 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   write_filegroup_output(dt = Filgruppe, parameters = parameters)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  print_console_message("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
-  print_console_message("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  khtools::msg("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
+  khtools::msg("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
@@ -69,7 +71,7 @@ lagfilgruppe_cleanup <- function(parameters){
 #' Initiates log for filegroup cleaning
 #' @noRd
 initiate_cleanlog_db <- function(codebooklog, parameters){
-  if(!"FILGRUPPE" %in% get_duckdb_tables(con = parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
+  if(!"FILGRUPPE" %in% khtools::duckdb_get_tables(con = parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
   koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
   log <- parameters$read_parameters[KOBLID %in% koblids, .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
   n_rows <- data.table::setDT(DBI::dbGetQuery(parameters$duck, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))
@@ -84,7 +86,7 @@ initiate_cleanlog_db <- function(codebooklog, parameters){
 
 rename_fg_value_columns_duckdb <- function(parameters){
   con <- parameters$duck
-  vals <- intersect(c("VAL1", "VAL2", "VAL3"), get_duckdb_cols(con, "FILGRUPPE"))
+  vals <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_cols(con, "FILGRUPPE"))
   valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
   
   rename_map <- data.table::data.table(

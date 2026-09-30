@@ -2,14 +2,14 @@
 #' @description Looper gjennom verdikolonner, renser og sjekker disse. 
 #' @noRd
 clean_filegroup_values_duckdb <- function(parameters, cleanlog){
-  print_console_message("\n* Starter rensing av verdikolonner...")
+  khtools::msg("\n* Starter rensing av verdikolonner...")
   con <- parameters$duck
-  cols <- intersect(c("VAL1", "VAL2", "VAL3"), get_duckdb_cols(con, "FILGRUPPE"))
+  cols <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_cols(con, "FILGRUPPE"))
   for(val in cols){
-    print_console_message("\n** ", val, sep = "")
+    khtools::msg("\n** ", val, sep = "")
     clean_value_column_duckdb(con = con, parameters = parameters, cleanlog = cleanlog, val = val)
   }
-  print_console_message("\n* Verdikolonner ferdig renset")
+  khtools::msg("\n* Verdikolonner ferdig renset")
   invisible(NULL)
 }
 
@@ -18,7 +18,7 @@ clean_filegroup_values_duckdb <- function(parameters, cleanlog){
 #' @noRd
 clean_value_column_duckdb <- function(con, parameters, cleanlog, val){
   
-  print_console_message("\n*** Setter flagg-kolonne") 
+  khtools::msg("\n*** Setter flagg-kolonne") 
   # 1,2,3 som angitt i ACCESS, og 8 dersom verdikolonnen ikke kan leses som tall
   # Flaggede verdier settes til missing. 
   valF <- paste0(val, ".f")
@@ -73,10 +73,10 @@ scale_value_duckdb <- function(con, parameters, val){
   scales <- parameters$read_parameters[, .(KOBLID, scale = get(scalecol))]
   if(!any(!is.na(scales$scale) & scales$scale != 1)) return(invisible(NULL))
   
-  print_console_message("\n*** Skalerer ", val, " med ", scalecol, sep = "")
+  khtools::msg("\n*** Skalerer ", val, " med ", scalecol, sep = "")
   
-  write_duckdb_table(con, "tmp_scale", scales)
-  on.exit(drop_tables_duckdb(con = con, tables = "tmp_scale"), add = TRUE)
+  khtools::duckdb_write_table(con, "tmp_scale", scales)
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = "tmp_scale"), add = TRUE)
   
   invisible(DBI::dbExecute(con, sprintf(
       "UPDATE FILGRUPPE AS f
@@ -103,10 +103,10 @@ check_value_ok_duckdb <- function(con, cleanlog, val){
   rawfiles_not_ok <- val_ok[ok == 0, unique(KOBLID)]
   n_not_ok <- length(rawfiles_not_ok)
   if(n_not_ok > 0){
-    print_console_message("\n*** Fant ", n_not_ok, " ugyldige verdier for ", val,
+    khtools::msg("\n*** Fant ", n_not_ok, " ugyldige verdier for ", val,
       "\n - Råfiler med ugyldige verdier (KOBLID): ", paste(rawfiles_not_ok, collapse = ", "), sep = "")
   } else {
-    print_console_message("\n*** Alle ", val, " ok", sep = "")
+    khtools::msg("\n*** Alle ", val, " ok", sep = "")
   }
   invisible(NULL)
 }

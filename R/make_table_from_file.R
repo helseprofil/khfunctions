@@ -50,7 +50,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
 #' @noRd
 set_manheader_duckdb <- function(manheader, con){
   if(is_empty(manheader)) return(invisible(NULL))
-  origcols <- get_duckdb_cols(con, "temp_orgfile")
+  origcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   manheader_split <- trimws(unlist(strsplit(manheader, "=")))
   old <- manheader_to_vector(manheader_split[[1]], "old", origcols)
   new <- manheader_to_vector(manheader_split[[2]], "new", origcols)
@@ -59,8 +59,8 @@ set_manheader_duckdb <- function(manheader, con){
   
   for(i in seq_along(old)){
     invisible(DBI::dbExecute(con,sprintf("ALTER TABLE temp_orgfile RENAME COLUMN %s TO %s",
-                                        sqlquote(con, old[i]),
-                                        sqlquote(con, new[i]))))
+                                        khtools::sql_quote_I(con, old[i]),
+                                        khtools::sql_quote_I(con, new[i]))))
   }
 }
 
@@ -94,7 +94,7 @@ manheader_to_vector <- function(string, old_new = c("old", "new"), origcols){
 #' @family duckdb
 #' @noRd
 give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
-  cols <- get_duckdb_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   rename <- setNames(as.character(filedescription[, ..defcolumns]), defcolumns)
   rename <- rename[rename != names(rename)]
   idx <- which(rename %in% cols)
@@ -114,8 +114,8 @@ give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
   
   for(i in seq_along(old)){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile RENAME COLUMN %s TO %s",
-                                         sqlquote(con, old[i]),
-                                         sqlquote(con, new[i]))))
+                                         khtools::sql_quote_I(con, old[i]),
+                                         khtools::sql_quote_I(con, new[i]))))
   }
 }
 
@@ -129,7 +129,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
   remove <- gsub("^c\\(|\\)$", "", kastkols)
   remove <- as.integer(trimws(unlist(strsplit(remove, ","))))
   
-  cols <- get_duckdb_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   
   if(any(remove < 1L | remove > length(cols))) stop("Feil i KASTKOLS: Angitt kolonnenummer eksisterer ikke i filen")
   
@@ -137,7 +137,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
   
   for(col in cols_remove){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s",
-                                         sqlquote(con, col))))
+                                         khtools::sql_quote_I(con, col))))
   }
   invisible(NULL)
 }
@@ -147,10 +147,10 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
 #' @family duckdb
 #' @noRd
 do_reshape_var_duckdb <- function(filedescription, con){
-  drop_tables_duckdb(con, "temp_orgfile_reshape")
+  khtools::duckdb_drop_tables(con, "temp_orgfile_reshape")
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
-  allcols <- get_duckdb_cols(con, "temp_orgfile")
+  allcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = allcols)
   if(length(intersect(cols$id, cols$measure)) > 0) stop("Kolonne kan ikke være både RESHAPEid og RESHAPEmeas")
   if(cols$var %in% allcols) stop(sprintf("RESHAPEvar '%s' finnes allerede i datasettet", cols$var))
@@ -160,7 +160,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
   if(!is.null(cols$measure) && !all(cols$measure %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
   if(length(cols$measure) == 0) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
   
-  measure_sql <- paste(sqlquote(con, cols$measure), collapse = ", ")
+  measure_sql <- paste(khtools::sql_quote_I(con, cols$measure), collapse = ", ")
   
   out_cols <- c(cols$id, cols$var, cols$val)
   if(anyDuplicated(out_cols) > 0) stop("RESHAPE genererer dublerte kolonnenavn")
@@ -168,8 +168,8 @@ do_reshape_var_duckdb <- function(filedescription, con){
   select_sql <- paste(
     sprintf(
       "\nCAST(%s AS VARCHAR) AS %s",
-     sqlquote(con, out_cols),
-     sqlquote(con, out_cols)
+     khtools::sql_quote_I(con, out_cols),
+     khtools::sql_quote_I(con, out_cols)
     ),
     collapse = ","
   )
@@ -182,13 +182,13 @@ do_reshape_var_duckdb <- function(filedescription, con){
                   UNPIVOT INCLUDE NULLS (%s FOR %s IN (%s))
                  )",
                  select_sql,
-                 sqlquote(con, cols$val),
-                 sqlquote(con, cols$var),
+                 khtools::sql_quote_I(con, cols$val),
+                 khtools::sql_quote_I(con, cols$var),
                  measure_sql
   )
   
   invisible(DBI::dbExecute(con, sql))
-  replace_table_duckdb(con, target = "temp_orgfile", source = "temp_orgfile_reshape")
+  khtools::duckdb_replace_table(con, target = "temp_orgfile", source = "temp_orgfile_reshape")
   invisible(NULL)
 }
 
@@ -219,22 +219,22 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
   
   default <- filedescription[, ..defaultcolumns]
   default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
-  existing_cols <- get_duckdb_cols(con, "temp_orgfile")
+  existing_cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   cols_to_add <- setdiff(defaultcolumns, existing_cols)
   cols_to_update <- intersect(defaultcolumns, existing_cols)
   if(length(cols_to_add) > 0){
     for(col in cols_to_add){
       DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR DEFAULT %s",
-                                  as.character(sqlquote(con, col)),
-                                  as.character(DBI::dbQuoteString(con, default[[col]][1]))))
+                                  as.character(khtools::sql_quote_I(con, col)),
+                                  as.character(khtools::sql_quote_s(con, default[[col]][1]))))
     }
   }
   
   if(length(cols_to_update) > 0){
     set_clause <- paste(vapply(cols_to_update, function(col) {
       sprintf("%s = %s", 
-              as.character(sqlquote(con, col)),
-              as.character(DBI::dbQuoteString(con, default[[col]][1]))
+              as.character(khtools::sql_quote_I(con, col)),
+              as.character(khtools::sql_quote_s(con, default[[col]][1]))
           )
         },
         character(1)
@@ -252,12 +252,12 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
 #' @noRd
 drop_unwanted_columns_duckdb <- function(con){
   keep_cols <- c(getOption("khfunctions.kolorgs"))
-  existing_cols <- get_duckdb_cols(con, "temp_orgfile")
+  existing_cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   cols_to_drop <- setdiff(existing_cols, keep_cols)
   if(length(cols_to_drop) == 0) return(invisible(NULL))
   
   for (col in cols_to_drop) {
-    DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s", as.character(sqlquote(con, col))))
+    DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile DROP COLUMN %s", as.character(khtools::sql_quote_I(con, col))))
   }
   invisible(NULL)
 }
@@ -267,11 +267,11 @@ drop_unwanted_columns_duckdb <- function(con){
 #' @family duckdb
 #' @noRd
 drop_unwanted_columns_duckdb <- function(con) {
-  cols <- get_duckdb_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   
   set_clause <- paste(sprintf("%s = COALESCE(%s, '')",
-                             sqlquote(con, cols),
-                             sqlquote(con, cols)),
+                             khtools::sql_quote_I(con, cols),
+                             khtools::sql_quote_I(con, cols)),
                       collapse = ", ")
   
   DBI::dbExecute(con, sprintf("UPDATE temp_orgfile SET %s", set_clause))
@@ -290,7 +290,7 @@ check_if_all_columns_exist <- function(filecolumns, con){
   oblig <- c("GEO", "AAR", "VAL1")
   have <- filecolumns$have
   default <- filecolumns$default
-  allcols <- get_duckdb_cols(con, "temp_orgfile")
+  allcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
   if(!all(oblig %in% allcols)) stop("Feil i innlesing: Kolonnene <", oblig[!(oblig %in% allcols)], "> finnes ikke\n")
   if(!all(have %in% allcols)) stop("Feil i innlesing: Kolonnene <", have[!(have %in% allcols)], "> finnes ikke\n")
   if(!all(default %in% allcols)) stop("Feil i innlesing: Kolonnene <", default[!(default %in% allcols)], "> skulle fått default verdi, men finnes ikke\n")
@@ -305,26 +305,26 @@ append_temp_orgfil_to_filgruppe <- function(con){
   
   if(!DBI::dbExistsTable(con, "temp_orgfile")) stop("temp_orgfile finnes ikke i duckdb")
   
-  cols_orgfile <- get_duckdb_cols(con, "temp_orgfile")
+  cols_orgfile <- khtools::duckdb_get_cols(con, "temp_orgfile")
   
   if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
     DBI::dbExecute(con, "CREATE TABLE FILGRUPPE AS SELECT * FROM temp_orgfile")
     return(invisible(NULL))
   } else {
-    cols_filgruppe <- get_duckdb_cols(con, "FILGRUPPE")
+    cols_filgruppe <- khtools::duckdb_get_cols(con, "FILGRUPPE")
     missing_cols <- setdiff(cols_orgfile, cols_filgruppe)
     if(length(missing_cols) > 0) {
       for(col in missing_cols) {
         invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN %s VARCHAR default ''", 
-                                              as.character(sqlquote(con, col)))))
+                                              as.character(khtools::sql_quote_I(con, col)))))
       }
     }
   }
-  cols_filgruppe <- get_duckdb_cols(con, "FILGRUPPE")
+  cols_filgruppe <- khtools::duckdb_get_cols(con, "FILGRUPPE")
   missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
   for(col in missing_in_temp_orgfile){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 
-                                          as.character(sqlquote(con, col)))))
+                                          as.character(khtools::sql_quote_I(con, col)))))
   }
   
   invisible(DBI::dbExecute(con, "INSERT INTO FILGRUPPE BY NAME SELECT * FROM temp_orgfile"))
@@ -339,7 +339,7 @@ append_temp_orgfil_to_filgruppe <- function(con){
 report_filegroup_progress <- function(file_number, parameters){
   n_files <- parameters$n_files
   filename <- parameters$read_parameters[file_number]$FILNAVN
-  print_console_message("\n", file_number, "/", n_files, ": ", filename, sep = "")
+  khtools::msg("\n", file_number, "/", n_files, ": ", filename, sep = "")
 }
 
 #' @title identify_columns_in_file
@@ -360,7 +360,7 @@ identify_columns_in_file <- function(filedescription){
 
 clean_tempfiles <- function(con){
   tabs <- c("temp_orgfile", "temp_orgfile_reshape", "temp_recode")
-  drop_tables_duckdb(con, tabs)
+  khtools::duckdb_drop_tables(con, tabs)
 }
 
 
@@ -384,10 +384,10 @@ merge_geo_d2 <- function(dt, filedescription){
 #' @noRd
 do_split_multihead <- function(dt, filedescription, con, tablename){
   if(is_empty(filedescription$MULTIHEAD)) return(invisible(NULL))
-  dt <- fetch_duckdb_table(con = con, tablename = tablename)
+  dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
   mhl <- LesMultiHead(filedescription$MULTIHEAD)
   dt[, (mhl$colnames) := data.table::tstrsplit(mhl$varname, mhl$sep)]
-  write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
+  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
 }
 
 #' @title do_handle_fylltab
@@ -397,7 +397,7 @@ do_split_multihead <- function(dt, filedescription, con, tablename){
 #' @noRd
 do_handle_fylltab <- function(filedescription, con, tablename){
   if(is_empty(filedescription$FYLLTAB)) return(invisible(NULL))
-  dt <- fetch_duckdb_table(con = con, tablename = tablename)
+  dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
   cols <- trimws(strsplit(filedescription$FYLLTAB, ",")[[1]])
   if(!all(cols %in% names(dt))) stop("Feil i FYLLTAB: ", paste0("Kolonner ", paste(cols[!cols %in% names(dt)], collapse = ","), " finnes ikke"))
   
@@ -405,7 +405,7 @@ do_handle_fylltab <- function(filedescription, con, tablename){
     dt[dt[[col]] == "", (col) := NA]
     dt[, names(.SD) := zoo::na.locf(.SD, na.rm = FALSE), .SDcols = col]
   }
-  write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
+  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
 }
 
 #' @title do_aggregate_if_grunnkrets
@@ -416,7 +416,7 @@ do_handle_fylltab <- function(filedescription, con, tablename){
 #' @noRd
 do_aggregate_if_grunnkrets <- function(dt, filedescription, parameters){
   if(is_empty(filedescription$GRUNNKRETS) || filedescription$GRUNNKRETS != 1) return(invisible(NULL))
-  print_console_message("\n* Aggregerer fra grunnkrets...")
+  khtools::msg("\n* Aggregerer fra grunnkrets...")
   colorder <- names(dt)
   aggregate <- collapse::join(dt, parameters$GkBHarm, how = "l", on = c("GEO" = "GK"), verbose = 0)
   aggregate[is.na(Bydel2004), Bydel2004 := paste(substr(GEO, 1, 4), "00", sep = "")]

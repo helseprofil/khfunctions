@@ -27,7 +27,7 @@ get_movav_information <- function(parameters) {
 find_missing_year <- function(aarl){
   aarl_min_max <- min(aarl):max(aarl)
   aarl_missing <- aarl_min_max[!aarl_min_max %in% aarl]
-  if(length(aarl_missing) > 0) print_console_message("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
+  if(length(aarl_missing) > 0) khtools::msg("\n*** Mangler data for:", paste0(aarl_missing, collapse = ", "), "\n")
   return(list(n = length(aarl_missing), years = aarl_missing))
 }
 
@@ -56,14 +56,14 @@ aggregate_to_periods <- function(tablename, parameters, standard = FALSE){
   
   if(parameters$MOVAV$is_movav){
     period <- parameters$MOVAV$movav
-    print_console_message("* Aggregerer ", tablename, " til ", period, "-årige tall", sep = "")
+    khtools::msg("* Aggregerer ", tablename, " til ", period, "-årige tall", sep = "")
     do_aggregate_periods(con = con, tablename = tablename, parameters = parameters)
     do_filter_periods_with_missing_original(con = con, tablename = tablename)
   } else {
     do_handle_indata_periods(con = con, tablename = tablename,parameters = parameters)
   }
   
-  do_clean_duckdb(con = con)
+  khtools::duckdb_clean(con = con)
   invisible(NULL)
 }
 
@@ -75,20 +75,20 @@ aggregate_to_periods <- function(tablename, parameters, standard = FALSE){
 #' @param parameters cube parameters
 do_aggregate_periods <- function(con, tablename, parameters){
   tmp_periods <- "tmp_movav_periods"
-  on.exit(drop_tables_duckdb(con = con, tables = tmp_periods), add = TRUE)
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = tmp_periods), add = TRUE)
           
   period <- parameters$MOVAV$movav
-  n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", sqlquote(con, tablename)))$n
+  n_multi <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS n FROM %s WHERE AARl <> AARh", khtools::sql_quote_I(con, tablename)))$n
   if(n_multi > 0) stop(sprintf("Aggregering til %s-årige tall er ønsket, men originaldata inneholder allerede flerårige tall.", period))
-  aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", sqlquote(con, tablename)))$AARh
+  aarh <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARh FROM %s ORDER BY AARh", khtools::sql_quote_I(con, tablename)))$AARh
   allperiods <- find_periods(aarh = aarh, period = period)
   
   # DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
-  write_duckdb_table(con, tablename = tmp_periods, data = allperiods)
-  cols <- get_duckdb_cols(con, tablename)
+  khtools::duckdb_write_table(con, tablename = tmp_periods, data = allperiods)
+  cols <- khtools::duckdb_get_cols(con, tablename)
   values <- get_value_columns(cols)
   dims <- get_dimension_columns(cols)
-  dims_no_year <- sqlquote(con, setdiff(dims,c("AARl", "AARh")))
+  dims_no_year <- khtools::sql_quote_I(con, setdiff(dims,c("AARl", "AARh")))
 
   # Bygge sql som velger og aggregerer kolonner, og setter år til periods$AARl/AARh
   select_parts <- c(
@@ -98,44 +98,39 @@ do_aggregate_periods <- function(con, tablename, parameters){
   )
   
   for(val in values){
-    val_sql <- sqlquote(con, val)
-    val_f <- sqlquote(con, paste0(val, ".f"))
-    val_a <- sqlquote(con, paste0(val, ".a"))
+    val_sql <- khtools::sql_quote_I(con, val)
+    val_f <- khtools::sql_quote_I(con, paste0(val, ".f"))
+    val_a <- khtools::sql_quote_I(con, paste0(val, ".a"))
     select_parts <- c(
       select_parts,
       sprintf('COALESCE(SUM(d.%s), 0) AS %s', val_sql, val_sql),
       sprintf('0 AS %s', val_f),
       sprintf('SUM(d.%s) AS %s', val_a, val_a),
       sprintf('SUM(CASE WHEN d.%s IN (1,2) THEN 1 ELSE 0 END) AS %s',
-              val_f, sqlquote(con, paste0(val, ".fn1"))),
+              val_f, khtools::sql_quote_I(con, paste0(val, ".fn1"))),
       sprintf('SUM(CASE WHEN d.%s = 3 THEN 1 ELSE 0 END) AS %s',
-              val_f, sqlquote(con, paste0(val, ".fn3"))),
+              val_f, khtools::sql_quote_I(con, paste0(val, ".fn3"))),
       sprintf('SUM(CASE WHEN d.%s = 9 THEN 1 ELSE 0 END) AS %s',
-              val_f, sqlquote(con, paste0(val, ".fn9"))),
+              val_f, khtools::sql_quote_I(con, paste0(val, ".fn9"))),
       sprintf('SUM(CASE WHEN d.%s = 0 THEN 1 ELSE 0 END) AS %s',
-              val_f, sqlquote(con, paste0(val, ".n")))
+              val_f, khtools::sql_quote_I(con, paste0(val, ".n")))
     )
   }
   
   group_by <- c("p.AARl", "p.AARh", sprintf("d.%s", dims_no_year))
 
-  tmp_result <- prepare_tmp_result_table(con, tablename)
-  
   sql <- sprintf(
-    "CREATE TABLE %s AS
-    SELECT %s FROM %s d
+    "SELECT %s FROM %s d
     INNER JOIN %s p ON d.AARl >= p.AARl AND d.AARh <= p.AARh
     GROUP BY 
     %s",
-    sqlquote(con, tmp_result),
     paste(select_parts, collapse = ",\n"),
-    sqlquote(con, tablename),
+    khtools::sql_quote_I(con, tablename),
     tmp_periods,
     paste(group_by, collapse = ",\n")
   )
   
-  invisible(DBI::dbExecute(con, sql))
-  replace_table_duckdb(con, target = tablename, source = tmp_result)
+  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
   
   # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1. 
   # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
@@ -145,16 +140,16 @@ do_aggregate_periods <- function(con, tablename, parameters){
   missing_year <- parameters$MOVAV$missyears
   if (missing_year$n <= period) {
     for (val in values) {
-      val_sql <- sqlquote(con, val)
-      val_f <- sqlquote(con, paste0(val, ".f"))
-      val_fn9 <- sqlquote(con, paste0(val, ".fn9"))
+      val_sql <- khtools::sql_quote_I(con, val)
+      val_f <- khtools::sql_quote_I(con, paste0(val, ".f"))
+      val_fn9 <- khtools::sql_quote_I(con, paste0(val, ".fn9"))
       sql <- sprintf(
         "UPDATE %s
       SET
         %s = NULL,
         %s = 9
       WHERE %s > %s",
-        sqlquote(con, tablename),
+        khtools::sql_quote_I(con, tablename),
         val_sql,
         val_f,
         val_fn9,
@@ -186,17 +181,17 @@ find_periods <- function(aarh, period){
 #' @noRd
 do_filter_periods_with_missing_original <- function(con, tablename){
   
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- khtools::duckdb_get_cols(con, tablename)
   values <- get_value_columns(cols)
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol")
   
-  tbl_sql <- sqlquote(con, tablename)
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
   
   for(val in values){
-    val_sql <- sqlquote(con, val)
-    val_f   <- sqlquote(con, paste0(val, ".f"))
-    val_n   <- sqlquote(con, paste0(val, ".n"))
-    val_fn3 <- sqlquote(con, paste0(val, ".fn3"))
+    val_sql <- khtools::sql_quote_I(con, val)
+    val_f   <- khtools::sql_quote_I(con, paste0(val, ".f"))
+    val_n   <- khtools::sql_quote_I(con, paste0(val, ".n"))
+    val_fn3 <- khtools::sql_quote_I(con, paste0(val, ".fn3"))
     
     if (!paste0(val, ".n") %in% cols) next
     
@@ -223,14 +218,14 @@ do_filter_periods_with_missing_original <- function(con, tablename){
 #' @noRd
 do_handle_indata_periods <- function(con,tablename,parameters){
   n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- khtools::duckdb_get_cols(con, tablename)
   values <- get_value_columns(cols)
-  tbl_sql <- sqlquote(con, tablename)
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
   
   val_n_cols <- vector("character", length(values))
     
   for(i in seq_along(values)){
-    val_n <- sqlquote(con, paste0(values[i], ".n"))
+    val_n <- khtools::sql_quote_I(con, paste0(values[i], ".n"))
     val_n_cols[i] <- sprintf("%s = %s", val_n, n)
     if(!paste0(values[i], ".n") %in% cols) {
         DBI::dbExecute(con, sprintf("ALTER TABLE %s ADD COLUMN %s INTEGER",

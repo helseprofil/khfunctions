@@ -7,8 +7,8 @@
 get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
-  parameters[["duck"]] <- init_duckdb(dbname = "kubeduck") 
-  write_duckdb_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
+  parameters[["duck"]] <- khtools::duckdb_init(dbname = "kubeduck", mem_limit_gb = parameters[["ramlimit"]]) 
+  khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
@@ -45,7 +45,7 @@ get_lks_startaar <- function(parameters){
   lks_start <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
                                                  query = paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0"), 
                                                  as.is = TRUE))
-  write_duckdb_table(con = parameters$duck, data = lks_start, tablename = "LKS_STARTAAR")
+  khtools::duckdb_write_table(con = parameters$duck, data = lks_start, tablename = "LKS_STARTAAR")
   return(lks_start)
 }
 
@@ -208,7 +208,7 @@ get_friskvik_information <- function(parameters){
 get_filedesign <- function(parameters){
   files <- unique(parameters$files)
   con <- parameters$duck
-  isfiles <- all(files %in% get_duckdb_tables(con = con))
+  isfiles <- all(files %in% khtools::duckdb_get_tables(con = con))
   if(!isfiles) stop("Alle nødvendige filer er ikke lastet inn")
   filedesign <- list()
   for(file in files){
@@ -294,8 +294,8 @@ get_geo_recoding <- function(parameters){
   KnrHarm <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   out <- data.table::rbindlist(list(KnrHarm, KnrHarmS))[, .SD, .SDcols = c("GEO", "GEO_omk")]
-  drop_tables_duckdb(con = parameters$duck, tables = "KnrHarm")
-  write_duckdb_table(parameters$duck, "KnrHarm", data = out, temp = FALSE)
+  khtools::duckdb_drop_tables(con = parameters$duck, tables = "KnrHarm")
+  khtools::duckdb_write_table(parameters$duck, "KnrHarm", data = out, temp = FALSE)
   # DBI::dbWriteTable(parameters$duck, name = "KnrHarm", value = out)
   return(out)
 }

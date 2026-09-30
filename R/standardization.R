@@ -3,8 +3,8 @@ add_predteller <- function(parameters){
   new_section_header("Standardisering")
   con <- parameters$duck
   tmp_tables <- c(PREDRATE = "tmp_predrate", PREDNEVNER = "tmp_prednevner", PREDTELLER = "tmp_predteller")
-  drop_tables_duckdb(con, tmp_tables)
-  on.exit(drop_tables_duckdb(con, tmp_tables), add = TRUE)
+  khtools::duckdb_drop_tables(con, tmp_tables)
+  on.exit(khtools::duckdb_drop_tables(con, tmp_tables), add = TRUE)
   
   designlist <- find_common_standard_teller_nevner_prednevner_design(parameters = parameters)
   generate_tmp_predrate(con = con, gentable = tmp_tables[["PREDRATE"]], design = designlist$STNdesign, parameters = parameters) # Lag tmp_predteller og skriv til duckdb
@@ -13,7 +13,7 @@ add_predteller <- function(parameters){
   
   merge_duckdb_table(con = con, mergeto = "KUBE",  mergefrom = "tmp_predteller")
   set_implicit_null_after_merge_duckdb(con = con, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals, table = "KUBE")
-  do_clean_duckdb(con = con)
+  khtools::duckdb_clean(con = con)
   invisible(NULL)
 }
 
@@ -24,7 +24,7 @@ add_predteller <- function(parameters){
 #' @keywords internal
 #' @noRd
 find_common_standard_teller_nevner_prednevner_design <- function(parameters){
-  print_console_message("* Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
+  khtools::msg("* Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
   
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {
@@ -84,25 +84,25 @@ FinnRedesignForFilter <- function(ORGd, Filter, parameters) {
 #' @family duckdb
 #' @noRd
 generate_tmp_predrate <- function(con, gentable, design, parameters){
-  print_console_message("\n* Henter ut RATE å standardisere mot")
+  khtools::msg("\n* Henter ut RATE å standardisere mot")
   missyears <- parameters$MOVAV$missyears
   merge_teller_nevner(parameters = parameters, standardfiles = TRUE, design = design)
   standardkube_name <- "STANDARD_KUBE"
-  if(!is_duckdb_table(con, standardkube_name)) stop("Prøver å standardisere, men STANDARD_KUBE har ikke blitt skrevet til duckdb")
+  if(!khtools::duckdb_table_exists(con, standardkube_name)) stop("Prøver å standardisere, men STANDARD_KUBE har ikke blitt skrevet til duckdb")
   
-  aar_exist <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl AS AAR FROM %s", sqlquote(con, standardkube_name)))$AAR
+  aar_exist <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT AARl AS AAR FROM %s", khtools::sql_quote_I(con, standardkube_name)))$AAR
   if(missyears$n > 0 && any(missyears$years %in% aar_exist)){
     problem <- intersect(missyears$years, aar_exist)
     warning("\n--\n** OBS! Mangler tall for år som skal standardiseres mot: ", paste(problem, collapse = ", "), 
             "\n*** Dette vil påvirke landsraten i standardiseringsperioden!\n--\n", immediate. = TRUE)
-    sql <- sprintf('DELETE FROM %s WHERE AARl IN (%s)', sqlquote(con, standardkube_name), paste(missyears$years, collapse = ", "))
+    sql <- sprintf('DELETE FROM %s WHERE AARl IN (%s)', khtools::sql_quote_I(con, standardkube_name), paste(missyears$years, collapse = ", "))
     invisible(DBI::dbExecute(con, sql))
   }
   
   aggregate_to_periods(tablename = standardkube_name, parameters = parameters)
-  allcols <- get_duckdb_cols(con, standardkube_name)
+  allcols <- khtools::duckdb_get_cols(con, standardkube_name)
   dims <- setdiff(get_dimension_columns(allcols), parameters$PredFilter$Predfiltercolumns)
-  dims_sql <- sqlquote(con, dims)
+  dims_sql <- khtools::sql_quote_I(con, dims)
   
   sql_generate <- sprintf(
     'CREATE TABLE %s AS 
@@ -124,28 +124,25 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
       WHEN TELLER IS NULL OR NEVNER IS NULL THEN 1 ELSE 0
     END AS ukurant
     FROM %s',
-    sqlquote(con, gentable), paste(dims_sql, collapse = ", "), sqlquote(con, standardkube_name))
+    khtools::sql_quote_I(con, gentable), paste(dims_sql, collapse = ", "), khtools::sql_quote_I(con, standardkube_name))
   
   invisible(DBI::dbExecute(con, sql_generate))
   
-  sql_ukurante <- sprintf('SELECT %s FROM %s WHERE ukurant = 1', paste(dims_sql, collapse = ", "), sqlquote(con, gentable))
+  sql_ukurante <- sprintf('SELECT %s FROM %s WHERE ukurant = 1', paste(dims_sql, collapse = ", "), khtools::sql_quote_I(con, gentable))
   ukurante <- data.table::setDT(DBI::dbGetQuery(con, sql_ukurante))
   
   if(ukurante[, .N] > 0){
-    print_console_message(paste0("\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
-    print_console_message("-Dette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
-    print_console_message("-Dersom det faktisk mangler tall kan det være behov for å justere startår")
-    print_console_message("-Følgende unike verdier for ulike dimensjonene er påvirket: ")
-    for(dim in dims){print_console_message(paste0("- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))}
+    khtools::msg(paste0("\n!!! Missing verdier i standardteller og/eller standardnevner (", ukurante[, .N], ")"))
+    khtools::msg("-Dette KAN gi problemer, da PREDTELLER - og dermed MEIS - ikke kan beregnes for disse strataene: \n")
+    khtools::msg("-Dersom det faktisk mangler tall kan det være behov for å justere startår")
+    khtools::msg("-Følgende unike verdier for ulike dimensjonene er påvirket: ")
+    for(dim in dims){khtools::msg(paste0("- ", dim, ": ", paste(unique(ukurante[[dim]]), collapse = ", ")))}
   }
   
-  tmp_gentable <- prepare_tmp_result_table(con, gentable)
-  
   sql_cleanup <- sprintf(
-  'CREATE TABLE %s AS SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
-  sqlquote(con, tmp_gentable), paste(dims_sql, collapse = ", "), sqlquote(con, gentable))
-  invisible(DBI::dbExecute(con, sql_cleanup))
-  replace_table_duckdb(con, target = gentable, source = tmp_gentable)
+  'SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
+  paste(dims_sql, collapse = ", "), khtools::sql_quote_I(con, gentable))
+  khtools::duckdb_create_and_replace_table(con, target = gentable, select_sql = sql_cleanup)
   invisible(NULL)
 }
 
@@ -154,22 +151,22 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
 #' @family duckdb
 #' @noRd
 generate_tmp_prednevner <- function(con, gentable, design, parameters){
-  print_console_message("\n* Henter ut NEVNER som grunnlag for PREDTELLER")
+  khtools::msg("\n* Henter ut NEVNER som grunnlag for PREDTELLER")
   missyears <- parameters$MOVAV$missyears
-  tmp_prednevner_sql <- sqlquote(con, gentable)
+  tmp_prednevner_sql <- khtools::sql_quote_I(con, gentable)
   prednevnerfile <- parameters$files$PREDNEVNER
-  prednevnerfile_sql <- sqlquote(con, prednevnerfile)
+  prednevnerfile_sql <- khtools::sql_quote_I(con, prednevnerfile)
   
   # UBRUKT KOLONNE, BRUKER ALLTID NEVNER, aldri PREDNEVNERFIL/PREDNEVNERCOL
   prednevner_col <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(prednevner_col)) prednevner_col <- parameters$TNPinformation$NEVNERKOL
   
-  allcols <- get_duckdb_cols(con, prednevnerfile_sql)
+  allcols <- khtools::duckdb_get_cols(con, prednevnerfile_sql)
   dims <- get_dimension_columns(allcols)
-  dims_sql <- sqlquote(con, dims)
+  dims_sql <- khtools::sql_quote_I(con, dims)
   pred_cols <- grep(sprintf("^%s(\\.f|.a|)$", prednevner_col),allcols, value = TRUE)
   rename_cols <- gsub(sprintf("^%s(\\.f|.a|)$", prednevner_col),"PREDNEVNER\\1",pred_cols)
-  predvalue_sql <- sprintf("%s AS %s", sqlquote(con, pred_cols), sqlquote(con, rename_cols))
+  predvalue_sql <- sprintf("%s AS %s", khtools::sql_quote_I(con, pred_cols), khtools::sql_quote_I(con, rename_cols))
   
   sql_generate <- sprintf("CREATE TABLE %s AS SELECT %s, %s FROM %s", 
                           tmp_prednevner_sql, 
@@ -192,19 +189,19 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
 }
 
 generate_tmp_predteller <- function(con, tables, parameters){
-  print_console_message("\n* Beregner forventet teller (PREDTELLER)")
-  tmp_predrate_sql <- sqlquote(con, tables[["PREDRATE"]])
-  tmp_prednevner_sql <- sqlquote(con, tables[["PREDNEVNER"]])
-  tmp_predteller_sql <- sqlquote(con, tables[["PREDTELLER"]])
+  khtools::msg("\n* Beregner forventet teller (PREDTELLER)")
+  tmp_predrate_sql <- khtools::sql_quote_I(con, tables[["PREDRATE"]])
+  tmp_prednevner_sql <- khtools::sql_quote_I(con, tables[["PREDNEVNER"]])
+  tmp_predteller_sql <- khtools::sql_quote_I(con, tables[["PREDTELLER"]])
   
-  predrate_dims <- get_dimension_columns(get_duckdb_cols(con, tables[["PREDRATE"]]))
-  prednevner_dims <- get_dimension_columns(get_duckdb_cols(con, tables[["PREDNEVNER"]]))
-  commondims <- sqlquote(con, intersect(prednevner_dims, predrate_dims))
+  predrate_dims <- get_dimension_columns(khtools::duckdb_get_cols(con, tables[["PREDRATE"]]))
+  prednevner_dims <- get_dimension_columns(khtools::duckdb_get_cols(con, tables[["PREDNEVNER"]]))
+  commondims <- khtools::sql_quote_I(con, intersect(prednevner_dims, predrate_dims))
   
   all_dims <- union(prednevner_dims, predrate_dims)
   dim_select <- c(
-    sprintf("pn.%s", sqlquote(con, intersect(all_dims, prednevner_dims))),
-    sprintf("pr.%s", sqlquote(con, setdiff(all_dims, prednevner_dims)))
+    sprintf("pn.%s", khtools::sql_quote_I(con, intersect(all_dims, prednevner_dims))),
+    sprintf("pr.%s", khtools::sql_quote_I(con, setdiff(all_dims, prednevner_dims)))
   )
   
   join_condition <- paste(sprintf("pn.%s = pr.%s", commondims, commondims),collapse = "\n  AND ")
@@ -213,7 +210,7 @@ generate_tmp_predteller <- function(con, tables, parameters){
                           tmp_predrate_sql, tmp_prednevner_sql, join_condition)
   
   mismatch <- DBI::dbGetQuery(con, sql_mismatch)$N
-  if(mismatch > 0) print_console_message(sprintf('!!!!!ADVARSEL: %s strata i predrate finnes ikke i prednevner!!!', mismatch))
+  if(mismatch > 0) khtools::msg(sprintf('!!!!!ADVARSEL: %s strata i predrate finnes ikke i prednevner!!!', mismatch))
   
   sql_generate <- sprintf(
     'CREATE TABLE %s AS
@@ -231,7 +228,7 @@ generate_tmp_predteller <- function(con, tables, parameters){
   )
   
   invisible(DBI::dbExecute(con, sql_generate))
-  print_console_message("- Redesigner for å matche KUBE")
+  khtools::msg("- Redesigner for å matche KUBE")
   prednevnerdesign <- find_filedesign(filename = tables[["PREDNEVNER"]], parameters = parameters, copy_fileinfo_from = parameters$files$PREDNEVNER)
   cubedesign <- list(Part = parameters$CUBEdesign)
   redesign <- find_redesign(orgdesign = prednevnerdesign, targetdesign = cubedesign, aggregate = parameters$DefDesign$AggVedStand, parameters = parameters)
@@ -244,10 +241,10 @@ generate_tmp_predteller <- function(con, tables, parameters){
 #' @noRd
 add_meisskala <- function(parameters){
   if(parameters$PredFilter$ref_year_type != "Specific") return(invisible(NULL))
-  print_console_message("- Legger til MEISskala for å justere MEIS\n")
+  khtools::msg("- Legger til MEISskala for å justere MEIS\n")
   
   con <- parameters$duck
-  tbl_sql <- sqlquote(con, "KUBE")
+  tbl_sql <- khtools::sql_quote_I(con, "KUBE")
   
   if(parameters$CUBEinformation$REFVERDI_VP != "P"){
     sql <- sprintf('ALTER TABLE %s 
@@ -258,8 +255,8 @@ add_meisskala <- function(parameters){
   }
   
   subset_table <- "tmp_meisskala"
-  subset_sql <- sqlquote(con, subset_table)
-  drop_tables_duckdb(con, subset_table)
+  subset_sql <- khtools::sql_quote_I(con, subset_table)
+  khtools::duckdb_drop_tables(con, subset_table)
   
   filter_sql <- r_filter_to_sql(parameters$PredFilter$meisskalafilter)
   sql <- sprintf('CREATE TABLE %s AS SELECT *, RATE AS MEISskala FROM %s WHERE %s',
@@ -269,9 +266,9 @@ add_meisskala <- function(parameters){
   n_subset <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", subset_sql))$N
   if(n_subset == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   
-  subset_cols <- get_duckdb_cols(con, subset_table)
+  subset_cols <- khtools::duckdb_get_cols(con, subset_table)
   
-  joincolumns <- sqlquote(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
+  joincolumns <- khtools::sql_quote_I(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
                                                      parameters$PredFilter$Predfiltercolumns))
   
   join_sql <- paste(sprintf("k.%s = m.%s", joincolumns, joincolumns), collapse = "\n AND ")
@@ -282,6 +279,6 @@ add_meisskala <- function(parameters){
   tbl_sql, tbl_sql, subset_sql,join_sql)
   
   invisible(DBI::dbExecute(con, sql))
-  drop_tables_duckdb(con, subset_table)
+  khtools::duckdb_drop_tables(con, subset_table)
   invisible(NULL)
 }

@@ -1,6 +1,6 @@
 clean_filegroup_dimensions_duckdb <- function(parameters, cleanlog){
   con <- parameters$duck
-  print_console_message("\n\n* Starter rensing av dimensjoner...")
+  khtools::msg("\n\n* Starter rensing av dimensjoner...")
   do_clean_GEO_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR_duckdb(con = con, cleanlog = cleanlog)
   do_clean_ALDER_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
@@ -8,7 +8,7 @@ clean_filegroup_dimensions_duckdb <- function(parameters, cleanlog){
   do_clean_dimension_duckdb(con = con, col = "UTDANN", cleanlog = cleanlog, illegal = getOption("khfunctions.illegal"))
   do_clean_dimension_duckdb(con = con, col = "INNVKAT", cleanlog = cleanlog, illegal = getOption("khfunctions.innvkat_illegal"))
   do_clean_dimension_duckdb(con = con, col = "LANDBAK", cleanlog = cleanlog, illegal = getOption("khfunctions.landbak_illegal"))
-  print_console_message("\n* Dimensjoner ferdig renset")
+  khtools::msg("\n* Dimensjoner ferdig renset")
 }
 
 check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
@@ -23,9 +23,9 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
   rawfiles_not_ok <- dim_ok[ok == 0, unique(KOBLID)]
   n_not_ok <- length(rawfiles_not_ok)
   
-  if(n_not_ok > 0) print_console_message("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
+  if(n_not_ok > 0) khtools::msg("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
                                          "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
-  if(n_not_ok == 0) print_console_message("\n*** Alle ", col, " ok", sep = "")
+  if(n_not_ok == 0) khtools::msg("\n*** Alle ", col, " ok", sep = "")
   
   invisible(NULL)
 }
@@ -37,8 +37,8 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 #' Legger til GEOniv og FYLKE
 #' @noRd
 do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
-  print_console_message("\n** Renser GEO og legger til GEOniv og FYLKE")
-  on.exit(drop_tables_duckdb(con = con, tables = c("sone6", "geo_map")), add = TRUE)
+  khtools::msg("\n** Renser GEO og legger til GEOniv og FYLKE")
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = c("sone6", "geo_map")), add = TRUE)
   
   build_geo_map(con = con, parameters = parameters)
   update <- DBI::dbGetQuery(con, "SELECT EXISTS(SELECT 1 FROM geo_map WHERE GEO_ORG != GEO_CLEAN) AS update")[["update"]]
@@ -48,7 +48,7 @@ do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
                                  FROM geo_map AS m 
                                  WHERE t.GEO = m.GEO_ORG"))
   } else {
-    print_console_message("\n*** Alle GEO-koder var gyldige")
+    khtools::msg("\n*** Alle GEO-koder var gyldige")
   }
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, 
@@ -83,7 +83,7 @@ add_geoniv_fylke <- function(con, parameters){
   # SETT GEOniv S dersom nødvendig, gjelder for spesifikke KOBLID - sjekk om nødvendig
   sone6 <- parameters$read_parameters[grepl("6", SONER), unique(KOBLID)]
   if(length(sone6) > 0){
-    write_duckdb_table(con, "sone6", data = data.table::data.table(KOBLID = sone6))
+    khtools::duckdb_write_table(con, "sone6", data = data.table::data.table(KOBLID = sone6))
     
     invisible(DBI::dbExecute(con,
                    "UPDATE FILGRUPPE AS f SET GEOniv = 'S' FROM sone6 AS s
@@ -104,8 +104,8 @@ build_geo_map <- function(con, parameters){
   recode_geo_from_name(dt = geo_map, parameters = parameters)
   geo_map[GEO != "0" & nchar(GEO) %in% c(1,3,5,7,9), GEO := paste0("0", GEO)]
   set_unknown_geo_99_map(dt = geo_map, parameters = parameters)
-  drop_tables_duckdb(con = con, tables = "geo_map")
-  write_duckdb_table(con, "geo_map", data = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)])
+  khtools::duckdb_drop_tables(con = con, tables = "geo_map")
+  khtools::duckdb_write_table(con, "geo_map", data = geo_map[, .(GEO_ORG, GEO_CLEAN = GEO)])
   invisible(NULL)
 }
 
@@ -151,12 +151,12 @@ set_unknown_geo_99_map <- function(dt, parameters){
   recode[!(RECODE %in% parameters$GeoKoder$GEO | RECODE %in% c("99", "9999", "999999", "9999999999")),
          RECODE := getOption("khfunctions.geo_illegal")]
   recode99 <- recode[RECODE != getOption("khfunctions.geo_illegal")]
-  print_console_message("\n*** Setter ukjente numeriske koder til 99, fra originalkode(r): ", 
+  khtools::msg("\n*** Setter ukjente numeriske koder til 99, fra originalkode(r): ", 
                         paste(recode99$GEO, collapse = ", "), sep = "")
   
   illegals <- recode[RECODE == getOption("khfunctions.geo_illegal")]
   if(nrow(illegals) > 0){
-    print_console_message("\n!!OBS!!, Følgende GEO-koder kan ikke kodes til gyldige verdier", paste(illegals$GEO, collapse = ", "), sep = "")
+    khtools::msg("\n!!OBS!!, Følgende GEO-koder kan ikke kodes til gyldige verdier", paste(illegals$GEO, collapse = ", "), sep = "")
   }
   dt[recode, on = "GEO", GEO := i.RECODE]
 }
@@ -171,8 +171,8 @@ update_geo_cleanlog <- function(con, cleanlog){
   cleanlog[geo_ok, on = "KOBLID", GEO_ok := i.ok]
   n_not_ok <- geo_ok[ok == 0, .N]
   n_not_ok <- sum(geo_ok$ok == 0)
-  if(n_not_ok > 0) print_console_message("\n*** Fant ugyldige GEO i ", n_not_ok, " originalfiler, ikke OK!", sep = "")
-  if(n_not_ok == 0) print_console_message("\n*** Alle GEO ok")
+  if(n_not_ok > 0) khtools::msg("\n*** Fant ugyldige GEO i ", n_not_ok, " originalfiler, ikke OK!", sep = "")
+  if(n_not_ok == 0) khtools::msg("\n*** Alle GEO ok")
   invisible(NULL)
 }
 
@@ -183,8 +183,8 @@ update_geo_cleanlog <- function(con, cleanlog){
 #' Legger også til AARl og AARh
 #' @noRd
 do_clean_AAR_duckdb <- function(con, cleanlog){
-  print_console_message("\n** Renser AAR og legger til AARl/AARh")
-  on.exit(drop_tables_duckdb(con = con, tables = "aar_map"), add = TRUE)
+  khtools::msg("\n** Renser AAR og legger til AARl/AARh")
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = "aar_map"), add = TRUE)
   build_aar_map(con = con)
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARl VARCHAR"))
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARh VARCHAR"))
@@ -229,8 +229,8 @@ build_aar_map <- function(con){
   aar_map[valid & !is.na(AARl) & !is.na(AARh) & as.integer(AARl) > as.integer(AARh), AAR := aar_illegal]
   aar_map[AAR == aar_illegal, c("AARl", "AARh") := aar_illegal_split]
   
-  drop_tables_duckdb(con = con, tables = "geo_map")
-  write_duckdb_table(con, "geo_map", data = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)])
+  khtools::duckdb_drop_tables(con = con, tables = "geo_map")
+  khtools::duckdb_write_table(con, "geo_map", data = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)])
   invisible(NULL)
 }
 
@@ -242,8 +242,8 @@ build_aar_map <- function(con){
 #' Legger også til ALDERl og ALDERh
 #' @noRd
 do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
-  print_console_message("\n** Renser ALDER og legger til ALDERl/ALDERh")
-  on.exit(drop_tables_duckdb(con = con, tables = "alder_map"), add = TRUE)
+  khtools::msg("\n** Renser ALDER og legger til ALDERl/ALDERh")
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = "alder_map"), add = TRUE)
   
   build_alder_map(con = con, parameters = parameters)
   
@@ -315,8 +315,8 @@ build_alder_map <- function(con, parameters){
   alder_map[valid &!is.na(ALDERl) &!is.na(ALDERh) & as.integer(ALDERl) > as.integer(ALDERh), ALDER := alder_illegal]
   alder_map[ALDER == alder_illegal,c("ALDERl", "ALDERh") := alder_illegal_split]
   
-  drop_tables_duckdb(con = con, tables = "alder_map")
-  write_duckdb_table(con, "alder_map", data = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)])
+  khtools::duckdb_drop_tables(con = con, tables = "alder_map")
+  khtools::duckdb_write_table(con, "alder_map", data = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)])
   invisible(NULL)
 }
 
@@ -329,11 +329,11 @@ build_alder_map <- function(con, parameters){
 #' Renser KJONN, UTDANN, INNVKAT og LANDBAK. Disse følger samme logikk med å bare oppdatere en enkelt kolonne.
 #' @noRd
 do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
-  if(!col %in% get_duckdb_cols(con, "FILGRUPPE")) return(invisible(NULL))
-  print_console_message("\n** Renser", col)
+  if(!col %in% khtools::duckdb_get_cols(con, "FILGRUPPE")) return(invisible(NULL))
+  khtools::msg("\n** Renser", col)
   
   map_table_name <- paste0(tolower(col), "_map")
-  on.exit(drop_tables_duckdb(con = con, tables = map_table_name), add = TRUE)
+  on.exit(khtools::duckdb_drop_tables(con = con, tables = map_table_name), add = TRUE)
   build_dimension_map(con = con, col = col, map_table_name = map_table_name)
   
   update <- DBI::dbGetQuery(con, 
@@ -351,7 +351,7 @@ do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
         col, map_table_name, col)
     ))
   } else {
-    print_console_message("\n*** Alle ", col, "-verdier var gyldige", sep = "")
+    khtools::msg("\n*** Alle ", col, "-verdier var gyldige", sep = "")
   }
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, col = col, illegal = illegal)
   invisible(NULL)
@@ -372,8 +372,8 @@ build_dimension_map <- function(con, col, map_table_name){
   clean_fun(map)
 
   data.table::setnames(map, col, "CLEAN")
-  drop_tables_duckdb(con = con, tables = map_table_name)
-  write_duckdb_table(con, tablename = map_table_name, data = map[, .(ORG, CLEAN)])
+  khtools::duckdb_drop_tables(con = con, tables = map_table_name)
+  khtools::duckdb_write_table(con, tablename = map_table_name, data = map[, .(ORG, CLEAN)])
   invisible(NULL)
 }
 

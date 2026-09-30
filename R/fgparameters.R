@@ -5,11 +5,11 @@
 #' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
-  print_console_message("\n* Henter parametre")
+  khtools::msg("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
-  parameters[["duck"]] <- init_duckdb(dbname = "filgruppeduck") 
-  write_duckdb_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
+  parameters[["duck"]] <- khtools::duckdb_init(dbname = "filgruppeduck", mem_limit_gb = parameters[["ramlimit"]]) 
+  khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
   # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
   parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)

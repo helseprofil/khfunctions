@@ -5,11 +5,11 @@
 #' @family duckdb
 #' @noRd 
 do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = TRUE){
-  print_console_message("\n** Geo-harmonisering")
+  khtools::msg("\n** Geo-harmonisering")
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
-                                       sqlquote(con, tablename))))
-  cols <- get_duckdb_cols(con, tablename)
-  table_sql <- sqlquote(con, tablename)
+                                       khtools::sql_quote_I(con, tablename))))
+  cols <- khtools::duckdb_get_cols(con, tablename)
+  table_sql <- khtools::sql_quote_I(con, tablename)
   
   nharm <- DBI::dbGetQuery(con,sprintf(
       paste("SELECT COUNT(DISTINCT f.GEO) AS n",
@@ -19,24 +19,19 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
       table_sql))$n
   
   if(nharm > 0){
-    print_console_message("- Rekoder", nharm, "geo-koder")
-    cols_sql <- sqlquote(con, setdiff(cols, "GEO"))
+    khtools::msg("- Rekoder", nharm, "geo-koder")
+    cols_sql <- khtools::sql_quote_I(con, setdiff(cols, "GEO"))
 
     select_sql <- paste(c("COALESCE(k.GEO_omk, f.GEO) AS GEO",
                           paste0("f.",cols_sql)), collapse = ", ")
   
-    tmp_result <- prepare_tmp_result_table(con, tablename)
-    
     sql <- sprintf(
-      paste("CREATE TABLE %s AS",
-            "SELECT %s FROM %s f",
-            "LEFT JOIN KnrHarm k ON f.GEO = k.GEO"),
-      sqlquote(con, tmp_result), 
+      "SELECT %s FROM %s f 
+      LEFT JOIN KnrHarm k ON f.GEO = k.GEO",
       select_sql, table_sql)
-    invisible(DBI::dbExecute(con, sql))
-    replace_table_duckdb(con, target = tablename, source = tmp_result)
+    khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
   } else {
-    print_console_message(paste0("- Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
+    khtools::msg(paste0("- Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
     
   do_aggregate_file_duckdb(con = con, tablename = tablename, vals = vals)
@@ -51,7 +46,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
 #' @family duckdb
 #' @noRd 
 add_fylke_duckdb <- function(con, tablename){
-  table_sql <- sqlquote(con, tablename)
+  table_sql <- khtools::sql_quote_I(con, tablename)
   
   DBI::dbExecute(con, sprintf("ALTER TABLE %s ADD COLUMN FYLKE VARCHAR",table_sql))
   
@@ -78,26 +73,26 @@ fix_geo_special <- function(parameters){
   geonivs <- DBI::dbGetQuery(con, "SELECT DISTINCT GEOniv FROM KUBE")[[1]]
   
   flags <- intersect(
-    c("spv_tmp", grep("\\.f$", get_duckdb_cols(con, "KUBE"), value = TRUE)),
-    get_duckdb_cols(con, "KUBE")
+    c("spv_tmp", grep("\\.f$", khtools::duckdb_get_cols(con, "KUBE"), value = TRUE)),
+    khtools::duckdb_get_cols(con, "KUBE")
   )
   
   where <- character()
   
-  print_console_message("\n* Spesialprikking for GEO")
+  khtools::msg("\n* Spesialprikking for GEO")
   if(!is.na(bydelstart) && bydelstart > 0 && any(geonivs %in% c("B", "V"))){
-    print_console_message("- Sletter tall for bydel og levekårssoner før ", bydelstart, " dersom de finnes", sep = "")
+    khtools::msg("- Sletter tall for bydel og levekårssoner før ", bydelstart, " dersom de finnes", sep = "")
     where <- c(
       where, sprintf("(GEOniv IN ('B','V') AND AARl < %s)", bydelstart))
   }
   
   if("V" %in% geonivs){
-    print_console_message("- Håndterer individuelle startår for levekårssoner")
+    khtools::msg("- Håndterer individuelle startår for levekårssoner")
     where <- c(where, "(GEOniv = 'V' AND EXISTS (SELECT 1 FROM LKS_STARTAAR l WHERE l.GEO = KUBE.GEO AND KUBE.AARl < l.lks_startaar))")
   }
   
   if(!is.na(dk2020start) && dk2020start > 0 && "K" %in% geonivs){
-    print_console_message("- Håndterer delingskommuner (DK2020) og Aalesund/Haram i perioden 2020-2023")
+    khtools::msg("- Håndterer delingskommuner (DK2020) og Aalesund/Haram i perioden 2020-2023")
     where <- c(where, sprintf("(GEOniv = 'K' AND GEO IN ('5055','5056','5059','1806','1875') AND AARl < %s)", dk2020start))
     
     ystart <- if(parameters$name == "VALGDELTAKELSE") 2019L else 2020L
@@ -111,8 +106,8 @@ fix_geo_special <- function(parameters){
   where_sql <- paste(where, collapse = "\nOR\n")
   
   set_sql <- c(
-    sprintf("%s = 9", sqlquote(con, flags)),
-    sprintf("%s = 1", sqlquote(con, "geoprikket"))
+    sprintf("%s = 9", khtools::sql_quote_I(con, flags)),
+    sprintf("%s = 1", khtools::sql_quote_I(con, "geoprikket"))
   )
   
   sql <- sprintf("UPDATE KUBE SET %s WHERE %s", paste(set_sql, collapse = ", "), where_sql)
@@ -127,8 +122,8 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
   if("dekningprikket" %notin% names(dt)) dt[, dekningprikket := 0L]
   geolevel <- match.arg(geolevel)
   if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))
-  print_console_message(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
-  print_console_message("- Originalt", dt[GEOniv == geolevel, .N], "rader")
+  khtools::msg(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
+  khtools::msg("- Originalt", dt[GEOniv == geolevel, .N], "rader")
   # Sette inn kommentar om kriteriene?
   dims <- parameters$outdimensions
   flags <- c(grep("\\.f$", names(dt), value = T))
@@ -137,9 +132,9 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
     dt[skjul, dekningprikket := 1L, on = dims]
     n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
     dt[spv_tmp == 0 & dekningprikket == 1L, (c(flags, "spv_tmp")) := 1L]
-    print_console_message("-", n_new, "rader skjules")
+    khtools::msg("-", n_new, "rader skjules")
   } else {
-    print_console_message("- Ingen rader skjules")
+    khtools::msg("- Ingen rader skjules")
   }
 }
 
@@ -189,11 +184,11 @@ get_deletestrata <- function(dt, dims, level){
 add_missing_lks <- function(parameters){
   if(!"V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))) return(invisible(NULL))
   con <- parameters$duck
-  cols <- get_duckdb_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_cols(con, "KUBE")
   vals <- intersect(union(get_value_columns(cols), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR")), cols)
   
-  drop_tables_duckdb(con, c("tmp_single_lks", "tmp_invalid_lks"))
-  on.exit(drop_tables_duckdb(con, c("tmp_single_lks", "tmp_invalid_lks")), add = TRUE)
+  khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks"))
+  on.exit(khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks")), add = TRUE)
   
   # --- Kommuner med bare én levekårssone ----
   sql_single <- "
@@ -219,9 +214,9 @@ add_missing_lks <- function(parameters){
   
   # --- Ugyldige levekårssoner ----
   invalid_cols <- c(
-    sprintf("%s = NULL", sqlquote(con, vals)),
-    sprintf("%s = 2", sqlquote(con, "spv_tmp")),
-    sprintf("%s = 1", sqlquote(con, "geoprikket"))
+    sprintf("%s = NULL", khtools::sql_quote_I(con, vals)),
+    sprintf("%s = 2", khtools::sql_quote_I(con, "spv_tmp")),
+    sprintf("%s = 1", khtools::sql_quote_I(con, "geoprikket"))
   )
   
   sql_invalid <- "
@@ -277,7 +272,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
   geoomk <- parameters$KnrHarm
   georecode <- sum(collapse::funique(file$GEO) %in% geoomk$GEO)
   if(georecode > 0){
-    print_console_message("\n*** Recoding", georecode, "geo-codes")
+    khtools::msg("\n*** Recoding", georecode, "geo-codes")
     file <- collapse::join(file, geoomk, on = "GEO", how = "left", overid = 0, verbose = 0)
     file[!is.na(GEO_omk), let(GEO = GEO_omk)]
     file[, let(GEO_omk = NULL, HARMstd = NULL)]

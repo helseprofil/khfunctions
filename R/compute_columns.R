@@ -13,7 +13,7 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   values <- get_value_columns(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
-    print_console_message("\n*** Legger til nye kolonner: ", f)
+    khtools::msg("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()
@@ -37,7 +37,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
   
   if(is_empty(formulas)) return(invisible(NULL))
   
-  cols <- get_duckdb_cols(con, tablename)
+  cols <- khtools::duckdb_get_cols(con, tablename)
   values <- get_value_columns(cols)
   
   formulas <- trimws(
@@ -46,11 +46,11 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     )
   )
   
-  table_sql <- sqlquote(con, tablename)
+  table_sql <- khtools::sql_quote_I(con, tablename)
   
   for(f in formulas){
     
-    print_console_message(
+    khtools::msg(
       paste0("\n*** Legger til nye kolonner: ", f)
     )
     
@@ -81,7 +81,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s DOUBLE",
         table_sql,
-        sqlquote(con, name)
+        khtools::sql_quote_I(con, name)
       )
     )
     
@@ -90,7 +90,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s INTEGER",
         table_sql,
-        sqlquote(con, paste0(name, ".f"))
+        khtools::sql_quote_I(con, paste0(name, ".f"))
       )
     )
     
@@ -99,7 +99,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       sprintf(
         "ALTER TABLE %s ADD COLUMN %s INTEGER",
         table_sql,
-        sqlquote(con, paste0(name, ".a"))
+        khtools::sql_quote_I(con, paste0(name, ".a"))
       )
     )
     
@@ -110,7 +110,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
         sprintf(
           "ALTER TABLE %s ADD COLUMN %s INTEGER",
           table_sql,
-          sqlquote(con, paste0(name, ".n"))
+          khtools::sql_quote_I(con, paste0(name, ".n"))
         )
       )
       
@@ -122,7 +122,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          sqlquote(con, paste0(name, ".fn1"))
+          khtools::sql_quote_I(con, paste0(name, ".fn1"))
         )
       )
       
@@ -134,7 +134,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          sqlquote(con, paste0(name, ".fn3"))
+          khtools::sql_quote_I(con, paste0(name, ".fn3"))
         )
       )
       
@@ -146,13 +146,13 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "ADD COLUMN %s INTEGER DEFAULT 0"
           ),
           table_sql,
-          sqlquote(con, paste0(name, ".fn9"))
+          khtools::sql_quote_I(con, paste0(name, ".fn9"))
         )
       )
     }
     
     f_sql <- paste0(
-      sqlquote(
+      khtools::sql_quote_I(
         con,
         paste0(included_columns, ".f")
       ),
@@ -160,7 +160,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     )
     
     a_sql <- paste0(
-      sqlquote(
+      khtools::sql_quote_I(
         con,
         paste0(included_columns, ".a")
       ),
@@ -177,13 +177,13 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
       ),
       table_sql,
       
-      sqlquote(con, name),
+      khtools::sql_quote_I(con, name),
       formula,
       
-      sqlquote(con, paste0(name, ".f")),
+      khtools::sql_quote_I(con, paste0(name, ".f")),
       f_sql,
       
-      sqlquote(con, paste0(name, ".a")),
+      khtools::sql_quote_I(con, paste0(name, ".a")),
       a_sql
     )
     
@@ -192,7 +192,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
     if(post_moving_average){
       
       n_sql <- paste0(
-        sqlquote(
+        khtools::sql_quote_I(
           con,
           paste0(included_columns, ".n")
         ),
@@ -207,7 +207,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
             "SET %s = GREATEST(%s)"
           ),
           table_sql,
-          sqlquote(con, paste0(name, ".n")),
+          khtools::sql_quote_I(con, paste0(name, ".n")),
           n_sql
         )
       )
@@ -226,10 +226,10 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
           "OR %s IS NULL"
         ),
         table_sql,
-        sqlquote(con, name),
-        sqlquote(con, paste0(name, ".f")),
-        sqlquote(con, name),
-        sqlquote(con, name)
+        khtools::sql_quote_I(con, name),
+        khtools::sql_quote_I(con, paste0(name, ".f")),
+        khtools::sql_quote_I(con, name),
+        khtools::sql_quote_I(con, name)
       )
     )
   }
@@ -242,13 +242,13 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
 #' @family duckdb
 #' @noRd
 add_crude_rate <- function(con, tablename){
-  print_console_message("- Legger til crude RATE")
-  cols <- get_duckdb_cols(con, tablename)
+  khtools::msg("- Legger til crude RATE")
+  cols <- khtools::duckdb_get_cols(con, tablename)
   if(!"NEVNER" %in% cols){
-    print_console_message("- Har ikke NEVNER, kan ikke beregne crude RATE")
+    khtools::msg("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
-  tbl_sql <- sqlquote(con, tablename)
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
   sql_addcols <- sprintf(
     'ALTER TABLE %s ADD COLUMN IF NOT EXISTS RATE DOUBLE;
     ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.f" INTEGER;
@@ -297,7 +297,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
   
   for(formula in formulas){
     formula <- trimws(formula)
-    print_console_message("\n*** Legger til kolonner som sum av rader: ", formula)
+    khtools::msg("\n*** Legger til kolonner som sum av rader: ", formula)
     fparts <- extract_formula_parts(formula = formula, fileinfo = fileinfo, parameters = parameters)
     
     newdata <- EkstraherRadSummer(dt, pstrorg = fparts$filter, FGP = fileinfo, parameters = parameters)

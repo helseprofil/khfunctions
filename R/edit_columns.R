@@ -8,8 +8,8 @@ scale_rate_and_meisskala <- function(parameters){
   con <- parameters$duck
   scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
   
-  print_console_message("- Skalerer RATE til per", scalevalue)
-  tbl_sql <- sqlquote(con, "KUBE")
+  khtools::msg("- Skalerer RATE til per", scalevalue)
+  tbl_sql <- khtools::sql_quote_I(con, "KUBE")
   cols <- DBI::dbListFields(con, tbl_sql)
   
   update_cols <- character()
@@ -37,7 +37,7 @@ do_format_cube_columns <- function(parameters){
   con = parameters$duck
   tablename <- "KUBE"
   cols <- DBI::dbListFields(con, tablename)
-  tbl_sql <- sqlquote(con, tablename)
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
   
   obligcolumns <- c("TELLER","NEVNER","RATE")
   obligcolumns <- c(paste0(rep(obligcolumns, each = 4),c("", ".f", ".a", ".n")), "PREDTELLER", "PREDTELLER.f")
@@ -55,8 +55,8 @@ do_format_cube_columns <- function(parameters){
   missing_cols <- setdiff(names(required_cols), cols)
   
   if(length(missing_cols) > 0){
-    print_console_message("- Initierer manglende kolonner:", paste(missing_cols, collapse = ", "))
-    init_new_duckdb_cols(con, "KUBE", required_cols[missing_cols])
+    khtools::msg("- Initierer manglende kolonner:", paste(missing_cols, collapse = ", "))
+    khtools::duckdb_ensure_columns(con, "KUBE", required_cols[missing_cols])
   }
   
   # Oppdater kolonner (sumkolonner, nonsumkolonner, ALDER, AAR og MALTALL)
@@ -75,29 +75,29 @@ do_format_cube_columns <- function(parameters){
     # PREDTELLER bruker TELLER.n for å lage årlige tall, 
     # i stedet for å lage PREDTELLER.n som en ekstra kolonne som == TELLER.n
     valn_sql <- if(val == "PREDTELLER"){
-      sqlquote(con, "TELLER.n") 
+      khtools::sql_quote_I(con, "TELLER.n") 
     } else {
-      sqlquote(con, paste0(val, ".n"))
+      khtools::sql_quote_I(con, paste0(val, ".n"))
     }
     update <- c(update,
                 sprintf("%s = %s / %s",
-                        sqlquote(con, val),
-                        sqlquote(con, val),
+                        khtools::sql_quote_I(con, val),
+                        khtools::sql_quote_I(con, val),
                         valn_sql))
   }
   
   if("AAR" %in% cols) update <- c(update, "AAR = printf('%d_%d', AARl, AARh)")
   if("ALDER" %in% cols) update <- c(update, "ALDER = printf('%d_%d', ALDERl, ALDERh)")
-  update <- c(update, sprintf("%s = %s", sqlquote(con, "MALTALL"), sqlquote(con, parameters$MALTALL)))
+  update <- c(update, sprintf("%s = %s", khtools::sql_quote_I(con, "MALTALL"), khtools::sql_quote_I(con, parameters$MALTALL)))
   update_sql <- sprintf("UPDATE %s SET %s", 
-                        sqlquote(con, tablename), 
+                        khtools::sql_quote_I(con, tablename), 
                         paste(update, collapse = ", "))
   invisible(DBI::dbExecute(con, update_sql))
   
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)){
-    dt <- fetch_duckdb_table(con = con, tablename = tablename) 
+    dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename) 
     compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
-    write_to_tmp_and_replace_table(con = con, tablename = tablename, data = dt)
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
   }
   
   invisible(NULL)
@@ -111,7 +111,7 @@ do_format_cube_columns <- function(parameters){
 rename_tab_columns <- function(parameters){
   con <- parameters$duck
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  cols <- get_duckdb_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_cols(con, "KUBE")
   tabcols <- grep("^TAB\\d+$", cols, value = TRUE)
   if(length(tabcols) == 0) return(invisible(NULL))
   tabnames <- vapply(tabcols, function(x) spec[[x]], character(1))
@@ -119,7 +119,7 @@ rename_tab_columns <- function(parameters){
   sql <- paste(
     sprintf(
       "ALTER TABLE KUBE RENAME COLUMN %s TO %s",
-      sqlquote(con, tabcols), sqlquote(con, tabnames)
+      khtools::sql_quote_I(con, tabcols), khtools::sql_quote_I(con, tabnames)
     ), collapse = ";\n")
   
   invisible(DBI::dbExecute(con, sql))
@@ -136,7 +136,7 @@ get_outdimensions <- function(parameters){
     dims <- setdiff(dims, dimdropp)
   }
   
-  cols <- get_duckdb_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_cols(con, "KUBE")
   if("ALDER" %notin% cols) dims <- setdiff(dims, "ALDER")
   if("KJONN" %notin% cols) dims <- setdiff(dims, "KJONN")
   return(dims)

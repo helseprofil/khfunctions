@@ -34,7 +34,7 @@ expand.grid.dt <- function(...){
 #' @keywords internal
 #' @noRd
 set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
-  print_console_message("*** Håndterer implisitte nuller")
+  khtools::msg("*** Håndterer implisitte nuller")
   vals <- get_value_columns(names(dt))
   
   for (val in vals) {
@@ -54,7 +54,7 @@ set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
     valA <- paste0(val, ".a")
     missingrows <- which((is.na(dt[[val]]) & dt[[valF]] == 0) | is.na(dt[[valF]]))
     n_missing <- length(missingrows)
-    if(n_missing > 0) print_console_message("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
+    if(n_missing > 0) khtools::msg("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
     data.table::set(dt, i = missingrows, j = c(val, valF, valA), value = replacemissing)
   }
 }
@@ -64,7 +64,7 @@ set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
 
 #' KHerr (kb)
 KHerr <- function(error) {
-  print_console_message(
+  khtools::msg(
     "***************************************************************************\n",
     "*KHFEIL!! ", error, "\n***************************************************************************\n"
   )

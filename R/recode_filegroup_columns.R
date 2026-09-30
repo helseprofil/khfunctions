@@ -17,8 +17,8 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   save_filedump_if_requested(dumpname = "KODEBOKpre", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
   on.exit({
     save_filedump_if_requested(dumpname = "KODEBOKpost", dt = NULL, parameters = parameters, koblid = filedescription$KOBLID, duck = TRUE, tablename = "temp_orgfile")
-    drop_tables_duckdb(con, "temp_recode")
-    if("ROWID_KH" %in% get_duckdb_cols(con, "temp_orgfile")) {
+    khtools::duckdb_drop_tables(con, "temp_recode")
+    if("ROWID_KH" %in% khtools::duckdb_get_cols(con, "temp_orgfile")) {
       invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
     }
   }, add = TRUE)
@@ -27,11 +27,11 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   
   codebook <- parameters$codebook[DELID %in% c(filedescription$DELID, "FELLES")]
   recodecols <- intersect(unique(codebook$FELTTYPE), 
-                          get_duckdb_cols(con, "temp_orgfile"))
+                          khtools::duckdb_get_cols(con, "temp_orgfile"))
   if(nrow(codebook) == 0) return(invisible(NULL))
   
-  drop_tables_duckdb(con, "temp_recode")
-  if("ROWID_KH" %in% get_duckdb_cols(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
+  khtools::duckdb_drop_tables(con, "temp_recode")
+  if("ROWID_KH" %in% khtools::duckdb_get_cols(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
   
   invisible(DBI::dbExecute(con, "ALTER TABLE temp_orgfile ADD COLUMN ROWID_KH BIGINT"))
   invisible(DBI::dbExecute(con, "UPDATE temp_orgfile SET ROWID_KH = rowid"))
@@ -40,7 +40,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
     DBI::dbGetQuery(con, sprintf("SELECT ROWID_KH, %s FROM temp_orgfile",
         paste(DBI::dbQuoteIdentifier(con, recodecols),collapse = ", "))))
   
-  print_console_message("\n* KODEBOK:")
+  khtools::msg("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
     orgvalues <- unique(recode_dt[[col]])
@@ -51,19 +51,19 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   }
   recodelog[, KOBLID := filedescription$KOBLID]
   n_recoded <- sum(as.numeric(recodelog$FREQ), na.rm = T)
-  print_console_message("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
+  khtools::msg("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
   if(n_recoded == 0) return(invisible(NULL))
   
   recode_dt[, kast := as.integer(rowSums(.SD == "-", na.rm = TRUE) > 0), .SDcols = recodecols]
   # DBI::dbWriteTable(con, "temp_recode", recode_dt, overwrite = TRUE)
-  write_duckdb_table(con, "temp_recode", data = recode_dt)
+  khtools::duckdb_write_table(con, "temp_recode", data = recode_dt)
   update_recoded_cols_db(con = con, recodecols = recodecols)
   
   n_remove <- recode_dt[, sum(kast, na.rm = T)]
   if(n_remove > 0){
-    print_console_message("\n** Kaster", n_remove, "slettede rader")
+    khtools::msg("\n** Kaster", n_remove, "slettede rader")
     DBI::dbExecute(con, "DELETE FROM temp_orgfile WHERE ROWID_KH IN (SELECT ROWID_KH FROM temp_recode WHERE kast = 1)")
   }
   
@@ -177,7 +177,7 @@ do_remove_deleted_rows <- function(dt, cols){
   dt[, let(kast = 0)]
   dt[rowSums(dt[, ..cols] == "-", na.rm = T) > 0, let(kast = 1)]
   n_remove <- sum(dt$kast, na.rm = T)
-  if(n_remove > 0) print_console_message("\n** Kaster", n_remove, "slettede rader")
+  if(n_remove > 0) khtools::msg("\n** Kaster", n_remove, "slettede rader")
   dt <- dt[kast == 0][, let(kast = NULL)]
   return(dt)
 }
@@ -188,10 +188,10 @@ do_remove_deleted_rows <- function(dt, cols){
 do_recode_tknr_db <- function(tknr, parameters){
   if (is_empty(tknr) || tknr != "1") return(invisible(NULL))
   
-  on.exit(drop_tables_duckdb(con, "temp_tknr"), add = TRUE)
-  print_console_message("\n* Omkoder fra TKNR")
+  on.exit(khtools::duckdb_drop_tables(con, "temp_tknr"), add = TRUE)
+  khtools::msg("\n* Omkoder fra TKNR")
   # DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
-  write_duckdb_table(parameters$duck, "temp_tknr", data = parameters$TKNR)
+  khtools::duckdb_write_table(parameters$duck, "temp_tknr", data = parameters$TKNR)
   DBI::dbExecute(parameters$duck,
     "UPDATE temp_orgfile AS t SET GEO = x.NYKODE FROM temp_tknr AS x WHERE t.GEO = x.ORGKODE AND x.NYKODE IS NOT NULL"
   )
@@ -203,7 +203,7 @@ do_recode_tknr_db <- function(tknr, parameters){
 #' @noRd
 do_recode_soner_4_db <- function(filedescription, con) {
   if(is_empty(filedescription$SONER) || !grepl("4", filedescription$SONER)) return(invisible(NULL))
-  print_console_message("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  khtools::msg("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
   DBI::dbExecute(con, "UPDATE temp_orgfile SET GEO = GEO || '00' WHERE length(GEO) = 4")
   invisible(NULL)
 }
@@ -218,7 +218,7 @@ do_recode_soner_4_db <- function(filedescription, con) {
 #' @noRd
 do_recode_tknr <- function(dt, tknr, parameters){
   if(is_empty(tknr) || tknr != "1") return(invisible(NULL))
-  print_console_message("\n* Omkoder fra TKNR")
+  khtools::msg("\n* Omkoder fra TKNR")
   dt[parameters$TKNR, on = c(GEO = "ORGKODE"), GEO := data.table::fifelse(!is.na(i.NYKODE), i.NYKODE, GEO)]
 }
 
@@ -228,6 +228,6 @@ do_recode_tknr <- function(dt, tknr, parameters){
 #' @noRd
 do_recode_soner_4 <- function(dt, filedescription){
   if(!grepl("4", filedescription$SONER)) return(invisible(NULL))
-  print_console_message("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  khtools::msg("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
   dt[nchar(GEO) == 4, let(GEO = paste0(GEO, "00"))]
 }

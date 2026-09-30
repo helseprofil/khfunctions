@@ -4,14 +4,14 @@
 #'
 #' @param name Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
+#' @param ramlimit max RAM allocation for duckdb. If NULL, default value is 8GB.
 #' @param alarm if TRUE, plays a sound when done
-#' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
 #' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
-#' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
+#' @param qualcontrol perform initial qualcontrol of data
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
@@ -64,11 +64,11 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   
   # 6. Prikking og dekningsgrad bydel/lks
   # - Dette skjer i R fortsatt, kan oversettes på et senere tidspunkt
-  dt <- fetch_duckdb_table(con = parameters$duck, tablename = "KUBE")
+  dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = "KUBE")
   dt <- do_censor_cube(dt = dt, parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "B", parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
-  write_to_tmp_and_replace_table(con = parameters$duck, data = dt, tablename = "KUBE")
+  khtools::duckdb_write_and_replace_table_from_R(con = parameters$duck, data = dt, tablename = "KUBE")
   rm(dt)
   invisible(gc())
   
@@ -93,15 +93,15 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
                       parameters = parameters, duck = TRUE, tablename = "ALLVIS")
   write_cube_output(parameters = parameters)
   RESULTAT <- list(
-    KUBE = fetch_duckdb_table(parameters$duck, "KUBE"),
-    ALLVIS = fetch_duckdb_table(parameters$duck, "ALLVIS"),
-    QC = fetch_duckdb_table(parameters$duck, "QC")
+    KUBE = khtools::duckdb_fetch_table(parameters$duck, "KUBE"),
+    ALLVIS = khtools::duckdb_fetch_table(parameters$duck, "ALLVIS"),
+    QC = khtools::duckdb_fetch_table(parameters$duck, "QC")
   )
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   new_section_header(paste0("KUBE ", parameters$name, " er ferdig"))
-  print_console_message("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  khtools::msg("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
 

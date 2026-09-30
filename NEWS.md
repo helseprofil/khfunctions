@@ -17,14 +17,17 @@
       - Everything moved into one pipeline, with filefilter-functions included only when needed
       - Formatting and filefilter functionality moved to duckdb
       - Ensures integer columns when reading
-  - do_harmonize_geo translated to sql, and add_fylke added as an argument
+  - `do_harmonize_geo` translated to sql, and add_fylke added as an argument
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
-  - Clean up console messages
   - All output files generated directly in duckdb and written to disk
+  - Clean up console messages
+  - Rsynt moved to duckdb
 
 ## Other changes
-- `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
+- Implemented new package `khtools` with generic functionality used throughout the system
+  - `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
+  - `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
 - Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
 - Parameter tables GeoKoder and KnrHarm written to duckdb
 - `do_special_handling` 
@@ -33,11 +36,11 @@
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
 - `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb for faster geo recoding
-- `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
 
 ## Bugfix
-- LKS startaar was not running if neither bydelsstart nor DK2020 were set. 
+- LKS startaar was not running if neither bydelsstart nor DK2020 were set.
+- Fixed typo in `save_filedump_if_requested` which did not work for csv output.
 
 # khfunctions 1.2.7 (2026-08-10)
 

@@ -14,7 +14,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
   con <- parameters$duck
-  isduck <- is_duckdb_table(con = con, tablename = filename)
+  isduck <- khtools::duckdb_table_exists(con = con, tablename = filename)
   if(is.null(file) && !isduck){
     stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
   }
@@ -29,7 +29,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   if (data.table::is.data.table(file)) {
     cols <- names(file)
   } else if (isduck) {
-    cols <- get_duckdb_cols(con, filename)
+    cols <- khtools::duckdb_get_cols(con, filename)
   } else {
     stop("Fant ikke kolonner: verken data.table eller duckdb-tabell")
   }
