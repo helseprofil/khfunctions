@@ -68,7 +68,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   dt <- do_censor_cube(dt = dt, parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "B", parameters = parameters)
   do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
-  khtools::duckdb_write_and_replace_table_from_R(con = parameters$duck, data = dt, tablename = "KUBE")
+  khtools::duckdb_write_and_replace_table_from_R(con = parameters$duck, tablename = "KUBE", data = dt)
   rm(dt)
   invisible(gc())
   

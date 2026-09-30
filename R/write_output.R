@@ -75,7 +75,7 @@ add_lks_filter <- function(con) {
 sort_bef_gkny_duckdb <- function(con){
   khtools::msg("\n Sorterer befolkningsfilgruppe")
   
-  dims <- khfunctions:::get_dimension_columns(khtools::duckdb_get_cols(con, "FILGRUPPE"))
+  dims <- khfunctions:::get_dimension_columns(khtools::duckdb_get_columns(con, "FILGRUPPE"))
   sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
   sortdims <- union(sort, dims)
   sortdims_sql <- paste(sortdims, collapse = ", ")
@@ -84,7 +84,7 @@ sort_bef_gkny_duckdb <- function(con){
   
   sql <- sprintf("SELECT * FROM %s ORDER BY %s", 
                  khtools::sql_quote_I(con, orgtabell), sortdims_sql)
-  khtools::duckdb_create_and_replace_table(con, target = orgtabell, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = orgtabell, select_sql = sql)
 }
 
 
@@ -263,7 +263,7 @@ do_write_output_duckdb <- function(con, source, filepath, format = c("parquet", 
       sprintf(
         "COPY %s TO %s (%s)",
         source,
-        khtools::sql_quote_s(con, filepath),
+        khtools::sql_quote_S(con, filepath),
         options
       )
     )

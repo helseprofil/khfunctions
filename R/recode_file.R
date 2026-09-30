@@ -52,7 +52,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters, parameters){
     
     khtools::duckdb_drop_tables(con, "tmp_filter_all")
     invisible(DBI::dbExecute(con, filter_all_sql))
-    filter_cols <- khtools::duckdb_get_cols(con, "tmp_filter_all")
+    filter_cols <- khtools::duckdb_get_columns(con, "tmp_filter_all")
     join_condition <- paste(sprintf("t.%s = f.%s",filter_cols,filter_cols), collapse = "\n  AND ")
     
     filter_sql <- sprintf(
@@ -62,7 +62,7 @@ do_filter_dimensions_duckdb <- function(con, tablename, filters, parameters){
       join_condition)
     
     n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s",  khtools::sql_quote_I(con, tablename)))$N
-    khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = filter_sql)
+    khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = filter_sql)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s",  khtools::sql_quote_I(con, tablename)))$N
     filterpartsname <- as.character(parameters$DefDesign$DelKolN[filterparts])
     khtools::msg(sprintf("-- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
@@ -90,7 +90,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     
     recode_table <- sprintf("tmp_recode_%s", part)
     khtools::duckdb_write_table(con, tablename = recode_table, data = recodebook)
-    table_cols <- khtools::duckdb_get_cols(con, tablename)
+    table_cols <- khtools::duckdb_get_columns(con, tablename)
     join_condition <- paste(sprintf("t.%s = r.%s", partinfo$cols, partinfo$cols), collapse = "\n  AND ")
     select_cols <- character()
     
@@ -115,7 +115,7 @@ do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
     )
     
     n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
-    khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = recode_sql)
+    khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = recode_sql)
     if(part == "Gn") fix_recode_geo_duckdb(con = con, tablename = tablename, parameters = parameters)
     do_aggregate_file_duckdb(con = con, tablename = tablename)
     n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
@@ -138,7 +138,7 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
   khtools::duckdb_write_table(con, "tmp_helsereg", data = parameters$HELSEREG)
   khtools::duckdb_write_table(con, "tmp_geokoder_b", data = unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]))
   
-  has_fylke <- "FYLKE" %in% khtools::duckdb_get_cols(con, tablename)
+  has_fylke <- "FYLKE" %in% khtools::duckdb_get_columns(con, tablename)
   fylke_sql <- if(has_fylke){
     "CASE
       WHEN t.GEOniv = 'L' THEN '00'
@@ -175,7 +175,7 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
     khtools::sql_quote_I(con, tablename)
   )
   
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   invisible(NULL)
 }
 
@@ -188,7 +188,7 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   khtools::duckdb_write_table(con, "tmp_udekk", data = udekk)
   on.exit(khtools::duckdb_drop_tables(con, "tmp_udekk"), add = TRUE)
 
-  table_cols <- khtools::duckdb_get_cols(con, tablename)
+  table_cols <- khtools::duckdb_get_columns(con, tablename)
   dims <- get_dimension_columns(table_cols)
   vals <- get_value_columns(table_cols)
   
@@ -226,7 +226,7 @@ add_udekk_duckdb <- function(con, tablename, udekk){
     keep_cols, khtools::sql_quote_I(con, tablename), anti_join_sql, 
     paste(newrow_select, collapse = ",\n "), newrow_from_sql)
   
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   invisible(NULL)
 }
 

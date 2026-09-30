@@ -85,7 +85,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
   
   # DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
   khtools::duckdb_write_table(con, tablename = tmp_periods, data = allperiods)
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   values <- get_value_columns(cols)
   dims <- get_dimension_columns(cols)
   dims_no_year <- khtools::sql_quote_I(con, setdiff(dims,c("AARl", "AARh")))
@@ -130,7 +130,7 @@ do_aggregate_periods <- function(con, tablename, parameters){
     paste(group_by, collapse = ",\n")
   )
   
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   
   # Denne er sketchy, for om hele år mangler så gir ikke dette .fn9 = 1. 
   # I en 5-årsperiode med 2 manglende år, må altså de tre andre årene ha f = 9 for at val.fn9 > antall manglende år
@@ -181,7 +181,7 @@ find_periods <- function(aarh, period){
 #' @noRd
 do_filter_periods_with_missing_original <- function(con, tablename){
   
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   values <- get_value_columns(cols)
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol")
   
@@ -218,7 +218,7 @@ do_filter_periods_with_missing_original <- function(con, tablename){
 #' @noRd
 do_handle_indata_periods <- function(con,tablename,parameters){
   n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   values <- get_value_columns(cols)
   tbl_sql <- khtools::sql_quote_I(con, tablename)
   

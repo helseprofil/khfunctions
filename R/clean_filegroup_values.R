@@ -4,7 +4,7 @@
 clean_filegroup_values_duckdb <- function(parameters, cleanlog){
   khtools::msg("\n* Starter rensing av verdikolonner...")
   con <- parameters$duck
-  cols <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_cols(con, "FILGRUPPE"))
+  cols <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_columns(con, "FILGRUPPE"))
   for(val in cols){
     khtools::msg("\n** ", val, sep = "")
     clean_value_column_duckdb(con = con, parameters = parameters, cleanlog = cleanlog, val = val)

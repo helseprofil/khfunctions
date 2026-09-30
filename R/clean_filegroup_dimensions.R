@@ -329,7 +329,7 @@ build_alder_map <- function(con, parameters){
 #' Renser KJONN, UTDANN, INNVKAT og LANDBAK. Disse følger samme logikk med å bare oppdatere en enkelt kolonne.
 #' @noRd
 do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
-  if(!col %in% khtools::duckdb_get_cols(con, "FILGRUPPE")) return(invisible(NULL))
+  if(!col %in% khtools::duckdb_get_columns(con, "FILGRUPPE")) return(invisible(NULL))
   khtools::msg("\n** Renser", col)
   
   map_table_name <- paste0(tolower(col), "_map")

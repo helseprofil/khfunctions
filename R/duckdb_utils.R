@@ -9,6 +9,15 @@ r_filter_to_sql <- function(filter_expr){
   sql
 }
 
+#' @description
+#' hjelpefunksjon for å finne fellesdimensjoner for tabeller før merge
+#' @noRd
+get_common_dimension_columns <- function(con, table1, table2){
+  commoncols <- intersect(khtools::duckdb_get_columns(con, table1),
+                          khtools::duckdb_get_columns(con, table2))
+  get_dimension_columns(commoncols)
+}
+
 #' @title convert_duckdb_cols_to_string
 #' @description converts non-character columns to character 
 #' @keywords duckdb

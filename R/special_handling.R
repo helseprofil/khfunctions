@@ -30,7 +30,6 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     stop("do_special_handling forsøker å bruke duckdb, men tabellen finnes ikke")
   }
   
-  
   if(is_sql){
     if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
     khtools::msg("\n** Starter SQL-snutt:", name)

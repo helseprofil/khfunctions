@@ -4,12 +4,22 @@
 \alias{LagFilgruppe}
 \title{LagFilgruppe}
 \usage{
-LagFilgruppe(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
+LagFilgruppe(
+  name,
+  write = TRUE,
+  dumps = list(),
+  qualcontrol = TRUE,
+  ramlimit = NULL
+)
 }
 \arguments{
 \item{write}{save output files? default = TRUE}
 
 \item{dumps}{list of intermediate files to save, used for debugging and development.}
+
+\item{qualcontrol}{perform initial qualcontrol of data}
+
+\item{ramlimit}{max RAM allocation for duckdb. If NULL, default value is 8GB}
 
 \item{gruppe}{name of filegroup}
 }

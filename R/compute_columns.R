@@ -37,7 +37,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
   
   if(is_empty(formulas)) return(invisible(NULL))
   
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   values <- get_value_columns(cols)
   
   formulas <- trimws(
@@ -243,7 +243,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
 #' @noRd
 add_crude_rate <- function(con, tablename){
   khtools::msg("- Legger til crude RATE")
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   if(!"NEVNER" %in% cols){
     khtools::msg("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))

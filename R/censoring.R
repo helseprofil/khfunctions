@@ -9,16 +9,11 @@ set_initial_spvtmp <- function(dt){
 #' @title add_censorinfo_cube
 #' @description
 #' Initierer prikkeinfo_koloner
-#' 
-#' @param con 
-#' @param tablename 
-#'
-#' @returns
-#' @export
-#'
-#' @examples
+#' @param con db connection
+#' @param tablename tabellnavn
+#' @noRd
 add_censorinfo_cube <- function(con, tablename){
-  allcols <- khtools::duckdb_get_cols(con, tablename)
+  allcols <- khtools::duckdb_get_columns(con, tablename)
   if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
   censorcolumns <- khtools::sql_quote_I(con, c(getOption("khfunctions.prikkeinfo"), "spv_tmp"))
   tbl_sql <- khtools::sql_quote_I(con, tablename)

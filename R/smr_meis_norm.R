@@ -25,18 +25,19 @@ add_smr_and_meis <- function(parameters){
     }
     
     khtools::duckdb_drop_tables(con, "normsubset")
-    design_cols <- intersect(khtools::duckdb_get_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    design_cols <- intersect(khtools::duckdb_get_columns(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
     keep_cols <- c(setdiff(design_cols, c("GEOniv", "GEO", "FYLKE")), "LANDSNORMAL")
     keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
     
     sql_norm <- sprintf(
-      "CREATE TABLE normsubset AS SELECT %s FROM 
+      "SELECT %s FROM 
       (SELECT *, MEIS AS LANDSNORMAL FROM KUBE WHERE GEOniv = 'L')",
       keep_sql
     )
-    
-    invisible(DBI::dbExecute(con, sql_norm))
-    merge_duckdb_table(con = con, mergeto = "KUBE", mergefrom = "normsubset")
+    khtools::duckdb_drop_tables(con, "normsubset")
+    khtools::duckdb_create_new_table(con, target = "normsubset", select_sql = sql_norm)
+    khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
+                                 join_cols = get_common_dimension_columns(con, "KUBE", "normsubset"))
     invisible(DBI::dbExecute(con, "UPDATE KUBE SET SMR = MEIS / LANDSNORMAL * 100.0"))
     
   } else { # Moving
@@ -49,19 +50,20 @@ add_smr_and_meis <- function(parameters){
     
     khtools::duckdb_drop_tables(con, "normsubset")
     
-    design_cols <- intersect(khtools::duckdb_get_cols(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    design_cols <- intersect(khtools::duckdb_get_columns(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
     keep_cols <- c(setdiff(design_cols, parameters$PredFilter$Predfiltercolumns), "NORM", "NORMSMR")
     keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
     
     sql_norm <- sprintf(
-      "CREATE TABLE normsubset AS SELECT %s FROM 
+      "SELECT %s FROM 
       (SELECT *, %s AS NORMSMR, %s AS NORM FROM KUBE WHERE %s) x",
       keep_sql, normsmr_expr, khtools::sql_quote_I(con, parameters$MALTALL),
       r_filter_to_sql(parameters$PredFilter$meisskalafilter))
     
-    invisible(DBI::dbExecute(con, sql_norm))
-    
-    merge_duckdb_table(con = con, mergeto = "KUBE", mergefrom = "normsubset")
+    khtools::duckdb_drop_tables(con, "normsubset")
+    khtools::duckdb_create_new_table(con, target = "normsubset",select_sql = sql_norm)
+    khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
+                                 join_cols = get_common_dimension_columns(con, "KUBE", "normsubset"))
     khtools::duckdb_ensure_columns(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
     
     smr0_expr <- if(refverdi_vp == "P") {

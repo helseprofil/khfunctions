@@ -86,7 +86,7 @@ initiate_cleanlog_db <- function(codebooklog, parameters){
 
 rename_fg_value_columns_duckdb <- function(parameters){
   con <- parameters$duck
-  vals <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_cols(con, "FILGRUPPE"))
+  vals <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_columns(con, "FILGRUPPE"))
   valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
   
   rename_map <- data.table::data.table(

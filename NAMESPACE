@@ -5,7 +5,6 @@ export(LagKUBE)
 export(LagKubeDatertCsv)
 export(generate_specific_friskvik_indicators)
 export(make_godkjent_folder)
-export(read_filegroup)
 importFrom(data.table,
   "%chin%",
   "%notin%",

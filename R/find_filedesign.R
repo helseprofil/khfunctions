@@ -29,7 +29,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_filei
   if (data.table::is.data.table(file)) {
     cols <- names(file)
   } else if (isduck) {
-    cols <- khtools::duckdb_get_cols(con, filename)
+    cols <- khtools::duckdb_get_columns(con, filename)
   } else {
     stop("Fant ikke kolonner: verken data.table eller duckdb-tabell")
   }

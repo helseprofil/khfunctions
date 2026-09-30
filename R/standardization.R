@@ -11,7 +11,8 @@ add_predteller <- function(parameters){
   generate_tmp_prednevner(con = con, gentable = tmp_tables[["PREDNEVNER"]], design = designlist$STNPdesign, parameters = parameters) # lag tmp_prednevner og skriv til duckdb
   generate_tmp_predteller(con = con, tables = tmp_tables, parameters = parameters) # Merge sammen tmp_predrate og tmp_prednevner, og lag predteller. Kod om til kubedesign
   
-  merge_duckdb_table(con = con, mergeto = "KUBE",  mergefrom = "tmp_predteller")
+  khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "tmp_predteller",
+                               join_cols = get_common_dimension_columns(con, "KUBE", "tmp_predteller"))
   set_implicit_null_after_merge_duckdb(con = con, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals, table = "KUBE")
   khtools::duckdb_clean(con = con)
   invisible(NULL)
@@ -100,7 +101,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
   }
   
   aggregate_to_periods(tablename = standardkube_name, parameters = parameters)
-  allcols <- khtools::duckdb_get_cols(con, standardkube_name)
+  allcols <- khtools::duckdb_get_columns(con, standardkube_name)
   dims <- setdiff(get_dimension_columns(allcols), parameters$PredFilter$Predfiltercolumns)
   dims_sql <- khtools::sql_quote_I(con, dims)
   
@@ -142,7 +143,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
   sql_cleanup <- sprintf(
   'SELECT %s, PREDRATE, "PREDRATE.f", "PREDRATE.a" FROM %s',
   paste(dims_sql, collapse = ", "), khtools::sql_quote_I(con, gentable))
-  khtools::duckdb_create_and_replace_table(con, target = gentable, select_sql = sql_cleanup)
+  khtools::duckdb_replace_existing_table(con, target = gentable, select_sql = sql_cleanup)
   invisible(NULL)
 }
 
@@ -161,7 +162,7 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
   prednevner_col <- gsub("^(.*):(.*)", "\\2", parameters$TNPinformation$PREDNEVNERFIL)
   if(is_empty(prednevner_col)) prednevner_col <- parameters$TNPinformation$NEVNERKOL
   
-  allcols <- khtools::duckdb_get_cols(con, prednevnerfile_sql)
+  allcols <- khtools::duckdb_get_columns(con, prednevnerfile_sql)
   dims <- get_dimension_columns(allcols)
   dims_sql <- khtools::sql_quote_I(con, dims)
   pred_cols <- grep(sprintf("^%s(\\.f|.a|)$", prednevner_col),allcols, value = TRUE)
@@ -194,8 +195,8 @@ generate_tmp_predteller <- function(con, tables, parameters){
   tmp_prednevner_sql <- khtools::sql_quote_I(con, tables[["PREDNEVNER"]])
   tmp_predteller_sql <- khtools::sql_quote_I(con, tables[["PREDTELLER"]])
   
-  predrate_dims <- get_dimension_columns(khtools::duckdb_get_cols(con, tables[["PREDRATE"]]))
-  prednevner_dims <- get_dimension_columns(khtools::duckdb_get_cols(con, tables[["PREDNEVNER"]]))
+  predrate_dims <- get_dimension_columns(khtools::duckdb_get_columns(con, tables[["PREDRATE"]]))
+  prednevner_dims <- get_dimension_columns(khtools::duckdb_get_columns(con, tables[["PREDNEVNER"]]))
   commondims <- khtools::sql_quote_I(con, intersect(prednevner_dims, predrate_dims))
   
   all_dims <- union(prednevner_dims, predrate_dims)
@@ -266,7 +267,7 @@ add_meisskala <- function(parameters){
   n_subset <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", subset_sql))$N
   if(n_subset == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke lage meisskala")
   
-  subset_cols <- khtools::duckdb_get_cols(con, subset_table)
+  subset_cols <- khtools::duckdb_get_columns(con, subset_table)
   
   joincolumns <- khtools::sql_quote_I(con, setdiff(intersect(subset_cols, parameters$DefDesign$DesignKolsFA), 
                                                      parameters$PredFilter$Predfiltercolumns))

@@ -111,7 +111,7 @@ do_format_cube_columns <- function(parameters){
 rename_tab_columns <- function(parameters){
   con <- parameters$duck
   spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  cols <- khtools::duckdb_get_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
   tabcols <- grep("^TAB\\d+$", cols, value = TRUE)
   if(length(tabcols) == 0) return(invisible(NULL))
   tabnames <- vapply(tabcols, function(x) spec[[x]], character(1))
@@ -136,7 +136,7 @@ get_outdimensions <- function(parameters){
     dims <- setdiff(dims, dimdropp)
   }
   
-  cols <- khtools::duckdb_get_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
   if("ALDER" %notin% cols) dims <- setdiff(dims, "ALDER")
   if("KJONN" %notin% cols) dims <- setdiff(dims, "KJONN")
   return(dims)

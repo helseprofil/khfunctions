@@ -6,8 +6,8 @@
 merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
   if(is.null(result)) result <- mergeto
   if(identical(result, mergefrom)) stop("Måltabellen kan ikke være == mergefrom")
-  to_cols <- khtools::duckdb_get_cols(con, mergeto)
-  from_cols <- khtools::duckdb_get_cols(con, mergefrom)
+  to_cols <- khtools::duckdb_get_columns(con, mergeto)
+  from_cols <- khtools::duckdb_get_columns(con, mergefrom)
   newcols_names <- setdiff(from_cols, to_cols)
   commoncols <- intersect(to_cols, from_cols)
   
@@ -60,7 +60,7 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
     khtools::duckdb_replace_table(con, target = result, source = target_table_merge)
   }
   
-  actual_cols <- khtools::duckdb_get_cols(con, result)
+  actual_cols <- khtools::duckdb_get_columns(con, result)
   missing_new_cols <- setdiff(newcols_names, actual_cols)
   if(length(missing_new_cols) > 0) stop(sprintf("Merge feilet. Mangler kolonner i %s: %s", result, paste(missing_new_cols, collapse = ", ")))
   invisible(NULL)
@@ -75,7 +75,7 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
   khtools::msg("\n- Håndterer implisitte nuller")
-  cols <- khtools::duckdb_get_cols(con, table)
+  cols <- khtools::duckdb_get_columns(con, table)
   vals <- get_value_columns(cols)
   tbl_sql <- khtools::sql_quote_I(con, table)
   
@@ -131,7 +131,7 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
 #' @noRd
 do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
   
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   dimcols <- get_dimension_columns(cols)
   valcols <- get_value_columns(cols)
   
@@ -153,7 +153,7 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
                  khtools::sql_quote_I(con, tablename),
                  paste(dims_sql,collapse = ", "))
   
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   
   nonsum <- intersect(
     valcols,
@@ -180,7 +180,7 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
 
 set_integer_columns_duckdb <- function(con){
   integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
-  cols <- intersect(integers,khtools::duckdb_get_cols(con, "FILGRUPPE"))
+  cols <- intersect(integers,khtools::duckdb_get_columns(con, "FILGRUPPE"))
   
   sql <- paste(sprintf(
     "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",

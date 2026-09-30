@@ -50,7 +50,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
 #' @noRd
 set_manheader_duckdb <- function(manheader, con){
   if(is_empty(manheader)) return(invisible(NULL))
-  origcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  origcols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   manheader_split <- trimws(unlist(strsplit(manheader, "=")))
   old <- manheader_to_vector(manheader_split[[1]], "old", origcols)
   new <- manheader_to_vector(manheader_split[[2]], "new", origcols)
@@ -94,7 +94,7 @@ manheader_to_vector <- function(string, old_new = c("old", "new"), origcols){
 #' @family duckdb
 #' @noRd
 give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
-  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   rename <- setNames(as.character(filedescription[, ..defcolumns]), defcolumns)
   rename <- rename[rename != names(rename)]
   idx <- which(rename %in% cols)
@@ -129,7 +129,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
   remove <- gsub("^c\\(|\\)$", "", kastkols)
   remove <- as.integer(trimws(unlist(strsplit(remove, ","))))
   
-  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   
   if(any(remove < 1L | remove > length(cols))) stop("Feil i KASTKOLS: Angitt kolonnenummer eksisterer ikke i filen")
   
@@ -150,7 +150,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
   khtools::duckdb_drop_tables(con, "temp_orgfile_reshape")
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
-  allcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  allcols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = allcols)
   if(length(intersect(cols$id, cols$measure)) > 0) stop("Kolonne kan ikke være både RESHAPEid og RESHAPEmeas")
   if(cols$var %in% allcols) stop(sprintf("RESHAPEvar '%s' finnes allerede i datasettet", cols$var))
@@ -219,14 +219,14 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
   
   default <- filedescription[, ..defaultcolumns]
   default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
-  existing_cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  existing_cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   cols_to_add <- setdiff(defaultcolumns, existing_cols)
   cols_to_update <- intersect(defaultcolumns, existing_cols)
   if(length(cols_to_add) > 0){
     for(col in cols_to_add){
       DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR DEFAULT %s",
                                   as.character(khtools::sql_quote_I(con, col)),
-                                  as.character(khtools::sql_quote_s(con, default[[col]][1]))))
+                                  as.character(khtools::sql_quote_S(con, default[[col]][1]))))
     }
   }
   
@@ -234,7 +234,7 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
     set_clause <- paste(vapply(cols_to_update, function(col) {
       sprintf("%s = %s", 
               as.character(khtools::sql_quote_I(con, col)),
-              as.character(khtools::sql_quote_s(con, default[[col]][1]))
+              as.character(khtools::sql_quote_S(con, default[[col]][1]))
           )
         },
         character(1)
@@ -252,7 +252,7 @@ do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
 #' @noRd
 drop_unwanted_columns_duckdb <- function(con){
   keep_cols <- c(getOption("khfunctions.kolorgs"))
-  existing_cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  existing_cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   cols_to_drop <- setdiff(existing_cols, keep_cols)
   if(length(cols_to_drop) == 0) return(invisible(NULL))
   
@@ -267,7 +267,7 @@ drop_unwanted_columns_duckdb <- function(con){
 #' @family duckdb
 #' @noRd
 drop_unwanted_columns_duckdb <- function(con) {
-  cols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   
   set_clause <- paste(sprintf("%s = COALESCE(%s, '')",
                              khtools::sql_quote_I(con, cols),
@@ -290,7 +290,7 @@ check_if_all_columns_exist <- function(filecolumns, con){
   oblig <- c("GEO", "AAR", "VAL1")
   have <- filecolumns$have
   default <- filecolumns$default
-  allcols <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  allcols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   if(!all(oblig %in% allcols)) stop("Feil i innlesing: Kolonnene <", oblig[!(oblig %in% allcols)], "> finnes ikke\n")
   if(!all(have %in% allcols)) stop("Feil i innlesing: Kolonnene <", have[!(have %in% allcols)], "> finnes ikke\n")
   if(!all(default %in% allcols)) stop("Feil i innlesing: Kolonnene <", default[!(default %in% allcols)], "> skulle fått default verdi, men finnes ikke\n")
@@ -305,13 +305,13 @@ append_temp_orgfil_to_filgruppe <- function(con){
   
   if(!DBI::dbExistsTable(con, "temp_orgfile")) stop("temp_orgfile finnes ikke i duckdb")
   
-  cols_orgfile <- khtools::duckdb_get_cols(con, "temp_orgfile")
+  cols_orgfile <- khtools::duckdb_get_columns(con, "temp_orgfile")
   
   if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
     DBI::dbExecute(con, "CREATE TABLE FILGRUPPE AS SELECT * FROM temp_orgfile")
     return(invisible(NULL))
   } else {
-    cols_filgruppe <- khtools::duckdb_get_cols(con, "FILGRUPPE")
+    cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
     missing_cols <- setdiff(cols_orgfile, cols_filgruppe)
     if(length(missing_cols) > 0) {
       for(col in missing_cols) {
@@ -320,7 +320,7 @@ append_temp_orgfil_to_filgruppe <- function(con){
       }
     }
   }
-  cols_filgruppe <- khtools::duckdb_get_cols(con, "FILGRUPPE")
+  cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
   missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
   for(col in missing_in_temp_orgfile){
     invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 

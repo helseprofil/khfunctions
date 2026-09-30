@@ -8,7 +8,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
   khtools::msg("\n** Geo-harmonisering")
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
                                        khtools::sql_quote_I(con, tablename))))
-  cols <- khtools::duckdb_get_cols(con, tablename)
+  cols <- khtools::duckdb_get_columns(con, tablename)
   table_sql <- khtools::sql_quote_I(con, tablename)
   
   nharm <- DBI::dbGetQuery(con,sprintf(
@@ -29,7 +29,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
       "SELECT %s FROM %s f 
       LEFT JOIN KnrHarm k ON f.GEO = k.GEO",
       select_sql, table_sql)
-    khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = sql)
+    khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   } else {
     khtools::msg(paste0("- Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
@@ -73,8 +73,8 @@ fix_geo_special <- function(parameters){
   geonivs <- DBI::dbGetQuery(con, "SELECT DISTINCT GEOniv FROM KUBE")[[1]]
   
   flags <- intersect(
-    c("spv_tmp", grep("\\.f$", khtools::duckdb_get_cols(con, "KUBE"), value = TRUE)),
-    khtools::duckdb_get_cols(con, "KUBE")
+    c("spv_tmp", grep("\\.f$", khtools::duckdb_get_columns(con, "KUBE"), value = TRUE)),
+    khtools::duckdb_get_columns(con, "KUBE")
   )
   
   where <- character()
@@ -184,7 +184,7 @@ get_deletestrata <- function(dt, dims, level){
 add_missing_lks <- function(parameters){
   if(!"V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))) return(invisible(NULL))
   con <- parameters$duck
-  cols <- khtools::duckdb_get_cols(con, "KUBE")
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
   vals <- intersect(union(get_value_columns(cols), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR")), cols)
   
   khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks"))

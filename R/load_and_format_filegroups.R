@@ -48,7 +48,7 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   
   orgfilepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
   if(!file.exists(orgfilepath)) stop("Finner ikke filgruppe: ", orgfile, " i STABLAORG/R/NYESTE.")
-  allcols <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", khtools::sql_quote_s(con, orgfilepath)))$column_name
+  allcols <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", khtools::sql_quote_S(con, orgfilepath)))$column_name
   
   tabfilter <- set_filter_tab_sql(isteller, cubeinformation = parameters$CUBEinformation)
   alderfilter <- set_filter_age_sql(con = con, parameters = parameters)
@@ -145,7 +145,7 @@ set_filter_age_sql <- function(con, parameters){
     tellerfile <- parameters$files[["TELLER"]]
     isduck <- khtools::duckdb_table_exists(con = con, tablename = tellerfile)
     if(!isduck) return(NULL)
-    if(isduck && all(c("ALDERl", "ALDERh") %in% khtools::duckdb_get_cols(con, tellerfile))){
+    if(isduck && all(c("ALDERl", "ALDERh") %in% khtools::duckdb_get_columns(con, tellerfile))){
       warning(
         "ACCESS::KUBER::ALDER er tom. Bruker aldersspenn fra tellerfil.",
         "Vurder å sette ALDER='ALLE' eksplisitt, eller angi konkrete aldersgrupper ",
@@ -193,7 +193,7 @@ set_filter_year_sql <- function(con, parameters){
   tellerfile <- parameters$files[["TELLER"]]
   aarstart <- min_teller_aar <- parameters$CUBEinformation$AAR_START
   isduck <- khtools::duckdb_table_exists(con = con, tablename = tellerfile)
-  if(isduck && "AARl" %in% khtools::duckdb_get_cols(con, tellerfile)){
+  if(isduck && "AARl" %in% khtools::duckdb_get_columns(con, tellerfile)){
     min_teller_aar <- DBI::dbGetQuery(con, paste0("SELECT MIN(AARl) FROM ", 
                                                   khtools::sql_quote_I(con, tellerfile)))[[1]]
   }
@@ -247,7 +247,7 @@ identify_readcols <- function(allcols, bef = FALSE,  parameters){
 #' @noRd
 do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
   tab_sql <- khtools::sql_quote_I(con, filegroup)
-  allcols <- khtools::duckdb_get_cols(con, filegroup)
+  allcols <- khtools::duckdb_get_columns(con, filegroup)
   filters <- character()
   filtercols <- character()
   for(dim in c("KJONN", "UTDANN", "INNVKAT", "LANDBAK")){
@@ -277,7 +277,7 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
                                 paste(filters, collapse = "\n- ")))
   
   n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
-  khtools::duckdb_create_and_replace_table(con, target = filegroup, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con, target = filegroup, select_sql = sql)
   n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tab_sql))$N
   khtools::msg(sprintf("-- %s -> %s rader", n_before, n_after))
   invisible(NULL)
@@ -292,7 +292,7 @@ do_filter_KUIL_duckdb <- function(con, filegroup, cubeinformation){
 #' @param readcols vector of columns to read
 #' @noRd
 read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readcols){
-  schema <- data.table::setDT(DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", khtools::sql_quote_s(con, filepath))))
+  schema <- data.table::setDT(DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", khtools::sql_quote_S(con, filepath))))
   integer_cols <- intersect(c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT"), readcols)
   
   needs_cast <- schema[column_name %in% integer_cols & !toupper(column_type) %in% c("INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT")]$column_name
@@ -318,7 +318,7 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
   
   sql <- sprintf(
     "CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)%s",
-    tab_sql, cols_sql, khtools::sql_quote_s(con, filepath), where_sql)
+    tab_sql, cols_sql, khtools::sql_quote_S(con, filepath), where_sql)
   
   khtools::duckdb_drop_tables(con, tablename)
   invisible(DBI::dbExecute(con, sql))
@@ -411,7 +411,7 @@ do_filfiltre_kollapsdeler_duckdb <- function(con, filegroup, parts, parameters){
   }
   
   updatecols <- khtools::sql_quote_I(con, columns)
-  updatetotals <- khtools::sql_quote_s(con, totals)
+  updatetotals <- khtools::sql_quote_S(con, totals)
   
   set_sql <- sprintf("%s = %s", 
                      updatecols, updatetotals)
@@ -444,7 +444,7 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   khtools::duckdb_drop_tables(con, rect_table)
   
   create_sql <- character()
-  file_cols <- khtools::duckdb_get_cols(con, tablename)
+  file_cols <- khtools::duckdb_get_columns(con, tablename)
   design_cols <- intersect(file_cols, names(design$Design))
   
   for(Gn in design$Part[["Gn"]][["GEOniv"]]){
@@ -465,10 +465,10 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   
   invisible(DBI::dbExecute(con, rectangularize_sql))
   
-  join_cols <- intersect(khtools::duckdb_get_cols(con, rect_table), khtools::duckdb_get_cols(con, tablename))
+  join_cols <- intersect(khtools::duckdb_get_columns(con, rect_table), khtools::duckdb_get_columns(con, tablename))
   join_cols_sql <- paste(khtools::sql_quote_I(con, join_cols), collapse = ", ")
   
-  table_cols <- setdiff(khtools::duckdb_get_cols(con, tablename), join_cols)
+  table_cols <- setdiff(khtools::duckdb_get_columns(con, tablename), join_cols)
   table_cols_sql <- paste(sprintf("f.%s", khtools::sql_quote_I(con, table_cols)),collapse = ",\n")
   
   merge_sql <- sprintf(
@@ -477,7 +477,7 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   )
   
   n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", khtools::sql_quote_I(con, tablename)))$N
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = merge_sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = merge_sql)
   n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", khtools::sql_quote_I(con, tablename)))$N
   khtools::msg(sprintf("- %s -> %s rader", n_before, n_after))
   
@@ -498,7 +498,7 @@ add_leadyear_befvekst <- function(con, tablename){
   khtools::duckdb_drop_tables(con, tmp_table)
   
   khtools::msg("\n*** Legger til ledeår for å beregne befolkningsvekst")
-  table_cols <- khtools::duckdb_get_cols(con, tablename)
+  table_cols <- khtools::duckdb_get_columns(con, tablename)
   dims <- get_dimension_columns(table_cols)
   dims_sql <- khtools::sql_quote_I(con, dims)
   
@@ -536,7 +536,7 @@ add_leadyear_befvekst <- function(con, tablename){
     khtools::sql_quote_I(con, tmp_table), 
     join_sql) 
   
-  khtools::duckdb_create_and_replace_table(con, target = tablename, select_sql = merge_sql)
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = merge_sql)
   invisible(NULL)
 }
 

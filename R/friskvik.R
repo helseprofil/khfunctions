@@ -42,7 +42,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
                        "K" = c("K", "F", "L"),
                        "B" = c("B", "K", "F", "L"),
                        "F" = c("F", "L"))
-  geovals <- paste(khtools::sql_quote_s(con, geo_filter),collapse = ", ")
+  geovals <- paste(khtools::sql_quote_S(con, geo_filter),collapse = ", ")
   
   where <- sprintf("GEOniv IN (%s)", geovals)
   
@@ -203,7 +203,7 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
   
   con <- parameters$duck
-  DBI::dbExecute(con, sprintf("CREATE TABLE KUBE AS SELECT * FROM read_parquet(%s)", khtools::sql_quote_s(con, kubepath)))
+  DBI::dbExecute(con, sprintf("CREATE TABLE KUBE AS SELECT * FROM read_parquet(%s)", khtools::sql_quote_S(con, kubepath)))
   generate_allvis_base(parameters = parameters)
   
   khtools::msg("\n* Skriver filer: ")
