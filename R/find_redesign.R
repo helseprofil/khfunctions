@@ -7,10 +7,9 @@
 find_redesign <- function(orgdesign, targetdesign, aggregate = character(), parameters) {
   FULL <- get_all_dimension_combinations_targetdesign(targetdesign = targetdesign)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
-  TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
-  # KAN SKRIVES TIL DUCKDB i stedet for å skrive til tmp-fil på disk
-  # SLETTES on.exit, i tilfelle funksjonen kjøres flere ganger
-  saveRDS(FULL, TempFile)
+  con = parameters$duck
+  khtools::duckdb_write_table(con, data = FULL, tablename = "full_pre_udekk")
+  on.exit(khtools::duckdb_drop_tables(con, "full_pre_udekk"))
   FULL <- add_betcols_to_full(dt = FULL, orgdesign = orgdesign)
   targetdesign <- add_missing_parts_from_orgdesign(targetdesign, orgdesign)
   any_ubeting <- length(orgdesign$UBeting) > 0
@@ -46,7 +45,7 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   
   out[["FULL"]] <- FULL
   out[["Dekk"]] <- get_dekk(full = FULL)
-  out[["Udekk"]] <- handle_udekk(FULL, namesFULL, TempFile)
+  out[["Udekk"]] <- handle_udekk(con, FULL, namesFULL)
   gc()
   return(out)
 }
@@ -396,8 +395,8 @@ get_dekk <- function(full){
 #' handle_udekk (ybk)
 #' @keywords internal
 #' @noRd
-handle_udekk <- function(FULL, namesFULL, TempFile){
-  Udekk <- readRDS(TempFile)
+handle_udekk <- function(con, FULL, namesFULL){
+  Udekk <- khtools::duckdb_fetch_table(con, "full_pre_udekk")
   data.table::setkeyv(Udekk, namesFULL)
   data.table::setkeyv(FULL, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]
