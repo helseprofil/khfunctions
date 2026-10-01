@@ -1,6 +1,6 @@
 clean_filegroup_dimensions_duckdb <- function(parameters, cleanlog){
   con <- parameters$duck
-  khtools::msg("\n\n* Starter rensing av dimensjoner...")
+  new_section_header("Renser dimensjonskolonner")
   do_clean_GEO_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR_duckdb(con = con, cleanlog = cleanlog)
   do_clean_ALDER_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
@@ -8,7 +8,6 @@ clean_filegroup_dimensions_duckdb <- function(parameters, cleanlog){
   do_clean_dimension_duckdb(con = con, col = "UTDANN", cleanlog = cleanlog, illegal = getOption("khfunctions.illegal"))
   do_clean_dimension_duckdb(con = con, col = "INNVKAT", cleanlog = cleanlog, illegal = getOption("khfunctions.innvkat_illegal"))
   do_clean_dimension_duckdb(con = con, col = "LANDBAK", cleanlog = cleanlog, illegal = getOption("khfunctions.landbak_illegal"))
-  khtools::msg("\n* Dimensjoner ferdig renset")
 }
 
 check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
@@ -23,9 +22,9 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
   rawfiles_not_ok <- dim_ok[ok == 0, unique(KOBLID)]
   n_not_ok <- length(rawfiles_not_ok)
   
-  if(n_not_ok > 0) khtools::msg("\n*** Fant ", n_not_ok, " ugyldige verdier for ", col, 
-                                         "\n - Råfiler med ugyldige verdier (KOBLID): ", paste0(rawfiles_not_ok, collapse = ", "), sep = "")
-  if(n_not_ok == 0) khtools::msg("\n*** Alle ", col, " ok", sep = "")
+  if(n_not_ok > 0) khtools::msg("-- Fant ugyldige verdier for", col, "i", n_not_ok, "råfiler",
+                                         "\n - KOBLID:", paste0(rawfiles_not_ok, collapse = ", "))
+  if(n_not_ok == 0) khtools::msg("-- Alle", col, "ok")
   
   invisible(NULL)
 }
@@ -37,7 +36,7 @@ check_if_dimension_ok_duckdb <- function(con, cleanlog, col, illegal){
 #' Legger til GEOniv og FYLKE
 #' @noRd
 do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
-  khtools::msg("\n** Renser GEO og legger til GEOniv og FYLKE")
+  khtools::msg("- Renser GEO og legger til GEOniv og FYLKE")
   on.exit(khtools::duckdb_drop_tables(con = con, tables = c("sone6", "geo_map")), add = TRUE)
   
   build_geo_map(con = con, parameters = parameters)
@@ -46,9 +45,9 @@ do_clean_GEO_duckdb <- function(con, parameters, cleanlog){
   invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE AS t SET
                                  GEO = m.GEO_CLEAN
                                  FROM geo_map AS m 
-                                 WHERE t.GEO = m.GEO_ORG"))
+                                 WHERE t.GEO IS NOT DISTINCT FROM m.GEO_ORG"))
   } else {
-    khtools::msg("\n*** Alle GEO-koder var gyldige")
+    khtools::msg("-- Alle GEO-koder var gyldige")
   }
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, 
@@ -183,7 +182,7 @@ update_geo_cleanlog <- function(con, cleanlog){
 #' Legger også til AARl og AARh
 #' @noRd
 do_clean_AAR_duckdb <- function(con, cleanlog){
-  khtools::msg("\n** Renser AAR og legger til AARl/AARh")
+  khtools::msg("\n- Renser AAR og legger til AARl/AARh")
   on.exit(khtools::duckdb_drop_tables(con = con, tables = "aar_map"), add = TRUE)
   build_aar_map(con = con)
   invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS AARl VARCHAR"))
@@ -194,7 +193,7 @@ do_clean_AAR_duckdb <- function(con, cleanlog){
                                 AARl = m.AARl, 
                                 AARh = m.AARh 
                                 FROM aar_map AS m
-                                WHERE t.AAR = m.AAR_ORG"))
+                                WHERE t.AAR IS NOT DISTINCT FROM m.AAR_ORG"))
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
                                col = "AAR", illegal = getOption("khfunctions.aar_illegal"))
@@ -229,8 +228,8 @@ build_aar_map <- function(con){
   aar_map[valid & !is.na(AARl) & !is.na(AARh) & as.integer(AARl) > as.integer(AARh), AAR := aar_illegal]
   aar_map[AAR == aar_illegal, c("AARl", "AARh") := aar_illegal_split]
   
-  khtools::duckdb_drop_tables(con = con, tables = "geo_map")
-  khtools::duckdb_write_table(con, "geo_map", data = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)])
+  khtools::duckdb_drop_tables(con = con, tables = "aar_map")
+  khtools::duckdb_write_table(con, "aar_map", data = aar_map[, .(AAR_ORG, AAR_CLEAN = AAR, AARl, AARh)])
   invisible(NULL)
 }
 
@@ -242,7 +241,7 @@ build_aar_map <- function(con){
 #' Legger også til ALDERl og ALDERh
 #' @noRd
 do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
-  khtools::msg("\n** Renser ALDER og legger til ALDERl/ALDERh")
+  khtools::msg("\n- Renser ALDER og legger til ALDERl/ALDERh")
   on.exit(khtools::duckdb_drop_tables(con = con, tables = "alder_map"), add = TRUE)
   
   build_alder_map(con = con, parameters = parameters)
@@ -255,7 +254,7 @@ do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
                                 ALDERl = m.ALDERl,
                                 ALDERh = m.ALDERh 
                                 FROM alder_map AS m
-                                WHERE t.ALDER = m.ALDER_ORG"))
+                                WHERE t.ALDER IS NOT DISTINCT FROM m.ALDER_ORG"))
   
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog,
                                col = "ALDER", illegal = getOption("khfunctions.alder_illegal"))
@@ -277,9 +276,9 @@ build_alder_map <- function(con, parameters){
   alder_illegal <- getOption("khfunctions.alder_illegal")
   
   if(grepl("_", alder_illegal, fixed = TRUE)){
-    alder_illegal_split <- strsplit(alder_illegal,"_",fixed = TRUE)[[1]]
+    alder_illegal_split <- as.list(strsplit(alder_illegal,"_",fixed = TRUE)[[1]])
   } else {
-    alder_illegal_split <- c(alder_illegal,alder_illegal)
+    alder_illegal_split <- as.list(c(alder_illegal, alder_illegal))
   }
   
   alder_map[, ALDER_ORG := ALDER]
@@ -313,7 +312,7 @@ build_alder_map <- function(con, parameters){
   alder_map[valid, c("ALDERl", "ALDERh") := data.table::tstrsplit(ALDER,"_",fixed = TRUE)]
   
   alder_map[valid &!is.na(ALDERl) &!is.na(ALDERh) & as.integer(ALDERl) > as.integer(ALDERh), ALDER := alder_illegal]
-  alder_map[ALDER == alder_illegal,c("ALDERl", "ALDERh") := alder_illegal_split]
+  alder_map[ALDER == alder_illegal, c("ALDERl", "ALDERh") := alder_illegal_split]
   
   khtools::duckdb_drop_tables(con = con, tables = "alder_map")
   khtools::duckdb_write_table(con, "alder_map", data = alder_map[,.(ALDER_ORG, ALDER_CLEAN = ALDER, ALDERl, ALDERh)])
@@ -330,7 +329,7 @@ build_alder_map <- function(con, parameters){
 #' @noRd
 do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
   if(!col %in% khtools::duckdb_get_columns(con, "FILGRUPPE")) return(invisible(NULL))
-  khtools::msg("\n** Renser", col)
+  khtools::msg("\n- Renser", col)
   
   map_table_name <- paste0(tolower(col), "_map")
   on.exit(khtools::duckdb_drop_tables(con = con, tables = map_table_name), add = TRUE)
@@ -347,11 +346,11 @@ do_clean_dimension_duckdb <- function(con, col, cleanlog, illegal){
         "UPDATE FILGRUPPE AS t
          SET %s = m.CLEAN
          FROM %s AS m
-         WHERE t.%s = m.ORG",
+         WHERE t.%s IS NOT DISTINCT FROM m.ORG",
         col, map_table_name, col)
     ))
   } else {
-    khtools::msg("\n*** Alle ", col, "-verdier var gyldige", sep = "")
+    khtools::msg("-- Alle ", col, "-verdier var gyldige", sep = "")
   }
   check_if_dimension_ok_duckdb(con = con, cleanlog = cleanlog, col = col, illegal = illegal)
   invisible(NULL)

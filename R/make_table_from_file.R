@@ -147,7 +147,6 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
 #' @family duckdb
 #' @noRd
 do_reshape_var_duckdb <- function(filedescription, con){
-  khtools::duckdb_drop_tables(con, "temp_orgfile_reshape")
   if(is_empty(filedescription$RESHAPEvar)) return(invisible(NULL))
   
   allcols <- khtools::duckdb_get_columns(con, "temp_orgfile")
@@ -174,8 +173,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
     collapse = ","
   )
   
-  sql <- sprintf("CREATE TABLE temp_orgfile_reshape 
-                 AS SELECT %s 
+  sql <- sprintf("SELECT %s 
                  FROM (
                   SELECT * 
                   FROM temp_orgfile 
@@ -187,8 +185,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
                  measure_sql
   )
   
-  invisible(DBI::dbExecute(con, sql))
-  khtools::duckdb_replace_table(con, target = "temp_orgfile", source = "temp_orgfile_reshape")
+  khtools::duckdb_replace_existing_table(con = con, target = "temp_orgfile", select_sql = sql)
   invisible(NULL)
 }
 
@@ -305,29 +302,30 @@ append_temp_orgfil_to_filgruppe <- function(con){
   
   if(!DBI::dbExistsTable(con, "temp_orgfile")) stop("temp_orgfile finnes ikke i duckdb")
   
-  cols_orgfile <- khtools::duckdb_get_columns(con, "temp_orgfile")
+  # cols_orgfile <- khtools::duckdb_get_columns(con, "temp_orgfile")
   
   if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
-    DBI::dbExecute(con, "CREATE TABLE FILGRUPPE AS SELECT * FROM temp_orgfile")
+    khtools::duckdb_create_new_table(con, "FILGRUPPE", "SELECT * FROM temp_orgfile")
     return(invisible(NULL))
-  } else {
-    cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
-    missing_cols <- setdiff(cols_orgfile, cols_filgruppe)
-    if(length(missing_cols) > 0) {
-      for(col in missing_cols) {
-        invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN %s VARCHAR default ''", 
-                                              as.character(khtools::sql_quote_I(con, col)))))
-      }
-    }
-  }
-  cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
-  missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
-  for(col in missing_in_temp_orgfile){
-    invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 
-                                          as.character(khtools::sql_quote_I(con, col)))))
-  }
-  
-  invisible(DBI::dbExecute(con, "INSERT INTO FILGRUPPE BY NAME SELECT * FROM temp_orgfile"))
+  } 
+  # else {
+  #   cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
+  #   missing_cols <- setdiff(cols_orgfile, cols_filgruppe)
+  #   if(length(missing_cols) > 0) {
+  #     for(col in missing_cols) {
+  #       invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN %s VARCHAR default ''", 
+  #                                             as.character(khtools::sql_quote_I(con, col)))))
+  #     }
+  #   }
+  # }
+  # cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
+  # missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
+  # for(col in missing_in_temp_orgfile){
+  #   invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 
+  #                                         as.character(khtools::sql_quote_I(con, col)))))
+  # }
+  # 
+  khtools::duckdb_append_table(con, target = "FILGRUPPE", source = "temp_orgfile")
   clean_tempfiles(con)
   invisible(NULL)
 }
@@ -339,7 +337,7 @@ append_temp_orgfil_to_filgruppe <- function(con){
 report_filegroup_progress <- function(file_number, parameters){
   n_files <- parameters$n_files
   filename <- parameters$read_parameters[file_number]$FILNAVN
-  khtools::msg("\n", file_number, "/", n_files, ": ", filename, sep = "")
+  khtools::msg("\n*", paste0(file_number, "/", n_files), ":", filename)
 }
 
 #' @title identify_columns_in_file

@@ -5,13 +5,7 @@
 \title{LagKubeDatertCsv
 Wrapper around LagKUBE, with default options to save output files}
 \usage{
-LagKubeDatertCsv(
-  name,
-  write = TRUE,
-  alarm = FALSE,
-  geonaboprikk = TRUE,
-  dumps = list()
-)
+LagKubeDatertCsv(name, write = TRUE, alarm = FALSE, dumps = list())
 }
 \description{
 LagKubeDatertCsv

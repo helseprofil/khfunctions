@@ -176,11 +176,11 @@ generate_qc_table <- function(parameters){
   invisible(NULL)
 }
 
-#' @title do_write_cube_output
+#' @title write_cube_output
 #' @description
 #' Skriver alle outputfiler fra LagKUBE.
 #' @noRd
-do_write_cube_output <- function(parameters){
+write_cube_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
   name <- parameters$name

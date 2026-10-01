@@ -61,7 +61,7 @@ do_censor_cube <- function(dt, parameters){
     idx <- which(dt[["spv_tmp"]] == 9)
     data.table::set(dt, i = idx, j = vals, value = NA)
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
-    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims)
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
@@ -527,7 +527,7 @@ get_geonaboprikk_triangles <- function(){
 #' @description Saves ACCESS specs + list of dimensions to be used in STATA censoring
 #' @keywords internal
 #' @noRd
-save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
+save_kubespec_csv <- function(spec, dims = NULL){
   rootDir <- file.path(fs::path_home(), "helseprofil")
   if (!fs::dir_exists(rootDir))
     fs::dir_create(rootDir)
@@ -537,8 +537,6 @@ save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktr
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, .SD, .SDcols = varSpec]
   if(!is.null(dims)) varDF[, DIMS := list(dims)]
-  if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
-  if(!is.null(geoprikktriangel)) varDF[, names(geoprikktriangel) := geoprikktriangel]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   return(invisible(specDF))

@@ -307,7 +307,6 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
       }
   }, character(1))
   
-  tab_sql <- as.character(khtools::sql_quote_I(con, tablename))
   cols_sql <- paste(select_cols, collapse = ", ")
   
   where_sql <- if(is_not_empty(filter)) {
@@ -317,11 +316,11 @@ read_filegroup_duckdb <- function(con, tablename, filepath, filter = NULL, readc
     }
   
   sql <- sprintf(
-    "CREATE TABLE %s AS SELECT %s FROM read_parquet(%s)%s",
-    tab_sql, cols_sql, khtools::sql_quote_S(con, filepath), where_sql)
+    "SELECT %s FROM read_parquet(%s)%s",
+    cols_sql, khtools::sql_quote_S(con, filepath), where_sql)
   
   khtools::duckdb_drop_tables(con, tablename)
-  invisible(DBI::dbExecute(con, sql))
+  khtools::duckdb_create_new_table(con, tablename, sql)
   invisible(NULL)
 }
 

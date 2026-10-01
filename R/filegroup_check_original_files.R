@@ -1,9 +1,9 @@
+#' @noRd
 filegroup_check_original_files_and_spec <- function(parameters){
-  khtools::msg("\n* SJEKK AV ORIGINALFILER OG PARAMETRE")
+  new_section_header("SJEKK AV ORIGINALFILER OG PARAMETRE")
   checks <- list()
   checks[["FILER_FINNES"]] <- check_if_files_exists_and_are_readable(files = parameters$read_parameters$filepath)
   checks[["FORMAT_OK"]] <- check_if_format_is_ok(read_parameters = parameters$read_parameters)
-  
   
   # Hvis noe feil oppdages, skriv en feilrapport som .txt-fil ved hjelp av sink(), 
   # og lagre denne et sted. For alle elementer over som ikke er NULL, limes disse inn 
@@ -19,13 +19,11 @@ filegroup_check_original_files_and_spec <- function(parameters){
     # sink()
     stop("FEIL funnet i originalfiler eller innlesingsspecs. Sjekk `sessionInfo()` og se om locale = [...]NO.UTF-8. Hvis ikke, kjør `Sys.setlocale('LC_ALL', 'nb-NO.UTF-8')` og prøv igjen")
   } else {
-    khtools::msg("\n* ALLE SJEKKER FERDIG OG OK!")
+    khtools::msg("-- ALLE SJEKKER FERDIG OG OK!")
   }
 }
 
-
-
-
+#' @noRd
 check_if_files_exists_and_are_readable <- function(files){
   not_exist <- character()
   not_readable <- character()
@@ -39,11 +37,11 @@ check_if_files_exists_and_are_readable <- function(files){
     }
   }
   if(length(not_exist) == 0 && length(not_readable) == 0){
-    khtools::msg("\n** Alle filer eksisterer og kan leses")
+    khtools::msg("- Alle filer eksisterer og kan leses")
     return(invisible(NULL))
   } 
   msg <- character()
-  info <- paste0("\n!! OBS !! Du skal bare angi filbanen etter: '", getOption("khfunctions.root"), "/'")
+  info <- paste0("- !! OBS !! Du skal bare angi filbanen etter: '", getOption("khfunctions.root"), "/'")
   if(length(not_exist) > 0) msg <- paste0(msg, "\n** Følgende fil(er) eksisterer ikke:\n", paste(" - ", not_exist, collapse = "\n"), info)
   if(length(not_readable) > 0) msg <- paste0(msg,"\n** Følgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
   return(msg)
@@ -57,12 +55,12 @@ check_if_format_is_ok <- function(read_parameters){
                                   toupper(FORMAT) == "SPSS" & !grepl(".sav$", FILNAVN) |
                                   toupper(FORMAT) == "PARQUET" & !grepl(".parquet$", FILNAVN)]
   if(nrow(not_valid_format) == 0 & nrow(mismatch_extension) == 0){
-    khtools::msg("\n** Alle filformater ok og korresponderer med filnavn")
+    khtools::msg("- Alle filformater ok og korresponderer med filnavn")
     return(invisible(NULL))
   }
   
   msg <- character()
-  if(nrow(not_valid_format) > 0) msg <- paste0(msg, "\n** Følgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN, "\n"))
-  if(nrow(mismatch_extension) > 0) msg <- paste0(msg, "\n** Følgende fil(er) har mismatch mellom FORMAT og filtype i filbanen\n", paste(" - ", mismatch_extension$FILNAVN, "\n"))
+  if(nrow(not_valid_format) > 0) msg <- paste0(msg, "- Følgende fil(er) har ugyldig FORMAT:\n", paste(" - ", not_valid_format$FILNAVN, "\n"))
+  if(nrow(mismatch_extension) > 0) msg <- paste0(msg, "- Følgende fil(er) har mismatch mellom FORMAT og filtype i filbanen\n", paste(" - ", mismatch_extension$FILNAVN, "\n"))
   return(msg)
 }

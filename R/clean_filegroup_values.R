@@ -2,14 +2,13 @@
 #' @description Looper gjennom verdikolonner, renser og sjekker disse. 
 #' @noRd
 clean_filegroup_values_duckdb <- function(parameters, cleanlog){
-  khtools::msg("\n* Starter rensing av verdikolonner...")
+  new_section_header("Renser verdikolonner")
   con <- parameters$duck
   cols <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_columns(con, "FILGRUPPE"))
   for(val in cols){
-    khtools::msg("\n** ", val, sep = "")
+    khtools::msg("\n- Renser ", val, sep = "")
     clean_value_column_duckdb(con = con, parameters = parameters, cleanlog = cleanlog, val = val)
   }
-  khtools::msg("\n* Verdikolonner ferdig renset")
   invisible(NULL)
 }
 
@@ -18,7 +17,7 @@ clean_filegroup_values_duckdb <- function(parameters, cleanlog){
 #' @noRd
 clean_value_column_duckdb <- function(con, parameters, cleanlog, val){
   
-  khtools::msg("\n*** Setter flagg-kolonne") 
+  khtools::msg("-- Setter flagg-kolonne") 
   # 1,2,3 som angitt i ACCESS, og 8 dersom verdikolonnen ikke kan leses som tall
   # Flaggede verdier settes til missing. 
   valF <- paste0(val, ".f")
@@ -73,7 +72,7 @@ scale_value_duckdb <- function(con, parameters, val){
   scales <- parameters$read_parameters[, .(KOBLID, scale = get(scalecol))]
   if(!any(!is.na(scales$scale) & scales$scale != 1)) return(invisible(NULL))
   
-  khtools::msg("\n*** Skalerer ", val, " med ", scalecol, sep = "")
+  khtools::msg("-- Skalerer ", val, " med ", scalecol, sep = "")
   
   khtools::duckdb_write_table(con, "tmp_scale", scales)
   on.exit(khtools::duckdb_drop_tables(con = con, tables = "tmp_scale"), add = TRUE)
@@ -103,10 +102,10 @@ check_value_ok_duckdb <- function(con, cleanlog, val){
   rawfiles_not_ok <- val_ok[ok == 0, unique(KOBLID)]
   n_not_ok <- length(rawfiles_not_ok)
   if(n_not_ok > 0){
-    khtools::msg("\n*** Fant ", n_not_ok, " ugyldige verdier for ", val,
-      "\n - Råfiler med ugyldige verdier (KOBLID): ", paste(rawfiles_not_ok, collapse = ", "), sep = "")
+    khtools::msg("-- Fant ugyldige verdier for", val, "i", n_not_ok, "råfiler",
+      "\n - KOBLID:", paste(rawfiles_not_ok, collapse = ", "))
   } else {
-    khtools::msg("\n*** Alle ", val, " ok", sep = "")
+    khtools::msg("-- Alle", val, "ok")
   }
   invisible(NULL)
 }

@@ -11,6 +11,8 @@
 LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
+  new_section_header(paste0("Starter filgruppekjøring: ", name))
+  
   user_args = as.list(environment())
   parameters <- get_filegroup_parameters(user_args = user_args)
   # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
@@ -19,7 +21,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  khtools::msg("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
+  new_section_header("Starter lesing, formattering og stabling av originalfiler")
   if(parameters$n_files == 1){
     make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
@@ -29,26 +31,32 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   }
   clean_tempfiles(con = parameters$duck)
   khtools::duckdb_clean(con = parameters$duck)
-  khtools::msg("-----\n* Alle originalfiler lest og stablet")
+  khtools::msg("\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
   cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
   clean_filegroup_dimensions_duckdb(parameters = parameters, cleanlog = cleanlog)
   clean_filegroup_values_duckdb(parameters = parameters, cleanlog = cleanlog)
   
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
-  khtools::msg("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+
+  new_section_header("Fikser kolonnenavn, kolonnetyper og evt ")
   rename_fg_value_columns_duckdb(parameters = parameters)
   set_integer_columns_duckdb(con = parameters$duck)
-  
   do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = NULL, dt_name = "Filgruppe", 
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
                       parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
   
-  write_filegroup_output(dt = Filgruppe, parameters = parameters)
+  write_filegroup_output(parameters = parameters)
+  
+  RESULTAT <- list(
+    Filgruppe = khtools::duckdb_fetch_table(parameters$duck, "FILGRUPPE"),
+    cleanlog = cleanlog,
+    codebooklog = codebooklog
+  )
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  khtools::msg("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
-  khtools::msg("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  new_section_header(paste0("FILGRUPPE ", parameters$name, " er ferdig"))
+  khtools::msg("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
@@ -56,10 +64,7 @@ lagfilgruppe_cleanup <- function(parameters){
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   RODBC::odbcCloseAll()
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
-  if(!is.null(parameters$duck)){
-    DBI::dbDisconnect(parameters$duck)
-    fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
-  }
+  khtools::duckdb_shutdown(con = parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)

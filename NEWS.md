@@ -21,6 +21,7 @@
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
   - All output files generated directly in duckdb and written to disk
+  - Column types explicitly set when exporting ALLVIS parquet ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
   - Clean up console messages
   - Rsynt moved to duckdb
 
@@ -37,9 +38,10 @@
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
 - `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb for faster geo recoding
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
+- graveyard3 initiated, for functions replaced by khtools
 
 ## Bugfix
-- LKS startaar was not running if neither bydelsstart nor DK2020 were set.
+- LKS startaar was not running if neither bydelsstart nor DK2020 were set. ([issue175](https://github.com/helseprofil/khfunctions/issues/175))
 - Fixed typo in `save_filedump_if_requested` which did not work for csv output.
 
 # khfunctions 1.2.7 (2026-08-10)

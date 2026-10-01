@@ -30,6 +30,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
                           khtools::duckdb_get_columns(con, "temp_orgfile"))
   if(nrow(codebook) == 0) return(invisible(NULL))
   
+  khtools::msg("- KODEBOK:")
   khtools::duckdb_drop_tables(con, "temp_recode")
   if("ROWID_KH" %in% khtools::duckdb_get_columns(con, "temp_orgfile")) invisible(DBI::dbExecute(con,"ALTER TABLE temp_orgfile DROP COLUMN ROWID_KH"))
   
@@ -40,7 +41,6 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
     DBI::dbGetQuery(con, sprintf("SELECT ROWID_KH, %s FROM temp_orgfile",
         paste(DBI::dbQuoteIdentifier(con, recodecols),collapse = ", "))))
   
-  khtools::msg("\n* KODEBOK:")
   recodelog <- initiate_codebooklog(nrow = 0)
   for(col in recodecols){
     orgvalues <- unique(recode_dt[[col]])
@@ -51,7 +51,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   }
   recodelog[, KOBLID := filedescription$KOBLID]
   n_recoded <- sum(as.numeric(recodelog$FREQ), na.rm = T)
-  khtools::msg("\n** Omkodet ", n_recoded, " verdier/celler", sep = "")
+  khtools::msg("-- Omkodet ", n_recoded, " verdier/celler", sep = "")
   update_codebooklog(codebooklog = codebooklog, recodelog = recodelog)
   
   if(n_recoded == 0) return(invisible(NULL))
@@ -63,7 +63,7 @@ recode_columns_with_codebook <- function(dt, filedescription, parameters, codebo
   
   n_remove <- recode_dt[, sum(kast, na.rm = T)]
   if(n_remove > 0){
-    khtools::msg("\n** Kaster", n_remove, "slettede rader")
+    khtools::msg("-- Kaster", n_remove, "slettede rader")
     DBI::dbExecute(con, "DELETE FROM temp_orgfile WHERE ROWID_KH IN (SELECT ROWID_KH FROM temp_recode WHERE kast = 1)")
   }
   

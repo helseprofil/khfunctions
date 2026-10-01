@@ -5,7 +5,6 @@
 #' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
-  khtools::msg("\n* Henter parametre")
   parameters <- get_global_parameters()
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- khtools::duckdb_init(dbname = "filgruppeduck", mem_limit_gb = parameters[["ramlimit"]]) 

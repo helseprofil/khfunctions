@@ -202,8 +202,9 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
   
-  con <- parameters$duck
-  DBI::dbExecute(con, sprintf("CREATE TABLE KUBE AS SELECT * FROM read_parquet(%s)", khtools::sql_quote_S(con, kubepath)))
+  khtools::duckdb_create_new_table(con = parameters$duck, target = "KUBE",
+                                   select_sql = sprintf("SELECT * FROM read_parquet(%s)", 
+                                                        khtools::sql_quote_S(con, kubepath)))
   generate_allvis_base(parameters = parameters)
   
   khtools::msg("\n* Skriver filer: ")

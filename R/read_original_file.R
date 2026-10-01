@@ -8,7 +8,6 @@
 #' @param dumps any file dumps requested
 #' @returns original file is read into duckdb as `temp_orgfile`
 read_original_file <- function(filedescription, parameters, dumps = list()){
-  khtools::msg("\n* Starter innlesing av fil")
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   outtable <- "temp_orgfile"
   switch(toupper(filedescription$FORMAT),
@@ -16,9 +15,10 @@ read_original_file <- function(filedescription, parameters, dumps = list()){
          "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
          "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
          "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
-         "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck))
+         "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck, outtable = outtable))
   
   invisible(DBI::dbExecute(parameters$duck, sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS LEVEL", outtable)))
+  khtools::msg("- Originalfil lest inn")
   invisible(NULL)
 }
 

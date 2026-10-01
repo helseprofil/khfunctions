@@ -190,9 +190,8 @@ add_missing_lks <- function(parameters){
   khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks"))
   on.exit(khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks")), add = TRUE)
   
-  # --- Kommuner med bare én levekårssone ----
+  # Kommuner med bare én levekårssone
   sql_single <- "
-    CREATE TABLE tmp_single_lks AS
     WITH single AS (
       SELECT lks, overniv,
       COUNT(*) OVER (PARTITION BY overniv) AS n FROM 
@@ -210,9 +209,10 @@ add_missing_lks <- function(parameters){
     FROM KUBE k
     INNER JOIN single s ON k.GEO = s.overniv WHERE s.n = 1"
   
-  invisible(DBI::dbExecute(con, sql_single))
+  khtools::duckdb_create_new_table(con, target = "tmp_single_lks",
+                                   select_sql = sql_single)
   
-  # --- Ugyldige levekårssoner ----
+  # Ugyldige levekårssoner 
   invalid_cols <- c(
     sprintf("%s = NULL", khtools::sql_quote_I(con, vals)),
     sprintf("%s = 2", khtools::sql_quote_I(con, "spv_tmp")),
@@ -220,7 +220,6 @@ add_missing_lks <- function(parameters){
   )
   
   sql_invalid <- "
-  CREATE TABLE tmp_invalid_lks AS
   WITH invalid AS (
     SELECT DISTINCT
       GEO AS lks,
@@ -236,7 +235,8 @@ add_missing_lks <- function(parameters){
     'V' AS GEOniv
   FROM KUBE k INNER JOIN invalid i ON k.GEO = i.overniv"
   
-  invisible(DBI::dbExecute(con, sql_invalid))
+  khtools::duckdb_create_new_table(con, target = "tmp_invalid_lks",
+                                   select_sql = sql_invalid)
   
   if(nrow(DBI::dbGetQuery(con, "SELECT 1 FROM tmp_invalid_lks LIMIT 1")) > 0){
     sql <- sprintf(
@@ -248,16 +248,11 @@ add_missing_lks <- function(parameters){
     invisible(DBI::dbExecute(con, sql))
   }
   
-  # --- Legg til radene ----
-  invisible(DBI::dbExecute(con, "INSERT INTO KUBE BY NAME SELECT * FROM tmp_single_lks"))
-  invisible(DBI::dbExecute(con, "INSERT INTO KUBE BY NAME SELECT * FROM tmp_invalid_lks"))
-  
-  
+  # Legg til radene
+  khtools::duckdb_append_table(con, target = "KUBE", source = "tmp_single_lks")
+  khtools::duckdb_append_table(con, target = "KUBE", source = "tmp_invalid_lks")
   invisible(NULL)
 }
-
-
-
 
 # old version ----
 

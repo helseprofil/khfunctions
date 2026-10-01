@@ -32,7 +32,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   
   if(is_sql){
     if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
-    khtools::msg("\n** Starter SQL-snutt:", name)
+    khtools::msg("- Starter SQL-snutt:", name)
     code <- gsub("<SQL>[ \n]*(.*)", "\\1", code)
     code <- ensure_correct_url(code, name)
     code_env <- new.env(parent = parent.frame())
@@ -45,6 +45,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
       print(sqlsynterr)
       stop("Noe gikk galt i SQL-snutten")
     }
+    khtools::msg("-- SQL-snutt ferdig")
     khtools::duckdb_clean(con = con)
     return(invisible(NULL))
   }
@@ -57,12 +58,12 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     if(name == "RSYNT1"){
       dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
     }
-    khtools::msg("\n** Starter STATA-snutt:", name)
+    khtools::msg("- Starter STATA-snutt:", name)
     code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
     if(length(extracols) > 0) dt[, (extracols) := NULL]
-    khtools::msg("\n** Ferdig i STATA")
+    khtools::msg("-- Ferdig i STATA")
     if(use_duck){
       khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
       khtools::duckdb_clean(con = parameters$duck)
@@ -72,7 +73,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   }
   
   code <- ensure_correct_url(code, name)
-  khtools::msg("\n** Starter R-snutt:", name)
+  khtools::msg("- Starter R-snutt:", name)
   code_env <- new.env()
   assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
@@ -87,7 +88,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   dt <- code_env[[dt_name]]
   extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
   if(length(extracols) > 0) dt[, (extracols) := NULL]
-  khtools::msg("- R-snutt ferdig")
+  khtools::msg("-- R-snutt ferdig")
   if(use_duck){
     khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
     khtools::duckdb_clean(con = con)

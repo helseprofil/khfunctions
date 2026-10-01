@@ -59,14 +59,12 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
     khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_teller,
                                  join_cols = get_common_dimension_columns(con, tntype, tablename_teller))
     if(isnevnerfil){
-      merge_duckdb_table(con = con, mergeto = tntype, mergefrom = tablename_nevner)
       khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_nevner,
                                    join_cols = get_common_dimension_columns(con, tntype, tablename_nevner))
     }
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     khtools::msg("\n* Ferdig rektangularisert og merget", tntype)
   } else if (isnevnerfil) {
-    merge_duckdb_table(con = con, mergeto = tablename_teller, mergefrom = tablename_nevner, result = tntype)
     khtools::duckdb_merge_tables(con = con, mergeto = tablename_teller, mergefrom = tablename_nevner, result = tntype,
                                  join_cols = get_common_dimension_columns(con, tablename_teller, tablename_nevner))
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)

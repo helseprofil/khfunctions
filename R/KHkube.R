@@ -15,15 +15,14 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
-  
   new_section_header(paste0("Starter kubekjøring: ", name))
+  
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
   parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), 
                                         getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
   if(parameters$write) sink(file = parameters$loggpath, split = TRUE)
-  if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   # 1. Laste inn filer og oppdatere parametre
@@ -101,7 +100,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
   new_section_header(paste0("KUBE ", parameters$name, " er ferdig"))
-  khtools::msg("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  khtools::msg("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
 
@@ -149,10 +148,7 @@ lagkube_cleanup <- function(parameters){
     if(is_not_empty(parameters$loggpath)) do_clean_sink_log(path = parameters$loggpath)
   }
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  if(!is.null(parameters$duck)){
-    DBI::dbDisconnect(parameters$duck)
-    fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
-  }
+  khtools::duckdb_shutdown(parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)
@@ -175,6 +171,6 @@ do_clean_sink_log <- function(path){
 #' LagKubeDatertCsv
 #' Wrapper around LagKUBE, with default options to save output files
 #' @export
-LagKubeDatertCsv <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, dumps = list()){ 
-  invisible(LagKUBE(name = name, write = write, alarm = alarm, geonaboprikk = geonaboprikk, dumps = dumps))
+LagKubeDatertCsv <- function(name, write = TRUE, alarm = FALSE, dumps = list()){ 
+  invisible(LagKUBE(name = name, write = write, alarm = alarm, dumps = dumps))
 }
