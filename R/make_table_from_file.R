@@ -19,7 +19,6 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   }
   
   give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
-  # do_handle_fylltab(filedescription = filedescription, con = parameters$duck, tablename = "temp_orgfile")
   do_handle_kastkols_duckdb(kastkols = filedescription$KASTKOLS, con = parameters$duck)  
   do_reshape_var_duckdb(filedescription = filedescription, con = parameters$duck)
   do_split_multihead(dt = DF, filedescription = filedescription, con = parameters$duck, tablename = "temp_orgfile")
@@ -34,7 +33,7 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_set_default_values_duckdb(filedescription = filedescription, defaultcolumns = filecolumns$default, con = parameters$duck)
   check_if_all_columns_exist(filecolumns = filecolumns, con = parameters$duck)
   drop_unwanted_columns_duckdb(con = parameters$duck)
-  drop_unwanted_columns_duckdb(con = parameters$duck)
+  convert_na_to_empty_duckdb(con = parameters$duck)
   invisible(DBI::dbExecute(parameters$duck, paste0("ALTER TABLE temp_orgfile ADD COLUMN KOBLID VARCHAR DEFAULT ", filedescription$KOBLID)))
   recode_columns_with_codebook(dt = DF, filedescription = filedescription, parameters = parameters, codebooklog = codebooklog, dumps = dumps)
   do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
@@ -152,8 +151,24 @@ do_reshape_var_duckdb <- function(filedescription, con){
   allcols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   cols <- get_reshape_parameters(filedescription = filedescription, allcolumns = allcols)
   if(length(intersect(cols$id, cols$measure)) > 0) stop("Kolonne kan ikke være både RESHAPEid og RESHAPEmeas")
-  if(cols$var %in% allcols) stop(sprintf("RESHAPEvar '%s' finnes allerede i datasettet", cols$var))
-  if(cols$val %in% allcols) stop(sprintf("RESHAPEval '%s' finnes allerede i datasettet", cols$val))
+  if(toupper(cols$var) %in% toupper(allcols)){
+    matchcol <- allcols[toupper(allcols) == toupper(cols$var)]
+    matchcol <- paste(matchcol, collapse = ", ")
+    stop(sprintf(
+      "RESHAPEvar '%s' finnes allerede i datasettet som '%s'. 
+      \nDuckDB behandler kolonnenavn case-insensitivt, og disse regnes derfor som samme kolonne. 
+      \nOm '%s' ikke skal brukes videre kan den fjernes i RSYNT1", 
+                 cols$var, matchcol, matchcol))
+  }
+  if(toupper(cols$val) %in% toupper(allcols)){
+    matchcol <- allcols[toupper(allcols) == toupper(cols$val)]
+    matchcol <- paste(matchcol, collapse = ", ")
+    stop(sprintf(
+      "RESHAPEval '%s' finnes allerede i datasettet som '%s'. 
+      \nDuckDB behandler kolonnenavn case-insensitivt, og disse regnes derfor som samme kolonne.
+      \nOm '%s' ikke skal brukes videre kan den fjernes i RSYNT1", 
+      cols$val, matchcol, matchcol))
+  }
 
   if(!is.null(cols$id) && !all(cols$id %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
   if(!is.null(cols$measure) && !all(cols$measure %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
@@ -162,7 +177,7 @@ do_reshape_var_duckdb <- function(filedescription, con){
   measure_sql <- paste(khtools::sql_quote_I(con, cols$measure), collapse = ", ")
   
   out_cols <- c(cols$id, cols$var, cols$val)
-  if(anyDuplicated(out_cols) > 0) stop("RESHAPE genererer dublerte kolonnenavn")
+  if(anyDuplicated(toupper(out_cols)) > 0) stop("RESHAPE genererer dublerte kolonnenavn.\nDuckDB behandler kolonnenavn case-insensitivt.")
   
   select_sql <- paste(
     sprintf(
@@ -259,11 +274,11 @@ drop_unwanted_columns_duckdb <- function(con){
   invisible(NULL)
 }
 
-#' @title drop_unwanted_columns_duckdb
+#' @title convert_na_to_empty
 #' @description Erstatter manglende celler med "" (alle kolonner er tekst)
 #' @family duckdb
 #' @noRd
-drop_unwanted_columns_duckdb <- function(con) {
+convert_na_to_empty_duckdb <- function(con) {
   cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   
   set_clause <- paste(sprintf("%s = COALESCE(%s, '')",
