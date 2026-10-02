@@ -12,6 +12,38 @@ is_empty <- function(value){
   is.null(value) || is.na(value) || value == "" 
 }
 
+#' @title classify_columns
+#' @description 
+#' Klassifiserer kolonner som dimensjoner, verdier, hjelpekolonner og annet. 
+#' For gruppering trengs ofte bare dimensjoner (ikke misc som GEOniv og FYLKE)
+#' For aggregering må misc-kolonnene også bevares
+#' @noRd
+classify_columns <- function(columnnames){
+  alldims <- c(
+    getOption("khfunctions.dim.standard"),
+    getOption("khfunctions.dim.interval"),
+    getOption("khfunctions.dim.tab")
+  )
+  
+  dims <- intersect(columnnames, alldims)
+  f_cols <- grep("^(.*?)\\.f$", columnnames, value = T)
+  vals <- gsub("\\.f$", "", f_cols)
+  vals_helpers <- grep("^(.*?)\\.(f|a|n|fn1|fn3|fn9)$", columnnames, value = T)
+  misc <- setdiff(columnnames, c(dims, vals, vals_helpers))
+  
+  list(dims = dims, vals = vals, vals_helpers = vals_helpers, misc = misc)
+}
+
+get_dimensions <- function(columnnames){
+  classify_columns(columnnames)$dims
+}
+
+get_values <- function(columnnames, helpers = FALSE){
+  x <- classify_columns(columnnames)
+  if(!helpers) return(x$vals)
+  c(x$vals, x$vals_helpers)
+}
+
 #' @keywords internal
 #' @noRd
 get_value_columns <- function(columnnames, full = FALSE) {
