@@ -1,4 +1,4 @@
-# Funksjoner som er flyttet til khtools
+# Funksjoner som er flyttet til khtools eller avviklet etter innføring av khtools
 
 #' @description wrapper rundt dbquoteidentifier, for renere kode da denne brukes mange steder
 #' @noRd
@@ -254,4 +254,13 @@ merge_duckdb_table <- function(con, mergeto, mergefrom, result = NULL){
   missing_new_cols <- setdiff(newcols_names, actual_cols)
   if(length(missing_new_cols) > 0) stop(sprintf("Merge feilet. Mangler kolonner i %s: %s", result, paste(missing_new_cols, collapse = ", ")))
   invisible(NULL)
+}
+
+ensure_kh_options <- function(){
+  optkhfunctions <- orgdata:::is_globs("khfunctions")
+  missing <- !(names(optkhfunctions) %in% names(options()))
+  if (any(missing)) options(optkhfunctions[missing])
+  options("khfunctions.snutter" = get_snutt_list())
+  corrglobs <- orgdata:::is_correct_globs(c(optkhfunctions, "khfunctions.snutter"))
+  isTRUE(corrglobs)
 }
