@@ -153,7 +153,6 @@ lagkube_cleanup <- function(parameters){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)
   }
-  RODBC::odbcCloseAll()
 }
 
 #' @keywords internal

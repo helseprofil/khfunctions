@@ -62,7 +62,6 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
 lagfilgruppe_cleanup <- function(parameters){
   if(parameters$write) sink()
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  RODBC::odbcCloseAll()
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
   khtools::duckdb_shutdown(con = parameters$duck)
   if(!is.null(parameters$threads)){

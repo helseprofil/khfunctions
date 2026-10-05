@@ -264,3 +264,21 @@ ensure_kh_options <- function(){
   corrglobs <- orgdata:::is_correct_globs(c(optkhfunctions, "khfunctions.snutter"))
   isTRUE(corrglobs)
 }
+
+#' @title connect_khelsa
+#' @description connects to khelsa.mdb
+#' @keywords internal
+#' @noRd
+connect_khelsa <- function(){
+  path <- file.path(getOption("khfunctions.root"),
+                    getOption("khfunctions.db"))
+  
+  if(!file.exists(path)) stop("Finner ikke databasefilen ", path)
+  
+  RODBC::odbcDriverConnect(
+    paste0(
+      "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
+      "DBQ=", path, ";"
+    )
+  )
+}

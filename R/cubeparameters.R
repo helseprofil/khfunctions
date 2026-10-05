@@ -6,10 +6,10 @@
 #' @return A list of relevant parameters
 get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
+  on.exit(DBI::dbDisconnect(parameters$dbh))
   parameters <- c(parameters, user_args)
   parameters[["duck"]] <- khtools::duckdb_init(dbname = "kubeduck", mem_limit_gb = parameters[["ramlimit"]]) 
   khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
-  # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)
   parameters[["TNPinformation"]] <- get_tnp_information(parameters = parameters)
   parameters[["STNPinformation"]] <- get_stnp_information(parameters = parameters)
@@ -18,7 +18,7 @@ get_cubeparameters <- function(user_args = list()) {
   parameters[["LKS_STARTAAR"]] <- get_lks_startaar(parameters = parameters)
   parameters[["fileinformation"]] <- get_filegroup_information(parameters = parameters)
   parameters[["friskvik"]] <- get_friskvik_information(parameters = parameters)
-  parameters[["HELSEREG"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from HELSEREG", as.is = TRUE), key = c("FYLKE"))
+  parameters[["HELSEREG"]] <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT * from HELSEREG"), key = c("FYLKE"))
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["KB"]] <- SettKodeBokGlob(parameters = parameters)
   parameters[["Censor_type"]] <- get_censor_type(parameters = parameters)
@@ -42,9 +42,8 @@ get_maltall_column <- function(parameters){
 #' @title get_lks_startaar
 #' @noRd
 get_lks_startaar <- function(parameters){
-  lks_start <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
-                                                 query = paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0"), 
-                                                 as.is = TRUE))
+  lks_start <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, 
+                                                 paste0("SELECT [GEO], [lks_startaar] FROM LKS_STARTAAR WHERE lks_startaar > 0")))
   khtools::duckdb_write_table(con = parameters$duck, data = lks_start, tablename = "LKS_STARTAAR")
   return(lks_start)
 }
@@ -59,9 +58,11 @@ get_lks_startaar <- function(parameters){
 #' @param validdates valid dates to specify active rows in the ACCESS table
 #' @param parameters global parameters
 get_cube_information <- function(parameters){
-  KUBER <- as.list(RODBC::sqlQuery(parameters$dbh, 
-                                   query = paste0("SELECT * FROM KUBER WHERE KUBE_NAVN='", parameters$name, "' AND ", parameters$validdates), 
-                                   as.is = TRUE))
+  KUBER <- as.list(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf(
+                      "SELECT * FROM KUBER WHERE KUBE_NAVN='%s' AND %s", 
+                      parameters$name, parameters$validdates)))
   if(length(KUBER$KUBE_NAVN) == 0) stop("Finner ikke KUBE_NAVN='", parameters$name, "' i ACCESS::KUBER, har du skrevet riktig?")
   if((is.na(KUBER$TNP) || KUBER$TNP == "")) stop("Feltet ACCESS::KUBER::TNP er ikke satt for ", parameters$name)
   return(KUBER)
@@ -77,9 +78,11 @@ get_cube_information <- function(parameters){
 #' @param validdates valid dates to specify active rows in the ACCESS table
 #' @param parameters global parameters
 get_tnp_information <- function(parameters){
-  TNP_PROD <- as.list(RODBC::sqlQuery(parameters$dbh, 
-                                      query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", parameters$CUBEinformation$TNP, "' AND ", parameters$validdates), 
-                                      as.is = TRUE))
+  TNP_PROD <- as.list(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf(
+                      "SELECT * FROM TNP_PROD WHERE TNP_NAVN='%s' AND %s", 
+                      parameters$CUBEinformation$TNP, parameters$validdates)))
   for(col in c("TNP_NAVN", "TELLERFIL", "NEVNERFIL", "PREDNEVNERFIL")){
     TNP_PROD[[col]] <- fix_befgk_spelling(TNP_PROD[[col]])
   }
@@ -101,10 +104,11 @@ get_stnp_information <- function(parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(list())
   if(is_empty(parameters$TNPinformation$STANDARDTNFIL)) return(parameters$TNPinformation)
   
-  STNP <- as.list(RODBC::sqlQuery(parameters$dbh, 
-                                  query = paste0("SELECT * FROM TNP_PROD WHERE TNP_NAVN='", parameters$TNPinformation$STANDARDTNFIL, "' AND ", parameters$validdates), 
-                                  as.is = TRUE))
-  return(STNP)
+  as.list(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf(
+                      "SELECT * FROM TNP_PROD WHERE TNP_NAVN='%s' AND %s", 
+                      parameters$TNPinformation$STANDARDTNFIL, parameters$validdates)))
 }
 
 #' @title get_filenames
@@ -155,9 +159,15 @@ get_filenames <- function(parameters){
 #' @keywords internal
 #' @noRd
 get_filfiltre <- function(parameters){
-  filfiltre <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILFILTRE WHERE ", parameters$validdates), as.is = TRUE))
-  filfiltre <- filfiltre[FILVERSJON %in% unique(parameters$files)]
-  return(filfiltre)
+  files <- paste(khtools::sql_quote_S(parameters$dbh, 
+                                      unlist(unique(parameters$files))), 
+                 collapse = ", ")
+    
+  data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT * FROM FILFILTRE WHERE %s AND FILVERSJON IN (%s)", 
+                            parameters$validdates, files))
+    )
 }
 
 #' @title get_filegroup_information
@@ -195,10 +205,10 @@ replace_filename_if_filefilters <- function(filename, filefilters){
 #' @keywords internal
 #' @noRd
 get_friskvik_information <- function(parameters){
-  FRISKVIK <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
-                                   query = paste0(paste0("SELECT * FROM FRISKVIK WHERE AARGANG=", parameters$year, "AND KUBE_NAVN='", parameters$name, "'")), 
-                                   as.is = TRUE))
-  return(FRISKVIK)
+  data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT * FROM FRISKVIK WHERE AARGANG = %s AND KUBE_NAVN = '%s'",
+                            parameters$year, parameters$name)))
 }
 
 #' @title get_filedesign
@@ -291,7 +301,7 @@ update_cubedesign_after_moving_average <- function(parameters){
 #' @keywords internal
 #' @noRd
 get_geo_recoding <- function(parameters){
-  KnrHarm <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from KnrHarm", as.is = TRUE), key = c("GEO"))
+  KnrHarm <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT * from KnrHarm"), key = c("GEO"))
   KnrHarmS <- data.table::copy(KnrHarm)[, let(GEO = paste0(GEO, "00"), GEO_omk = paste0(GEO_omk, "00"))]
   out <- data.table::rbindlist(list(KnrHarm, KnrHarmS))[, .SD, .SDcols = c("GEO", "GEO_omk")]
   khtools::duckdb_drop_tables(con = parameters$duck, tables = "KnrHarm")
@@ -306,8 +316,8 @@ get_geo_recoding <- function(parameters){
 #' @keywords internal
 #' @noRd
 SettKodeBokGlob <- function(parameters) {
-  OmkodD <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM KH_OMKOD
-                                              UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER", as.is = TRUE))
+  OmkodD <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT * FROM KH_OMKOD
+                                              UNION SELECT ID, DEL, KODE as NYKODE, KODE as ORGKODE, 0 as PRI_OMKOD, 1 AS OBLIG FROM KH_KODER"))
   OmkodD <- OmkodD[DEL != "S"]
   KB <- list()
   

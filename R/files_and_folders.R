@@ -7,8 +7,7 @@
 #   if(!dir.exists(arkiv)) dir.create(arkiv)
 #   orgprodfiles <- list.files(prod, pattern = ".csv")
 # 
-#   con <- connect_khelsa()
-#   on.exit(RODBC::odbcCloseAll())
+#   con <- khtools::connect_khelsa()
 #   kubestatus_ok <- read_kubestatus(con, year = year)[, filenames := paste0(KUBE_NAVN, "_", DATOTAG_KUBE, ".csv")]
 #   alltargetfiles <- kubestatus_ok[, filenames]
 #   notwanted <- setdiff(orgprodfiles, alltargetfiles)
@@ -46,8 +45,8 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   geoniv <- match.arg(geoniv)
   message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)
   
-  con <- connect_khelsa()
-  on.exit(RODBC::odbcCloseAll(), add = T)
+  con <- khtools::connect_khelsa()
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
   
   friskvik <- read_friskvik(con, profil, geoniv, year)
   kubestatus <- read_kubestatus(con, year)
@@ -95,7 +94,7 @@ read_friskvik <- function(con, profil, geoniv, year){
   friskvik_sql <- paste("SELECT", friskvik_columns, "FROM FRISKVIK WHERE AARGANG =", year, 
                         "AND PROFILTYPE =", paste0("'", profil, "'"),
                         "AND MODUS =", paste0("'", geoniv, "'"))
-  friskvik <- data.table::setDT(RODBC::sqlQuery(con, friskvik_sql))
+  friskvik <- data.table::setDT(DBI::dbGetQuery(con, friskvik_sql))
   return(friskvik)
 }
 
@@ -104,7 +103,7 @@ read_kubestatus <- function(con, year){
   kubestatus_columns <- paste0(c("KUBE_NAVN", "DATOTAG_KUBE", "QC_OK"), collapse = ", ")
   kubestatus_table <- paste0("KUBESTATUS_", year)
   kubestatus_sql <- paste("SELECT", kubestatus_columns, "FROM", kubestatus_table, "WHERE QC_OK = '1'")
-  kubestatus <- data.table::setDT(RODBC::sqlQuery(con, kubestatus_sql))
+  kubestatus <- data.table::setDT(DBI::dbGetQuery(con, kubestatus_sql))
   return(kubestatus)
 }
 

@@ -19,7 +19,6 @@ Imports:
     orgdata (>= 1.5.7),
     readxl (>= 1.4.5),
     rlang (>= 1.1.6),
-    RODBC (>= 1.3.23),
     stringr (>= 1.5.1),
     zoo (>= 1.8.14),
     data.table (>= 1.17.8),

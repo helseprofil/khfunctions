@@ -1,5 +1,4 @@
 SetKubeParameters <- function(cube){
-  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = cube,
                      year = getOption("khfunctions.year"),
                      dumps = list(),
@@ -10,7 +9,6 @@ SetKubeParameters <- function(cube){
 }
 
 SetFilgruppeParameters <- function(filgruppenavn){
-  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
                      ramlimit = NULL, 
@@ -20,9 +18,9 @@ SetFilgruppeParameters <- function(filgruppenavn){
 }
 
 fg_get_all_read_args <- function(globs = get_global_parameters()){
-  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORGINNLESkobl"), as.is = TRUE))
-  originalfiler <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", globs$validdates)), as.is = TRUE))
-  innlesing <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM INNLESING WHERE ", globs$validdates), as.is = TRUE))
+  orginnleskobl <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORGINNLESkobl")))
+  originalfiler <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", globs$validdates))))
+  innlesing <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM INNLESING WHERE ", globs$validdates)))
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
   out <- collapse::join(orginnleskobl, originalfiler, how = "i", on = "FILID", overid = 2, verbose = 0)

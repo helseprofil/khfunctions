@@ -161,7 +161,6 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   parameters <- get_cubeparameters(user_args = user_args)
   on.exit({
     duckfile <- DBI::dbGetInfo(parameters$duck)$dbname
-    RODBC::odbcCloseAll()
     DBI::dbDisconnect(parameters$duck)
     if(fs::file_exists(duckfile)) fs::file_delete(duckfile)
   }, add = TRUE)

@@ -5,17 +5,7 @@
 }
 
 .onAttach <- function(libname, pkgname){
-  
-  if(interactive() && khtools:::package_update_available(package = "khfunctions", branch = "master")) {
-    
-    x <- utils::menu(title = "Update khfunctions now?", choices = c("Yes", "No"))
-    
-    if(x == 1){
-      packageStartupMessage( "Please restart your R session and then run:")
-      packageStartupMessage('remotes::install_github("helseprofil/khfunctions@master")')
-    }
-  }
-  
+  khtools:::check_package_update(package = "khfunctions", branch = "master")
   packageStartupMessage("khfunctions version: ", utils::packageDescription("khfunctions")[["Version"]])
   check_connection_folders()
 }

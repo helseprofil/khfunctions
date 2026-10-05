@@ -31,12 +31,14 @@
   - `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
 - Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
 - Parameter tables GeoKoder and KnrHarm written to duckdb
+- classify_columns implemented for better column-classification
 - `do_special_handling` 
     - reads and write to duckdb, new arguments `duck` and `tablename`
     - if `duck` = TRUE, data is always written to duckdb as table = `tablename`
     - if dt = NULL and duck = TRUE, dt is fetched from duckdb as table = `tablename`
     - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb)
 - `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb for faster geo recoding
+- Replaced all RODBC codes with DBI
 - graveyard2 initiated, for functions deprecated when switching to duckdb processing
 - graveyard3 initiated, for functions replaced by khtools
 
