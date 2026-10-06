@@ -1,6 +1,6 @@
 clean_filegroup_dimensions_duckdb <- function(parameters, cleanlog){
   con <- parameters$duck
-  new_section_header("Renser dimensjonskolonner")
+  khtools::header("Renser dimensjonskolonner")
   do_clean_GEO_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)
   do_clean_AAR_duckdb(con = con, cleanlog = cleanlog)
   do_clean_ALDER_duckdb(con = con, parameters = parameters, cleanlog = cleanlog)

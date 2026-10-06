@@ -15,7 +15,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
-  new_section_header(paste0("Starter kubekjøring: ", name))
+  khtools::header(paste0("Starter kubekjøring: ", name))
   
   # 0. Hente inn parametre
   user_args <- as.list(environment())
@@ -33,12 +33,12 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   write_access_specs(parameters = parameters)
   
   # 2. Koble teller og nevner, hente ut kubedesign
-  new_section_header("Merger teller- og nevnerfil")
+  khtools::header("Merger teller- og nevnerfil")
   parameters <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
 
   # 3. Aggregering til flerårige tall og oppdatere kubedesign
   parameters <- get_movav_information(parameters = parameters)
-  if(parameters$MOVAV$is_movav) new_section_header("Aggregering til flerårige tall")
+  if(parameters$MOVAV$is_movav) khtools::header("Aggregering til flerårige tall")
   aggregate_to_periods(tablename = "KUBE", parameters = parameters, standard = FALSE)
   parameters <- update_cubedesign_after_moving_average(parameters = parameters)
 
@@ -51,7 +51,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   add_meisskala(parameters = parameters)
   
   # 5. Redigere kolonner og filtrere ugyldige rader
-  new_section_header("Formatterer kolonner i KUBE")
+  khtools::header("Formatterer kolonner i KUBE")
   # do_filter_invalid_geo_alder_kjonn(parameters$duck, "KUBE")
   scale_rate_and_meisskala(parameters = parameters)
   do_format_cube_columns(parameters = parameters)
@@ -82,7 +82,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   add_missing_lks(parameters = parameters)
   
   # 8. Slicing av outputfiler
-  new_section_header("Genererer og eksporterer resultatfiler")
+  khtools::header("Genererer og eksporterer resultatfiler")
   generate_allvis_base(parameters = parameters)
   generate_and_export_all_friskvik_indicators(parameters = parameters)
   generate_qc_table(parameters = parameters)
@@ -99,7 +99,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
-  new_section_header(paste0("KUBE ", parameters$name, " er ferdig"))
+  khtools::header(paste0("KUBE ", parameters$name, " er ferdig"))
   khtools::msg("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }

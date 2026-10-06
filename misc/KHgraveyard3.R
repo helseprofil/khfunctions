@@ -282,3 +282,34 @@ connect_khelsa <- function(){
     )
   )
 }
+
+#' @keywords internal
+#' @noRd
+get_dimension_columns <- function(columnnames) {
+  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear", "spv_tmp")
+  return(setdiff(columnnames, nodim))
+  # dims <- c(getOption("khfunctions.alldimensions"), "TAB1", "TAB2", "TAB3")
+  # return(intersect(columnnames, dims))
+}
+
+#' @keywords internal
+48
+
+#' @noRd
+get_value_columns <- function(columnnames, full = FALSE) {
+  valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
+  valcols <- gsub("\\.f$", "", valcols)
+  if(full) valcols <- paste0(rep(valcols, each = 7), c("", ".f", ".a", ".n", ".fn1", ".fn3", ".fn9"))
+  return(intersect(columnnames, valcols))
+}
+
+
+print_console_message <- function(...){
+  base::cat(...)
+  base::cat("\n")
+  utils::flush.console()
+}
+
+new_section_header <- function(msg){
+  khtools::msg("\n# --", msg, "-- #\n")
+}

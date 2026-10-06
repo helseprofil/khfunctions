@@ -1,6 +1,6 @@
 add_predteller <- function(parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
-  new_section_header("Standardisering")
+  khtools::header("Standardisering")
   con <- parameters$duck
   tmp_tables <- c(PREDRATE = "tmp_predrate", PREDNEVNER = "tmp_prednevner", PREDTELLER = "tmp_predteller")
   khtools::duckdb_drop_tables(con, tmp_tables)
@@ -102,7 +102,7 @@ generate_tmp_predrate <- function(con, gentable, design, parameters){
   
   aggregate_to_periods(tablename = standardkube_name, parameters = parameters)
   allcols <- khtools::duckdb_get_columns(con, standardkube_name)
-  dims <- setdiff(get_dimension_columns(allcols), parameters$PredFilter$Predfiltercolumns)
+  dims <- setdiff(identify_nonvalues(allcols), parameters$PredFilter$Predfiltercolumns)
   dims_sql <- khtools::sql_quote_I(con, dims)
   
   sql_generate <- sprintf(
@@ -163,18 +163,19 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
   if(is_empty(prednevner_col)) prednevner_col <- parameters$TNPinformation$NEVNERKOL
   
   allcols <- khtools::duckdb_get_columns(con, prednevnerfile_sql)
-  dims <- get_dimension_columns(allcols)
+  dims <- identify_nonvalues(allcols)
   dims_sql <- khtools::sql_quote_I(con, dims)
   pred_cols <- grep(sprintf("^%s(\\.f|.a|)$", prednevner_col),allcols, value = TRUE)
   rename_cols <- gsub(sprintf("^%s(\\.f|.a|)$", prednevner_col),"PREDNEVNER\\1",pred_cols)
   predvalue_sql <- sprintf("%s AS %s", khtools::sql_quote_I(con, pred_cols), khtools::sql_quote_I(con, rename_cols))
   
-  sql_generate <- sprintf("CREATE TABLE %s AS SELECT %s, %s FROM %s", 
-                          tmp_prednevner_sql, 
+  sql_generate <- sprintf("SELECT %s, %s FROM %s", 
                           paste(dims_sql, collapse = ", "),
                           paste(predvalue_sql, collapse = ",\n"),
                           prednevnerfile_sql)
-  invisible(DBI::dbExecute(con, sql_generate))
+  
+  khtools::duckdb_create_new_table(con, target = tmp_prednevner_sql,
+                                   select_sql = sql_generate)
   
   redesign <- find_redesign(orgdesign = parameters$filedesign[[prednevnerfile]], targetdesign = design, parameters = parameters)
   filter_and_recode_table_duckdb(con = con, tablename = gentable, redesign = redesign, parameters = parameters)
@@ -195,8 +196,8 @@ generate_tmp_predteller <- function(con, tables, parameters){
   tmp_prednevner_sql <- khtools::sql_quote_I(con, tables[["PREDNEVNER"]])
   tmp_predteller_sql <- khtools::sql_quote_I(con, tables[["PREDTELLER"]])
   
-  predrate_dims <- get_dimension_columns(khtools::duckdb_get_columns(con, tables[["PREDRATE"]]))
-  prednevner_dims <- get_dimension_columns(khtools::duckdb_get_columns(con, tables[["PREDNEVNER"]]))
+  predrate_dims <- identify_nonvalues(khtools::duckdb_get_columns(con, tables[["PREDRATE"]]))
+  prednevner_dims <- identify_nonvalues(khtools::duckdb_get_columns(con, tables[["PREDNEVNER"]]))
   commondims <- khtools::sql_quote_I(con, intersect(prednevner_dims, predrate_dims))
   
   all_dims <- union(prednevner_dims, predrate_dims)
@@ -214,21 +215,20 @@ generate_tmp_predteller <- function(con, tables, parameters){
   if(mismatch > 0) khtools::msg(sprintf('!!!!!ADVARSEL: %s strata i predrate finnes ikke i prednevner!!!', mismatch))
   
   sql_generate <- sprintf(
-    'CREATE TABLE %s AS
-    SELECT %s,
+    'SELECT %s,
     pr.PREDRATE * pn.PREDNEVNER AS PREDTELLER,
     GREATEST(pr."PREDRATE.f", pn."PREDNEVNER.f") AS "PREDTELLER.f",
     GREATEST(pr."PREDRATE.a", pn."PREDNEVNER.a") AS "PREDTELLER.a"
     FROM %s pn
     LEFT JOIN %s pr ON %s',
-    tmp_predteller_sql,
     paste(dim_select, collapse = ", "),
     tmp_prednevner_sql,
     tmp_predrate_sql,
     join_condition
   )
+  khtools::duckdb_create_new_table(con, target = tmp_predteller_sql,
+                                   select_sql = sql_generate)
   
-  invisible(DBI::dbExecute(con, sql_generate))
   khtools::msg("- Redesigner for å matche KUBE")
   prednevnerdesign <- find_filedesign(filename = tables[["PREDNEVNER"]], parameters = parameters, copy_fileinfo_from = parameters$files$PREDNEVNER)
   cubedesign <- list(Part = parameters$CUBEdesign)

@@ -34,32 +34,19 @@ classify_columns <- function(columnnames){
   list(dims = dims, vals = vals, vals_helpers = vals_helpers, misc = misc)
 }
 
-get_dimensions <- function(columnnames){
+identify_dimensions <- function(columnnames){
   classify_columns(columnnames)$dims
 }
 
-get_values <- function(columnnames, helpers = FALSE){
+identify_values <- function(columnnames, helpers = FALSE){
   x <- classify_columns(columnnames)
   if(!helpers) return(x$vals)
   c(x$vals, x$vals_helpers)
 }
 
-#' @keywords internal
-#' @noRd
-get_value_columns <- function(columnnames, full = FALSE) {
-  valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
-  valcols <- gsub("\\.f$", "", valcols)
-  if(full) valcols <- paste0(rep(valcols, each = 7), c("", ".f", ".a", ".n", ".fn1", ".fn3", ".fn9"))
-  return(intersect(columnnames, valcols))
-}
-
-#' @keywords internal
-#' @noRd
-get_dimension_columns <- function(columnnames) {
-  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear", "spv_tmp")
-  return(setdiff(columnnames, nodim))
-  # dims <- c(getOption("khfunctions.alldimensions"), "TAB1", "TAB2", "TAB3")
-  # return(intersect(columnnames, dims))
+identify_nonvalues <- function(columnnames){
+  x <- classify_columns(columnnames)
+  c(x$dims, x$misc)
 }
 
 #' @title fix_befgk_spelling
@@ -87,14 +74,4 @@ set_threads <- function(){
   
   return(list(dt = old_dt,
               collapse = old_collapse))
-}
-
-print_console_message <- function(...){
-  base::cat(...)
-  base::cat("\n")
-  utils::flush.console()
-}
-
-new_section_header <- function(msg){
-  khtools::msg("\n# --", msg, "-- #\n")
 }

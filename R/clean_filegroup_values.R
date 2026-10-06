@@ -2,7 +2,7 @@
 #' @description Looper gjennom verdikolonner, renser og sjekker disse. 
 #' @noRd
 clean_filegroup_values_duckdb <- function(parameters, cleanlog){
-  new_section_header("Renser verdikolonner")
+  khtools::header("Renser verdikolonner")
   con <- parameters$duck
   cols <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_columns(con, "FILGRUPPE"))
   for(val in cols){

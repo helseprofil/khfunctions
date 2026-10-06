@@ -189,8 +189,8 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   on.exit(khtools::duckdb_drop_tables(con, "tmp_udekk"), add = TRUE)
 
   table_cols <- khtools::duckdb_get_columns(con, tablename)
-  dims <- get_dimension_columns(table_cols)
-  vals <- get_value_columns(table_cols)
+  dims <- identify_nonvalues(table_cols)
+  vals <- identify_values(table_cols)
   
   udekk_cols <- names(udekk)
   join_cols <- intersect(dims, udekk_cols)
@@ -239,7 +239,7 @@ add_udekk_duckdb <- function(con, tablename, udekk){
 #' @keywords internal
 #' @noRd
 do_filter_and_recode_to_redesign <- function(dt, redesign, parameters){
-  cols <- list(orgcols = names(dt), dims = get_dimension_columns(names(dt)), values = get_value_columns(names(dt)))
+  cols <- list(orgcols = names(dt), dims = identify_nonvalues(names(dt)), values = identify_values(names(dt)))
   
   if(nrow(redesign$FULL) > 0){
     dt <- do_filter_dimensions(dt = dt, filters = redesign$Filters)

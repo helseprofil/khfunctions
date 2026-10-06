@@ -86,8 +86,8 @@ do_aggregate_periods <- function(con, tablename, parameters){
   # DBI::dbWriteTable(con, name = tmp_periods, value = allperiods, overwrite = TRUE)
   khtools::duckdb_write_table(con, tablename = tmp_periods, data = allperiods)
   cols <- khtools::duckdb_get_columns(con, tablename)
-  values <- get_value_columns(cols)
-  dims <- get_dimension_columns(cols)
+  values <- identify_values(cols)
+  dims <- identify_nonvalues(cols)
   dims_no_year <- khtools::sql_quote_I(con, setdiff(dims,c("AARl", "AARh")))
 
   # Bygge sql som velger og aggregerer kolonner, og setter år til periods$AARl/AARh
@@ -182,7 +182,7 @@ find_periods <- function(aarh, period){
 do_filter_periods_with_missing_original <- function(con, tablename){
   
   cols <- khtools::duckdb_get_columns(con, tablename)
-  values <- get_value_columns(cols)
+  values <- identify_values(cols)
   anonymous_tolerance <- getOption("khfunctions.anon_tot_tol")
   
   tbl_sql <- khtools::sql_quote_I(con, tablename)
@@ -219,7 +219,7 @@ do_filter_periods_with_missing_original <- function(con, tablename){
 do_handle_indata_periods <- function(con,tablename,parameters){
   n <- as.integer(ifelse(parameters$MOVAV$is_orig_snitt, 1L, parameters$MOVAV$int_lengde))
   cols <- khtools::duckdb_get_columns(con, tablename)
-  values <- get_value_columns(cols)
+  values <- identify_values(cols)
   tbl_sql <- khtools::sql_quote_I(con, tablename)
   
   val_n_cols <- vector("character", length(values))

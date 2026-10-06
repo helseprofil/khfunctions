@@ -10,7 +10,7 @@
 #' @noRd
 compute_new_value_from_formula <- function(dt, formulas, post_moving_average = FALSE){
   if(is_empty(formulas)) return(invisible(dt))
-  values <- get_value_columns(names(dt))
+  values <- identify_values(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
     khtools::msg("\n*** Legger til nye kolonner: ", f)
@@ -38,7 +38,7 @@ compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post
   if(is_empty(formulas)) return(invisible(NULL))
   
   cols <- khtools::duckdb_get_columns(con, tablename)
-  values <- get_value_columns(cols)
+  values <- identify_values(cols)
   
   formulas <- trimws(
     unlist(
@@ -304,7 +304,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     oldcols <- paste0(fparts$old, c("", ".f", ".a"))
     newcols <- paste0(fparts$new, c("", ".f", ".a"))
     data.table::setnames(newdata, oldcols, newcols)
-    newdims <- get_dimension_columns(names(newdata))
+    newdims <- identify_dimensions(names(newdata))
     merge_cols_by_reference(orgdata = dt, newdata = newdata[, .SD, .SDcols = c(newdims, newcols)])
     valdef <- fileinfo$vals
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
@@ -354,8 +354,8 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
 #' @noRd
 merge_cols_by_reference <- function(orgdata, newdata){
   commoncols <- intersect(
-    get_dimension_columns(names(orgdata)),
-    get_dimension_columns(names(newdata))
+    identify_nonvalues(names(orgdata)),
+    identify_nonvalues(names(newdata))
   )
   newcols_names <- setdiff(names(newdata), commoncols)
   

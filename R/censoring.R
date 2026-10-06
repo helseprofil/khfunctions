@@ -46,18 +46,18 @@ do_censor_cube <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "PRIKKpre", dt = dt, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
   if(is_empty(parameters$Censor_type)){
-    new_section_header("Ingen prikking")
+    khtools::header("Ingen prikking")
     return(dt)
   }
 
-  new_section_header("Starter personvernhåndtering (prikking)")  
+  khtools::header("Starter personvernhåndtering (prikking)")  
   if(parameters$Censor_type == "R"){
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
     khtools::msg("\n** STATA-prikking er aktiv, gjør endringer i ACCESS om du ønsker R-prikking")
     # Må slette verdiene for rader med spv_tmp = 9
-    vals <- get_value_columns(names(dt))
+    vals <- identify_values(names(dt))
     idx <- which(dt[["spv_tmp"]] == 9)
     data.table::set(dt, i = idx, j = vals, value = NA)
     dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
@@ -107,7 +107,7 @@ do_censor_primary_secondary <- function(dt, parameters){
   } else {
     khtools::msg("** Ingen naboprikking satt opp")
   }
-  valuesF <- paste0(get_value_columns(names(dt)), ".f")
+  valuesF <- paste0(identify_values(names(dt)), ".f")
   dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
 }
 
@@ -336,7 +336,7 @@ get_censor_triangles <- function(parameters){
     names(out)[names(out) == "SPES"] <- correctname
   }
   
-  if(parameters$CUBEinformation$GEO_NABOPRIKK == "1"){
+  if(isTRUE(parameters$CUBEinformation$GEO_NABOPRIKK)){
     out[["GEO"]] <- get_geonabotriangles(parameters = parameters)
   }
   

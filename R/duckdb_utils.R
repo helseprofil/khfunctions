@@ -15,7 +15,7 @@ r_filter_to_sql <- function(filter_expr){
 get_common_dimension_columns <- function(con, table1, table2){
   commoncols <- intersect(khtools::duckdb_get_columns(con, table1),
                           khtools::duckdb_get_columns(con, table2))
-  get_dimension_columns(commoncols)
+  identify_dimensions(commoncols)
 }
 
 #' @title convert_duckdb_cols_to_string

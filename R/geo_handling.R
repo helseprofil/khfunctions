@@ -4,7 +4,7 @@
 #' Uses table KnrHarm in duckdb for recoding to current geographical codes.
 #' @family duckdb
 #' @noRd 
-do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = TRUE){
+do_harmonize_geo_duckdb <- function(con, tablename, valdefs = list(), add_fylke = TRUE){
   khtools::msg("\n** Geo-harmonisering")
   invisible(DBI::dbExecute(con,sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS FYLKE",
                                        khtools::sql_quote_I(con, tablename))))
@@ -34,7 +34,7 @@ do_harmonize_geo_duckdb <- function(con, tablename, vals = list(), add_fylke = T
     khtools::msg(paste0("- Alle GEO-koder var gyldige, ingen omkoding nødvendig"))
   }
     
-  do_aggregate_file_duckdb(con = con, tablename = tablename, vals = vals)
+  do_aggregate_file_duckdb(con = con, tablename = tablename, valdefs = valdefs)
   if(add_fylke) add_fylke_duckdb(con = con, tablename = tablename)
   
   invisible(NULL)
@@ -185,7 +185,7 @@ add_missing_lks <- function(parameters){
   if(!"V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))) return(invisible(NULL))
   con <- parameters$duck
   cols <- khtools::duckdb_get_columns(con, "KUBE")
-  vals <- intersect(union(get_value_columns(cols), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR")), cols)
+  vals <- intersect(union(identify_values(cols), c("sumTELLER", "sumNEVNER", "MEIS", "RATE", "SMR")), cols)
   
   khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks"))
   on.exit(khtools::duckdb_drop_tables(con, c("tmp_single_lks", "tmp_invalid_lks")), add = TRUE)

@@ -11,7 +11,7 @@
 LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
-  new_section_header(paste0("Starter filgruppekjøring: ", name))
+  khtools::header(paste0("Starter filgruppekjøring: ", name))
   
   user_args = as.list(environment())
   parameters <- get_filegroup_parameters(user_args = user_args)
@@ -21,7 +21,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  new_section_header("Starter lesing, formattering og stabling av originalfiler")
+  khtools::header("Starter lesing, formattering og stabling av originalfiler")
   if(parameters$n_files == 1){
     make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
@@ -39,7 +39,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
 
-  new_section_header("Fikser kolonnenavn, kolonnetyper og evt ")
+  khtools::header("Postprosessering")
   rename_fg_value_columns_duckdb(parameters = parameters)
   set_integer_columns_duckdb(con = parameters$duck)
   do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = NULL, dt_name = "Filgruppe", 
@@ -55,7 +55,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   )
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  new_section_header(paste0("FILGRUPPE ", parameters$name, " er ferdig"))
+  khtools::header(paste0("FILGRUPPE ", parameters$name, " er ferdig"))
   khtools::msg("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 

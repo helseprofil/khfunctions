@@ -17,6 +17,37 @@ SetFilgruppeParameters <- function(filgruppenavn){
   parameters <<- get_filegroup_parameters(user_args = user_args)
 }
 
+# Sammenligne mot et fasitdatasett:
+
+comparefasit <- function(dt, fasit){
+  fasitcompare <- data.table::copy(fasit)
+  fix_fasit_colorder(dt, fasitcompare)
+  fix_fasit_order(dt, fasitcompare)
+  rm_fasit_extracolumn(dt, fasitcompare)
+  all.equal(dt, fasitcompare)
+}
+
+# Setter kolonner i fasit i samme rekkefølge som dt
+fix_fasit_colorder <- function(dt, fasit){
+  data.table::setcolorder(fasit, names(dt))
+}
+
+# Setter samme rekkefølge i dt og fasit for sammenligning
+fix_fasit_order <- function(dt, fasit){
+  keyvar <- identify_dimensions(names(dt))
+  data.table::setkeyv(dt, keyvar)
+  data.table::setkeyv(fasit, keyvar)
+}
+
+rm_fasit_extracolumn <- function(dt, fasit){
+  extracol <- setdiff(names(fasit), names(dt))
+  if(length(extracol)){
+    warning(paste("Sletter ekstrakolonner i fasit:", paste(extracol, collapse = ", ")))
+    fasit[, extracol := NULL]
+  }
+}
+
+
 fg_get_all_read_args <- function(globs = get_global_parameters()){
   orginnleskobl <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORGINNLESkobl")))
   originalfiler <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", globs$validdates))))

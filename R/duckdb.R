@@ -8,7 +8,7 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
   
   khtools::msg("\n- Håndterer implisitte nuller")
   cols <- khtools::duckdb_get_columns(con, table)
-  vals <- get_value_columns(cols)
+  vals <- identify_values(cols)
   tbl_sql <- khtools::sql_quote_I(con, table)
   
   if("BEF" %in% names(implicitnull_defs) && any(grepl("^BEF", vals))){
@@ -61,15 +61,15 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
 #' For verdier som ikke kan summeres vil tall som er sum av flere rader bli satt til NA med flagg = 2. 
 #' @keywords duckdb
 #' @noRd
-do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
+do_aggregate_file_duckdb <- function(con, tablename, valdefs = list()){
   
   cols <- khtools::duckdb_get_columns(con, tablename)
-  dimcols <- get_dimension_columns(cols)
-  valcols <- get_value_columns(cols)
+  nonvalues <- identify_nonvalues(cols)
+  values <- identify_values(cols)
   
-  dims_sql <- khtools::sql_quote_I(con, dimcols)
+  nonvalues_sql <- khtools::sql_quote_I(con, nonvalues)
   
-  aggcols_sql <- unlist(lapply(valcols,
+  aggcols_sql <- unlist(lapply(values,
       function(val){
         valf <- khtools::sql_quote_I(con, paste0(val, ".f"))
         vala <- khtools::sql_quote_I(con, paste0(val, ".a"))
@@ -81,18 +81,18 @@ do_aggregate_file_duckdb <- function(con, tablename, vals = list()){
         }))
   
   sql <- sprintf("SELECT %s FROM %s GROUP BY %s",
-                 paste(c(dims_sql, aggcols_sql),collapse = ", "),
+                 paste(c(nonvalues_sql, aggcols_sql),collapse = ", "),
                  khtools::sql_quote_I(con, tablename),
-                 paste(dims_sql,collapse = ", "))
+                 paste(nonvalues_sql,collapse = ", "))
   
   khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
   
   nonsum <- intersect(
-    valcols,
-    names(vals)[
+    values,
+    names(valdefs)[
     vapply(
-      vals,
-      function(x) identical(as.character(x$sumbar), "0"),
+      valdefs,
+      function(x) isFALSE(x$sumbar),
       logical(1))
     ])
   

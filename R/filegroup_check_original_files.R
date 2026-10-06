@@ -1,6 +1,6 @@
 #' @noRd
 filegroup_check_original_files_and_spec <- function(parameters){
-  new_section_header("SJEKK AV ORIGINALFILER OG PARAMETRE")
+  khtools::header("SJEKK AV ORIGINALFILER OG PARAMETRE")
   checks <- list()
   checks[["FILER_FINNES"]] <- check_if_files_exists_and_are_readable(files = parameters$read_parameters$filepath)
   checks[["FORMAT_OK"]] <- check_if_format_is_ok(read_parameters = parameters$read_parameters)

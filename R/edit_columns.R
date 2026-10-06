@@ -69,7 +69,7 @@ do_format_cube_columns <- function(parameters){
               sprintf("sumNEVNER = %s * NEVNER", factor),
               sprintf("sumPREDTELLER = %s * PREDTELLER", factor))
   
-  nonsumvalues <- setdiff(get_value_columns(DBI::dbListFields(con, tablename)), c("RATE", "SMR"))
+  nonsumvalues <- setdiff(identify_values(DBI::dbListFields(con, tablename)), c("RATE", "SMR"))
   
   for(val in nonsumvalues){
     # PREDTELLER bruker TELLER.n for å lage årlige tall, 
@@ -212,7 +212,7 @@ add_sumvalues <- function(dt, factor){
 #' @keywords internal
 #' @noRd
 set_nonsumvalues <- function(dt){
-  values <- setdiff(get_value_columns(names(dt)), c("RATE", "SMR"))
+  values <- setdiff(identify_values(names(dt)), c("RATE", "SMR"))
   if(length(values) == 0) return(dt)
   for(val in values){
     valN = paste0(val, ".n")

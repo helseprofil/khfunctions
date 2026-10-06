@@ -35,7 +35,7 @@ expand.grid.dt <- function(...){
 #' @noRd
 set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
   khtools::msg("*** Håndterer implisitte nuller")
-  vals <- get_value_columns(names(dt))
+  vals <- identify_values(names(dt))
   
   for (val in vals) {
     if (val %in% names(implicitnull_defs)) {

@@ -75,7 +75,7 @@ add_lks_filter <- function(con) {
 sort_bef_gkny_duckdb <- function(con){
   khtools::msg("\n Sorterer befolkningsfilgruppe")
   
-  dims <- khfunctions:::get_dimension_columns(khtools::duckdb_get_columns(con, "FILGRUPPE"))
+  dims <- khfunctions:::identify_nonvalues(khtools::duckdb_get_columns(con, "FILGRUPPE"))
   sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
   sortdims <- union(sort, dims)
   sortdims_sql <- paste(sortdims, collapse = ", ")
