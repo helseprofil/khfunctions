@@ -1,6 +1,6 @@
 # PRODUCTION ----
 # 
-# update_production_folder <- function(year = getOption("khfunctions.year"), prodfolder = getOption("khfunctions.kube.prod")){
+# update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.kube.prod")){
 #   prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
 #   if(!dir.exists(prod)) dir.create(prod)
 #   arkiv <- file.path(prod, "arkiv")
@@ -40,7 +40,7 @@
 #' @export
 make_godkjent_folder <- function(profil = c("FHP", "OVP"),
                                  geoniv = c("K", "F", "B"),
-                                 year = getOption("khfunctions.year")) {
+                                 year = getOption("khfunctions.profileyear")) {
   profil <- match.arg(profil)
   geoniv <- match.arg(geoniv)
   message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)

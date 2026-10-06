@@ -13,9 +13,9 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   set_manheader_duckdb(manheader = filedescription$MANHEADER, con = parameters$duck)
   
   if(is_not_empty(filedescription$RSYNT1)){
-    do_special_handling(name = "RSYNT1", dt = NULL, dt_name = "DF", code = filedescription$RSYNT1, 
-                        parameters = parameters, duck = TRUE, tablename = "temp_orgfile", 
-                        koblid = filedescription$KOBLID, filedescription = filedescription)
+    do_special_handling(name = "RSYNT1", tablename = "temp_orgfile", dt_name = "DF", 
+                        code = filedescription$RSYNT1, 
+                        parameters = parameters, koblid = filedescription$KOBLID, filedescription = filedescription)
   }
   
   give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
@@ -24,9 +24,9 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   do_split_multihead(dt = DF, filedescription = filedescription, con = parameters$duck, tablename = "temp_orgfile")
   
   if(is_not_empty(filedescription$RSYNT2)){
-    do_special_handling(name = "RSYNT2", dt = DF, dt_name = "DF", code = filedescription$RSYNT2, 
-                        parameters = parameters, duck = TRUE, tablename = "temp_orgfile",
-                        koblid = filedescription$KOBLID)
+    do_special_handling(name = "RSYNT2", tablename = "temp_orgfile", dt_name = "DF", 
+                        code = filedescription$RSYNT2, 
+                        parameters = parameters, koblid = filedescription$KOBLID)
   }
   
   give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)

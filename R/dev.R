@@ -1,6 +1,6 @@
 SetKubeParameters <- function(cube){
   user_args <<- list(name = cube,
-                     year = getOption("khfunctions.year"),
+                     year = getOption("khfunctions.profileyear"),
                      dumps = list(),
                      write = FALSE,
                      ramlimit = NULL,

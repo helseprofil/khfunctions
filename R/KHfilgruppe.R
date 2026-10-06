@@ -42,9 +42,9 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   khtools::header("Postprosessering")
   rename_fg_value_columns_duckdb(parameters = parameters)
   set_integer_columns_duckdb(con = parameters$duck)
-  do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = NULL, dt_name = "Filgruppe", 
+  do_special_handling(name = "RSYNT_PRE_FGLAGRING", tablename = "FILGRUPPE", dt_name = "Filgruppe", 
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
-                      parameters = parameters, duck = TRUE, tablename = "FILGRUPPE")
+                      parameters = parameters)
   
   write_filegroup_output(parameters = parameters)
   

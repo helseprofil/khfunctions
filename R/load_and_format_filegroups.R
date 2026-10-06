@@ -93,8 +93,8 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   }
   
   if(!is.null(ff$ffrsynt)){
-    do_special_handling(name = "FF_RSYNT1", dt = NULL, dt_name = "Filgruppe", code = ff$ffrsynt, 
-                        parameters = parameters, duck = TRUE, tablename = filegroup)
+    do_special_handling(name = "FF_RSYNT1", tablename = filegroup, dt_name = "Filgruppe", 
+                        code = ff$ffrsynt, parameters = parameters)
   }
   
   # Spesialfunksjoner
@@ -438,7 +438,7 @@ do_rectangularize_filfiltre_duckdb <- function(con, tablename, vals = list(), pa
   
   khtools::msg("\n*** Rektangulariserer filfiltre")
   design <- find_filedesign(file = NULL, filename = tablename, parameters = parameters)
-  year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
+  year <- ifelse(is_empty(parameters$year), getOption("khfunctions.profileyear"), parameters$year)
   rect_table <- "tmp_rectangularized"
   khtools::duckdb_drop_tables(con, rect_table)
   

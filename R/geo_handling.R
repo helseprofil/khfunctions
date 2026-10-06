@@ -278,7 +278,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
   if(rectangularize){
     rectangularized <- data.table::data.table()
     design <- find_filedesign(file, parameters = parameters)
-    year <- ifelse(is_empty(parameters$year), getOption("khfunctions.year"), parameters$year)
+    year <- ifelse(is_empty(parameters$year), getOption("khfunctions.profileyear"), parameters$year)
     for (Gn in design$Part[["Gn"]][["GEOniv"]]) {
       validgeo <- data.table::data.table(GEO = parameters$GeoKoder[GEOniv == Gn & FRA <= year & TIL > year]$GEO)
       designgeo <- design$Design[HAR == 1 & GEOniv == Gn, .SD, .SDcols = intersect(names(file), names(design$Design))]

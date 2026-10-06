@@ -27,4 +27,3 @@ get_snutt_list <- function(){
 utils::globalVariables(c("HAR", "..betKols", "..kol", "keep", "..kols", "..outnames", "Bruk",
                          ".", "NOPri", "..brukcols", "..common", "..kolsomk", "..omkkols",
                          "filbesk"))
-

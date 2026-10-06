@@ -6,12 +6,12 @@
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
 #' @param ramlimit max RAM allocation for duckdb. If NULL, default value is 8GB.
 #' @param alarm if TRUE, plays a sound when done
-#' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
+#' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.profileyear")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
 #' @param qualcontrol perform initial qualcontrol of data
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.year"), dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.profileyear"), dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
@@ -72,12 +72,12 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   invisible(gc())
   
   # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
-  do_special_handling(name = "RSYNT_POSTPROSESS", dt = NULL, dt_name = "KUBE", 
+  do_special_handling(name = "RSYNT_POSTPROSESS", tablename = "KUBE", dt_name = "KUBE", 
                       code = parameters$CUBEinformation$RSYNT_POSTPROSESS, 
-                      parameters = parameters, duck = TRUE, tablename = "KUBE")
-  do_special_handling(name = "SLUTTREDIGER", dt = NULL, dt_name = "KUBE", 
+                      parameters = parameters)
+  do_special_handling(name = "SLUTTREDIGER", tablename = "KUBE", dt_name = "KUBE", 
                       code = parameters$CUBEinformation$SLUTTREDIGER, 
-                      parameters = parameters, duck = TRUE, tablename = "KUBE")
+                      parameters = parameters)
   
   add_missing_lks(parameters = parameters)
   
@@ -87,9 +87,9 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   generate_and_export_all_friskvik_indicators(parameters = parameters)
   generate_qc_table(parameters = parameters)
   generate_allvis_export_table(parameters = parameters)
-  do_special_handling(name = "ALLVISFILTER", dt = NULL, dt_name = "ALLVIS", 
+  do_special_handling(name = "ALLVISFILTER", tablename = "ALLVIS", dt_name = "ALLVIS", 
                       code = parameters$CUBEinformation$ALLVISFILTER, 
-                      parameters = parameters, duck = TRUE, tablename = "ALLVIS")
+                      parameters = parameters)
   write_cube_output(parameters = parameters)
   RESULTAT <- list(
     KUBE = khtools::duckdb_fetch_table(parameters$duck, "KUBE"),

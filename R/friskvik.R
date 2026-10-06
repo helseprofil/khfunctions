@@ -148,9 +148,9 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
 #' Lager friskvikfiler fra allerede godkjent kube
 #' @param cubename navn
 #' @param friskvik_id Kan evt spesifisere FRISVIK_ID. Dersom denne er NULL lages alle
-#' @param year friskvikår, default = getOption("khfunctions.year")
+#' @param year friskvikår, default = getOption("khfunctions.profileyear")
 #' @export
-generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id = NULL, year = getOption("khfunctions.year")){
+generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id = NULL, year = getOption("khfunctions.profileyear")){
   if(is.null(cubename)) stop("cubename kan ikke være NULL")
   overwritewarning <- paste(
     "\n** Filer overskrives om de eksisterer",

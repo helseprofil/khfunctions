@@ -3,21 +3,18 @@
 #' Do special handling of data files, either in R or STATA. 
 #' code must be provided in specific files and specified in STATA to be used at certain points in data processing. 
 #' 
-#' @param name name of RSYNT point, refer to the column, to be used for filedump names
-#' @param dt data to be processed, default is NULL as data should ideally be in duckdb
-#' @param dt_name name of data object, passed to code env
-#' @param code code to be performed, either R or STATA
-#' @param parameters global parameters
-#' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
-#' @param duck is data located in duckdb (TRUE) or in memory (FALSE)
-#' @param tablename name of table in duckdb
-#' @param filedescription filedescription object if relevant, default = NULL
-#' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameters, koblid = NULL, duck = FALSE, tablename = NULL, filedescription = NULL){
-  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)
-  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid, duck = duck, tablename = tablename)}, add = TRUE)
+#' @param name Navn på snutt-punkt. Brukes som filnavn for fildumper
+#' @param tablename navn på tabell i duckdb som skal brukes
+#' @param dt_name Navn på datasett etter innlasting til R dersom snutten er R-kode.
+#' @param code koden som skal kjøres, enten SQL, R eller STATA
+#' @param parameters globale parametre
+#' @param koblid for RSYNT-punkter på individuelle originale filer, brukes i filnavn for fildumper
+#' @param filedescription dersom relevant, default = NULL 
+do_special_handling <- function(name, tablename = NULL, dt_name = NULL, code, parameters, koblid = NULL, filedescription = NULL){
+  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = NULL, parameters = parameters, koblid = koblid, duck = TRUE, tablename = tablename)
+  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = NULL, parameters = parameters, koblid = koblid, duck = TRUE, tablename = tablename)}, add = TRUE)
   is_code <- is_not_empty(code)
-  if(!is_code) return(invisible(dt))
+  if(!is_code) return(invisible(NULL))
   invisible(gc()) # Sikre at minnet er ryddet før snutt
   con <- parameters$duck
   
@@ -25,13 +22,11 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   is_stata <- grepl("<STATA>", code)
   is_sql <- grepl("<SQL>", code)
   
-  use_duck <- isTRUE(duck) && is_not_empty(tablename)
-  if(use_duck && !khtools::duckdb_table_exists(con, tablename)){
-    stop("do_special_handling forsøker å bruke duckdb, men tabellen finnes ikke")
+  if(!khtools::duckdb_table_exists(con, tablename)){
+    stop("do_special_handling forsøker å lese fra duckdb, men tabellen finnes ikke")
   }
   
   if(is_sql){
-    if(!use_duck) stop("SQL-snutt forutsetter at man bruker duckdb")
     khtools::msg("- Starter SQL-snutt:", name)
     code <- gsub("<SQL>[ \n]*(.*)", "\\1", code)
     code <- ensure_correct_url(code, name)
@@ -50,9 +45,7 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     return(invisible(NULL))
   }
   
-  if(is.null(dt) && use_duck){
-    dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
-  }
+  dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
   
   if(is_stata){
     if(name == "RSYNT1"){
@@ -63,15 +56,13 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
     dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
     extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
     if(length(extracols) > 0) dt[, (extracols) := NULL]
-    khtools::msg("-- Ferdig i STATA")
-    if(use_duck){
-      khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
-      khtools::duckdb_clean(con = parameters$duck)
-      return(invisible(NULL))
-    }
-    return(dt)
+    khtools::msg("-- Ferdig i STATA, skriver tilbake til duckdb")
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+    khtools::duckdb_clean(con = parameters$duck)
+    return(invisible(NULL))
   }
   
+  if(is.null(dt_name)) stop("Datasettet har ikke blitt gitt et navn før snutt")
   code <- ensure_correct_url(code, name)
   khtools::msg("- Starter R-snutt:", name)
   code_env <- new.env()
@@ -89,12 +80,9 @@ do_special_handling <- function(name, dt = NULL, dt_name = NULL, code, parameter
   extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
   if(length(extracols) > 0) dt[, (extracols) := NULL]
   khtools::msg("-- R-snutt ferdig")
-  if(use_duck){
-    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
-    khtools::duckdb_clean(con = con)
-    return(invisible(NULL))
-  }
-  return(dt)
+  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+  khtools::duckdb_clean(con = con)
+  return(invisible(NULL))
 }
 
 #' @title clean_rsynt_code
