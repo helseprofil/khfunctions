@@ -37,7 +37,7 @@ add_smr_and_meis <- function(parameters){
     khtools::duckdb_drop_tables(con, "normsubset")
     khtools::duckdb_create_new_table(con, target = "normsubset", select_sql = sql_norm)
     khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
-                                 join_cols = get_common_dimension_columns(con, "KUBE", "normsubset"))
+                                 join_cols = get_duckdb_join_cols(con, "KUBE", "normsubset"))
     invisible(DBI::dbExecute(con, "UPDATE KUBE SET SMR = MEIS / LANDSNORMAL * 100.0"))
     
   } else { # Moving
@@ -63,7 +63,7 @@ add_smr_and_meis <- function(parameters){
     khtools::duckdb_drop_tables(con, "normsubset")
     khtools::duckdb_create_new_table(con, target = "normsubset",select_sql = sql_norm)
     khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
-                                 join_cols = get_common_dimension_columns(con, "KUBE", "normsubset"))
+                                 join_cols = get_duckdb_join_cols(con, "KUBE", "normsubset"))
     khtools::duckdb_ensure_columns(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
     
     smr0_expr <- if(refverdi_vp == "P") {

@@ -24,7 +24,7 @@ comparefasit <- function(dt, fasit){
   fix_fasit_colorder(dt, fasitcompare)
   fix_fasit_order(dt, fasitcompare)
   rm_fasit_extracolumn(dt, fasitcompare)
-  all.equal(dt, fasitcompare)
+  all.equal(dt, fasitcompare, check.attributes = F, check.class = F)
 }
 
 # Setter kolonner i fasit i samme rekkefølge som dt

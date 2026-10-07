@@ -12,7 +12,7 @@ add_predteller <- function(parameters){
   generate_tmp_predteller(con = con, tables = tmp_tables, parameters = parameters) # Merge sammen tmp_predrate og tmp_prednevner, og lag predteller. Kod om til kubedesign
   
   khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "tmp_predteller",
-                               join_cols = get_common_dimension_columns(con, "KUBE", "tmp_predteller"))
+                               join_cols = get_duckdb_join_cols(con, "KUBE", "tmp_predteller"))
   set_implicit_null_after_merge_duckdb(con = con, implicitnull_defs = parameters$fileinformation[[parameters$files[["TELLER"]]]]$vals, table = "KUBE")
   khtools::duckdb_clean(con = con)
   invisible(NULL)

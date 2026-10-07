@@ -57,16 +57,16 @@ merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL
                                     design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
     report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
     khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_teller,
-                                 join_cols = get_common_dimension_columns(con, tntype, tablename_teller))
+                                 join_cols = get_duckdb_join_cols(con, tntype, tablename_teller))
     if(isnevnerfil){
       khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_nevner,
-                                   join_cols = get_common_dimension_columns(con, tntype, tablename_nevner))
+                                   join_cols = get_duckdb_join_cols(con, tntype, tablename_nevner))
     }
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     khtools::msg("\n* Ferdig rektangularisert og merget", tntype)
   } else if (isnevnerfil) {
     khtools::duckdb_merge_tables(con = con, mergeto = tablename_teller, mergefrom = tablename_nevner, result = tntype,
-                                 join_cols = get_common_dimension_columns(con, tablename_teller, tablename_nevner))
+                                 join_cols = get_duckdb_join_cols(con, tablename_teller, tablename_nevner))
     set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
     khtools::msg("\n* Ferdig merget", tntype)
   } else {

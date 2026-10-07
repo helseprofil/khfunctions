@@ -17,7 +17,7 @@ write_filegroup_output <- function(parameters){
     sort_bef_gkny_duckdb(con = con)
   } 
   khtools::msg("\n Skriver:\n", parquet,"\n", datert)
-  do_write_output_duckdb(con = con, source = "FILGRUPPE", filepath = parquet, format = "parquet")
+  khtools::duckdb_save_file(con = con, source = "FILGRUPPE", filepath = parquet)
   file.copy(from = parquet, to = datert)
 }
 
@@ -87,7 +87,6 @@ sort_bef_gkny_duckdb <- function(con){
   khtools::duckdb_replace_existing_table(con, target = orgtabell, select_sql = sql)
 }
 
-
 # Kube ----
 
 #' @title generate_allvis_base
@@ -101,7 +100,7 @@ generate_allvis_base <- function(parameters){
   qcvals <- intersect(getOption("khfunctions.qcvals"), cols)
   
   qcols <- as.character(khtools::sql_quote_I(con, cols))
-  select_expr <- c(qcols, "SPVFLAGG")
+  select_expr <- c(qcols)
   
   censorvalues <- intersect(unique(c(parameters$outvalues, "MEIS")), cols)
   qcensor <- as.character(khtools::sql_quote_I(con, censorvalues))
@@ -115,24 +114,8 @@ generate_allvis_base <- function(parameters){
   select_expr <- c(select_expr, sprintf("%s AS %s", quprikk, quprikk_alias))
   
   khtools::duckdb_drop_tables(con, "ALLVIS_base")
- 
-  sql <- sprintf(
-    "CREATE TABLE ALLVIS_base AS
-    WITH base AS (
-      SELECT *,
-        CASE
-            WHEN spv_tmp IS NULL THEN 0
-            WHEN spv_tmp IN (-1, 4) THEN 3
-            WHEN spv_tmp = 9 THEN 1
-            ELSE spv_tmp
-        END AS SPVFLAGG
-      FROM KUBE
-    )
-    SELECT %s FROM base",
-    paste(select_expr, collapse = ",\n        ")
-  )
-  
-  invisible(DBI::dbExecute(con, sql))
+  sql <- sprintf("SELECT %s FROM KUBE", paste(select_expr, collapse = ",\n"))
+  khtools::duckdb_create_new_table(con, target = "ALLVIS_base", select_sql = sql)
   invisible(NULL)
 }
 
@@ -193,21 +176,21 @@ write_cube_output <- function(parameters){
   con <- parameters$duck
   # Skriv KUBE
   khtools::msg("-", datert_parquet_full)
-  do_write_output_duckdb(con, source = "KUBE", filepath = datert_parquet_full, format = "parquet")
+  khtools::duckdb_save_file(con, source = "KUBE", filepath = datert_parquet_full)
   
   # Skriv ALLVIS
   khtools::msg("-", allvis_parquet)
   allvis_source <- generate_allvis_select(parameters = parameters)
-  do_write_output_duckdb(con, source = allvis_source, filepath = allvis_parquet, format = "parquet")
+  khtools::duckdb_save_file(con, source = allvis_source, filepath = allvis_parquet)
   
   khtools::msg("-", allvis_csv)
-  do_write_output_duckdb(con, source = "ALLVIS", filepath = allvis_csv, format = "csv")
+  khtools::duckdb_save_file(con, source = "ALLVIS", filepath = allvis_csv)
   
   # Skriv QC
   khtools::msg("-", qc_parquet)
-  do_write_output_duckdb(con, source = "QC", filepath = qc_parquet, format = "parquet")
+  khtools::duckdb_save_file(con, source = "QC", filepath = qc_parquet)
   khtools::msg("-", qc_csv)
-  do_write_output_duckdb(con, source = "QC", filepath = qc_csv, format = "csv")
+  khtools::duckdb_save_file(con, source = "QC", filepath = qc_csv)
 }
 
 #' @title generate_allvis_select
@@ -227,51 +210,6 @@ generate_allvis_select <- function(parameters){
 }
 
 # MISC ----
-
-#' @title do_write_output_duckdb
-#' @description
-#' Skriver outputfiler fra duckdb som parquet eller CSV-format
-#' @param con connection
-#' @param source kildetabell eller selectuttrykk
-#' @param filepath hvor skal filen lagres
-#' @param format hvilket format, støtter parquet og csv, default er parquet
-#' @noRd
-do_write_output_duckdb <- function(con, source, filepath, format = c("parquet", "csv")){
-  
-  format <- match.arg(format)
-  if((format == "parquet" && !grepl("\\.parquet$", filepath, ignore.case = TRUE)) ||
-     (format == "csv" && !grepl("\\.csv$", filepath, ignore.case = TRUE))){
-    stop("mismatch mellom format og filsti")
-  }
-  
-  options <- switch(
-    format,
-    parquet = "
-      FORMAT PARQUET,
-      COMPRESSION ZSTD,
-      ROW_GROUP_SIZE 1000000
-    ",
-    csv = "
-      HEADER,
-      DELIMITER ';'
-    "
-  )
-  
-  invisible(
-    DBI::dbExecute(
-      con,
-      sprintf(
-        "COPY %s TO %s (%s)",
-        source,
-        khtools::sql_quote_S(con, filepath),
-        options
-      )
-    )
-  )
-  
-  invisible(NULL)
-}
-
 
 #' @title save_filedump_if_requested
 #' @description

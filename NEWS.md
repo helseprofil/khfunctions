@@ -20,32 +20,32 @@
   - `do_harmonize_geo` translated to sql, and add_fylke added as an argument
   - Aggregation to moving average moved to duckdb
   - Standardization moved to duckdb
-  - All output files generated directly in duckdb and written to disk
   - Column types explicitly set when exporting ALLVIS parquet ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
   - Clean up console messages
-  - Rsynt moved to duckdb
+  - All Rsynt-points moved to duckdb
+  - "SPVFLAGG" is set in KUBE (previously in ALLVIS), as it is needed in quality control. 
+  - Added new quality control functions ([issue173](https://github.com/helseprofil/khfunctions/issues/173))
 
 ## Other changes
-- Implemented new package `khtools` with generic functionality used throughout the system
-  - `init_duckdb` is more robust towards existing db file. It sets maximum memory limit, and designated temp folder.
-  - `prepare_tmp_result_table` and `replace_table_duckdb` implemented to avoid 'CREATE OR REPLACE X AS SELECT FROM X' and instead always write to a tmp table
-- Started using global options set in config-globals
-    - khfunctions.year -> khfunctions.profileyear
-    - khfunctions.db -> khfunctions.db_khelsa
-- Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
-- Parameter tables GeoKoder and KnrHarm written to duckdb
-- `classify_columns()` implemented for better column-classification
-    - wrappers: identify_values, identify_nonvalues, and identify_dimensions
-- `do_special_handling` 
-    - arguments dt and duck deprecated
-    - reads and write to duckdb, new argument and `tablename` and `dt_name`
-    - Data is always written to duckdb as table = `tablename`
-    - when code is R or STATA, table = `tablename` is fetched from duckdb and names `dt_name` in the code environment
-    - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb with con = `duckdb_con`)
-- `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb for faster geo recoding
-- Replaced all RODBC codes with DBI
-- graveyard2 initiated, for functions deprecated when switching to duckdb processing
-- graveyard3 initiated, for functions replaced by khtools
+  - Implemented new package `khtools` with generic functionality used throughout the system
+    - `khtools::duckdb_save_file()` exports CSV and parquet-format output directly from duckdb ([issue168](https://github.com/helseprofil/khfunctions/issues/168))
+  - Started using global options set in config-globals
+      - khfunctions.year -> khfunctions.profileyear
+      - khfunctions.db -> khfunctions.db_khelsa
+  - Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
+  - Parameter tables `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb ([issue169](https://github.com/helseprofil/khfunctions/issues/169))
+  - `classify_columns()` implemented for better column-classification
+      - wrappers: identify_values, identify_nonvalues, and identify_dimensions
+  - `do_special_handling` 
+      - arguments dt and duck deprecated
+      - reads and write to duckdb, new argument and `tablename` and `dt_name`
+      - Data is always written to duckdb as table = `tablename`
+      - when code is R or STATA, table = `tablename` is fetched from duckdb and names `dt_name` in the code environment
+      - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb with con = `duckdb_con`)
+  - `find_filedesign` now writes FULL to duckdb instead of tmp-file ([issue174](https://github.com/helseprofil/khfunctions/issues/173))
+  - Replaced all RODBC codes with DBI
+  - graveyard2 initiated, for functions deprecated when switching to duckdb processing
+  - graveyard3 initiated, for functions replaced by khtools
 
 ## Bugfix
 - LKS startaar was not running if neither bydelsstart nor DK2020 were set. ([issue175](https://github.com/helseprofil/khfunctions/issues/175))

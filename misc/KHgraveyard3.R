@@ -313,3 +313,47 @@ print_console_message <- function(...){
 new_section_header <- function(msg){
   khtools::msg("\n# --", msg, "-- #\n")
 }
+
+#' @title do_write_output_duckdb
+#' @description
+#' Skriver outputfiler fra duckdb som parquet eller CSV-format
+#' @param con connection
+#' @param source kildetabell eller selectuttrykk
+#' @param filepath hvor skal filen lagres
+#' @param format hvilket format, støtter parquet og csv, default er parquet
+#' @noRd
+do_write_output_duckdb <- function(con, source, filepath, format = c("parquet", "csv")){
+  
+  format <- match.arg(format)
+  if((format == "parquet" && !grepl("\\.parquet$", filepath, ignore.case = TRUE)) ||
+     (format == "csv" && !grepl("\\.csv$", filepath, ignore.case = TRUE))){
+    stop("mismatch mellom format og filsti")
+  }
+  
+  options <- switch(
+    format,
+    parquet = "
+      FORMAT PARQUET,
+      COMPRESSION ZSTD,
+      ROW_GROUP_SIZE 1000000
+    ",
+    csv = "
+      HEADER,
+      DELIMITER ';'
+    "
+  )
+  
+  invisible(
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "COPY %s TO %s (%s)",
+        source,
+        khtools::sql_quote_S(con, filepath),
+        options
+      )
+    )
+  )
+  
+  invisible(NULL)
+}

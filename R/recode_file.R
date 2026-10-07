@@ -184,10 +184,14 @@ fix_recode_geo_duckdb <- function(con, tablename, parameters){
 #' @family duckdb
 #' @noRd
 add_udekk_duckdb <- function(con, tablename, udekk){
+  
   if(is.null(udekk) || nrow(udekk) == 0) return(invisible(NULL))
   khtools::duckdb_write_table(con, "tmp_udekk", data = udekk)
-  on.exit(khtools::duckdb_drop_tables(con, "tmp_udekk"), add = TRUE)
-
+  on.exit(
+    khtools::duckdb_drop_tables(con, c("tmp_udekk", "tmp_udekk_keep")),
+    add = TRUE
+  )
+  
   table_cols <- khtools::duckdb_get_columns(con, tablename)
   dims <- identify_nonvalues(table_cols)
   vals <- identify_values(table_cols)
@@ -196,37 +200,41 @@ add_udekk_duckdb <- function(con, tablename, udekk){
   join_cols <- intersect(dims, udekk_cols)
   extracols <- setdiff(dims, udekk_cols)
   
-  anti_join_sql <- paste(sprintf("t.%s = u.%s", join_cols, join_cols),
-                         collapse = "\n  AND ")
+  join_sql <- paste(sprintf("t.%s = u.%s",
+      khtools::sql_quote_I(con, join_cols),
+      khtools::sql_quote_I(con, join_cols)
+    ),
+    collapse = "\n  AND "
+  )
+  
+  sql_keep <- sprintf("SELECT * FROM %s t ANTI JOIN tmp_udekk u ON %s",
+                      khtools::sql_quote_I(con, tablename), join_sql)
+  khtools::duckdb_create_new_table(con = con, target = "tmp_udekk_keep", select_sql = sql_keep)
   
   if(length(extracols) > 0){
-    extra_sql <- sprintf("(SELECT DISTINCT %s FROM %s)", paste(extracols, collapse = ", "), khtools::sql_quote_I(con, tablename))
+    extra_sql <- sprintf("(SELECT DISTINCT %s FROM tmp_udekk_keep)", 
+                         paste(khtools::sql_quote_I(con, extracols), collapse = ", "))
     newrow_from_sql <- sprintf("tmp_udekk u CROSS JOIN %s e", extra_sql)
   } else {
     newrow_from_sql <- "tmp_udekk u"
   }
   
-  value_sql <- c(sprintf("CAST(NULL AS DOUBLE) AS %s", vals),
+  value_sql <- c(sprintf("CAST(NULL AS DOUBLE) AS %s", khtools::sql_quote_I(con, vals)),
                  sprintf("9 AS %s", khtools::sql_quote_I(con, paste0(vals, ".f"))),
                  sprintf("0 AS %s", khtools::sql_quote_I(con, paste0(vals, ".a"))))
   
-  newrow_select <- c(sprintf("u.%s", udekk_cols),
-                     if(length(extracols) > 0) sprintf("e.%s", extracols),
+  newrow_select <- c(sprintf("u.%s", khtools::sql_quote_I(con, udekk_cols)),
+                     if(length(extracols) > 0) sprintf("e.%s", khtools::sql_quote_I(con, extracols)),
                      value_sql)
   
-  keep_cols <- paste(sprintf("t.%s", 
-                             khtools::sql_quote_I(con, table_cols)), 
-                     collapse = ",\n ")
-  
   sql <- sprintf(
-    "SELECT %s FROM %s t 
-    ANTI JOIN tmp_udekk u ON %s
-    UNION ALL BY NAME 
+    "SELECT * FROM tmp_udekk_keep
+    UNION ALL BY NAME
     SELECT %s FROM %s",
-    keep_cols, khtools::sql_quote_I(con, tablename), anti_join_sql, 
-    paste(newrow_select, collapse = ",\n "), newrow_from_sql)
+    paste(newrow_select, collapse = ",\n"), newrow_from_sql
+  )
   
-  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
+  khtools::duckdb_replace_existing_table(con = con, target = tablename, select_sql = sql)
   invisible(NULL)
 }
 

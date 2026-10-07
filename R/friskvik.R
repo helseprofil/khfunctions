@@ -102,13 +102,24 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
     )
   }
   
+  # Sette filsti
+  setPath <- file.path(getOption("khfunctions.root"),
+                       getOption("khfunctions.kubedir"),
+                       FriskVDir, parameters$year, "csv")
+  
+  if(!fs::dir_exists(setPath)) fs::dir_create(setPath)
+  filename <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", parameters$batchdate,".csv"))
+  msgpath <- paste0(FriskVDir, "/", parameters$year, "/csv/", basename(filename))
+  
   # Sjekke antall rader
   nrows_sql <- sprintf("SELECT COUNT(*) AS N FROM ALLVIS_base WHERE %s", where_sql)
   nrows <- DBI::dbGetQuery(con, nrows_sql)$N
   if(nrows == 0){
-    khtools::msg("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:",msgpath)
+    khtools::msg("\n!!-->> INGEN RADER I FRISKVIKFIL, IKKE GENERERT:", msgpath)
     return(invisible(NULL))
   }
+  
+  khtools::msg("-", msgpath)
   
   n_expected_rows_sql <- sprintf("SELECT COUNT(*) AS N FROM GeoKoder WHERE TYP = 'O' AND GEOniv IN (%s) AND FRA <= '%s' AND TIL > '%s'",
                                  geovals, parameters$year, parameters$year)
@@ -118,15 +129,6 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
     warning("\nFEIL I FRISKVIKFILTER som gir ", nrows, " / ", n_expected, " forventede rader, er dette riktig eller er det noe feil i friskvikfilteret?")
   }
   
-  # Skriv fil
-  setPath <- file.path(getOption("khfunctions.root"),
-                       getOption("khfunctions.kubedir"),
-                       FriskVDir, parameters$year, "csv")
-  
-  if(!fs::dir_exists(setPath)) fs::dir_create(setPath)
-  filename <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", parameters$batchdate,".csv"))
-  msgpath <- paste0("- ", FriskVDir, "/", parameters$year, "/csv/", basename(filename))
-  khtools::msg(msgpath)
   
   export_sql <- sprintf(
     "COPY (
