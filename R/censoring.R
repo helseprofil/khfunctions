@@ -5,6 +5,27 @@ set_initial_spvtmp <- function(dt){
   }
 }
 
+#' @title add_spvflagg
+#' @description
+#' Legger til eller oppdaterer SPVFLAGG i KUBE basert på spv_tmp
+#' @noRd
+set_spvflagg <- function(con){
+  
+  khtools::duckdb_ensure_columns(con, "KUBE", c(SPVFLAGG = "INTEGER"))
+  invisible(DBI::dbExecute(con,
+    "UPDATE KUBE
+    SET SPVFLAGG =
+      CASE
+        WHEN spv_tmp IS NULL THEN 0
+        WHEN spv_tmp IN (-1, 4) THEN 3
+        WHEN spv_tmp = 9 THEN 1
+        ELSE spv_tmp
+      END
+    "
+  ))
+  
+  invisible(NULL)
+}
 
 #' @title add_censorinfo_cube
 #' @description
@@ -455,48 +476,9 @@ warn_if_special_triangles <- function(alltriangles) {
   } 
 }
 
-#' @title do_remove_censored_observations
-#' @description
-#' Removes censored observations and set SPVFLAGG
-#' 
-#' Først beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
-#' Dette er unoedvendig kronglete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1. 
-#' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
-#' @keywords internal
-#' @noRd
-do_remove_censored_observations <- function(dt, outvalues, parameters){
-  data.table::set(dt, j = "SPVFLAGG", value = 0L)
-  
-  if(is_empty(parameters$Censor_type) || parameters$Censor_type == "R"){
-    check_if_spv_tmp_correct(dt, parameters)
-    dt[, SPVFLAGG := spv_tmp]
-  } else if(parameters$Censor_type == "STATA"){
-    valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
-    valF <- intersect(names(dt), valF)
-    if(length(valF) > 0){
-      dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-      dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
-                                         list(na.rm = TRUE))), .SDcols = valF] 
-      dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
-      dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
-    }
-  }
-  dt[is.na(SPVFLAGG), SPVFLAGG := 0L]
-  dt[SPVFLAGG %in% c(-1L, 4L), SPVFLAGG := 3L]
-  dt[SPVFLAGG == 9L, SPVFLAGG := 1L]
-  dt[SPVFLAGG > 0L, (outvalues) := NA]
-}
 
-#' @title check_if_spv_tmp_correct
-#' @description
-#' If spv_tmp is 0, but a .f-column is > 0, spv_tmp is corrected before being used to set SPVFLAGG. 
-#' @keywords internal
-#' @noRd
-check_if_spv_tmp_correct <- function(dt, parameters){
-  valF <- paste0(union(getOption("khfunctions.valcols"), parameters$outvalues), ".f")
-  valF <- intersect(names(dt), valF)
-  dt[spv_tmp == 0 & rowSums(dt[, .SD, .SDcols = valF]) > 0, spv_tmp := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-}
+
+
 
 #' @title do_censor_kube_stata
 #' @description
@@ -551,4 +533,3 @@ find_dims_for_stataprikk <- function(dt, parameters){
   alldims <- c(getOption("khfunctions.khtabs"), parameters$tabnames)
   alldims[alldims %in% names(dt)]
 }
-

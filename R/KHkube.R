@@ -71,7 +71,9 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   rm(dt)
   invisible(gc())
   
-  # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
+  # 7. Postprosess og sluttrediger 
+  ## - manuelle/eksterne kodesnutter
+  ## - legger til manglende LKS-rader og setter endelig SPVFLAGG
   do_special_handling(name = "RSYNT_POSTPROSESS", tablename = "KUBE", dt_name = "KUBE", 
                       code = parameters$CUBEinformation$RSYNT_POSTPROSESS, 
                       parameters = parameters)
@@ -80,6 +82,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
                       parameters = parameters)
   
   add_missing_lks(parameters = parameters)
+  set_spvflagg(con = parameters$duck)
   
   # 8. Slicing av outputfiler
   khtools::header("Genererer og eksporterer resultatfiler")
