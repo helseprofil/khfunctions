@@ -131,13 +131,12 @@ do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
   if(skjul[, .N] > 0){
     dt[skjul, dekningprikket := 1L, on = dims]
     n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
-    dt[spv_tmp == 0 & dekningprikket == 1L, (c(flags, "spv_tmp")) := 1L]
+    dt[dekningprikket == 1L & !spv_tmp %in% c(3,4), (c(flags, "spv_tmp")) := 1L] 
     khtools::msg("-", n_new, "rader skjules")
   } else {
     khtools::msg("- Ingen rader skjules")
   }
 }
-
 
 #' @title get_deletestrata
 #' @keywords internal
