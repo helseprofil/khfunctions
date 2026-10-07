@@ -10,12 +10,13 @@ r_filter_to_sql <- function(filter_expr){
 }
 
 #' @description
-#' hjelpefunksjon for å finne fellesdimensjoner for tabeller før merge
+#' hjelpefunksjon for å finne fellesdimensjoner for tabeller før merge. 
+#' Bruker alle felles ikke-verdikolonner for å inkludere f.eks. GEOniv og FYLKE i join-nøkler.
 #' @noRd
-get_common_dimension_columns <- function(con, table1, table2){
+get_duckdb_join_cols <- function(con, table1, table2){
   commoncols <- intersect(khtools::duckdb_get_columns(con, table1),
                           khtools::duckdb_get_columns(con, table2))
-  identify_dimensions(commoncols)
+  identify_nonvalues(commoncols)
 }
 
 #' @title convert_duckdb_cols_to_string
