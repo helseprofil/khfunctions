@@ -14,6 +14,7 @@ control_cube_output <- function(outputlist, parameters){
   report_n_unique_geoniv(d = unique(outputlist$KUBE[, .SD, .SDcols = c("GEOniv", "GEO")]))
   control_meis_rate(dt = outputlist$KUBE, parameters = parameters)
   control_rate_lks(dt = outputlist$KUBE, parameters = parameters)
+  control_meis_over_max(dt = outputlist$ALLVIS, parameters = parameters)
 }
 
 #' @keywords internal
@@ -208,17 +209,25 @@ check_value <- function(d, value, g, overniv, underniv){
 #' @keywords internal
 #' @noRd
 report_n_unique_geoniv <- function(d){
-  for(geoniv in c("F", "K", "B", "V")){
+  khtools::msg("* Antall unike (forventet):")
+  for(geoniv in intersect(c("F", "K", "B", "V"), unique(d$GEOniv))){
     label <- switch(geoniv,
                     "F" = "fylker",
                     "K" = "kommuner",
                     "B" = "bydeler",
                     "V" = "levekårssoner")
-    khtools::msg(paste0("\n* Antall unike ", label, ": ", unique(d[GEOniv == geoniv, length(unique(GEO))])))
+    forventet <- switch(geoniv,
+                        "F" = getOption("khfunctions.forventet")[["F"]],
+                        "K" = getOption("khfunctions.forventet")[["K"]],
+                        "B" = getOption("khfunctions.forventet")[["B"]],
+                        "V" = getOption("khfunctions.forventet")[["V"]])
+    khtools::msg(paste0("- ", label, ": ", unique(d[GEOniv == geoniv, length(unique(GEO))]),
+                        " (", forventet, ")"))
   }
   if("V" %in% unique(d$GEOniv)){
-    khtools::msg(paste0("\n* Antall kommuner/bydeler med levekårssonedata: ", 
-                                 length(sub("00$", "", collapse::funique(substr(d[GEOniv == "V", GEO], 1, 6))))
+    khtools::msg(paste0("- kommuner/bydeler med levekårssonedata: ", 
+                                 length(sub("00$", "", collapse::funique(substr(d[GEOniv == "V", GEO], 1, 6)))),
+                        " (", getOption("khfunctions.forventet")[["V_n"]], ")"
     ))
   }
 }
@@ -228,7 +237,7 @@ report_n_unique_geoniv <- function(d){
 #' @noRd
 control_meis_rate <- function(dt, parameters){
   if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
-  khtools::msg("\n\n* Sjekker forholdet mellom MEIS og RATE")
+  khtools::msg("\n* Sjekker forholdet mellom MEIS og RATE")
   cols <- c(parameters$outdimensions, "MEIS", "RATE", "SPVFLAGG")
   d <- dt[!is.na(MEIS), .SD, .SDcols = cols]
   
@@ -239,16 +248,29 @@ control_meis_rate <- function(dt, parameters){
   }
 
   d[, let(diff = round(MEIS - RATE, 2), `ratio, %` = round(100*MEIS/RATE, 2))]
-  khtools::msg("\n\n** Diff og ratio (%) på landsnivå per år:\n\n")
+  khtools::msg("\n** Diff og ratio (%) på landsnivå per år:\n\n")
   d_country <- d[GEO == 0]
   print(d_country, nrows = nrow(d_country))
   
-  khtools::msg("\n\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
+  khtools::msg("\n** 5 største (begge veier) diff og ratio (%) (ekskludert landstall):\n\n")
   d <- d[GEO != 0 & !is.nan(`ratio, %`)][order(`ratio, %`, decreasing = T)]
   if(nrow(d) <= 10){
     print(d)
   } else {
     print(d[c(1:5, seq(.N-4, .N))])
+  }
+}
+
+control_meis_over_max <- function(dt, parameters){
+  if(parameters$CUBEinformation$REFVERDI_VP != "P") return(invisible(NULL))
+  khtools::msg("\n* Sjekker om det eksisterer noen rader med MEIS > RATESKALA i ALLVIS-filen")
+  max <- parameters$CUBEinformation$RATESKALA
+  n_over <- dt[MEIS > max, .N]
+  if(n_over > 0){
+    khtools::msg("-", n_over, "rader funnet med MEIS > ", max, "\n\n")
+    print(dt[MEIS > max])
+  } else {
+    khtools::msg("- Ingen slike rader funnet, alt OK!")
   }
 }
 
