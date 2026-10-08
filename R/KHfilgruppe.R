@@ -53,6 +53,7 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
     cleanlog = cleanlog,
     codebooklog = codebooklog
   )
+  assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
   khtools::header(paste0("FILGRUPPE ", parameters$name, " er ferdig"))

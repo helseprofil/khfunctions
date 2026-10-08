@@ -241,6 +241,7 @@ build_aar_map <- function(con){
 #' Legger også til ALDERl og ALDERh
 #' @noRd
 do_clean_ALDER_duckdb <- function(con, parameters, cleanlog){
+  if(!"ALDER" %in% khtools::duckdb_get_columns(con, "FILGRUPPE")) return(invisible(NULL))
   khtools::msg("\n- Renser ALDER og legger til ALDERl/ALDERh")
   on.exit(khtools::duckdb_drop_tables(con = con, tables = "alder_map"), add = TRUE)
   
