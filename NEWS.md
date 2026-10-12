@@ -1,55 +1,62 @@
 # khfunctions (development version)
 
+- Nyheter på norsk fra nå
+
 ## LagFilgruppe
-  - Implement duckdb for LagFilgruppe
-      - Processing and stacking of original files is done in duckdb, minimizing memory requirements
-          - Non-parquet original files are read, and encoding is fixed if required, before writing to duckdb
-      - `RSYNT1` moved out of read_original file, to facilitate reading directly into duckdb instead of going via memory.
-      - Cleaning of dimension and value columns is done directly in duckdb
-      - Columns are renamed, and values are converted to integer in duckdb
-      - `RSYNT_PRE_FGLAGRING` now utilizes duckdb, meaning data doesn't need to go into memory
-      - write_filegroup_output now writes parquet files directly from duckdb
-  - Deprecate the partitioned versions of BEF_GKny, as the sorted filegroup can be filtered during reading. 
+  - Implementert duckdb-løsning for LagFilgruppe 
+      - Prosessering og stabling av originalfiler gjøres i duckdb, som minimerer minnebehov
+          - Originaliler som ikke er parquet leses inn i R og encoding fikses før filen skrives til duckdb
+          - Alle kolonner gjøres om til tekst ved innlesing
+      - Omkoding med kodebok gjøres nå i duckdb, og kodebokloggen ligger der ([issue172](https://github.com/helseprofil/khfunctions/issues/172))
+      - `RSYNT1` er flyttet ut av read_original_file, slik at parquetfiler kan leses direkte inn i duckdb
+      - Rensing, omdøping og konvertering av kolonnetyper skjer nå i duckdb
+      - `RSYNT_PRE_FGLAGRING` bruker nå duckdb, slik at filer ikke må leses inn i minnet (dersom snutt er SQL)
+      - `write_filegroup_output` skriver outputfilene direkte fra duckdb
+  - Partisjonerte versjoner av BEF_GKny er utfaset, siden det går raskt å filtrere en sortert filgruppe direkte ved innlesing. 
 
 ## LagKUBE
-  - Deprecated BUFFER, as files now are stored in duckdb and not in memory
-  - `load_and_format_files()` now reads filegroups directly into duckdb for further processing
-      - Everything moved into one pipeline, with filefilter-functions included only when needed
-      - Formatting and filefilter functionality moved to duckdb
-      - Ensures integer columns when reading
-  - `do_harmonize_geo` translated to sql, and add_fylke added as an argument
-  - Aggregation to moving average moved to duckdb
-  - Standardization moved to duckdb
-  - Column types explicitly set when exporting ALLVIS parquet ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
-  - Clean up console messages
-  - All Rsynt-points moved to duckdb
-  - "SPVFLAGG" is set in KUBE (previously in ALLVIS), as it is needed in quality control. 
+  - `load_and_format_files()` leser filgruppene direkte inn i duckdb
+      - All innlesing er nå lagt i en felles gren (tidligere flere grener avhengig av type fil og om det var satt opp filfiltre)
+      - All formattering skjer i duckdb
+      - Sikrer at kolonner som skal leses som integer får riktig format
+  - `do_harmonize_geo` er oversatt til sql og kjøres i duckdb, med add_fylke som valgfritt argument
+  - Aggregering og standardisering oversatt til sql og gjøres i duckdb. 
+  - Prikking: spv_tmp = 2 (stort sett ved nevner = 0) holdes ikke utenfor personvernprikking lenger ([issue178](https://github.com/helseprofil/khfunctions/issues/178))
+  # - Coverage B/V: Coverage for LKS checked towards kommune, not bydel. ([issue177](https://github.com/helseprofil/khfunctions/issues/177))
   - Added new quality control functions ([issue173](https://github.com/helseprofil/khfunctions/issues/173))
+    - "SPVFLAGG" blir nå satt i KUBE (tidligere i ALLVIS) for å være tilgjengelig for kvalitetskontroll
+  - Outputfiler skrives direkte fra duckdb
+      - Kolonnetyper blir satt eksplisitt ved eksportering av ALLVISfil ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
+  - BUFFER er utfaset
+  - Clean up console messages
+  - Alle Rsynt-punkter er flyttet til duckdb
 
 ## Other changes
-  - Implemented new package `khtools` with generic functionality used throughout the system
-    - `khtools::duckdb_save_file()` exports CSV and parquet-format output directly from duckdb ([issue168](https://github.com/helseprofil/khfunctions/issues/168))
-  - Started using global options set in config-globals
-      - khfunctions.year -> khfunctions.profileyear
-      - khfunctions.db -> khfunctions.db_khelsa
-  - Filename and batchdate dropped from duckdb name, to avoid accumulating files locally
-  - Parameter tables `KnrHarm`, `GeoKoder`, and `LKS_STARTAAR` tables written into duckdb ([issue169](https://github.com/helseprofil/khfunctions/issues/169))
-  - `classify_columns()` implemented for better column-classification
-      - wrappers: identify_values, identify_nonvalues, and identify_dimensions
+  - Implementert ny pakke `khtools` med generisk funksjonalitet brukt på tvers av produksjonsapparatet
+    - Tilkobling og generelle databasefunksjoner (`duckdb_FUNKSJONSNAVN`)
+    - `duckdb_save_file()` eksporterer csv/parquet direkte fra duckdb ([issue168](https://github.com/helseprofil/khfunctions/issues/168))
+    - Konsollmeldinger renset ved hjelp av `msg()` og `header()`
+    - config-globals inneholder globale defaultinnstillinger brukt på tvers av systemet, men som leses inn og dermed kan endres pakkevis
+    - khtools har egne options som skal brukes på tvers, men som ikke endres. Disse brukes som "khtools.optionsnavn"
+  - Filnavn og batchdato droppet fra duckdbnavnet for å unngå akkumulering av db-filer lokalt
+  - Parametertabeller som `KnrHarm`, `GeoKoder` og `LKS_STARTAAR` leses direkte inn i duckdb ([issue169](https://github.com/helseprofil/khfunctions/issues/169))
+  - `classify_columns()` implementert for å klassifisere kolonner som dimensjoner/verdier/hjelpekolonner 
+      - wrappere: identify_values, identify_nonvalues, and identify_dimensions
   - `do_special_handling` 
-      - arguments dt and duck deprecated
-      - reads and write to duckdb, new argument and `tablename` and `dt_name`
-      - Data is always written to duckdb as table = `tablename`
-      - when code is R or STATA, table = `tablename` is fetched from duckdb and names `dt_name` in the code environment
-      - handles SQL code as input, prefixed with <SQL> (works directly on table = `tablename` in duckdb with con = `duckdb_con`)
-  - `find_filedesign` now writes FULL to duckdb instead of tmp-file ([issue174](https://github.com/helseprofil/khfunctions/issues/173))
-  - Replaced all RODBC codes with DBI
-  - graveyard2 initiated, for functions deprecated when switching to duckdb processing
-  - graveyard3 initiated, for functions replaced by khtools
+      - Argumentene dt og duck utfaset, da denne bare kjører med duckdb fra nå.
+      - Leser og skriver til duckdb, med argumentenbe `tablename` og `dt_name` som definerer tabell i duckdb og tabellnavn i kodemiljøet
+        - For R or STATA, table = `tablename` hentes fra duckdb og lagret som data.table objekt `dt_name` i kodemiljøet
+      - Data skrives alltid tilbake til duckdb som tabell = `tablename`
+      - Kan motta SQL-spørringer som input. Da må accessfeltet merkes med `<SQL>` (jobber direkte på tabell = `tablename` i duckdb med con = `duckdb_con`)
+  - `find_filedesign` skriver til duckdb i stedet for å bruke tmp-fil ([issue174](https://github.com/helseprofil/khfunctions/issues/173))
+  - Mer informative feilmeldinger
+  - All RODBC-kode erstattet med DBI
+  - graveyard2 opprettet, for funksjoner som ikke lenger brukes etter overgang til duckdb
+  - graveyard3 opprettet, for funksjoner erstattet av khtools
 
 ## Bugfix
-- LKS startaar was not running if neither bydelsstart nor DK2020 were set. ([issue175](https://github.com/helseprofil/khfunctions/issues/175))
-- Fixed typo in `save_filedump_if_requested` which did not work for csv output.
+- LKS startår gjorde ingenting ikke dersom bydelsstart eller DK2020 ikke var satt opp ([issue175](https://github.com/helseprofil/khfunctions/issues/175))
+- Fikset skrivefeil i `save_filedump_if_requested` som ikke fungerte for csv-output.
 
 # khfunctions 1.2.7 (2026-08-10)
 

@@ -142,7 +142,7 @@ generate_qc_table <- function(parameters){
   
   con <- parameters$duck
   qcvals <- intersect(getOption("khfunctions.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
-  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
+  prikkvals <- intersect(getOption("khtools.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
   
   cols <- unique(c(
     parameters$outdimensions,

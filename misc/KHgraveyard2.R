@@ -83,7 +83,7 @@ remove_helper_columns <- function(dt){
 #' @description
 #' Initiates log for filegroup cleaning
 #' @noRd
-initiate_cleanlog <- function(dt, codebooklog, parameters){
+initiate_cleanlog_old <- function(dt, codebooklog, parameters){
   log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
   n_rows <- dt[, .(N_rows = .N), by = KOBLID]
   log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)

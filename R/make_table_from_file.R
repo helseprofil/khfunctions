@@ -35,11 +35,9 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   drop_unwanted_columns_duckdb(con = con)
   convert_na_to_empty_duckdb(con = con)
   invisible(DBI::dbExecute(con, paste0("ALTER TABLE temp_orgfile ADD COLUMN KOBLID VARCHAR DEFAULT ", filedescription$KOBLID)))
-  # recode_columns_with_codebook(dt = DF, filedescription = filedescription, parameters = parameters, codebooklog = codebooklog, dumps = dumps)
   recode_columns_with_codebook(filedescription = filedescription, parameters = parameters)
-  do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
-  do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
-  do_recode_soner_4_db(filedescription = filedescription, con = con)
+  do_recode_tknr(tknr = filedescription$TKNR, parameters = parameters)
+  do_recode_soner_4(filedescription = filedescription, con = con)
   append_temp_orgfil_to_filgruppe(con = con)
 }
 

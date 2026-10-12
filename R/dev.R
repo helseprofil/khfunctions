@@ -21,6 +21,7 @@ SetFilgruppeParameters <- function(filgruppenavn){
 
 comparefasit <- function(dt, fasit){
   fasitcompare <- data.table::copy(fasit)
+  fix_fasit_coltypes(dt, fasitcompare)
   fix_fasit_colorder(dt, fasitcompare)
   fix_fasit_order(dt, fasitcompare)
   rm_fasit_extracolumn(dt, fasitcompare)
@@ -28,22 +29,33 @@ comparefasit <- function(dt, fasit){
 }
 
 # Setter kolonner i fasit i samme rekkefølge som dt
-fix_fasit_colorder <- function(dt, fasit){
-  data.table::setcolorder(fasit, names(dt))
+fix_fasit_colorder <- function(dt, comp){
+  data.table::setcolorder(comp, names(dt))
+}
+
+fix_fasit_coltypes <- function(dt, comp){
+  common_cols <- intersect(names(dt), names(comp))
+  for(col in common_cols){
+    data.table::set(
+      comp,
+      j = col,
+      value = methods::as(comp[[col]], class(dt[[col]])[1])
+    )
+  }
 }
 
 # Setter samme rekkefølge i dt og fasit for sammenligning
-fix_fasit_order <- function(dt, fasit){
+fix_fasit_order <- function(dt, comp){
   keyvar <- identify_dimensions(names(dt))
   data.table::setkeyv(dt, keyvar)
-  data.table::setkeyv(fasit, keyvar)
+  data.table::setkeyv(comp, keyvar)
 }
 
-rm_fasit_extracolumn <- function(dt, fasit){
-  extracol <- setdiff(names(fasit), names(dt))
+rm_fasit_extracolumn <- function(dt, comp){
+  extracol <- setdiff(names(comp), names(dt))
   if(length(extracol)){
     warning(paste("Sletter ekstrakolonner i fasit:", paste(extracol, collapse = ", ")))
-    fasit[, extracol := NULL]
+    comp[, names(.SD) := NULL, .SDcols = extracol]
   }
 }
 

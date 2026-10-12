@@ -35,18 +35,21 @@ classify_columns <- function(columnnames){
 }
 
 identify_dimensions <- function(columnnames){
-  classify_columns(columnnames)$dims
+  x <- classify_columns(columnnames)
+  intersect(columnnames, x$dims)
 }
 
 identify_values <- function(columnnames, helpers = FALSE){
   x <- classify_columns(columnnames)
-  if(!helpers) return(x$vals)
-  c(x$vals, x$vals_helpers)
+  keep <- x$vals
+  if(helpers) keep <- c(keep, x$vals_helpers)
+  intersect(columnnames, keep)
 }
 
 identify_nonvalues <- function(columnnames){
   x <- classify_columns(columnnames)
-  c(x$dims, x$misc)
+  keep <- c(x$dims, x$misc)
+  intersect(columnnames, keep)
 }
 
 #' @title fix_befgk_spelling

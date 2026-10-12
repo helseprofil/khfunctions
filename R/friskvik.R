@@ -73,7 +73,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   
   where_sql <- paste(where, collapse = " AND ")
   
-  select_cols <- c(getOption("khfunctions.profiltabs"), getOption("khfunctions.profilvals"))
+  select_cols <- c(getOption("khtools.friskvik.tabs"), getOption("khtools.friskvik.vals"))
   available_cols <- DBI::dbListFields(con, "ALLVIS_base")
   missing_cols <- setdiff(select_cols, available_cols)
   
@@ -81,7 +81,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
     function(x){ 
       if(x %in% available_cols){ 
         x
-      } else if(x %in% getOption("khfunctions.profiltabs")){
+      } else if(x %in% getOption("khtools.friskvik.tabs")){
         sprintf("CAST(NULL AS VARCHAR) AS %s", x)
       } else {
         sprintf("CAST(NULL AS DOUBLE) AS %s", x)
@@ -94,11 +94,11 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   if(is_not_empty(FVdscr$ALTERNATIV_MALTALL)){
     altcol <- FVdscr$ALTERNATIV_MALTALL
     select_expr <- c(
-      getOption("khfunctions.profiltabs"),
+      getOption("khtools.friskvik.tabs"),
       sprintf("%s AS MALTALL", altcol),
       sprintf(
         "CAST(NULL AS DOUBLE) AS %s",
-        setdiff(getOption("khfunctions.profilvals"), "MALTALL"))
+        setdiff(getOption("khtools.friskvik.vals"), "MALTALL"))
     )
   }
   

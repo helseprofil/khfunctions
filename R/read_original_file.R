@@ -10,15 +10,17 @@
 read_original_file <- function(filedescription, parameters, dumps = list()){
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   outtable <- "temp_orgfile"
+  con <- parameters$duck
   switch(toupper(filedescription$FORMAT),
-         "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = parameters$duck, outtable = outtable),
-         "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
-         "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
-         "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = parameters$duck, outtable = outtable),
-         "SPSS" = do_read_org_spss(filedescription = filedescription, con = parameters$duck, outtable = outtable))
+         "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = con, outtable = outtable),
+         "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = con, outtable = outtable),
+         "XLSX" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = con, outtable = outtable),
+         "CSV" = do_read_org_csv(filedescription = filedescription, read_arg_list = read_arg_list, con = con, outtable = outtable),
+         "SPSS" = do_read_org_spss(filedescription = filedescription, con = con, outtable = outtable))
   
-  invisible(DBI::dbExecute(parameters$duck, sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS LEVEL", outtable)))
-  khtools::msg("- Originalfil lest inn")
+  invisible(DBI::dbExecute(con, sprintf("ALTER TABLE %s DROP COLUMN IF EXISTS LEVEL", outtable)))
+  convert_duckdb_cols_to_string(con = con, tablename = "temp_orgfile")
+  khtools::msg("- Originalfil lest inn og alle kolonner konvertert til string")
   invisible(NULL)
 }
 

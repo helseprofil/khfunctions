@@ -36,7 +36,7 @@ set_spvflagg <- function(con){
 add_censorinfo_cube <- function(con, tablename){
   allcols <- khtools::duckdb_get_columns(con, tablename)
   if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
-  censorcolumns <- khtools::sql_quote_I(con, c(getOption("khfunctions.prikkeinfo"), "spv_tmp"))
+  censorcolumns <- khtools::sql_quote_I(con, c(getOption("khtools.prikkeinfo"), "spv_tmp"))
   tbl_sql <- khtools::sql_quote_I(con, tablename)
   addcols <- sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s INTEGER DEFAULT 0", tbl_sql, censorcolumns)
   sql_censor <- paste(addcols, collapse = ";\n")
@@ -146,13 +146,13 @@ do_censor_primary <- function(dt, limits){
   khtools::msg("** Primærprikking:")
   if(is_not_empty(limits$TELLER)){
     khtools::msg("*** Teller og teller-nevner <=", limits$TELLER)
-    idx <- which(dt[["spv_tmp"]] == 0 & 
+    idx <- which(dt[["spv_tmp"]] != 9 & 
                    (dt[["sumTELLER"]] <= limits$TELLER | dt[["sumNEVNER"]] - dt[["sumTELLER"]] <= limits$TELLER))
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
   if(is_not_empty(limits$NEVNER)){
     khtools::msg("*** Nevner <=", limits$NEVNER)
-    idx <- which(dt[["spv_tmp"]] == 0 & dt[["sumNEVNER"]] <= limits$NEVNER)
+    idx <- which(dt[["spv_tmp"]] != 9 & dt[["sumNEVNER"]] <= limits$NEVNER)
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
   khtools::msg("- Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
@@ -181,7 +181,7 @@ do_censor_serie <- function(dt, limits, dims){
   # Kan holde spv_tmp == 9 utenfor her
   dt[, let(propweak = mean(weak, na.rm = T), propprimary = mean(orgprikket, na.rm = T)), by = seriedims]
   
-  idx <- which(dt[["spv_tmp"]] == 0 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
+  idx <- which(dt[["spv_tmp"]] != 9 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
   data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
   khtools::msg("\n** Serieprikker dersom tidsserien har:\n*** Andel personvernprikker >", primary_limit, 
              "\n*** Andel sumTELLER <=", limits$STATTOL, ">", weak_limit)
