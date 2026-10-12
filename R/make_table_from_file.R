@@ -4,13 +4,13 @@
 make_table_from_original_file <- function(file_number, codebooklog, parameters){
   dumps = parameters$dumps
   report_filegroup_progress(file_number = file_number, parameters = parameters)
-  clean_tempfiles(con = parameters$duck)
+  con <- parameters$duck
+  clean_tempfiles(con = con)
   
   filedescription <- parameters$read_parameters[file_number]
   filecolumns <- identify_columns_in_file(filedescription = filedescription)
   read_original_file(filedescription = filedescription, parameters = parameters, dumps = dumps)
-  convert_duckdb_cols_to_string(con = parameters$duck, table_name = "temp_orgfile")
-  set_manheader_duckdb(manheader = filedescription$MANHEADER, con = parameters$duck)
+  set_manheader_duckdb(manheader = filedescription$MANHEADER, con = con)
   
   if(is_not_empty(filedescription$RSYNT1)){
     do_special_handling(name = "RSYNT1", tablename = "temp_orgfile", dt_name = "DF", 
@@ -18,10 +18,10 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
                         parameters = parameters, koblid = filedescription$KOBLID, filedescription = filedescription)
   }
   
-  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
-  do_handle_kastkols_duckdb(kastkols = filedescription$KASTKOLS, con = parameters$duck)  
-  do_reshape_var_duckdb(filedescription = filedescription, con = parameters$duck)
-  do_split_multihead(dt = DF, filedescription = filedescription, con = parameters$duck, tablename = "temp_orgfile")
+  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = con)
+  do_handle_kastkols_duckdb(kastkols = filedescription$KASTKOLS, con = con)  
+  do_reshape_var_duckdb(filedescription = filedescription, con = con)
+  do_split_multihead(dt = DF, filedescription = filedescription, con = con, tablename = "temp_orgfile")
   
   if(is_not_empty(filedescription$RSYNT2)){
     do_special_handling(name = "RSYNT2", tablename = "temp_orgfile", dt_name = "DF", 
@@ -29,17 +29,18 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
                         parameters = parameters, koblid = filedescription$KOBLID)
   }
   
-  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = parameters$duck)
-  do_set_default_values_duckdb(filedescription = filedescription, defaultcolumns = filecolumns$default, con = parameters$duck)
-  check_if_all_columns_exist(filecolumns = filecolumns, con = parameters$duck)
-  drop_unwanted_columns_duckdb(con = parameters$duck)
-  convert_na_to_empty_duckdb(con = parameters$duck)
-  invisible(DBI::dbExecute(parameters$duck, paste0("ALTER TABLE temp_orgfile ADD COLUMN KOBLID VARCHAR DEFAULT ", filedescription$KOBLID)))
-  recode_columns_with_codebook(dt = DF, filedescription = filedescription, parameters = parameters, codebooklog = codebooklog, dumps = dumps)
+  give_columns_default_names_duckdb(filedescription = filedescription, defcolumns = filecolumns$have, con = con)
+  do_set_default_values_duckdb(filedescription = filedescription, defaultcolumns = filecolumns$default, con = con)
+  check_if_all_columns_exist(filecolumns = filecolumns, con = con)
+  drop_unwanted_columns_duckdb(con = con)
+  convert_na_to_empty_duckdb(con = con)
+  invisible(DBI::dbExecute(con, paste0("ALTER TABLE temp_orgfile ADD COLUMN KOBLID VARCHAR DEFAULT ", filedescription$KOBLID)))
+  # recode_columns_with_codebook(dt = DF, filedescription = filedescription, parameters = parameters, codebooklog = codebooklog, dumps = dumps)
+  recode_columns_with_codebook(filedescription = filedescription, parameters = parameters)
   do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
-  do_recode_soner_4_db(filedescription = filedescription, con = parameters$duck)
-  
-  append_temp_orgfil_to_filgruppe(con = parameters$duck)
+  do_recode_tknr_db(tknr = filedescription$TKNR, parameters = parameters)
+  do_recode_soner_4_db(filedescription = filedescription, con = con)
+  append_temp_orgfil_to_filgruppe(con = con)
 }
 
 # Process file DUCKDB ----
@@ -170,8 +171,16 @@ do_reshape_var_duckdb <- function(filedescription, con){
       cols$val, matchcol, matchcol))
   }
 
-  if(!is.null(cols$id) && !all(cols$id %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet")
-  if(!is.null(cols$measure) && !all(cols$measure %in% allcols)) stop("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet")
+  if(!is.null(cols$id) && !all(cols$id %in% allcols)){
+    stop(paste0("Feil i RESHAPE: Kolonner angitt i RESHAPEid ikke funnet, her er kolonnelisten som går inn i reshape:\n\n",
+                paste(capture.output(str(cols)), collapse = "\n"),
+                "\n\nKolonner i filen:\n", paste("- ", allcols, collapse = ",\n")))
+  }
+  if(!is.null(cols$measure) && !all(cols$measure %in% allcols)){
+    stop(paste0("Feil i RESHAPE: Kolonner angitt i RESHAPEmeas ikke funnet, her er kolonnelisten som går inn i reshape:\n\n",
+               paste(capture.output(str(cols)), collapse = "\n"),
+                     "\n\nKolonner i filen:\n", paste("- ", allcols, collapse = ",\n")))
+  }
   if(length(cols$measure) == 0) stop("Feil i RESHAPE: Både RESHAPEid og RESHAPEmeas er tomme")
   
   measure_sql <- paste(khtools::sql_quote_I(con, cols$measure), collapse = ", ")
