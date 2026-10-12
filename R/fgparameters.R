@@ -21,6 +21,8 @@ get_filegroup_parameters <- function(user_args){
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  create_codebooklog_tables(con = parameters$duck)
+  
   return(parameters)
 }
 
