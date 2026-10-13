@@ -26,7 +26,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   # 1. Laste inn filer og oppdatere parametre
-  load_and_format_filegroups_to_duckdb(parameters = parameters)
+  load_and_format_filegroups(parameters = parameters)
   parameters <- get_filedesign(parameters = parameters)
   parameters <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
@@ -65,8 +65,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   # - Dette skjer i R fortsatt, kan oversettes på et senere tidspunkt
   dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = "KUBE")
   dt <- do_censor_cube(dt = dt, parameters = parameters)
-  do_handle_coverage(dt = dt, geolevel = "B", parameters = parameters)
-  do_handle_coverage(dt = dt, geolevel = "V", parameters = parameters)
+  do_handle_coverage_bydel_lks(dt = dt, parameters = parameters)
   khtools::duckdb_write_and_replace_table_from_R(con = parameters$duck, tablename = "KUBE", data = dt)
   rm(dt)
   invisible(gc())
