@@ -70,7 +70,7 @@ fg_get_all_read_args <- function(globs = get_global_parameters()){
   out <- collapse::join(out, innlesing, how = "i", on = c("FILGRUPPE", "DELID"), overid = 2, verbose = 0)
   out <- out[, .SD, .SDcols = outcols]
   out[, let(FILNAVN = gsub("\\\\", "/", FILNAVN))]
-  out[, let(filepath = file.path(getOption("khfunctions.root"), FILNAVN), FORMAT = toupper(FORMAT))]
+  out[, let(filepath = file.path(getOption("khtools.root"), FILNAVN), FORMAT = toupper(FORMAT))]
   out[AAR == "<$y>", let(AAR = paste0("<", DEFAAR, ">"))]
   return(out)
 }

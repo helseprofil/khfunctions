@@ -20,7 +20,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
-  parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), 
+  parameters[["loggpath"]] <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), 
                                         getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
   if(parameters$write) sink(file = parameters$loggpath, split = TRUE)
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below

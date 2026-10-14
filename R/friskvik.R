@@ -103,7 +103,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   }
   
   # Sette filsti
-  setPath <- file.path(getOption("khfunctions.root"),
+  setPath <- file.path(getOption("khtools.root"),
                        getOption("khfunctions.kubedir"),
                        FriskVDir, parameters$year, "csv")
   
@@ -199,7 +199,7 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
                         paste0("\n- INDIKATOR: ",names, ", ID: ", ids), overwritewarning)
   
   cube_name <- sprintf("%s_%s.parquet", valid_cube$KUBE_NAVN, valid_cube$DATOTAG_KUBE)
-  kubepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.dat"), "R", cube_name)
+  kubepath <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.dat"), "R", cube_name)
   
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
   

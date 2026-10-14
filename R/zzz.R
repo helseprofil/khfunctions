@@ -11,8 +11,8 @@
 }
 
 check_connection_folders <- function(){
-  if(!dir.exists(getOption("khfunctions.root"))) stop(paste0(getOption("khfunctions.root"), " ikke funnet, Har du tilgang til O:/?"))
-  if(!file.exists(file.path(getOption("khfunctions.root"), getOption("khfunctions.db")))) stop(getOption("khfunctions.db"), " ikke funnet i ", getOption("khfunctions.root"))
+  if(!dir.exists(getOption("khtools.root"))) stop(paste0(getOption("khtools.root"), " ikke funnet, Har du tilgang til O:/?"))
+  if(!file.exists(file.path(getOption("khtools.root"), getOption("khfunctions.db")))) stop(getOption("khfunctions.db"), " ikke funnet i ", getOption("khtools.root"))
   invisible(NULL)
 }
 

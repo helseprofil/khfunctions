@@ -29,10 +29,10 @@ check_if_files_exists_and_are_readable <- function(files){
   not_readable <- character()
   for(file in files){
     if(file.access(file, mode = 0) != 0){
-      # not_exist <- c(not_exist, sub(getOption("khfunctions.root"), "", file))
+      # not_exist <- c(not_exist, sub(getOption("khtools.root"), "", file))
       not_exist <- c(not_exist, file)
     } else if(file.access(file, mode = 4) != 0){
-      # not_readable <- c(not_readable, sub(getOption("khfunctions.root"), "", file))
+      # not_readable <- c(not_readable, sub(getOption("khtools.root"), "", file))
       not_readable <- c(not_readable, file)
     }
   }
@@ -41,7 +41,7 @@ check_if_files_exists_and_are_readable <- function(files){
     return(invisible(NULL))
   } 
   msg <- character()
-  info <- paste0("- !! OBS !! Du skal bare angi filbanen etter: '", getOption("khfunctions.root"), "/'")
+  info <- paste0("- !! OBS !! Du skal bare angi filbanen etter: '", getOption("khtools.root"), "/'")
   if(length(not_exist) > 0) msg <- paste0(msg, "\n** Følgende fil(er) eksisterer ikke:\n", paste(" - ", not_exist, collapse = "\n"), info)
   if(length(not_readable) > 0) msg <- paste0(msg,"\n** Følgende fil(er) eksisterer men kan ikke leses:\n", paste(" - ", not_readable, collapse = "\n"))
   return(msg)

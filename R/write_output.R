@@ -8,7 +8,7 @@
 write_filegroup_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   khtools::msg("\n\n* SAVING OUTPUT FILES:\n")
-  root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
+  root <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"))
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
   con <- parameters$duck
@@ -24,13 +24,13 @@ write_filegroup_output <- function(parameters){
 #' @title write_codebooklog
 #' @keywords internal
 #' @noRd
-write_codebooklog <- function(log, parameters){
+write_codebooklog <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
-  log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "TYPE", "ORG", "OMK", "FREQ"))]
   khtools::msg("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
-  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  path <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
+  log <- khtools::duckdb_fetch_table(parameters$duck, "codebooklog")
   data.table::fwrite(log, file = file.path(path, name), sep = ";", bom = T)
 }
 
@@ -40,7 +40,7 @@ write_codebooklog <- function(log, parameters){
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
   khtools::msg("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
-  path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  path <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
   data.table::fwrite(log, file = file.path(path, name), sep = ";", bom = T)
@@ -165,7 +165,7 @@ generate_qc_table <- function(parameters){
 #' @noRd
 write_cube_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
-  basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
+  basepath <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"))
   name <- parameters$name
   datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
   allvis_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
@@ -245,7 +245,7 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
   if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
   if(is.null(dt) && (isFALSE(duck) | is.null(tablename))) stop("Filedump requested, but data not provided or in duckdb")
   format <- parameters$dumps[[dumpname]]
-  dumpdir <- file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"))
+  dumpdir <- file.path(getOption("khtools.root"), getOption("khfunctions.dumpdir"))
   filename <- paste0(parameters$name, "_", dumpname)
   if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
   
@@ -292,7 +292,7 @@ write_access_specs <- function(parameters){
     }
   }
   
-  file <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
+  file <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
   data.table::fwrite(specs, file = file, sep = ";")
 }
 

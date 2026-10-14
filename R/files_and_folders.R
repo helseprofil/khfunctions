@@ -1,7 +1,7 @@
 # PRODUCTION ----
 # 
 # update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.kube.prod")){
-#   prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
+#   prod <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), prodfolder)
 #   if(!dir.exists(prod)) dir.create(prod)
 #   arkiv <- file.path(prod, "arkiv")
 #   if(!dir.exists(arkiv)) dir.create(arkiv)
@@ -118,7 +118,7 @@ godkjent_summary_msg <- function(friskvik, alle){
 #' @noRd
 get_godkjent_paths <- function(profil, geoniv, year){
   batchdate <- SettKHBatchDate()
-  base <- file.path(getOption("khfunctions.root"),
+  base <- file.path(getOption("khtools.root"),
                     getOption("khfunctions.kubedir"),
                     getOption(paste0("khfunctions.", tolower(profil), geoniv)),
                     year)

@@ -46,7 +46,7 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   isbef <- grepl("^BEF_GKny$", orgfile, ignore.case = TRUE)
   islks <- "V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))
   
-  orgfilepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
+  orgfilepath <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.ny"), paste0(orgfile, ".parquet"))
   if(!file.exists(orgfilepath)) stop("Finner ikke filgruppe: ", orgfile, " i STABLAORG/R/NYESTE.")
   allcols <- DBI::dbGetQuery(con, sprintf("DESCRIBE SELECT * FROM read_parquet(%s)", khtools::sql_quote_S(con, orgfilepath)))$column_name
   

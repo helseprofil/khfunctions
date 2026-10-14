@@ -81,7 +81,7 @@ do_censor_cube <- function(dt, parameters){
     vals <- identify_values(names(dt))
     idx <- which(dt[["spv_tmp"]] == 9)
     data.table::set(dt, i = idx, j = vals, value = NA)
-    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
+    dims <- find_dims_for_stataprikk(dt = dt, parameters = parameters)
     save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims)
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
@@ -490,7 +490,7 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @keywords internal
 #' @noRd
 do_censor_kube_stata <- function(dt, parameters){
-  sfile <- file.path(getOption("khfunctions.root"), getOption("khfunctions.stataprikkfile"))
+  sfile <- file.path(getOption("khtools.root"), getOption("khfunctions.stataprikkfile"))
   script <- paste0('include "', sfile, '"')
   dt <- do_stata_processing(dt = dt, script = script, parameters = parameters)
   return(dt)

@@ -96,7 +96,7 @@ get_read_parameters <- function(parameters){
   out <- collapse::join(out, innlesing, how = "i", on = c("FILGRUPPE", "DELID"), overid = 2, verbose = 0)
   out <- out[, .SD, .SDcols = outcols]
   out[, let(FILNAVN = fix_befgk_spelling(gsub("\\\\", "/", FILNAVN)))]
-  out[, let(filepath = file.path(getOption("khfunctions.root"), FILNAVN), FORMAT = toupper(FORMAT))]
+  out[, let(filepath = file.path(getOption("khtools.root"), FILNAVN), FORMAT = toupper(FORMAT))]
   out[AAR == "<$y>", let(AAR = paste0("<", DEFAAR, ">"))]
   return(out)
 }
