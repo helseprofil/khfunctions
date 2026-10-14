@@ -25,7 +25,7 @@ add_predteller <- function(parameters){
 #' @keywords internal
 #' @noRd
 find_common_standard_teller_nevner_prednevner_design <- function(parameters){
-  khtools::msg("* Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER\n")
+  khtools::msg("* Finner felles design for STANDARDTELLER, STANDARDNEVNER og PREDNEVNER")
   
   STdesign <- find_design_after_filter(file = "STANDARDTELLER", parameters = parameters)
   if ("STANDARDNEVNER" %in% names(parameters$files)) {

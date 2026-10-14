@@ -15,7 +15,6 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   
   user_args = as.list(environment())
   parameters <- get_filegroup_parameters(user_args = user_args)
-  con = parameters$duck
   # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
   if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
@@ -30,11 +29,11 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
       make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     }
   }
-  clean_tempfiles(con = con)
-  khtools::duckdb_clean(con = con)
+  clean_tempfiles(con = parameters$duck)
+  khtools::duckdb_clean(con = parameters$duck)
   khtools::msg("\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
-  cleanlog <- initiate_cleanlog(parameters = parameters)
+  cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
   clean_filegroup_dimensions_duckdb(parameters = parameters, cleanlog = cleanlog)
   clean_filegroup_values_duckdb(parameters = parameters, cleanlog = cleanlog)
   
@@ -42,17 +41,18 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
 
   khtools::header("Postprosessering")
   rename_fg_value_columns_duckdb(parameters = parameters)
-  set_integer_columns_duckdb(con = con)
+  set_integer_columns_duckdb(con = parameters$duck)
   do_special_handling(name = "RSYNT_PRE_FGLAGRING", tablename = "FILGRUPPE", dt_name = "Filgruppe", 
                       code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
                       parameters = parameters)
   
+  khtools::header("Samler (og eksporterer) resultatfiler")
   write_filegroup_output(parameters = parameters)
   
   RESULTAT <- list(
-    Filgruppe = khtools::duckdb_fetch_table(con, "FILGRUPPE"),
+    Filgruppe = khtools::duckdb_fetch_table(parameters$duck, "FILGRUPPE"),
     cleanlog = cleanlog,
-    codebooklog = khtools::duckdb_fetch_table(con, "codebooklog")
+    codebooklog = codebooklog
   )
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
@@ -76,13 +76,11 @@ lagfilgruppe_cleanup <- function(parameters){
 #' @description
 #' Initiates log for filegroup cleaning
 #' @noRd
-initiate_cleanlog <- function(parameters){
-  con <- parameters$duck
-  if(!"FILGRUPPE" %in% khtools::duckdb_get_tables(con = con)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
-  koblids <- as.character(DBI::dbGetQuery(con, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
+initiate_cleanlog_db <- function(codebooklog, parameters){
+  if(!"FILGRUPPE" %in% khtools::duckdb_get_tables(con = parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
+  koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
   log <- parameters$read_parameters[KOBLID %in% koblids, .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
-  n_rows <- data.table::setDT(DBI::dbGetQuery(con, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))
-  codebooklog <- khtools::duckdb_fetch_table(con, "codebooklog")
+  n_rows <- data.table::setDT(DBI::dbGetQuery(parameters$duck, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))
   log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
   n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
   log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)

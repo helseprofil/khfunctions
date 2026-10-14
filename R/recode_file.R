@@ -11,7 +11,7 @@ filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters)
     khtools::duckdb_drop_tables(con, all_tables[grepl("^tmp_filter|^tmp_recode", all_tables)])
   }, add = TRUE)
   
-  khtools::msg("\n- Filtrerer og omkoder", tablename)
+  khtools::msg("- Filtrerer og omkoder", tablename)
   do_filter_dimensions_duckdb(con = con, tablename = tablename, 
                               filters = redesign$Filters, parameters = parameters)
   do_recode_dimensions_duckdb(con = con, tablename = tablename, 

@@ -84,7 +84,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
   set_spvflagg(con = parameters$duck)
   
   # 8. Slicing av outputfiler
-  khtools::header("Genererer og eksporterer resultatfiler")
+  khtools::header("Genererer (og eksporterer) resultatfiler")
   generate_allvis_base(parameters = parameters)
   generate_and_export_all_friskvik_indicators(parameters = parameters)
   generate_qc_table(parameters = parameters)
