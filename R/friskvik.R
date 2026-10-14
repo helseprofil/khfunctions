@@ -79,12 +79,13 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   
   select_expr <- vapply(select_cols,
     function(x){ 
+      x_quote <- as.character(khtools::sql_quote_I(con, x))
       if(x %in% available_cols){ 
-        x
+        x_quote
       } else if(x %in% getOption("khtools.friskvik.tabs")){
-        sprintf("CAST(NULL AS VARCHAR) AS %s", x)
+        sprintf("CAST(NULL AS VARCHAR) AS %s", x_quote)
       } else {
-        sprintf("CAST(NULL AS DOUBLE) AS %s", x)
+        sprintf("CAST(NULL AS DOUBLE) AS %s", x_quote)
       }
       
     },
