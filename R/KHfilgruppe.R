@@ -20,7 +20,6 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   if(parameters$n_files == 0) stop("Ingen originalfiler funnet, filgruppe kan ikke genereres. Sjekk at staving matcher for alle relevante felter i ACCESS")
   filegroup_check_original_files_and_spec(parameters = parameters)
   
-  codebooklog <- initiate_codebooklog(nrow = 0)
   khtools::header("Starter lesing, formattering og stabling av originalfiler")
   if(parameters$n_files == 1){
     make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
