@@ -5,27 +5,34 @@
 #' @param user_args user defined arguments to LagFilgruppe
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
-  print_console_message("\n* Henter parametre")
   parameters <- get_global_parameters()
+  on.exit(DBI::dbDisconnect(parameters$dbh))
   parameters <- c(parameters, user_args)
+  parameters[["duck"]] <- khtools::duckdb_init(dbname = "filgruppeduck", mem_limit_gb = parameters[["ramlimit"]]) 
+  khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
+  # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
   parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)
   parameters[["codebook"]] <- get_codebook(parameters = parameters)
-  parameters[["GeoNavn"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn", as.is = TRUE))
-  parameters[["TKNR"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * from TKNR", as.is = TRUE), key = c("ORGKODE"))
-  parameters[["GkBHarm"]] <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, "SELECT * FROM GKBydel2004T", as.is = TRUE), key = c("GK", "Bydel2004"))
-  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  parameters[["GeoNavn"]] <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT GEO AS NYGEO, NAVN FROM GeoNavn"))
+  parameters[["TKNR"]] <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT * from TKNR"), key = c("ORGKODE"))
+  parameters[["GkBHarm"]] <- data.table::setDT(DBI::dbGetQuery(parameters$dbh, "SELECT * FROM GKBydel2004T"), key = c("GK", "Bydel2004"))
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
-  return(c(parameters))
+  parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  create_codebooklog_tables(con = parameters$duck)
+  
+  return(parameters)
 }
 
 #' @noRd
-read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
+read_filegroups_and_add_values <- function(filegroup = NULL, parameters, translate_bef = FALSE){
   if(is.null(filegroup)) filegroup <- parameters$name
   if(grepl("BEF_Gkny", filegroup, ignore.case = TRUE)) filegroup <- "BEF_GKny"
-  FILGRUPPER <- as.list(RODBC::sqlQuery(parameters$dbh, paste0("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='", filegroup, "' AND ", parameters$validdates), as.is = TRUE))
+  FILGRUPPER <- as.list(DBI::dbGetQuery(
+    parameters$dbh, sprintf("SELECT * FROM FILGRUPPER WHERE FILGRUPPE='%s' AND %s", 
+                            filegroup, parameters$validdates)))
   if(length(FILGRUPPER$FILGRUPPE) != 1) stop(paste0("FILGRUPPE ", filegroup, " finnes ikke, er duplisert, eller er satt til inaktiv"))
   
   isalderalle <- is_not_empty(FILGRUPPER$ALDER_ALLE)
@@ -39,17 +46,26 @@ read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
     amax <- getOption("khfunctions.amax")
   }
   
+  valnamecols <- grep("^VAL\\d+navn$", names(FILGRUPPER), value = TRUE)
+  valnamecols <- valnamecols[vapply(FILGRUPPER[valnamecols],is_not_empty,logical(1))]
+  
+  if(translate_bef && grepl("BEF_GKny", filegroup, ignore.case = TRUE)){
+    if(is.null(parameters[["TNPinformation"]])) stop("Forsøker å lese parameters$TNPinformation, men den finnes ikke")
+    befcol <- valnamecols[unlist(FILGRUPPER[valnamecols], use.names = FALSE) == "BEF"]
+    correctbef <- unique(grep("^BEF|^mBEF", unlist(parameters$TNPinformation[c("TELLERKOL", "NEVNERKOL")],
+                                                   use.names = FALSE),value = TRUE))
+    if(length(correctbef) == 1){
+      FILGRUPPER[befcol] <- correctbef
+    }
+  }
+  
   vals <- list()
-  for(val in grep("^VAL", getOption("khfunctions.kolorgs"), value = T)) {
-    valname <- paste0(val, "navn")
-    isvalname <- !is.na(FILGRUPPER[[valname]]) && FILGRUPPER[[valname]] != ""
-    valname <- ifelse(isvalname, FILGRUPPER[[valname]], val)
-    valmiss <- paste0(val, "miss")
-    isvalmiss <-  !is.na(FILGRUPPER[[valmiss]]) && FILGRUPPER[[valmiss]] != ""
-    valmiss <- ifelse(isvalmiss, FILGRUPPER[[valmiss]], "0")
-    valsumbar <- paste0(val, "sumbar")
-    isvalsumbar <- !is.na(FILGRUPPER[[valsumbar]]) && FILGRUPPER[[valsumbar]] != ""
-    valsumbar <- ifelse(isvalsumbar, FILGRUPPER[[valsumbar]], "0")
+  for(val in valnamecols) {
+    valname <- FILGRUPPER[[val]]
+    miss <- sub("navn", "miss", val)
+    valmiss <- if(is_not_empty(FILGRUPPER[[miss]])) { FILGRUPPER[[miss]] } else {"0"}
+    sumbar <- sub("navn", "sumbar", val)
+    valsumbar <- if(is_not_empty(FILGRUPPER[[sumbar]])) { FILGRUPPER[[sumbar]] } else {"0"}
     vals[[valname]] <- list(miss = valmiss, sumbar = valsumbar)
   }
   return(c(FILGRUPPER, list(vals = vals, amin = amin, amax = amax)))
@@ -60,10 +76,19 @@ read_filegroups_and_add_values <- function(filegroup = NULL, parameters){
 #' Reads and combine orginnleskobl, originalfiler, and filgrupper from ACCESS.
 #' @noRd
 get_read_parameters <- function(parameters){
-  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='", parameters$name, "'"), as.is = TRUE))
+  orginnleskobl <- data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT * FROM ORGINNLESkobl WHERE FILGRUPPE='%s'", 
+                            parameters$name)))
   orginnleskobl[, FILGRUPPE := fix_befgk_spelling(FILGRUPPE)]
-  originalfiler <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", parameters$validdates)), as.is = TRUE))
-  innlesing <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, query = paste0("SELECT * FROM INNLESING WHERE FILGRUPPE='", parameters$name, "' AND ", parameters$validdates), as.is = TRUE))
+  originalfiler <- data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT * FROM ORIGINALFILER WHERE %s", 
+                            gsub("VERSJON", "IBRUK", parameters$validdates))))
+  innlesing <- data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT * FROM INNLESING WHERE FILGRUPPE='%s' & %s", 
+                            parameters$name, parameters$validdates)))
   innlesing[, FILGRUPPE := fix_befgk_spelling(FILGRUPPE)]
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
@@ -77,9 +102,10 @@ get_read_parameters <- function(parameters){
 }
 
 get_codebook <- function(parameters){
-  codebook <- data.table::setDT(RODBC::sqlQuery(parameters$dbh, 
-                                                paste0("SELECT FELTTYPE, DELID, TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE FILGRUPPE='", 
-                                                       parameters$name, "' AND ", parameters$validdates), as.is = TRUE))
+  codebook <- data.table::setDT(
+    DBI::dbGetQuery(parameters$dbh, 
+                    sprintf("SELECT FELTTYPE, DELID, TYPE, ORGKODE, NYKODE FROM KODEBOK WHERE FILGRUPPE='%s' AND %s", 
+                            parameters$name, parameters$validdates)))
   codebook[is.na(ORGKODE), ORGKODE := ""]
   return(codebook)
 }

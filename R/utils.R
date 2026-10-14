@@ -12,22 +12,44 @@ is_empty <- function(value){
   is.null(value) || is.na(value) || value == "" 
 }
 
-#' @keywords internal
+#' @title classify_columns
+#' @description 
+#' Klassifiserer kolonner som dimensjoner, verdier, hjelpekolonner og annet. 
+#' For gruppering trengs ofte bare dimensjoner (ikke misc som GEOniv og FYLKE)
+#' For aggregering må misc-kolonnene også bevares
 #' @noRd
-get_value_columns <- function(columnnames, full = FALSE) {
-  valcols <- grep("^(.*?)\\.f$", columnnames, value = T)
-  valcols <- gsub("\\.f$", "", valcols)
-  if(full) valcols <- paste0(rep(valcols, each = 7), c("", ".f", ".a", ".n", ".fn1", ".fn3", ".fn9"))
-  return(intersect(columnnames, valcols))
+classify_columns <- function(columnnames){
+  alldims <- c(
+    getOption("khtools.dim.standard"),
+    getOption("khtools.dim.interval"),
+    getOption("khtools.dim.tab")
+  )
+  
+  dims <- intersect(columnnames, alldims)
+  f_cols <- grep("^(.*?)\\.f$", columnnames, value = T)
+  vals <- gsub("\\.f$", "", f_cols)
+  vals_helpers <- grep("^(.*?)\\.(f|a|n|fn1|fn3|fn9)$", columnnames, value = T)
+  misc <- setdiff(columnnames, c(dims, vals, vals_helpers))
+  
+  list(dims = dims, vals = vals, vals_helpers = vals_helpers, misc = misc)
 }
 
-#' @keywords internal
-#' @noRd
-get_dimension_columns <- function(columnnames) {
-  nodim <- c(get_value_columns(columnnames, full = TRUE), "KOBLID", "ROW", "missyear", "spv_tmp")
-  return(setdiff(columnnames, nodim))
-  # dims <- c(getOption("khfunctions.alldimensions"), "TAB1", "TAB2", "TAB3")
-  # return(intersect(columnnames, dims))
+identify_dimensions <- function(columnnames){
+  x <- classify_columns(columnnames)
+  intersect(columnnames, x$dims)
+}
+
+identify_values <- function(columnnames, helpers = FALSE){
+  x <- classify_columns(columnnames)
+  keep <- x$vals
+  if(helpers) keep <- c(keep, x$vals_helpers)
+  intersect(columnnames, keep)
+}
+
+identify_nonvalues <- function(columnnames){
+  x <- classify_columns(columnnames)
+  keep <- c(x$dims, x$misc)
+  intersect(columnnames, keep)
 }
 
 #' @title fix_befgk_spelling
@@ -51,13 +73,8 @@ set_threads <- function(){
   use_dt <- pmax(old_dt, use)
   data.table::setDTthreads(use_dt)
   collapse::set_collapse(nthreads = use)
-  print_console_message("\n* Antall kjerner brukt\n** data.table:", use_dt, "\n** collapse: ", use)
+  khtools::msg("* Antall kjerner brukt\n- data.table:", use_dt, "\n- collapse: ", use)
   
   return(list(dt = old_dt,
               collapse = old_collapse))
-}
-
-print_console_message <- function(...) {
-  base::cat(...)
-  utils::flush.console()
 }

@@ -10,19 +10,25 @@ save_filedump_if_requested(
     "RSYNT_PRE_FGLAGRINGpost", "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre",
     "SLUTTREDIGERpost", "PRIKKpre", "PRIKKpost", "RSYNT_POSTPROSESSpre",
     "RSYNT_POSTPROSESSpost"),
-  dt,
+  dt = NULL,
   parameters,
-  koblid = NULL
+  koblid = NULL,
+  duck = FALSE,
+  tablename = NULL
 )
 }
 \arguments{
 \item{dumpname}{name of requested filedump}
 
-\item{dt}{data to be stored}
+\item{dt}{data to be stored, can be NULL if data is in duckdb}
 
 \item{parameters}{global parameters}
 
 \item{koblid}{used when requesting file dumps during processing of original files, default = NULL}
+
+\item{duck}{TRUE/FALSE, is data to be written located in duckdb}
+
+\item{tablename}{name of table in duckdb to be stored}
 }
 \description{
 Saves a .csv, .rds, or .dta file at specific points during data processing

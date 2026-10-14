@@ -7,8 +7,6 @@
 FinnFilGruppeFraKoblid(koblid, globs = get_global_parameters())
 }
 \arguments{
-\item{koblid}{}
-
 \item{globs}{global parameters, defaults to SettGlobs}
 }
 \description{

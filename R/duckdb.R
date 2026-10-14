@@ -1,35 +1,3 @@
-#' @title merge_duckdb_table
-#' @description
-#' Merges 2 tables in duckdb into a third table. If result = mergeto, mergefrom is merged into mergeto. If result != mergto, a new table is generated. 
-#' @keywords duckdb
-#' @noRd
-merge_duckdb_table <- function(result, mergeto, mergefrom, con){
-  to_cols <- DBI::dbListFields(con, mergeto)
-  from_cols <- DBI::dbListFields(con, mergefrom)
-  commoncols <- intersect(to_cols, from_cols)
-  newcols_names <- setdiff(from_cols, commoncols)
-  
-  join_cond <- paste0(
-    "org.", quote_col_duckdb(commoncols), " = new.", quote_col_duckdb(commoncols),
-    collapse = " AND "
-  )
-  
-  add_cols <- paste0(
-    "new.", quote_col_duckdb(newcols_names),
-    collapse = ", "
-  )
-  
-  query <- paste0(
-    "CREATE OR REPLACE TABLE ", result, " AS
-   SELECT org.*, ", add_cols, "
-   FROM ", mergeto, " AS org
-   LEFT JOIN ", mergefrom, " AS new
-   ON ", join_cond
-  )
-  
-  invisible(DBI::dbExecute(con, query))
-}
-
 #' @title set_implicit_null_after_merge_duckdb
 #' @description
 #' Inserts values for implicit rows generated during merging. 
@@ -38,9 +6,10 @@ merge_duckdb_table <- function(result, mergeto, mergefrom, con){
 #' @noRd
 set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list(), con) {
   
-  print_console_message("\n*** Håndterer implisitte nuller\n")
-  cols <- DBI::dbListFields(con, table)
-  vals <- get_value_columns(cols)
+  khtools::msg("\n- Håndterer implisitte nuller")
+  cols <- khtools::duckdb_get_columns(con, table)
+  vals <- identify_values(cols)
+  tbl_sql <- khtools::sql_quote_I(con, table)
   
   if("BEF" %in% names(implicitnull_defs) && any(grepl("^BEF", vals))){
     correctval <- grep("^BEF", vals, value = T)
@@ -65,20 +34,89 @@ set_implicit_null_after_merge_duckdb <- function(table, implicitnull_defs = list
     }
     
     valF <- paste0(val, ".f")
-    valA <- paste0(val, ".a")
-    
-    # hopp over hvis .f ikke finnes
     if (!(valF %in% cols)) next
+    # hopp over hvis .f ikke finnes
     
-    cond <- paste0("(", quote_col_duckdb(val), " IS NULL AND ", quote_col_duckdb(valF), " = 0) OR ", quote_col_duckdb(valF), " IS NULL" )
+    val_sql <- khtools::sql_quote_I(con, val)
+    valF_sql <- khtools::sql_quote_I(con, valF)
+    valA_sql <- khtools::sql_quote_I(con, paste0(val, ".a"))
     
-    query <- paste0("UPDATE ", table, " SET ",
-      quote_col_duckdb(val), " = ", replacemissing[1], ",
-       ", quote_col_duckdb(valF), " = ", replacemissing[2], ",
-       ", quote_col_duckdb(valA), " = ", replacemissing[3], "
-       WHERE ", cond
+    cond <- sprintf("(%s IS NULL AND %s = 0) OR %s IS NULL", val_sql, valF_sql, valF_sql)
+    
+    query <- sprintf(
+      "UPDATE %s SET %s = %s, %s = %s, %s = %s WHERE %s",
+      tbl_sql, 
+      val_sql, replacemissing[1],
+      valF_sql, replacemissing[2],
+      valA_sql, replacemissing[3],
+      cond
     )
     
     invisible(DBI::dbExecute(con, query))
   }
+}
+
+#' @title do_aggregate_file_duckdb
+#' @description Aggregerer verdikolonner for alle strata av dimensjoner. 
+#' For verdier som ikke kan summeres vil tall som er sum av flere rader bli satt til NA med flagg = 2. 
+#' @keywords duckdb
+#' @noRd
+do_aggregate_file_duckdb <- function(con, tablename, valdefs = list()){
+  
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  nonvalues <- identify_nonvalues(cols)
+  values <- identify_values(cols)
+  
+  nonvalues_sql <- khtools::sql_quote_I(con, nonvalues)
+  
+  aggcols_sql <- unlist(lapply(values,
+      function(val){
+        valf <- khtools::sql_quote_I(con, paste0(val, ".f"))
+        vala <- khtools::sql_quote_I(con, paste0(val, ".a"))
+        val <- khtools::sql_quote_I(con, val)
+        c(sprintf("SUM(%s) AS %s", val, val),
+          sprintf("MAX(%s) AS %s", valf, valf),
+          sprintf("SUM(CASE WHEN %s IS NULL OR %s = 0 THEN 0 ELSE %s END) AS %s",
+            val, val, vala, vala))
+        }))
+  
+  sql <- sprintf("SELECT %s FROM %s GROUP BY %s",
+                 paste(c(nonvalues_sql, aggcols_sql),collapse = ", "),
+                 khtools::sql_quote_I(con, tablename),
+                 paste(nonvalues_sql,collapse = ", "))
+  
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
+  
+  nonsum <- intersect(
+    values,
+    names(valdefs)[
+    vapply(
+      valdefs,
+      function(x) isFALSE(x$sumbar),
+      logical(1))
+    ])
+  
+  if(length(nonsum) > 0){
+    for(val in nonsum){
+      valf <- khtools::sql_quote_I(con, paste0(val, ".f"))
+      vala <- khtools::sql_quote_I(con, paste0(val, ".a"))
+      val <- khtools::sql_quote_I(con, val)
+      sql_nonsum <- sprintf("UPDATE %s SET %s = NULL, %s = 2 WHERE %s > 1",
+                            khtools::sql_quote_I(con, tablename), val, valf, vala)
+      invisible(DBI::dbExecute(con, sql_nonsum))
+    }
+  }
+  
+  invisible(NULL)
+}
+
+set_integer_columns_duckdb <- function(con){
+  integers <- c("AARl", "AARh", "ALDERl", "ALDERh", "KJONN", "UTDANN", "LANDBAK", "INNVKAT")
+  cols <- intersect(integers,khtools::duckdb_get_columns(con, "FILGRUPPE"))
+  
+  sql <- paste(sprintf(
+    "ALTER TABLE FILGRUPPE ALTER COLUMN %s TYPE INTEGER USING TRY_CAST(%s AS INTEGER)",
+    cols,cols),collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
 }

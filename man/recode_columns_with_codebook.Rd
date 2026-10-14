@@ -4,34 +4,20 @@
 \alias{recode_columns_with_codebook}
 \title{recode_columns_with_codebook}
 \usage{
-recode_columns_with_codebook(
-  dt,
-  filedescription,
-  parameters,
-  codebooklog,
-  dumps
-)
+recode_columns_with_codebook(filedescription, parameters)
 }
 \arguments{
-\item{dt}{data}
-
 \item{filedescription}{filedescription}
 
-\item{codebooklog}{overal recode log}
-
-\item{dumps}{in case file dumps before or after kodebok are requested.}
-
-\item{codebook}{codebook subset for file}
-
-\item{recode_cols}{columns to recode}
+\item{parameters}{parameterliste}
 }
 \value{
-recoded data file (updated by reference)
+Invisibly NULL dersom ingen kolonner skal omkodes.
+Ellers en liste med kodebokutvalg og kolonner som skal omkodes.
 }
 \description{
-Recode data according to criteria set in KODEBOK.
-Recodings with TYPE = "KB" are directly recoded using do_recode_kb,
-and recodings with TYPE = "SUB" are applied as regex using do_recode_regex.
-Codebooklog summarises all recodings, and are updated by reference after
-each file has been recoded.
+Initialiserer kodebokomkoding.
+
+Oppretter tom kodeboklogg i DuckDB og identifiserer hvilke
+kolonner i temp_orgfile som faktisk skal omkodes for aktuell fil.
 }

@@ -34,8 +34,8 @@ expand.grid.dt <- function(...){
 #' @keywords internal
 #' @noRd
 set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
-  print_console_message("\n*** Håndterer implisitte nuller")
-  vals <- get_value_columns(names(dt))
+  khtools::msg("*** Håndterer implisitte nuller")
+  vals <- identify_values(names(dt))
   
   for (val in vals) {
     if (val %in% names(implicitnull_defs)) {
@@ -54,7 +54,7 @@ set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
     valA <- paste0(val, ".a")
     missingrows <- which((is.na(dt[[val]]) & dt[[valF]] == 0) | is.na(dt[[valF]]))
     n_missing <- length(missingrows)
-    if(n_missing > 0) print_console_message("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
+    if(n_missing > 0) khtools::msg("\n - Setter", val, "=", replacemissing[[1]], "and", valF, "=", replacemissing[[2]], "for",  n_missing, "rader")
     data.table::set(dt, i = missingrows, j = c(val, valF, valA), value = replacemissing)
   }
 }
@@ -64,7 +64,7 @@ set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
 
 #' KHerr (kb)
 KHerr <- function(error) {
-  print_console_message(
+  khtools::msg(
     "***************************************************************************\n",
     "*KHFEIL!! ", error, "\n***************************************************************************\n"
   )
@@ -72,35 +72,16 @@ KHerr <- function(error) {
 
 #' FinnFilGruppeFraKoblid (kb)
 #'
-#' @param koblid 
 #' @param globs global parameters, defaults to SettGlobs
 FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
   return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
 }
 
-#' SVcloneRecord (kb)
-#'
-#' @param dbh 
-#' @param table 
-#' @param koblid 
-SVcloneRecord <- function(dbh, table, koblid) {
-  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
-  felt <- paste(design, collapse = ",")
-  feltm <- sub("SV", "'V' AS SV", felt)
-  sql <- paste(
-    "INSERT INTO ", table, "(", felt, ")",
-    "SELECT ", feltm, "FROM ", table,
-    "WHERE KOBLID=", koblid, "AND SV='S'"
-  )
-  sqlQuery(dbh, sql)
-}
 
 
 
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 #' expand.grid.df (ybk)
-#'
-#' @param ... 
 expand.grid.df <- function(...) {
   DFs <- list(...)
   

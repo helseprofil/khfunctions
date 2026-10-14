@@ -1,41 +1,185 @@
 #' @title scale_rate_and_meisskala
-#' @description
-#' scales RATE and MEISskala according to ACCESS::KUBER::RATESKALA
+#' @description Skalerer RATE og MEISskala til verdi angitt i ACCESS::KUBER::RATESKALA
 #' @noRd
-scale_rate_and_meisskala <- function(dt, parameters){
+scale_rate_and_meisskala <- function(parameters){
   is_rateskala <- is_not_empty(parameters$CUBEinformation$RATESKALA)
-  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
   if(!is_rateskala) return(invisible(NULL))
-  print_console_message("\n* Skalerer RATE til per", scalevalue, "\n")
   
-  if("RATE" %in% names(dt)) dt[, RATE := RATE * scalevalue]
-  if("MEISskala" %in% names(dt)) dt[, MEISskala := MEISskala * scalevalue]
+  con <- parameters$duck
+  scalevalue <- as.numeric(parameters$CUBEinformation$RATESKALA)
+  
+  khtools::msg("- Skalerer RATE til per", scalevalue)
+  tbl_sql <- khtools::sql_quote_I(con, "KUBE")
+  cols <- DBI::dbListFields(con, tbl_sql)
+  
+  update_cols <- character()
+  
+  if("RATE" %in% cols) update_cols <- c(update_cols, sprintf("RATE = RATE * %s", scalevalue))
+  if("MEISskala" %in% cols) update_cols <- c(update_cols, sprintf("MEISskala = MEISskala * %s", scalevalue))
+  
+  if(length(update_cols) > 0){
+    sql <- sprintf("UPDATE %s SET %s", tbl_sql, paste(update_cols, collapse = ", "))
+    invisible(DBI::dbExecute(con, sql))
+  }
+  invisible(NULL)
 }
 
-#' @title get_maltall_column
-#' @description gets the column containing maltall
-#' @param parameters cube parameters
+
+#' @title do_format_cube_columns
+#' @description
+#' Legger til manglende kolonner som må være med
+#' Beregner sum-kolonnene
+#' Beregner årlige tall
+#' Legger til MALTALL
+#' Eventuelt lage ny kolonne basert på ACCESS::TNP_PROD::NYEKOL_RAD_postMA
+#' @noRd
+do_format_cube_columns <- function(parameters){
+  con = parameters$duck
+  tablename <- "KUBE"
+  cols <- DBI::dbListFields(con, tablename)
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
+  
+  obligcolumns <- c("TELLER","NEVNER","RATE")
+  obligcolumns <- c(paste0(rep(obligcolumns, each = 4),c("", ".f", ".a", ".n")), "PREDTELLER", "PREDTELLER.f")
+  
+  required_cols <- c(
+    setNames(rep("DOUBLE", length(obligcolumns)), obligcolumns),
+    sumTELLER = "DOUBLE",
+    sumNEVNER = "DOUBLE",
+    sumPREDTELLER = "DOUBLE",
+    MALTALL = "DOUBLE")
+  
+  if(all(c("AARl", "AARh") %in% cols)) required_cols["AAR"] <- "VARCHAR"
+  if(all(c("ALDERl", "ALDERh") %in% cols)) required_cols["ALDER"] <- "VARCHAR"
+  
+  missing_cols <- setdiff(names(required_cols), cols)
+  
+  if(length(missing_cols) > 0){
+    khtools::msg("- Initierer manglende kolonner:", paste(missing_cols, collapse = ", "))
+    khtools::duckdb_ensure_columns(con, "KUBE", required_cols[missing_cols])
+  }
+  
+  # Oppdater kolonner (sumkolonner, nonsumkolonner, ALDER, AAR og MALTALL)
+  cols <- DBI::dbListFields(con, tablename)
+  update <- character()
+  factor <- parameters$MOVAV$orgintMult
+  
+  update <- c(update, 
+              sprintf("sumTELLER = %s * TELLER", factor),
+              sprintf("sumNEVNER = %s * NEVNER", factor),
+              sprintf("sumPREDTELLER = %s * PREDTELLER", factor))
+  
+  nonsumvalues <- setdiff(identify_values(DBI::dbListFields(con, tablename)), c("RATE", "SMR"))
+  
+  for(val in nonsumvalues){
+    # PREDTELLER bruker TELLER.n for å lage årlige tall, 
+    # i stedet for å lage PREDTELLER.n som en ekstra kolonne som == TELLER.n
+    valn_sql <- if(val == "PREDTELLER"){
+      khtools::sql_quote_I(con, "TELLER.n") 
+    } else {
+      khtools::sql_quote_I(con, paste0(val, ".n"))
+    }
+    update <- c(update,
+                sprintf("%s = %s / %s",
+                        khtools::sql_quote_I(con, val),
+                        khtools::sql_quote_I(con, val),
+                        valn_sql))
+  }
+  
+  if("AAR" %in% cols) update <- c(update, "AAR = printf('%d_%d', AARl, AARh)")
+  if("ALDER" %in% cols) update <- c(update, "ALDER = printf('%d_%d', ALDERl, ALDERh)")
+  update <- c(update, sprintf("%s = %s", khtools::sql_quote_I(con, "MALTALL"), khtools::sql_quote_I(con, parameters$MALTALL)))
+  update_sql <- sprintf("UPDATE %s SET %s", 
+                        khtools::sql_quote_I(con, tablename), 
+                        paste(update, collapse = ", "))
+  invisible(DBI::dbExecute(con, update_sql))
+  
+  if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)){
+    dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename) 
+    compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+  }
+  
+  invisible(NULL)
+}
+
+
+#' @title rename_tab_columns
+#' @description
+#' Omdøper TAB-kolonnene til sitt faktiske navn, angitt i ACCESS::FILGRUPPER
+#' @noRd
+rename_tab_columns <- function(parameters){
+  con <- parameters$duck
+  spec <- parameters$fileinformation[[parameters$files$TELLER]]
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
+  tabcols <- grep("^TAB\\d+$", cols, value = TRUE)
+  if(length(tabcols) == 0) return(invisible(NULL))
+  tabnames <- vapply(tabcols, function(x) spec[[x]], character(1))
+  
+  sql <- paste(
+    sprintf(
+      "ALTER TABLE KUBE RENAME COLUMN %s TO %s",
+      khtools::sql_quote_I(con, tabcols), khtools::sql_quote_I(con, tabnames)
+    ), collapse = ";\n")
+  
+  invisible(DBI::dbExecute(con, sql))
+  return(tabnames)
+}
+
 #' @keywords internal
 #' @noRd
-get_maltall_column <- function(parameters){
-  if(is_not_empty(parameters$CUBEinformation$MTKOL)) return(parameters$CUBEinformation$MTKOL)
-  if(parameters$TNPinformation$NEVNERKOL == "-") return("TELLER")
-  return("RATE")
+get_outdimensions <- function(parameters){
+  con <- parameters$duck
+  dims <- c(getOption("khfunctions.khtabs"), as.character(parameters$tabnames))
+  if(is_not_empty(parameters$CUBEinformation$DIMDROPP)){
+    dimdropp <- unlist(strsplit(parameters$CUBEinformation$DIMDROPP, ","))
+    dims <- setdiff(dims, dimdropp)
+  }
+  
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
+  if("ALDER" %notin% cols) dims <- setdiff(dims, "ALDER")
+  if("KJONN" %notin% cols) dims <- setdiff(dims, "KJONN")
+  return(dims)
 }
 
+#' @title get_outvalues_allvis
+#' @description finds value columns to be included in output
+#' @param parameters cube parameters   
+#' @noRd
+get_outvalues_allvis <- function(parameters){
+  cols <- character(0)
+  if(parameters$CUBEinformation$REFVERDI_VP == "P") cols <- c("T", "RATE", "SMR", "MEIS")
+  if(is_not_empty(parameters$CUBEinformation$NESSTARTUPPEL)){
+    cols <- gsub("\\s", "", parameters$CUBEinformation$NESSTARTUPPEL)
+    cols <- unlist(strsplit(cols, ","))
+    if(any(!cols %in% names(getOption("khfunctions.valcols")))){
+      stop("Feil i ACCESS::KUBER::NESSTARTUPPEL, aksepterte verdier (kommaseparert): ",
+           paste0(names(getOption("khfunctions.valcols")), collapse = ","))
+    } 
+  }
+  cols <- as.character(getOption("khfunctions.valcols")[cols])
+  
+  if(is_not_empty(parameters$CUBEinformation$EKSTRAVARIABLE)){
+    extravalue <- unlist(stringr::str_split(parameters$CUBEinformation$EKSTRAVARIABLE, ","))
+    cols <- c(cols, extravalue)
+  }
+  return(cols)
+}
+
+# DEPRECATED ----
 #' @title do_format_cube_columns
 #' @description
 #' Adds missing columns, creates sumvalues and nonsumvalues, sets alder and aar columns
 #' Creates new columns post moving average, as defined in ACCESS::TNP_PROD::NYEKOL_RAD_postMA
 #' @noRd
-do_format_cube_columns <- function(dt, parameters){
+do_format_cube_columns_old <- function(dt, parameters){
   add_missing_columns(dt = dt)
-  add_sumvalues(dt = dt, factor = parameters$MOVAVparameters$orgintMult)
+  add_sumvalues(dt = dt, factor = parameters$MOVAV$orgintMult)
   set_nonsumvalues(dt = dt)
   set_alder_aar(dt = dt)
   if(is_not_empty(parameters$TNPinformation$NYEKOL_RAD_postMA)) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD_postMA, post_moving_average = TRUE)
   data.table::set(dt, j = "MALTALL", value = dt[[parameters$MALTALL]])
-  data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
+  data.table::set(dt, j = getOption("khtools.prikkeinfo"), value = 0L)
   return(dt)
 }
 
@@ -68,7 +212,7 @@ add_sumvalues <- function(dt, factor){
 #' @keywords internal
 #' @noRd
 set_nonsumvalues <- function(dt){
-  values <- setdiff(get_value_columns(names(dt)), c("RATE", "SMR"))
+  values <- setdiff(identify_values(names(dt)), c("RATE", "SMR"))
   if(length(values) == 0) return(dt)
   for(val in values){
     valN = paste0(val, ".n")
@@ -97,59 +241,4 @@ filter_invalid_geo_alder_kjonn <- function(dt, parameters){
   if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
   if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
   return(dt)
-}
-
-#' @keywords internal
-#' @noRd
-get_etabs <- function(columnnames, parameters){
-  spec <- parameters$fileinformation[[parameters$files$TELLER]]
-  tabcols <- grep("^TAB\\d+$", columnnames, value = T)
-  tabnames <- character(0)
-  for(tab in tabcols){
-    tabnames <- c(tabnames, spec[[tab]])
-  }
-  return(list(tabcols = tabcols, tabnames = tabnames))
-}
-  
-#' @keywords internal
-#' @noRd
-set_etab_names <- function(dt, etablist){
-  data.table::setnames(dt, old = etablist$tabcols, new = etablist$tabnames)
-}
-
-#' @keywords internal
-#' @noRd
-get_outdimensions <- function(dt, etabs, parameters){
-  dims <- c(getOption("khfunctions.khtabs"), etabs)
-  if(is_not_empty(parameters$CUBEinformation$DIMDROPP)){
-    dimdropp <- unlist(strsplit(parameters$CUBEinformation$DIMDROPP, ","))
-    dims <- setdiff(dims, dimdropp)
-  }
-  if("ALDER" %notin% names(dt)) dims <- setdiff(dims, "ALDER")
-  if("KJONN" %notin% names(dt)) dims <- setdiff(dims, "KJONN")
-  return(dims)
-}
-
-#' @title get_outvalues_allvis
-#' @description finds value columns to be included in output
-#' @param parameters cube parameters   
-#' @noRd
-get_outvalues_allvis <- function(parameters){
-  cols <- character(0)
-  if(parameters$CUBEinformation$REFVERDI_VP == "P") cols <- c("T", "RATE", "SMR", "MEIS")
-  if(is_not_empty(parameters$CUBEinformation$NESSTARTUPPEL)){
-    cols <- gsub("\\s", "", parameters$CUBEinformation$NESSTARTUPPEL)
-    cols <- unlist(strsplit(cols, ","))
-    if(any(!cols %in% names(getOption("khfunctions.valcols")))){
-      stop("Feil i ACCESS::KUBER::NESSTARTUPPEL, aksepterte verdier (kommaseparert): ",
-           paste0(names(getOption("khfunctions.valcols")), collapse = ","))
-    } 
-  }
-  cols <- as.character(getOption("khfunctions.valcols")[cols])
-  
-  if(is_not_empty(parameters$CUBEinformation$EKSTRAVARIABLE)){
-    extravalue <- unlist(stringr::str_split(parameters$CUBEinformation$EKSTRAVARIABLE, ","))
-    cols <- c(cols, extravalue)
-  }
-  return(cols)
 }

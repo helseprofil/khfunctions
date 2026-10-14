@@ -2,30 +2,34 @@
 #' @description
 #' Finds design parameters for a file
 #' 
-#' @param file file. If NULL, gets the file from BUFFER[[filename]]. 
+#' @param file file. If NULL, gets the file from duckdb
 #' @param filename filegroup name
+#' @param copy_fileinfo_from hvis filparametre skal hentes fra en annen fil
 #' @param parameters global parameters
 #'
 #' @keywords internal
 #' @noRd
-find_filedesign <- function(file = NULL, filename = NULL, parameters){
+find_filedesign <- function(file = NULL, filename = NULL, parameters, copy_fileinfo_from = NULL){
   if(is.null(file) && is.null(filename)) stop("File or filename must be provided")
   if(is.null(filename) && !data.table::is.data.table(file)) stop("file må være data.table")
   fileparameters <- list(amin = getOption("khfunctions.amin"), amax = getOption("khfunctions.amax"))
-  isduck <- is_duckdb_file(con = parameters$duck, filename = filename)
+  con <- parameters$duck
+  isduck <- khtools::duckdb_table_exists(con = con, tablename = filename)
+  if(is.null(file) && !isduck){
+    stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
+  }
   if(!is.null(filename)){
-    fileparameters <- parameters$fileinformation[[filename]]
-    if(is.null(file) && !isduck && filename %in% .GlobalEnv$BUFFER){
-      file <- .GlobalEnv$BUFFER[[filename]]
-    } else if(!isduck) {
-      stop("file ikke angitt, og finner ikke fil i duckdb eller i BUFFER")
+    if(!is.null(copy_fileinfo_from)){
+      fileparameters <- parameters$fileinformation[[copy_fileinfo_from]]
+    } else {
+      fileparameters <- parameters$fileinformation[[filename]]
     }
   }
   designs <- list()
   if (data.table::is.data.table(file)) {
     cols <- names(file)
   } else if (isduck) {
-    cols <- DBI::dbListFields(parameters$duck, filename)
+    cols <- khtools::duckdb_get_columns(con, filename)
   } else {
     stop("Fant ikke kolonner: verken data.table eller duckdb-tabell")
   }
@@ -33,7 +37,7 @@ find_filedesign <- function(file = NULL, filename = NULL, parameters){
   args <- get_filedesign_args(parameters = parameters, columns_in_file = cols)
   if(is.null(file)){
     designs[["observed"]] <- data.table::setDT(
-      DBI::dbGetQuery(parameters$duck, paste0("SELECT DISTINCT ", paste(args$design_columns, collapse = ", "), " FROM ", filename))
+      DBI::dbGetQuery(con, paste0("SELECT DISTINCT ", paste(args$design_columns, collapse = ", "), " FROM ", filename))
       )
   } else {
     designs[["observed"]] <- unique(file[, .SD, .SDcols = args$design_columns])

@@ -7,10 +7,6 @@
 FinnFellesTab(DF1, DF2, parameters)
 }
 \arguments{
-\item{DF1}{}
-
-\item{DF2}{}
-
 \item{parameters}{global parameters}
 }
 \description{

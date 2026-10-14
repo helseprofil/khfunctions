@@ -1,100 +1,84 @@
-#' @keywords internal
-#' @noRd
-add_smr_and_meis <- function(dt, parameters){
-  if(parameters$PredFilter$ref_year_type == "Specific") calculate_smr_and_meis(dt = dt, parameters = parameters)
-  if(parameters$PredFilter$ref_year_type == "Moving") calculate_smrtmp(dt = dt, parameters = parameters)
-  adjust_smr_and_meis_to_country_normal(dt = dt, parameters = parameters)
-}
-
-#' @keywords internal
-#' @noRd
-calculate_smr_and_meis <- function(dt, parameters){
-  if(parameters$CUBEinformation$REFVERDI_VP == "P"){
-    dt[, let(SMR = sumTELLER / sumPREDTELLER * 100,
-             MEIS = sumTELLER / sumPREDTELLER * MEISskala)]
-    dt[sumPREDTELLER == 0, let(SMR = NA, MEIS = NA)]
-  }
-}
-
-#' @keywords internal
-#' @noRd
-calculate_smrtmp <- function(dt, parameters){
-  dt[, let(SMRtmp = NA_real_)]
-  if(parameters$CUBEinformation$REFVERDI_VP == "P") dt[, let(SMRtmp = sumTELLER / sumPREDTELLER * 100)]
-  if(parameters$CUBEinformation$REFVERDI_VP == "V") dt[, let(SMRtmp = 100)]
-}
-
-#' @title adjust_smr_and_meis_to_country_normal
-#' @description Find the subset to estimate country-level normals, 
-#' and adjusts SMR and MEIS to make sure country always have SMR = 100
-#' @keywords internal
-#' @noRd
-adjust_smr_and_meis_to_country_normal <- function(dt, parameters){
-  normsubset <- get_normsubset(dt = dt, parameters = parameters)
-  merge_cols_by_reference(orgdata = dt, newdata = normsubset)
-  # commondims <- intersect(names(normsubset), names(dt))
-  # newcols <- setdiff(names(normsubset), commondims)
-  # newvals <- normsubset[dt, on = commondims, ..newcols]
-  # data.table::set(dt, j = newcols, value = newvals)
-  do_adjust_smr_and_meis(dt = dt, parameters = parameters)
-}
-
-#' @keywords internal
-#' @noRd
-get_normsubset <- function(dt, parameters){
-  if(parameters$PredFilter$ref_year_type == "Specific"){
-    normsubset <- dt[GEOniv == "L"]
-  } else if(parameters$PredFilter$ref_year_type == "Moving"){
-    normsubset <- dt[x, env = list(x = str2lang(parameters$PredFilter$meisskalafilter))]
-  }
-  normsubset <- data.table::copy(normsubset)
-  if(nrow(normsubset) == 0) stop("Noe er feil i ACCESS::KUBER::REFVERDI, klarer ikke hente subset for landsnormal")
-  format_normsubset(dt = normsubset, parameters = parameters)
-  return(normsubset)  
-}
-
-#' @keywords internal
-#' @noRd
-format_normsubset <- function(dt, parameters){
-  if(parameters$PredFilter$ref_year_type == "Specific"){
-    dt[, lopendeMEISref := MEIS]
-    keep <- c(setdiff(intersect(names(dt), parameters$DefDesign$DesignKolsFA), c("GEOniv", "GEO", "FYLKE")), 
-              "lopendeMEISref")
-  } else {
-    maltall <- parameters$MALTALL
-    data.table::setnames(dt, c(maltall, "SMRtmp"), c("NORM", "NORMSMR"))
-    keep <- c(setdiff(intersect(names(dt), parameters$DefDesign$DesignKolsFA), parameters$PredFilter$Predfiltercolumns),
-                 "NORM", "NORMSMR")
-  }
-  
-  data.table::set(dt, j = setdiff(names(dt), keep), value = NULL)
-  return(invisible(NULL))
-}
-
-#' @title do_adjust_smr_and_meis
+#' @title add_smr_and_meis
 #' @description
-#' Juster SMR proporsjonalt slik at NORM (landet) alltid har SMR=100
-#' SMR>100 kan oppstaa dersom det f.eks. er noen med ukjent alder/kjoenn.
-#' Ratene for ukjent alder/kjoenn vil ikke matche nevner fra BEF, derfor vil det predikeres for faa doede relativt til observert
-#' @keywords internal
+#' Beregner SMR og MEIS
+#' Hvis kuben standardiseres, beregnes MEIS som
+#' sumTELLER / sumPREDTELLER * meisskala (raten for strataet fra standardiseringsutvalget/landstall)
+#' SMR settes deretter til MEIS / MEIS fra standardiseringsutvalget * 100
+#' 
+#' For kuber som ikke standardiseres, settes MEIS = MALTALL (ofte RATE), 
+#' mens SMR settes til MALTALL relativt til MALTALL på landsnivå slik at lands-SMR alltid blir 100.
+#' 
+#' @family duckdb
 #' @noRd
-do_adjust_smr_and_meis <- function(dt, parameters){
-  if(parameters$PredFilter$ref_year_type == "Specific"){
-    ref <- dt[["lopendeMEISref"]]
-    val <- dt[["MEIS"]] / ref * 100
-    data.table::set(dt, j = c("lopendeFORHOLDSVERDI", "SMR", "NORM"), value = list(val, val, ref))
-  } else if(parameters$PredFilter$ref_year_type == "Moving"){
-    normsmr <- dt[["NORMSMR"]]
-    norm <- dt[["NORM"]]
-    if(parameters$CUBEinformation$REFVERDI_VP == "P"){
-      smr0 <- dt[["sumTELLER"]] / dt[["sumPREDTELLER"]] * 100
-    } else if (parameters$CUBEinformation$REFVERDI_VP == "V") {
-      smr0 <- dt[["MALTALL"]] / norm * 100
+add_smr_and_meis <- function(parameters){
+  con <- parameters$duck
+  ref_year_type <- parameters$PredFilter$ref_year_type
+  refverdi_vp <- parameters$CUBEinformation$REFVERDI_VP
+  on.exit(khtools::duckdb_drop_tables(con, "normsubset"), add = TRUE)
+  
+  if(ref_year_type == "Specific") {
+    khtools::duckdb_ensure_columns(con = con, table = "KUBE", cols = c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    
+    if(refverdi_vp == "P") {
+      invisible(DBI::dbExecute(con,
+      "UPDATE KUBE SET MEIS = CASE WHEN sumPREDTELLER = 0 THEN NULL ELSE sumTELLER * 1.0 / sumPREDTELLER * MEISskala END"))
     }
-    smr <- 100 * (smr0 / normsmr)
-    meis <- smr * norm / 100
-
-    data.table::set(dt, j = c("SMR", "MEIS"), value = list(smr, meis))
+    
+    khtools::duckdb_drop_tables(con, "normsubset")
+    design_cols <- intersect(khtools::duckdb_get_columns(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    keep_cols <- c(setdiff(design_cols, c("GEOniv", "GEO", "FYLKE")), "LANDSNORMAL")
+    keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
+    
+    sql_norm <- sprintf(
+      "SELECT %s FROM 
+      (SELECT *, MEIS AS LANDSNORMAL FROM KUBE WHERE GEOniv = 'L')",
+      keep_sql
+    )
+    khtools::duckdb_drop_tables(con, "normsubset")
+    khtools::duckdb_create_new_table(con, target = "normsubset", select_sql = sql_norm)
+    khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
+                                 join_cols = get_duckdb_join_cols(con, "KUBE", "normsubset"))
+    invisible(DBI::dbExecute(con, "UPDATE KUBE SET SMR = MEIS / LANDSNORMAL * 100.0"))
+    
+  } else { # Moving
+    
+    normsmr_expr <- if(refverdi_vp == "P"){
+      "sumTELLER * 100.0 / sumPREDTELLER"
+    } else if(refverdi_vp == "V"){
+      "100.0"
+    }
+    
+    khtools::duckdb_drop_tables(con, "normsubset")
+    
+    design_cols <- intersect(khtools::duckdb_get_columns(con, "KUBE"), parameters$DefDesign$DesignKolsFA)
+    keep_cols <- c(setdiff(design_cols, parameters$PredFilter$Predfiltercolumns), "NORM", "NORMSMR")
+    keep_sql <- paste(khtools::sql_quote_I(con, keep_cols), collapse = ", ")
+    
+    sql_norm <- sprintf(
+      "SELECT %s FROM 
+      (SELECT *, %s AS NORMSMR, %s AS NORM FROM KUBE WHERE %s) x",
+      keep_sql, normsmr_expr, khtools::sql_quote_I(con, parameters$MALTALL),
+      r_filter_to_sql(parameters$PredFilter$meisskalafilter))
+    
+    khtools::duckdb_drop_tables(con, "normsubset")
+    khtools::duckdb_create_new_table(con, target = "normsubset",select_sql = sql_norm)
+    khtools::duckdb_merge_tables(con = con, mergeto = "KUBE", mergefrom = "normsubset",
+                                 join_cols = get_duckdb_join_cols(con, "KUBE", "normsubset"))
+    khtools::duckdb_ensure_columns(con, "KUBE", c(SMR = "DOUBLE", MEIS = "DOUBLE"))
+    
+    smr0_expr <- if(refverdi_vp == "P") {
+      "sumTELLER * 100.0 / sumPREDTELLER"
+    } else if(refverdi_vp == "V") {
+      sprintf("%s * 100.0 / NORM", khtools::sql_quote_I(con, parameters$MALTALL))
+    }
+    
+    sql <- sprintf(
+    "UPDATE KUBE SET
+    SMR = 100.0 * ((%s) / NORMSMR),
+    MEIS = ((%s) / NORMSMR) * NORM",
+    smr0_expr, smr0_expr)
+    
+    invisible(DBI::dbExecute(con, sql))
+    
   }
-  return(invisible(NULL))
 }

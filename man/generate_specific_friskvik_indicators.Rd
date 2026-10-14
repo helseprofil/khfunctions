@@ -7,20 +7,16 @@
 generate_specific_friskvik_indicators(
   cubename = NULL,
   friskvik_id = NULL,
-  year = getOption("khfunctions.year")
+  year = getOption("khfunctions.profileyear")
 )
 }
 \arguments{
-\item{cubename}{name of cube}
+\item{cubename}{navn}
 
-\item{friskvik_id}{optional, specify the ID of the indicators you want to generate}
+\item{friskvik_id}{Kan evt spesifisere FRISVIK_ID. Dersom denne er NULL lages alle}
 
-\item{year}{year, defaults to getOption("khfunctions.year")}
+\item{year}{friskvikår, default = getOption("khfunctions.profileyear")}
 }
 \description{
-generate_specific_friskvik_indicators
-}
-\examples{
-# implement_specific_friskvik_indicators(cubename = "UTDN", friskvik_id = c(1719, 1771), year = 2025) # Specific indicators and year
-# implement_specific_friskvik_indicators(cubename = "UTDN") # All indicators, default production year
+Lager friskvikfiler fra allerede godkjent kube
 }

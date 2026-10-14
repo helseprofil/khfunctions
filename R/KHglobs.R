@@ -4,10 +4,10 @@
 #' @returns list
 get_global_parameters <- function(){
   globs <- list()
-  globs[["dbh"]] <- connect_khelsa()
+  globs[["dbh"]] <- khtools:::connect_khelsa()
   globs[["batchdate"]] <- SettKHBatchDate()
   globs[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(globs$batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(globs$batchdate))
-  globs[["GeoKoder"]] <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * from GEOKoder", as.is = TRUE), key = "GEO")
+  globs[["GeoKoder"]] <- data.table::setDT(DBI::dbGetQuery(globs$dbh, "SELECT * from GEOKoder", as.is = TRUE), key = "GEO")
   globs[["DefDesign"]] <- get_default_design(globs = globs)
   globs[["LegKoder"]] <- SettLegitimeKoder(globs = globs)
   globs[["TotalKoder"]] <- getOption("khfunctions.totals")
@@ -23,7 +23,7 @@ get_global_parameters <- function(){
 #' @keywords internal
 #' @noRd
 get_default_design <- function(globs) {
-  deler <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT * FROM KH_DELER WHERE DEL <> 'S'", as.is = TRUE), key = "ID")
+  deler <- data.table::setDT(DBI::dbGetQuery(globs$dbh, "SELECT * FROM KH_DELER WHERE DEL <> 'S'"), key = "ID")
   out <- list()
   out[["DelKolN"]] <- setNames(deler$DelKol, deler$DEL)
   out[["DelType"]] <- setNames(deler$TYPE, deler$DEL)
@@ -68,7 +68,7 @@ add_delkols <- function(out, deler){
 #' @keywords internal
 #' @noRd
 SettLegitimeKoder <- function(globs) {
-  Koder <- data.table::setDT(RODBC::sqlQuery(globs$dbh, "SELECT DEL, KODE FROM KH_KODER WHERE DEL <> 'S'", as.is = TRUE))
+  Koder <- data.table::setDT(DBI::dbGetQuery(globs$dbh, "SELECT DEL, KODE FROM KH_KODER WHERE DEL <> 'S'"))
   return(split(Koder, by = "DEL"))
 }
 
@@ -87,24 +87,6 @@ FinnStataExe <- function() {
   Exe <- file.path(stata_path, stata_bin)
   
   return(list(Exe = Exe, Vers = Vers))
-}
-
-#' @title connect_khelsa
-#' @description connects to khelsa.mdb
-#' @keywords internal
-#' @noRd
-connect_khelsa <- function(){
-  path <- file.path(getOption("khfunctions.root"),
-                    getOption("khfunctions.db"))
-  
-  if(!file.exists(path)) stop("Finner ikke databasefilen ", path)
-  
-  RODBC::odbcDriverConnect(
-    paste0(
-      "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
-      "DBQ=", path, ";"
-    )
-  )
 }
 
 #' @keywords internal

@@ -1,9 +1,253 @@
+#' @title filter_and_recode_table_duckdb
+#' @description filters and recode dimensions according to redesign
+#' @keywords internal
+#' @family duckdb
+#' @noRd
+filter_and_recode_table_duckdb <- function(con, tablename, redesign, parameters){
+  all_tables <- khtools::duckdb_get_tables(con)
+  khtools::duckdb_drop_tables(con, all_tables[grepl("^tmp_filter|^tmp_recode", all_tables)])
+  on.exit({
+    all_tables <- khtools::duckdb_get_tables(con)
+    khtools::duckdb_drop_tables(con, all_tables[grepl("^tmp_filter|^tmp_recode", all_tables)])
+  }, add = TRUE)
+  
+  khtools::msg("- Filtrerer og omkoder", tablename)
+  do_filter_dimensions_duckdb(con = con, tablename = tablename, 
+                              filters = redesign$Filters, parameters = parameters)
+  do_recode_dimensions_duckdb(con = con, tablename = tablename, 
+                              recode = redesign$KBs[intersect(redesign$order, names(redesign$KBs))],
+                              parameters = parameters)
+  add_udekk_duckdb(con = con, tablename = tablename, udekk = redesign$Udekk)
+  invisible(NULL)
+}
+
+
+
+#' @title do_filter_dimensions_duckdb
+#' @description Filters table based on filters, generated with find_redesign
+#' @family duckdb
+#' @noRd
+do_filter_dimensions_duckdb <- function(con, tablename, filters, parameters){
+  if(length(filters) == 0) return(invisible(NULL))
+  filter_tables <- character()
+  for(part in names(filters)){
+    filter_cols <- names(filters[[part]])
+    filter_unique <- unique(filters[[part]])
+    sql <- sprintf("SELECT DISTINCT %s FROM %s",
+                   paste(filter_cols, collapse = ", "),
+                   khtools::sql_quote_I(con, tablename))
+    table_values <- data.table::setDT(DBI::dbGetQuery(con, sql))
+    fullmatch <- collapse::join(table_values, filter_unique, how = "anti", verbose = 0)[, .N] == 0
+    if(fullmatch) next
+    
+    filter_table <- sprintf("tmp_filter_%s", part)
+    khtools::duckdb_write_table(con, tablename = filter_table, data = filter_unique)
+    filter_tables <- c(filter_tables, filter_table)
+  }
+  
+  if(length(filter_tables) > 0){
+    filterparts <-  sub(".*_(.*)", "\\1", filter_tables)
+    filter_all_sql <- sprintf("CREATE TEMP TABLE tmp_filter_all AS SELECT * FROM %s",
+                              paste(filter_tables, collapse = "\nCROSS JOIN "))
+    
+    khtools::duckdb_drop_tables(con, "tmp_filter_all")
+    invisible(DBI::dbExecute(con, filter_all_sql))
+    filter_cols <- khtools::duckdb_get_columns(con, "tmp_filter_all")
+    join_condition <- paste(sprintf("t.%s = f.%s",filter_cols,filter_cols), collapse = "\n  AND ")
+    
+    filter_sql <- sprintf(
+      "SELECT t.* FROM %s t
+      SEMI JOIN tmp_filter_all f ON %s",
+      khtools::sql_quote_I(con, tablename), 
+      join_condition)
+    
+    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s",  khtools::sql_quote_I(con, tablename)))$N
+    khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = filter_sql)
+    n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s",  khtools::sql_quote_I(con, tablename)))$N
+    filterpartsname <- as.character(parameters$DefDesign$DelKolN[filterparts])
+    khtools::msg(sprintf("-- Filtrering på %s: %s -> %s rader", paste(filterpartsname, collapse = ", "), n_before, n_after))
+  }
+}
+
+#' @title do_recode_and_aggregate_dimensions_duckdb
+#' @description Recode dimensions based on codebook generated from find_redesign
+#' @family duckdb
+#' @noRd
+do_recode_dimensions_duckdb <- function(con, tablename, recode, parameters){
+  
+  recodeparts <- names(recode)
+  if(length(recodeparts) == 0) return(invisible(NULL)) 
+  
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
+  
+  for(part in recodeparts){
+    partinfo <- get_part_info(part = part,parameters = parameters)
+    recodebook <- recode[[part]]
+    
+    if(is.null(recodebook) || nrow(recodebook) == 0){
+      next
+    }
+    
+    recode_table <- sprintf("tmp_recode_%s", part)
+    khtools::duckdb_write_table(con, tablename = recode_table, data = recodebook)
+    table_cols <- khtools::duckdb_get_columns(con, tablename)
+    join_condition <- paste(sprintf("t.%s = r.%s", partinfo$cols, partinfo$cols), collapse = "\n  AND ")
+    select_cols <- character()
+    
+    for(col in table_cols){
+      idx <- match(col, partinfo$cols)
+      if(is.na(idx)){
+        select_cols <- c(select_cols, sprintf("t.%s", khtools::sql_quote_I(con, col)))
+      } else {
+        select_cols <- c(select_cols,
+                         sprintf("r.%s AS %s", 
+                                 khtools::sql_quote_I(con, partinfo$colsomk[idx]), 
+                                 khtools::sql_quote_I(con, partinfo$cols[idx])))
+      }
+    }
+    
+    recode_sql <- sprintf(
+    "SELECT %s FROM %s t INNER JOIN %s r ON %s",
+      paste(select_cols, collapse = ",\n"),
+      tbl_sql,
+      recode_table,
+      join_condition
+    )
+    
+    n_before <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
+    khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = recode_sql)
+    if(part == "Gn") fix_recode_geo_duckdb(con = con, tablename = tablename, parameters = parameters)
+    do_aggregate_file_duckdb(con = con, tablename = tablename)
+    n_after <- DBI::dbGetQuery(con, sprintf("SELECT COUNT(*) AS N FROM %s", tbl_sql))$N
+    partname <- as.character(parameters$DefDesign$DelKolN[part])
+    khtools::msg(sprintf("-- Omkoding av %s: %s -> %s rader", partname, n_before, n_after))
+  }
+  
+  invisible(NULL)
+}
+
+#' @title fix_recode_geo_duckdb
+#' @description If GEOniv is recoded, this function fix columns GEO and FYLKE
+#' @family duckdb
+#' @noRd
+fix_recode_geo_duckdb <- function(con, tablename, parameters){
+  on.exit({
+    khtools::duckdb_drop_tables(con, c("tmp_helsereg", "tmp_geokoder_b"))
+    }, add = TRUE)
+  
+  khtools::duckdb_write_table(con, "tmp_helsereg", data = parameters$HELSEREG)
+  khtools::duckdb_write_table(con, "tmp_geokoder_b", data = unique(parameters$GeoKoder[GEOniv == "B", .(GEO)]))
+  
+  has_fylke <- "FYLKE" %in% khtools::duckdb_get_columns(con, tablename)
+  fylke_sql <- if(has_fylke){
+    "CASE
+      WHEN t.GEOniv = 'L' THEN '00'
+      WHEN t.GEOniv = 'B' AND b.GEO IS NULL THEN '99'
+      ELSE t.FYLKE
+    END AS FYLKE,"
+  } else {
+    ""
+  }
+  
+  exclude_sql <- if(has_fylke){
+    "t.* EXCLUDE (GEO, FYLKE)"
+  } else {
+    "t.* EXCLUDE (GEO)"
+  }
+  
+  
+  sql <- sprintf(
+    "SELECT
+    CASE
+      WHEN t.GEOniv = 'L' THEN '0'
+      WHEN t.GEOniv = 'F' THEN SUBSTR(t.GEO, 1, 2)
+      WHEN t.GEOniv = 'K' THEN SUBSTR(t.GEO, 1, 4)
+      WHEN t.GEOniv = 'B' AND b.GEO IS NULL THEN '999999'
+      WHEN t.GEOniv = 'H' AND h.HELSEREG IS NOT NULL THEN h.HELSEREG
+      ELSE t.GEO 
+    END AS GEO,
+    %s
+    %s FROM %s t
+    LEFT JOIN tmp_helsereg h ON t.GEO = h.FYLKE
+    LEFT JOIN tmp_geokoder_b b ON t.GEO = b.GEO",
+    fylke_sql,
+    exclude_sql,
+    khtools::sql_quote_I(con, tablename)
+  )
+  
+  khtools::duckdb_replace_existing_table(con, target = tablename, select_sql = sql)
+  invisible(NULL)
+}
+
+#' @title add_udekk_duckdb
+#' @description Add uncovered combinations to table
+#' @family duckdb
+#' @noRd
+add_udekk_duckdb <- function(con, tablename, udekk){
+  
+  if(is.null(udekk) || nrow(udekk) == 0) return(invisible(NULL))
+  khtools::duckdb_write_table(con, "tmp_udekk", data = udekk)
+  on.exit(
+    khtools::duckdb_drop_tables(con, c("tmp_udekk", "tmp_udekk_keep")),
+    add = TRUE
+  )
+  
+  table_cols <- khtools::duckdb_get_columns(con, tablename)
+  dims <- identify_nonvalues(table_cols)
+  vals <- identify_values(table_cols)
+  
+  udekk_cols <- names(udekk)
+  join_cols <- intersect(dims, udekk_cols)
+  extracols <- setdiff(dims, udekk_cols)
+  
+  join_sql <- paste(sprintf("t.%s = u.%s",
+      khtools::sql_quote_I(con, join_cols),
+      khtools::sql_quote_I(con, join_cols)
+    ),
+    collapse = "\n  AND "
+  )
+  
+  sql_keep <- sprintf("SELECT * FROM %s t ANTI JOIN tmp_udekk u ON %s",
+                      khtools::sql_quote_I(con, tablename), join_sql)
+  khtools::duckdb_create_new_table(con = con, target = "tmp_udekk_keep", select_sql = sql_keep)
+  
+  if(length(extracols) > 0){
+    extra_sql <- sprintf("(SELECT DISTINCT %s FROM tmp_udekk_keep)", 
+                         paste(khtools::sql_quote_I(con, extracols), collapse = ", "))
+    newrow_from_sql <- sprintf("tmp_udekk u CROSS JOIN %s e", extra_sql)
+  } else {
+    newrow_from_sql <- "tmp_udekk u"
+  }
+  
+  value_sql <- c(sprintf("CAST(NULL AS DOUBLE) AS %s", khtools::sql_quote_I(con, vals)),
+                 sprintf("9 AS %s", khtools::sql_quote_I(con, paste0(vals, ".f"))),
+                 sprintf("0 AS %s", khtools::sql_quote_I(con, paste0(vals, ".a"))))
+  
+  newrow_select <- c(sprintf("u.%s", khtools::sql_quote_I(con, udekk_cols)),
+                     if(length(extracols) > 0) sprintf("e.%s", khtools::sql_quote_I(con, extracols)),
+                     value_sql)
+  
+  sql <- sprintf(
+    "SELECT * FROM tmp_udekk_keep
+    UNION ALL BY NAME
+    SELECT %s FROM %s",
+    paste(newrow_select, collapse = ",\n"), newrow_from_sql
+  )
+  
+  khtools::duckdb_replace_existing_table(con = con, target = tablename, select_sql = sql)
+  invisible(NULL)
+}
+
+# OLD ----
+
+# KEEP until completely deprecated
+
 #' @title do_recode_file
 #' @description filters and recode dimensions according to redesign
 #' @keywords internal
 #' @noRd
 do_filter_and_recode_to_redesign <- function(dt, redesign, parameters){
-  cols <- list(orgcols = names(dt), dims = get_dimension_columns(names(dt)), values = get_value_columns(names(dt)))
+  cols <- list(orgcols = names(dt), dims = identify_nonvalues(names(dt)), values = identify_values(names(dt)))
   
   if(nrow(redesign$FULL) > 0){
     dt <- do_filter_dimensions(dt = dt, filters = redesign$Filters)
@@ -27,7 +271,7 @@ do_filter_dimensions <- function(dt, filters){
   orgrow <- dt[, .N]
   dt <- collapse::join(dt, filtered, how = "inner", overid = 2, verbose = 0)
   filtrow <- dt[, .N]
-  if(filtrow != orgrow) print_console_message("\n** Filtrerer på", names(filtered), "\n** rader før:", orgrow, ", og etter: ", filtrow)
+  if(filtrow != orgrow) khtools::msg("\n** Filtrerer på", names(filtered), "\n** rader før:", orgrow, ", og etter: ", filtrow)
   return(dt)
 }
 
@@ -45,7 +289,7 @@ do_recode_and_aggregate_dimensions <- function(dt, recode, cols, parameters){
     data.table::set(dt, j = partinfo$cols, value = dt[, .SD, .SDcols = partinfo$colsomk])
     data.table::set(dt, j = partinfo$colsomk, value = NULL)
     dt <- do_aggregate_file(file = dt)
-    print_console_message(paste0("\n** Omkoder og aggregerer ", partinfo$name, ", rader nå: ", nrow(dt)))
+    khtools::msg(paste0("\n** Omkoder og aggregerer ", partinfo$name, ", rader nå: ", nrow(dt)))
   }
   return(dt)
 }
@@ -81,3 +325,6 @@ add_udekk <- function(dt, udekk, cols){
                                    udekk[, .SD, .SDcols = cols$orgcols]))
   return(dt)
 }
+
+
+  

@@ -3,50 +3,86 @@
 #' Do special handling of data files, either in R or STATA. 
 #' code must be provided in specific files and specified in STATA to be used at certain points in data processing. 
 #' 
-#' @param name name of RSYNT point, refer to the column, to be used for filedump names
-#' @param dt data to be processed 
-#' @param dt_name name of data object, passed to code env
-#' @param code code to be performed, either R or STATA
-#' @param parameters global parameters
-#' @param koblid for RSYNT points applied to individual original files, koblid is needed for filedump names
-#' @param ... additional objects passed to make them available for the evaluation environment (`code_env`) where the code is evaluated
-do_special_handling <- function(name, dt, dt_name = NULL, code, parameters, koblid = NULL, ...){
-  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = dt, parameters = parameters, koblid = koblid)
-  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = dt, parameters = parameters, koblid = koblid)}, add = TRUE)
+#' @param name Navn på snutt-punkt. Brukes som filnavn for fildumper
+#' @param tablename navn på tabell i duckdb som skal brukes
+#' @param dt_name Navn på datasett etter innlasting til R dersom snutten er R-kode.
+#' @param code koden som skal kjøres, enten SQL, R eller STATA
+#' @param parameters globale parametre
+#' @param koblid for RSYNT-punkter på individuelle originale filer, brukes i filnavn for fildumper
+#' @param filedescription dersom relevant, default = NULL 
+do_special_handling <- function(name, tablename = NULL, dt_name = NULL, code, parameters, koblid = NULL, filedescription = NULL){
+  save_filedump_if_requested(dumpname = paste0(name, "pre"), dt = NULL, parameters = parameters, koblid = koblid, duck = TRUE, tablename = tablename)
+  on.exit({save_filedump_if_requested(dumpname = paste0(name, "post"), dt = NULL, parameters = parameters, koblid = koblid, duck = TRUE, tablename = tablename)}, add = TRUE)
+  is_code <- is_not_empty(code)
+  if(!is_code) return(invisible(NULL))
+  invisible(gc()) # Sikre at minnet er ryddet før snutt
+  con <- parameters$duck
   
-  is_code <- !is.null(code) && !is.na(code) && code != ""
-  if(!is_code) return(dt)
   code <- clean_rsynt_code(code = code, name = name)
   is_stata <- grepl("<STATA>", code)
+  is_sql <- grepl("<SQL>", code)
   
-  if(is_stata){
-    print_console_message("\n** Starter STATA-snutt:", name)
-    code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
-    dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
-    print_console_message("\n** Ferdig i STATA")
-    return(dt)
+  if(!khtools::duckdb_table_exists(con, tablename)){
+    stop("do_special_handling forsøker å lese fra duckdb, men tabellen finnes ikke")
   }
   
+  if(is_sql){
+    khtools::msg("- Starter SQL-snutt:", name)
+    code <- gsub("<SQL>[ \n]*(.*)", "\\1", code)
+    code <- ensure_correct_url(code, name)
+    code_env <- new.env(parent = parent.frame())
+    assign("parameters", parameters, envir = code_env)
+    assign("tablename", tablename, envir = code_env)
+    assign("duckdb_con", con, envir = code_env)
+    
+    sqlsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
+    if(inherits(sqlsynterr, "try-error")){
+      print(sqlsynterr)
+      stop("Noe gikk galt i SQL-snutten")
+    }
+    khtools::msg("-- SQL-snutt ferdig")
+    khtools::duckdb_clean(con = con)
+    return(invisible(NULL))
+  }
+  
+  dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
+  
+  if(is_stata){
+    if(name == "RSYNT1"){
+      dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
+    }
+    khtools::msg("- Starter STATA-snutt:", name)
+    code <- gsub("<STATA>[ \n]*(.*)", "\\1", code)
+    dt <- do_stata_processing(dt = dt, script = code, parameters = parameters)
+    extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
+    if(length(extracols) > 0) dt[, (extracols) := NULL]
+    khtools::msg("-- Ferdig i STATA, skriver tilbake til duckdb")
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+    khtools::duckdb_clean(con = parameters$duck)
+    return(invisible(NULL))
+  }
+  
+  if(is.null(dt_name)) stop("Datasettet har ikke blitt gitt et navn før snutt")
   code <- ensure_correct_url(code, name)
-  print_console_message("\n** Starter R-snutt:", name)
+  khtools::msg("- Starter R-snutt:", name)
   code_env <- new.env()
   assign(dt_name, dt, envir = code_env)
   assign("parameters", parameters, envir = code_env)
-  extra_args <- list(...)
-  for(argname in c(names(extra_args))){
-    assign(argname, extra_args[[argname]], envir = code_env)
-  }
+  assign("filedescription", filedescription, envir = code_env)
   
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
   if(inherits(rsynterr, "try-error")){
     print(rsynterr)
     stop("Something went wrong in R")
   }
-  # assign(dt_name, get(dt_name, envir = code_env), envir = code_env)
-  # dt <- get(dt_name, envir = code_env)
+
   dt <- code_env[[dt_name]]
-  print_console_message("\n** R-snutt ferdig")
-  return(dt)
+  extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
+  if(length(extracols) > 0) dt[, (extracols) := NULL]
+  khtools::msg("-- R-snutt ferdig")
+  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+  khtools::duckdb_clean(con = con)
+  return(invisible(NULL))
 }
 
 #' @title clean_rsynt_code
@@ -143,7 +179,7 @@ do_stata_processing <- function(dt, script, parameters){
 #' @keywords internal
 #' @noRd
 stata_processing_cleanup <- function(statafiles, orgwd){
-  print_console_message("\n*** Sletter midlertidige datafiler")
+  khtools::msg("\n*** Sletter midlertidige datafiler")
   gc()
   for(file in c("parquet_in", "parquet_out", "dta")){
     path <- statafiles[[file]]
@@ -158,7 +194,7 @@ stata_processing_cleanup <- function(statafiles, orgwd){
 #' Some general conversions are not reversed. 
 #' @noRd
 fix_column_names_pre_stata <- function(oldnames){
-  print_console_message("\n*** Fikser kolonnenavn pre stata")
+  khtools::msg("\n*** Fikser kolonnenavn pre stata")
   fixednames <- oldnames
   fixednames <- gsub("^(\\d.*)$", "S_\\1", fixednames, perl = TRUE)
   fixednames <- gsub("^(.*)\\.(f|a|n|fn1|fn3|fn9)$", "\\1_\\2", fixednames)
@@ -171,7 +207,7 @@ fix_column_names_pre_stata <- function(oldnames){
 
 #' @noRd
 fix_column_names_post_stata <- function(oldnames){
-  print_console_message("\n*** Leser filen inn igjen og fikser kolonnenavn")
+  khtools::msg("\n*** Leser filen inn igjen og fikser kolonnenavn")
   fixednames <- oldnames
   fixednames <- gsub("^S_(\\d.*)$", "\\1", fixednames)
   fixednames <- gsub("^(.*)_(f|a|n|fn1|fn3|fn9)$", "\\1.\\2", fixednames)
@@ -180,10 +216,10 @@ fix_column_names_post_stata <- function(oldnames){
 
 #' @title can_use_parquet
 #' @description
-#' If the longest value of a character column contain [æøå], represented by unicode sequences.
+#' If the longest value of a character column contain `æøå`, represented by unicode sequences.
 #' STATA will crop the value when reading a .parquet file, as these characters are multibyte. 
 #' This function returns TRUE if this is not the case, indicating that .parquet can be used.
-#' If the longest value of any column contain [æøå], FALSE is returned, indicating that .dta-format should be used. 
+#' If the longest value of any column contain `æøå`, FALSE is returned, indicating that .dta-format should be used. 
 #' @param dt data
 #' @keywords internal
 #' @noRd
@@ -223,7 +259,7 @@ set_stata_filenames <- function(batchdate, tmpdir){
 #' @keywords internal
 #' @noRd
 do_write_stata_file <- function(dt, statafiles, use_parquet){
-  print_console_message("\n*** Skriver STATA-fil")
+  khtools::msg("\n*** Skriver STATA-fil")
   if(use_parquet){
     do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
   } else {
@@ -282,7 +318,7 @@ generate_stata_do_file <- function(script, statafiles, use_parquet){
 
 #' @noRd
 run_stata_script <- function(dofile, stata_exe){
-  print_console_message("\n*** Running STATA-script...")
+  khtools::msg("\n*** Running STATA-script...")
   call <- paste("\"", stata_exe, "\" /e do ", dofile, " \n", sep = "")
   system(call, intern = TRUE)
 }

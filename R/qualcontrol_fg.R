@@ -1,5 +1,5 @@
 control_fg_output <- function(outputlist){
-  print_console_message("\n\n---\n* Kvalitetskontroll:\n---")
+  khtools::msg("\n\n---\n* Kvalitetskontroll:\n---")
   analyze_cleanlog(log = outputlist$cleanlog)
   warn_geo_99(dt = outputlist$Filgruppe)
 }
@@ -13,15 +13,15 @@ analyze_cleanlog <- function(log){
   ok_cols <- grep("_ok$", names(log), value = T)
   any_not_ok <- log[rowSums(log[, .SD, .SDcols = ok_cols] == 0) > 0]
   if(nrow(any_not_ok) == 0){
-    print_console_message("\n** Ingen ugyldige verdier funnet i filen (alle celler i cleanlog = 1)")
+    khtools::msg("\n** Ingen ugyldige verdier funnet i filen (alle celler i cleanlog = 1)")
     return(invisible(NULL))
   }
   not_ok_cols <- ok_cols[sapply(any_not_ok[, .SD, .SDcols = ok_cols], function(col) any(col == 0))]
   out <- any_not_ok[, .SD, .SDcols = c("KOBLID", not_ok_cols)]
-  print_console_message("\n***** OBS! Feil funnet\n-----")
-  print_console_message("\nTabellen viser hvilke filer og hvilke kolonner det er funnet feil i\n-----\n")
+  khtools::msg("\n***** OBS! Feil funnet\n-----")
+  khtools::msg("\nTabellen viser hvilke filer og hvilke kolonner det er funnet feil i\n-----\n")
   print(out)
-  print_console_message("\n-----\n")
+  khtools::msg("\n-----\n")
   warning(paste0("Kolonnene i tabellen over med verdi = 0 indikerer at det finnes ugyldige verdier. Dette må sannsynligvis ordnes i kodebok før ny kjøring.",
                  "\nSe fullstendig logg her: ", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk")))
 }
@@ -33,13 +33,13 @@ analyze_cleanlog <- function(log){
 warn_geo_99 <- function(dt){
   any99 <- dt[grepl("99$", GEO), .N]
   if(any99 > 0){
-    print_console_message("\n**", any99, "99-koder funnet. ")
+    khtools::msg("\n**", any99, "99-koder funnet. ")
     if(exists("org_geo_codes", envir = .GlobalEnv)){
-      print_console_message("Disse kan være 99 originalt, men er også omkodet fra følgende originalkode(r):", paste(.GlobalEnv$org_geo_codes, collapse = ", "))
+      khtools::msg("Disse kan være 99 originalt, men er også omkodet fra følgende originalkode(r):", paste(.GlobalEnv$org_geo_codes, collapse = ", "))
     } else {
-      print_console_message("Disse er ikke omkodet, og har vært 99 originalt.")
+      khtools::msg("Disse er ikke omkodet, og har vært 99 originalt.")
     }
   } else {
-    print_console_message("\n** Ingen 99-koder funnet, OK!")
+    khtools::msg("\n** Ingen 99-koder funnet, OK!")
   }
 }

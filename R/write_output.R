@@ -1,91 +1,24 @@
+# Filgruppe ----
+
 #' @title write_filegroup_output
 #' @param outfile filgruppe
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
-write_filegroup_output <- function(dt, parameters){
+write_filegroup_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
-  print_console_message("\n\n* SAVING OUTPUT FILES:\n")
+  khtools::msg("\n\n* SAVING OUTPUT FILES:\n")
   root <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"))
   parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
   datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
-  print_console_message("\n", parquet,"\n", datert)
-  table <- convert_dt_to_arrow_table(dt)
-  arrow::write_parquet(table, sink = parquet, compression = "snappy")
+  con <- parameters$duck
+  if(grepl("BEF_GKny", parameters$name, ignore.case = T)){
+    add_lks_filter(con = con)
+    sort_bef_gkny_duckdb(con = con)
+  } 
+  khtools::msg("\n Skriver:\n", parquet,"\n", datert)
+  khtools::duckdb_save_file(con = con, source = "FILGRUPPE", filepath = parquet)
   file.copy(from = parquet, to = datert)
-  if(grepl("BEF_GKny", parameters$name, ignore.case = T)) write_population_filegroup(table = table, root = root)
-}
-
-#' @title convert_dt_to_arrow_table
-#' @description
-#' Removes attributes except column names before converting to an arrow table (for writing)
-#' @param dt data.table
-#' @noRd
-convert_dt_to_arrow_table <- function(dt){
-  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
-  for(att in attremove) data.table::setattr(dt, att, NULL)
-  table <- arrow::as_arrow_table(dt)
-  return(table)
-}
-
-#' @title do_write_parquet
-#' @description
-#' Wrapper around arrow::write_parquet, which first applies convert_dt_to_arrow_table() to generate a arrow table for writing.
-#' @param dt data.table
-#' @param filepath filepath to save file
-#' @keywords internal
-#' @noRd
-do_write_parquet <- function(dt, filepath){
-  table <- convert_dt_to_arrow_table(dt)
-  arrow::write_parquet(table, sink = filepath, compression = "snappy")
-}
-
-#' @title write_population_filegroup
-#' @description
-#' Writes a partitioned dataset for BEF_GKny, for quicker read times when used as nevner file
-#' Generates two helper columns to partition the data into age groups and with/without lks
-#' @noRd
-write_population_filegroup <- function(table, root){
-  table <- add_partition_columns(table = table)
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på AARl og GEOniv.....")
-  do_write_parquet_dataset(table = table, 
-                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_aargeo")),
-                           partitioncols = c("AARl", "lks"))
-  print_console_message("\n* Lagrer befolkningsfilgruppe splittet på ALDERl, AARl og GEOniv.....")
-  do_write_parquet_dataset(table = table, 
-                           path = file.path(root, getOption("khfunctions.fg.ny"), getOption("khfunctions.pop_alderaargeo")),
-                           partitioncols = c("alder", "AARl", "lks"))
-}
-
-#' @keywords internal
-#' @noRd
-add_partition_columns <- function(table){
-  table <- arrow::as_arrow_table(
-    table |>
-      dplyr::mutate(
-        lks = dplyr::if_else(GEOniv == "V", 1L, 0L),
-        alder = dplyr::case_when(
-          ALDERh <= 17 ~ "0_17",
-          ALDERh <= 29 ~ "18_29",
-          ALDERh <= 44 ~ "30_44",
-          ALDERh <= 67 ~ "45_67",
-          ALDERh <= 79 ~ "68_79",
-          .default = "80_120"
-          )
-        )
-  )
-  return(table)
-}
-
-#' @keywords internal
-#' @noRd
-do_write_parquet_dataset <- function(table, path, partitioncols){
-  dataset <- table |> 
-    dplyr::group_by(!!!rlang::syms(partitioncols)) |>
-    dplyr::arrange(!!!rlang::syms(partitioncols))
-  
-  arrow::write_dataset(dataset = dataset, path = path, format = "parquet", partitioning = partitioncols, compression = "snappy")
-  print_console_message("Ferdig!")
 }
 
 #' @title write_codebooklog
@@ -94,7 +27,7 @@ do_write_parquet_dataset <- function(table, path, partitioncols){
 write_codebooklog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
   log <- log[, .SD, .SDcols = intersect(names(log), c("KOBLID", "DELID", "FELTTYPE", "TYPE", "ORG", "OMK", "FREQ"))]
-  print_console_message("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  khtools::msg("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
@@ -106,7 +39,7 @@ write_codebooklog <- function(log, parameters){
 #' @noRd
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
-  print_console_message("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  khtools::msg("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   path <- file.path(getOption("khfunctions.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
@@ -116,70 +49,221 @@ write_cleanlog <- function(log, parameters){
 move_old_files_to_archive <- function(path, parameters){
   oldfiles <- list.files(path, pattern = paste0(".*_", parameters$name, "_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}.csv$"))
   if(length(oldfiles) == 0) return(invisible(NULL))
-  print_console_message("\n** Flytter gamle filer til arkiv-mappen")
+  khtools::msg("\n** Flytter gamle filer til arkiv-mappen")
   for(file in oldfiles){
     fs::file_move(path = file.path(path, file), new_path = file.path(path, "arkiv", file)) 
   }  
 }
 
-#' @title write_cube_output
-#' @description Writes KUBE, ALLVIS, and QC files from lagKUBE
-#' @param outputlist list of output to write
-#' @param parameters global parameters
-#' @keywords internal
+#' @title add_lks_filter
+#' @description Legger til lks 0/1 for å kunne filtrere bort lks-data i innlesing
+#' @param con kobling til duckdb
 #' @noRd
-write_cube_output <- function(outputlist, parameters){
+add_lks_filter <- function(con) {
+  khtools::msg("\n Legger til sorteringskolonner for befolkningsfilgruppe")
+  invisible(DBI::dbExecute(con, "ALTER TABLE FILGRUPPE ADD COLUMN IF NOT EXISTS lks INTEGER;"))
+  invisible(DBI::dbExecute(con, "UPDATE FILGRUPPE SET lks = CASE WHEN GEOniv = 'V' THEN 1 ELSE 0 END"))
+  invisible(NULL)
+}
+
+#' @title sort_bef_gkny_duckdb
+#' @description
+#' Sorterer FILGRUPPE etter alle dimensjonskolonner.
+#' Overskriver tabellen med sortert versjon.
+#' @param con duckdb-connection
+#' @noRd
+sort_bef_gkny_duckdb <- function(con){
+  khtools::msg("\n Sorterer befolkningsfilgruppe")
+  
+  dims <- khfunctions:::identify_nonvalues(khtools::duckdb_get_columns(con, "FILGRUPPE"))
+  sort <- c("lks", "AARl", "ALDERl", "GEO", "KJONN", "UTDANN", "INNVKAT", "LANDBAK")
+  sortdims <- union(sort, dims)
+  sortdims_sql <- paste(sortdims, collapse = ", ")
+  
+  orgtabell <- "FILGRUPPE"
+  
+  sql <- sprintf("SELECT * FROM %s ORDER BY %s", 
+                 khtools::sql_quote_I(con, orgtabell), sortdims_sql)
+  khtools::duckdb_replace_existing_table(con, target = orgtabell, select_sql = sql)
+}
+
+# Kube ----
+
+#' @title generate_allvis_base
+#' @description
+#' Lager grunnlaget for ALLVIS og QC-output
+#' @noRd
+generate_allvis_base <- function(parameters){
+  con <- parameters$duck
+  cols <- DBI::dbListFields(con, "KUBE")
+  cols <- cols[!grepl("\\.(f|a|n|fn[0-9]+)$|^naboprikketIomg\\d+$|^spv_tmp$", cols) | cols == "RATE.n"]
+  qcvals <- intersect(getOption("khfunctions.qcvals"), cols)
+  
+  qcols <- as.character(khtools::sql_quote_I(con, cols))
+  select_expr <- c(qcols)
+  
+  censorvalues <- intersect(unique(c(parameters$outvalues, "MEIS")), cols)
+  qcensor <- as.character(khtools::sql_quote_I(con, censorvalues))
+  select_expr[match(censorvalues, cols)] <- sprintf(
+    "CASE WHEN SPVFLAGG > 0 THEN NULL ELSE %s END AS %s",
+    qcensor, qcensor
+  )
+  
+  quprikk <- as.character(khtools::sql_quote_I(con, qcvals))
+  quprikk_alias <- as.character(khtools::sql_quote_I(con, paste0(qcvals, "_uprikk")))
+  select_expr <- c(select_expr, sprintf("%s AS %s", quprikk, quprikk_alias))
+  
+  khtools::duckdb_drop_tables(con, "ALLVIS_base")
+  sql <- sprintf("SELECT %s FROM KUBE", paste(select_expr, collapse = ",\n"))
+  khtools::duckdb_create_new_table(con, target = "ALLVIS_base", select_sql = sql)
+  invisible(NULL)
+}
+
+#' @title generate_allvis_export_table
+#' @description
+#' Lager endelig ALLVIS-fil
+#' @noRd
+generate_allvis_export_table <- function(parameters){
+  con <- parameters$duck
+  khtools::duckdb_drop_tables(con, "ALLVIS")
+  cols <- c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")
+  cols <- as.character(khtools::sql_quote_I(con, cols))
+  sql <- sprintf("CREATE TABLE ALLVIS AS SELECT %s FROM ALLVIS_base", 
+                 paste(cols, collapse = ", "))
+  invisible(DBI::dbExecute(parameters$duck, sql))
+  invisible(NULL)
+}
+
+#' @title generate_qc_table
+#' @description
+#' Lager QC-fil med nødvendige hjelpekolonner
+#' @noRd
+generate_qc_table <- function(parameters){
+  
+  con <- parameters$duck
+  qcvals <- intersect(getOption("khfunctions.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
+  prikkvals <- intersect(getOption("khtools.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
+  
+  cols <- unique(c(
+    parameters$outdimensions,
+    parameters$outvalues,
+    "SPVFLAGG",
+    paste0(qcvals, "_uprikk"),
+    prikkvals
+  ))
+  cols <- as.character(khtools::sql_quote_I(con, cols))
+  
+  khtools::duckdb_drop_tables(con, "QC")
+  sql <- sprintf("CREATE TABLE QC AS SELECT %s FROM ALLVIS_base", paste(cols, collapse = ", "))
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
+}
+
+#' @title write_cube_output
+#' @description
+#' Skriver alle outputfiler fra LagKUBE.
+#' @noRd
+write_cube_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   basepath <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"))
-  name <- ifelse(!parameters$geonaboprikk, paste0("ikkegeoprikket_", parameters$name), parameters$name)
+  name <- parameters$name
   datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
-  datert_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
-  datert_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
+  allvis_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
+  allvis_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
   qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
   qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   
-  print_console_message("\nSAVING OUTPUT FILES:\n")
-  # Full cube .parquet format
-  do_write_parquet(outputlist$KUBE, filepath = datert_parquet_full)
-  print_console_message("\n", datert_parquet_full)
-  # Main output file for stat bank (csv and parquet)
-  data.table::fwrite(outputlist$ALLVIS, file = datert_csv, sep = ";")
-  do_write_parquet_allvis(dt = outputlist$ALLVIS, filepath = datert_parquet, parameters = parameters)
-  print_console_message("\n", datert_csv, "\n", datert_parquet)
+  con <- parameters$duck
+  # Skriv KUBE
+  khtools::msg("-", datert_parquet_full)
+  khtools::duckdb_save_file(con, source = "KUBE", filepath = datert_parquet_full)
   
-  # QC files (parquet and csv)
-  data.table::fwrite(outputlist$QC, file = qc_csv, sep = ";")
-  do_write_parquet(dt = outputlist$QC, filepath = qc_parquet) # QC .parquet format
+  # Skriv ALLVIS
+  khtools::msg("-", allvis_parquet)
+  allvis_source <- generate_allvis_select(parameters = parameters)
+  khtools::duckdb_save_file(con, source = allvis_source, filepath = allvis_parquet)
+  
+  khtools::msg("-", allvis_csv)
+  khtools::duckdb_save_file(con, source = "ALLVIS", filepath = allvis_csv)
+  
+  # Skriv QC
+  khtools::msg("-", qc_parquet)
+  khtools::duckdb_save_file(con, source = "QC", filepath = qc_parquet)
+  khtools::msg("-", qc_csv)
+  khtools::duckdb_save_file(con, source = "QC", filepath = qc_csv)
 }
 
-#' @title do_write_parquet_allvis
-#' @description Saves allvis file with correct column types for statbank
-#' @param dt data.table
-#' @param filepath filepath
-#' @keywords internal
+#' @title generate_allvis_select
+#' @description
+#' Genererer et uttrekk til ALLVIS, som sørger for riktige kolonnetyper i parquetfilen
 #' @noRd
-do_write_parquet_allvis <- function(dt, filepath, parameters){
-  table <- convert_dt_to_arrow_table(dt)
-  schema <- generate_allvis_schema(table = table, parameters = parameters)
-  arrow::write_parquet(table$cast(schema), sink = filepath, compression = "snappy")
+generate_allvis_select <- function(parameters){
+  con <- parameters$duck
+  qdims <- as.character(khtools::sql_quote_I(con, parameters$outdimensions))
+  qvals <- as.character(khtools::sql_quote_I(con, parameters$outvalues))
+  dim_expr <- sprintf("CAST(%s AS VARCHAR) AS %s",qdims,qdims)
+  val_expr <- sprintf("CAST(%s AS DOUBLE) AS %s",qvals,qvals)
+  sprintf("(SELECT %s, %s, CAST(SPVFLAGG AS INTEGER) AS SPVFLAGG FROM ALLVIS)",
+          paste(dim_expr, collapse = ",\n"),
+          paste(val_expr, collapse = ",\n")
+  )
 }
 
+# MISC ----
 
-generate_allvis_schema <- function(table, parameters) {
-  tmp_sch <- table$schema
+#' @title save_filedump_if_requested
+#' @description
+#' Saves a .csv, .rds, or .dta file at specific points during data processing
+#' All RSYNT points have the possibility to save a filedump with the name rsyntname + pre/post, e.g. "RSYNT_POSTPROSESSpre" 
+#' 
+#' Filegroup processing: 
+#' * RSYNT1pre/post (Rsynt when reading original file)
+#' * RESHAPEpre/post (Before and after reshaping original file)
+#' * RSYNT2pre/post (Rsynt during formatting of original file to table)
+#' * KODEBOKpre/post (before and after recoding with codebook)
+#' * RSYNT_PRE_FGLAGRINGpre/post (Before and after rsynt point prior to saving output)
+#' 
+#' Cube processing: 
+#' * MOVAVpre/MOVAVpost (before and after aggregating to periods)
+#' * SLUTTREDIGERpre/post (before and after RSYNT point SLUTTREDIGER, after aggregation and standardization)
+#' * PRIKKpre/post (before and after censoring)
+#' * RSYNT_POSTPROSESSpre/post (Before and after RSYNT_POSTPROSESS)
+#' @param dumpname name of requested filedump
+#' @param dt data to be stored, can be NULL if data is in duckdb
+#' @param parameters global parameters
+#' @param koblid used when requesting file dumps during processing of original files, default = NULL
+#' @param duck TRUE/FALSE, is data to be written located in duckdb
+#' @param tablename name of table in duckdb to be stored
+#' @examples
+#' # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
+#' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
+save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "RESHAPEpre", "RESHAPEpost", "RSYNT2pre", "RSYNT2post",
+                                                    "KODEBOKpre", "KODEBOKpost", "RSYNT_PRE_FGLAGRINGpre", "RSYNT_PRE_FGLAGRINGpost",
+                                                    "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre", "SLUTTREDIGERpost", 
+                                                    "PRIKKpre", "PRIKKpost", "RSYNT_POSTPROSESSpre", "RSYNT_POSTPROSESSpost"), 
+                                       dt = NULL, parameters, koblid = NULL, duck = FALSE, tablename = NULL){
+  if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
+  if(is.null(dt) && (isFALSE(duck) | is.null(tablename))) stop("Filedump requested, but data not provided or in duckdb")
+  format <- parameters$dumps[[dumpname]]
+  dumpdir <- file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"))
+  filename <- paste0(parameters$name, "_", dumpname)
+  if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
   
-  fields <- lapply(names(table), function(name){
-    if (name %in% parameters$outdimensions) {
-    arrow::field(name, arrow::utf8())
-      } else if (name %in% parameters$outvalues) {
-        arrow::field(name, arrow::float64())
-        } else {
-          f <- tmp_sch$GetFieldByName(name)
-          arrow::field(name, f$type)
-        }
-    }
-  ) 
-  do.call(arrow::schema, fields)
+  if(is.null(dt) && isTRUE(duck)){
+    dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = tablename)
+  }
+    
+  if("CSV" %in% format) data.table::fwrite(dt, file = file.path(dumpdir, paste0(filename, ".csv")), sep = ";")
+  if("R" %in% format){
+    if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
+    .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
+    do_write_parquet(dt = dt, filepath = file.path(dumpdir, paste0(filename, ".parquet")))
+  } 
+  if("STATA" %in% format){
+    dtout <- fix_column_names_pre_stata(dt)
+    haven::write_dta(dtout, path = file.path(dumpdir, paste0(filename, ".dta")))
+  }
+  invisible(gc())
 }
 
 
@@ -228,69 +312,5 @@ melt_access_spec <- function(dscr, name = NULL){
   data.table::setcolorder(d, "Tabell")
 }
 
-#' @title LagQCKube (vl)
-#' @description
-#' Adds uncensored columns sumTELLER/sumNEVNER/RATE.n to the ALLVISkube
-#' @param allvis Censored ALLVIs kube
-#' @param uprikk Uncensored KUBE
-#' @param allvistabs Dimensions included in ALLVIS kube
-#' @param allvisvals All columns 
-#' @keywords internal
-#' @noRd
-LagQCKube <- function(data, allvistabs){
-  qcvals <- getOption("khfunctions.qcvals")
-  prikkvals <- intersect(getOption("khfunctions.prikkeinfo"), names(data[["KUBE"]]))
-  uprikk <- data.table::copy(data[["KUBE"]])[, .SD, .SDcols = c(allvistabs, qcvals, prikkvals)]
-  data.table::setnames(uprikk, qcvals, paste0(qcvals, "_uprikk"))
-  
-  QC <- collapse::join(data[["ALLVIS"]], uprikk, on = allvistabs, overid = 2, verbose = 0)
-  return(QC)
-}
+# Deprecated ----
 
-#' @title save_filedump_if_requested
-#' @description
-#' Saves a .csv, .rds, or .dta file at specific points during data processing
-#' All RSYNT points have the possibility to save a filedump with the name rsyntname + pre/post, e.g. "RSYNT_POSTPROSESSpre" 
-#' 
-#' Filegroup processing: 
-#' * RSYNT1pre/post (Rsynt when reading original file)
-#' * RESHAPEpre/post (Before and after reshaping original file)
-#' * RSYNT2pre/post (Rsynt during formatting of original file to table)
-#' * KODEBOKpre/post (before and after recoding with codebook)
-#' * RSYNT_PRE_FGLAGRINGpre/post (Before and after rsynt point prior to saving output)
-#' 
-#' Cube processing: 
-#' * MOVAVpre/MOVAVpost (before and after aggregating to periods)
-#' * SLUTTREDIGERpre/post (before and after RSYNT point SLUTTREDIGER, after aggregation and standardization)
-#' * PRIKKpre/post (before and after censoring)
-#' * RSYNT_POSTPROSESSpre/post (Before and after RSYNT_POSTPROSESS)
-#' @param dumpname name of requested filedump
-#' @param dt data to be stored
-#' @param parameters global parameters
-#' @param koblid used when requesting file dumps during processing of original files, default = NULL
-#' @examples
-#' # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
-#' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
-save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "RESHAPEpre", "RESHAPEpost", "RSYNT2pre", "RSYNT2post",
-                                                    "KODEBOKpre", "KODEBOKpost", "RSYNT_PRE_FGLAGRINGpre", "RSYNT_PRE_FGLAGRINGpost",
-                                                    "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre", "SLUTTREDIGERpost", 
-                                                    "PRIKKpre", "PRIKKpost", "RSYNT_POSTPROSESSpre", "RSYNT_POSTPROSESSpost"), 
-                                       dt, parameters, koblid = NULL){
-  if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
-  format <- parameters$dumps[[dumpname]]
-  dumpdir <- file.path(getOption("khfunctions.root"), getOption("khfunctions.dumpdir"))
-  filename <- paste0(parameters$name, "_", dumpname)
-  if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
-    
-  if("CSV" %in% format) data.table::fwrite(dt, file = file.path(dumpdir, paste0(filename, ".csv"), sep = ";"))
-  if("R" %in% format){
-    if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
-    .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
-    do_write_parquet(dt = dt, filepath = file.path(dumpdir, paste0(filename, ".parquet")))
-  } 
-  if("STATA" %in% format){
-    dtout <- fix_column_names_pre_stata(dt)
-    haven::write_dta(dtout, path = file.path(dumpdir, paste0(filename, ".dta")))
-  }
-}
-  

@@ -7,8 +7,9 @@
 find_redesign <- function(orgdesign, targetdesign, aggregate = character(), parameters) {
   FULL <- get_all_dimension_combinations_targetdesign(targetdesign = targetdesign)
   namesFULL <- names(FULL) # Need to get the original colnames before manipulation
-  TempFile <- file.path(tempdir(), paste0("full", SettKHBatchDate(), ".RDS"))
-  saveRDS(FULL, TempFile)
+  con = parameters$duck
+  khtools::duckdb_write_table(con, data = FULL, tablename = "full_pre_udekk")
+  on.exit(khtools::duckdb_drop_tables(con, "full_pre_udekk"))
   FULL <- add_betcols_to_full(dt = FULL, orgdesign = orgdesign)
   targetdesign <- add_missing_parts_from_orgdesign(targetdesign, orgdesign)
   any_ubeting <- length(orgdesign$UBeting) > 0
@@ -17,6 +18,7 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
                   c("Parts", "SKombs", "KBs", "Filters", "FULL", "Dekk", "Udekk", "DelStatus"))
   out[["Parts"]] <- set_redesign_parts(orgdesign = orgdesign, targetdesign = targetdesign, parameters = parameters)
   partcols <- get_partcols_and_set_aggpri(cols = names(out$Parts), parameters = parameters)
+  out[["order"]] <- partcols
   
   for(part in partcols){
     partinfo <- get_part_info(part = part, parameters = parameters)
@@ -35,7 +37,6 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
     
     filter <- all(cb_part$codebook[, .SD, .SDcols = partinfo$cols] == cb_part$codebook[, .SD, .SDcols = partinfo$colsomk])
     if(filter) cb_part <- switch_cbpart_to_filter(cb_part = cb_part, partinfo = partinfo)
-    # if(part == "Y" & cb_part$status == "B") stop("Delstatus for AAR kan ikke være B"), tror ikke denne trengs da delstatus ikke brukes i omkodfil. Må sjekke. 
     
     out$KBs[[part]] <- cb_part$codebook
     out$DelStatus[[part]] <- cb_part$status
@@ -44,7 +45,7 @@ find_redesign <- function(orgdesign, targetdesign, aggregate = character(), para
   
   out[["FULL"]] <- FULL
   out[["Dekk"]] <- get_dekk(full = FULL)
-  out[["Udekk"]] <- handle_udekk(FULL, namesFULL, TempFile)
+  out[["Udekk"]] <- handle_udekk(con, FULL, namesFULL)
   gc()
   return(out)
 }
@@ -341,19 +342,9 @@ set_partdata_bruk <- function(partdata, partinfo){
 #' @noRd
 merge_cbpart_to_full <- function(full, cb_part){
   commoncols <- intersect(names(full), names(cb_part))
-  keytab <- unique(cb_part[, ..commoncols])
   
-  idx <- full[
-    keytab,
-    on = commoncols,
-    nomatch = 0L,
-    which = TRUE
-  ]
-  
-  return(full[idx])
-  # full <- collapse::join(full, unique(cb_part[, .SD, .SDcols = commoncols], 
-                         # on = commoncols, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
-  return(full)
+ collapse::join(full, unique(cb_part[, .SD, .SDcols = commoncols]), 
+                on = commoncols, how = "inner", multiple = TRUE, overid = 2, verbose = 0)
 }
 
 #' @description
@@ -394,8 +385,8 @@ get_dekk <- function(full){
 #' handle_udekk (ybk)
 #' @keywords internal
 #' @noRd
-handle_udekk <- function(FULL, namesFULL, TempFile){
-  Udekk <- readRDS(TempFile)
+handle_udekk <- function(con, FULL, namesFULL){
+  Udekk <- khtools::duckdb_fetch_table(con, "full_pre_udekk")
   data.table::setkeyv(Udekk, namesFULL)
   data.table::setkeyv(FULL, namesFULL)
   Udekk <- Udekk[!FULL, allow.cartesian = TRUE]

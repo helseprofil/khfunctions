@@ -6,9 +6,6 @@
 \usage{
 expand.grid.df(...)
 }
-\arguments{
-\item{...}{}
-}
 \description{
 expand.grid.df (ybk)
 }

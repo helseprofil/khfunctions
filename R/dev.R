@@ -1,28 +1,69 @@
 SetKubeParameters <- function(cube){
-  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = cube,
-                     year = getOption("khfunctions.year"),
+                     year = getOption("khfunctions.profileyear"),
                      dumps = list(),
                      write = FALSE,
-                     geonaboprikk = TRUE,
-                     removebuffer = FALSE, 
+                     ramlimit = NULL,
                      qualcontrol = TRUE)
   parameters <<- get_cubeparameters(user_args = user_args)
 }
 
 SetFilgruppeParameters <- function(filgruppenavn){
-  on.exit(RODBC::odbcCloseAll())
   user_args <<- list(name = filgruppenavn,
                      write = FALSE,
+                     ramlimit = NULL, 
                      dumps = list(), 
                      qualcontrol = TRUE)
   parameters <<- get_filegroup_parameters(user_args = user_args)
 }
 
+# Sammenligne mot et fasitdatasett:
+
+comparefasit <- function(dt, fasit){
+  fasitcompare <- data.table::copy(fasit)
+  fix_fasit_coltypes(dt, fasitcompare)
+  fix_fasit_colorder(dt, fasitcompare)
+  fix_fasit_order(dt, fasitcompare)
+  rm_fasit_extracolumn(dt, fasitcompare)
+  all.equal(dt, fasitcompare, check.attributes = F, check.class = F)
+}
+
+# Setter kolonner i fasit i samme rekkefølge som dt
+fix_fasit_colorder <- function(dt, comp){
+  data.table::setcolorder(comp, names(dt))
+}
+
+fix_fasit_coltypes <- function(dt, comp){
+  common_cols <- intersect(names(dt), names(comp))
+  for(col in common_cols){
+    data.table::set(
+      comp,
+      j = col,
+      value = methods::as(comp[[col]], class(dt[[col]])[1])
+    )
+  }
+}
+
+# Setter samme rekkefølge i dt og fasit for sammenligning
+fix_fasit_order <- function(dt, comp){
+  keyvar <- identify_dimensions(names(dt))
+  data.table::setkeyv(dt, keyvar)
+  data.table::setkeyv(comp, keyvar)
+}
+
+rm_fasit_extracolumn <- function(dt, comp){
+  extracol <- setdiff(names(comp), names(dt))
+  if(length(extracol)){
+    warning(paste("Sletter ekstrakolonner i fasit:", paste(extracol, collapse = ", ")))
+    comp[, names(.SD) := NULL, .SDcols = extracol]
+  }
+}
+
+
 fg_get_all_read_args <- function(globs = get_global_parameters()){
-  orginnleskobl <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORGINNLESkobl"), as.is = TRUE))
-  originalfiler <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", globs$validdates)), as.is = TRUE))
-  innlesing <- data.table::setDT(RODBC::sqlQuery(globs$dbh, query = paste0("SELECT * FROM INNLESING WHERE ", globs$validdates), as.is = TRUE))
+  orginnleskobl <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORGINNLESkobl")))
+  originalfiler <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM ORIGINALFILER WHERE ", gsub("VERSJON", "IBRUK", globs$validdates))))
+  innlesing <- data.table::setDT(DBI::dbGetQuery(globs$dbh, paste0("SELECT * FROM INNLESING WHERE ", globs$validdates)))
   
   outcols <- c("KOBLID", "FILID", "FILNAVN", "FORMAT", "DEFAAR", setdiff(names(innlesing), "KOMMENTAR"))
   out <- collapse::join(orginnleskobl, originalfiler, how = "i", on = "FILID", overid = 2, verbose = 0)

@@ -4,20 +4,30 @@
 \alias{do_special_handling}
 \title{do_special_handling}
 \usage{
-do_special_handling(name, dt, code, parameters, koblid = NULL, ...)
+do_special_handling(
+  name,
+  tablename = NULL,
+  dt_name = NULL,
+  code,
+  parameters,
+  koblid = NULL,
+  filedescription = NULL
+)
 }
 \arguments{
-\item{name}{name of RSYNT point, refer to the column, to be used for filedump names}
+\item{name}{Navn på snutt-punkt. Brukes som filnavn for fildumper}
 
-\item{dt}{data to be processed}
+\item{tablename}{navn på tabell i duckdb som skal brukes}
 
-\item{code}{code to be performed, either R or STATA}
+\item{dt_name}{Navn på datasett etter innlasting til R dersom snutten er R-kode.}
 
-\item{parameters}{global parameters}
+\item{code}{koden som skal kjøres, enten SQL, R eller STATA}
 
-\item{koblid}{for RSYNT points applied to individual original files, koblid is needed for filedump names}
+\item{parameters}{globale parametre}
 
-\item{...}{additional objects passed to make them available for the evaluation environment (\code{code_env}) where the code is evaluated}
+\item{koblid}{for RSYNT-punkter på individuelle originale filer, brukes i filnavn for fildumper}
+
+\item{filedescription}{dersom relevant, default = NULL}
 }
 \description{
 Do special handling of data files, either in R or STATA.

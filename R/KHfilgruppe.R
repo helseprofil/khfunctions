@@ -4,11 +4,15 @@
 #'
 #' @param gruppe name of filegroup
 #' @param write save output files? default = TRUE
+#' @param ramlimit max RAM allocation for duckdb. If NULL, default value is 8GB
 #' @param dumps list of intermediate files to save, used for debugging and development. 
+#' @param qualcontrol perform initial qualcontrol of data
 #' @export
-LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE) {
+LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
+  khtools::header(paste0("Starter filgruppekjøring: ", name))
+  
   user_args = as.list(environment())
   parameters <- get_filegroup_parameters(user_args = user_args)
   # For dev and debug: use SetFilgruppeParameters("NAME") and run step by step below
@@ -17,46 +21,51 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE)
   filegroup_check_original_files_and_spec(parameters = parameters)
   
   codebooklog <- initiate_codebooklog(nrow = 0)
-  print_console_message("\n\n* Starter lesing, formattering og stabling av originalfiler\n-----")
+  khtools::header("Starter lesing, formattering og stabling av originalfiler")
   if(parameters$n_files == 1){
-    Filgruppe <- make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
+    make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
   } else {
-    Filgruppe <- vector("list", parameters$n_files)
     for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
-      Filgruppe[[file_number]] <- make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
+      make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
     }
-    Filgruppe <- data.table::rbindlist(Filgruppe, fill = TRUE, use.names = TRUE)
   }
-  print_console_message("-----\n* Alle originalfiler lest og stablet")
+  clean_tempfiles(con = parameters$duck)
+  khtools::duckdb_clean(con = parameters$duck)
+  khtools::msg("\n* Alle originalfiler lest og stablet")
   if(parameters$write) write_codebooklog(log = codebooklog, parameters = parameters)
-  check_encoding(dt = Filgruppe)
+  cleanlog <- initiate_cleanlog_db(codebooklog = codebooklog, parameters = parameters)
+  clean_filegroup_dimensions_duckdb(parameters = parameters, cleanlog = cleanlog)
+  clean_filegroup_values_duckdb(parameters = parameters, cleanlog = cleanlog)
   
-  cleanlog <- initiate_cleanlog(dt = Filgruppe, codebooklog = codebooklog, parameters = parameters)
-  Filgruppe <- clean_filegroup_dimensions(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
-  Filgruppe <- clean_filegroup_values(dt = Filgruppe, parameters = parameters, cleanlog = cleanlog)
   if(parameters$write) write_cleanlog(log = cleanlog, parameters = parameters)
-  print_console_message("\n-----\n* Alle dimensjoner og verdikolonner vasket")
+
+  khtools::header("Postprosessering")
+  rename_fg_value_columns_duckdb(parameters = parameters)
+  set_integer_columns_duckdb(con = parameters$duck)
+  do_special_handling(name = "RSYNT_PRE_FGLAGRING", tablename = "FILGRUPPE", dt_name = "Filgruppe", 
+                      code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, 
+                      parameters = parameters)
   
-  do_set_fg_column_order(dt = Filgruppe)
-  do_set_fg_value_names(dt = Filgruppe, parameters = parameters)
-  remove_helper_columns(dt = Filgruppe)
-  set_integer_columns(dt = Filgruppe)
-  Filgruppe <- do_special_handling(name = "RSYNT_PRE_FGLAGRING", dt = Filgruppe, dt_name = "Filgruppe", code = parameters$filegroup_information$RSYNT_PRE_FGLAGRING, parameters = parameters)
+  khtools::header("Samler (og eksporterer) resultatfiler")
+  write_filegroup_output(parameters = parameters)
   
-  # DEV: KAN GEOHARMONISERING SKJE HER?? Må I SåFALL OMKODE GEO OG AGGREGERE FILGRUPPEN
-  RESULTAT <<- list(Filgruppe = Filgruppe, cleanlog = cleanlog, codebooklog = codebooklog)
-  write_filegroup_output(dt = Filgruppe, parameters = parameters)
+  RESULTAT <- list(
+    Filgruppe = khtools::duckdb_fetch_table(parameters$duck, "FILGRUPPE"),
+    cleanlog = cleanlog,
+    codebooklog = codebooklog
+  )
+  assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
   if(parameters$qualcontrol) control_fg_output(outputlist = RESULTAT)
 
-  print_console_message("\n\n-------------------------FILGRUPPE", parameters$name, "FERDIG--------------------------------------")
-  print_console_message("\nSe output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
+  khtools::header(paste0("FILGRUPPE ", parameters$name, " er ferdig"))
+  khtools::msg("Se output med RESULTAT$Filgruppe, RESULTAT$cleanlog (rensing av kolonner) eller RESULTAT$codebooklog (omkodingslogg)")
 }
 
 lagfilgruppe_cleanup <- function(parameters){
   if(parameters$write) sink()
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  RODBC::odbcCloseAll()
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
+  khtools::duckdb_shutdown(con = parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)
@@ -67,9 +76,11 @@ lagfilgruppe_cleanup <- function(parameters){
 #' @description
 #' Initiates log for filegroup cleaning
 #' @noRd
-initiate_cleanlog <- function(dt, codebooklog, parameters){
-  log <- parameters$read_parameters[KOBLID %in% unique(dt$KOBLID), .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
-  n_rows <- dt[, .(N_rows = .N), by = KOBLID]
+initiate_cleanlog_db <- function(codebooklog, parameters){
+  if(!"FILGRUPPE" %in% khtools::duckdb_get_tables(con = parameters$duck)) stop("FILGRUPPE finnes ikke i duckdb, kan ikke initiere cleanlog")
+  koblids <- as.character(DBI::dbGetQuery(parameters$duck, "SELECT DISTINCT KOBLID FROM FILGRUPPE;"))
+  log <- parameters$read_parameters[KOBLID %in% koblids, .SD, .SDcols = c("KOBLID", "DELID")][, KOBLID := as.character(KOBLID)]
+  n_rows <- data.table::setDT(DBI::dbGetQuery(parameters$duck, "SELECT KOBLID, COUNT(*) AS n_rows FROM FILGRUPPE GROUP BY KOBLID;"))
   log <- collapse::join(log, n_rows, on = "KOBLID", verbose = 0)
   n_recoded <- codebooklog[, .(N_values_recoded = sum(as.numeric(FREQ), na.rm = T)), by = KOBLID]
   log <- collapse::join(log, n_recoded, on = "KOBLID", verbose = 0)
@@ -79,68 +90,23 @@ initiate_cleanlog <- function(dt, codebooklog, parameters){
   return(log)
 }
 
-#' @keywords internal
-#' @noRd
-do_set_fg_column_order <- function(dt){
-  colorder <- "GEO"
-  dims <- c(grep("GEO", getOption("khfunctions.standarddimensions"), value = T, invert = T))
-  for(i in c(dims, "TAB", "VAL", "GEOniv", "FYLKE", "KOBLID")){
-    colorder <- c(colorder, (names(dt)[startsWith(names(dt), i)]))
-  }
-  data.table::setcolorder(dt, colorder)
-}
-
-#' @title remove_helper_columns
-#' @noRd
-remove_helper_columns <- function(dt){
-  helpers <- c("LEVEL")
-  helpers <- helpers[helpers %in% names(dt)]
-  dt[, (helpers) := NULL]
-}
-
-#' @title check_encoding
-#' @description
-#' Scans all character columns for potential encoding issues. 
-#' Searches for `<c3><a6>`, etc., which indicates UTF-8 read by a single-byte locale.
-#' Searches for `Ã`, which indicates UTF-8 bytes were misinterpreted as Latin-1 characters.
-#'
-#' @param dt file group
-#' @returns a list of unique problematic values which indicates that a specific file should be read with different encoding
-check_encoding <- function(dt) {
-  encoding_error_pattern <- "<c3>|<c2>|<e2>|<c5>|Ã"
-  char_cols <- names(dt)[sapply(dt, is.character)]
-  setdiff(char_cols, "KOBLID")
-  errors <- list()
-  ok <- TRUE
+rename_fg_value_columns_duckdb <- function(parameters){
+  con <- parameters$duck
+  vals <- intersect(c("VAL1", "VAL2", "VAL3"), khtools::duckdb_get_columns(con, "FILGRUPPE"))
+  valnames <- as.character(parameters$filegroup_information[paste0(vals, "navn")])
   
-  for (col in char_cols) {
-    if (any(grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE))) {
-      # If an error is found, store the column name and unique values
-      values <- unique(dt[[col]][grepl(encoding_error_pattern, dt[[col]], ignore.case = TRUE)])
-      koblid <- dt[dt[[col]] %in% values, unique(KOBLID)]
-      errors[[col]] <- list(values = values, koblid = koblid)
-    }
-  }
+  rename_map <- data.table::data.table(
+    old = c(vals, paste0(vals, ".a"), paste0(vals, ".f")),
+    new = c(valnames, paste0(valnames, ".a"), paste0(valnames, ".f"))
+  )
   
-  if (length(errors) > 0) {
-    warning("Potential encoding issues detected in the following columns.
-            The values below are examples of garbled characters.
-            The file might have been read with the wrong encoding (e.g., Latin-1 instead of UTF-8).",
-            immediate. = TRUE)
-    
-    # Print the detailed information in a readable format
-    for (col in names(errors)) {
-      message(paste0("\nColumn '", col, "' has the following values with encoding issues in files specified by koblid: "))
-      print(errors[[col]])
-    }
-    ok <- FALSE
-  } else {
-    print_console_message("\n** Ingen encoding-problemer oppdaget")
-  }
+  sql <- paste0(sprintf(
+    'ALTER TABLE FILGRUPPE RENAME COLUMN "%s" TO "%s"',
+    rename_map$old,
+    rename_map$new
+  ),
+  collapse = ";\n"
+  )
   
-  if(!ok){
-    choice <- utils::menu(c("Ja, fortsett", "Nei, stopp her"),
-                          title = "\nPotensielle encodingproblemer funnet, vil du fortsette?")
-    if(choice == 2) stop("Dataprosesseringen stoppet pga encodingproblematikk")
-  }
+  invisible(DBI::dbExecute(con, sql))
 }

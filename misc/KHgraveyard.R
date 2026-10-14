@@ -3229,6 +3229,7 @@ ModifiserDesign <- function(Nytt, Org = list(), parameters) {
 #'
 #' @param innDF 
 #' @param topn 
+#' @noRd
 DFHeadToString <- function(innDF, topn = 10) {
   # is_kh_debug()
   
@@ -3248,6 +3249,7 @@ DFHeadToString <- function(innDF, topn = 10) {
 #' @param vals 
 #' @param snitt 
 #' @param globs global parameters, defaults to SettGlobs
+#' @noRd
 KHaggreger <- function(FIL, vals = list(), parameters) {
   orgclass <- class(FIL)
   orgcols <- names(FIL)
@@ -3286,6 +3288,7 @@ KHaggreger <- function(FIL, vals = list(), parameters) {
   return(unique(FIL))
 }
 
+#' @noRd
 get_merge_teller_nevner_args <- function(standardfiles, parameters){
   args <- list()
   args[["files"]] <- parameters$files
@@ -3339,6 +3342,7 @@ get_merge_teller_nevner_args <- function(standardfiles, parameters){
 #' @param TYP 
 #' @param IDKOLS 
 #' @param globs global parameters, defaults to SettGlobs
+#' @noRd
 FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "STABLAORG", IDKOLS = FALSE, globs = get_global_parameters()) {
   FT <- data.frame()
   if (is.na(batch) & exists("BUFFER") && FILID %in% names(BUFFER)) {
@@ -3377,11 +3381,12 @@ FinnFil <- function(FILID, versjonert = FALSE, batch = NA, ROLLE = "", TYP = "ST
 #' FinnFilT (kb)
 #'
 #' @param ... 
+#' @noRd
 FinnFilT <- function(filid) {
   return(FinnFil(filid, globs = globs)$FT)
 }
 
-
+#' @noRd
 ht2 <- function(x, n = 3) {
   rbind(head(x, n), tail(x, n))
 }
@@ -3389,6 +3394,7 @@ ht2 <- function(x, n = 3) {
 #' @title usebranch
 #' @description
 #' use to test other branches, loads all functions from a specified branch
+#' @noRd
 usebranch <- function(branch){
   rm(list = lsf.str(all.names = T))
   source(paste0("https://raw.githubusercontent.com/helseprofil/khfunctions/", branch, "/R/KHmisc.R"), encoding = "latin1")
@@ -3407,6 +3413,7 @@ usebranch <- function(branch){
 #' @description
 #' Reads config-khfunctions.yml and sets global options accordingly. Checks if any 
 #' option is different from the config-file, and give the option to update. 
+#' @noRd
 KH_options <- function(){
   # Set global options
   op <- options()
@@ -3425,6 +3432,7 @@ KH_options <- function(){
 #' @title usebranch
 #' @description
 #' use to test other branches, loads all functions from a specified branch
+#' @noRd
 use_branch <- function(branch, debug = FALSE){
   rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
   # show_functions <<- debug
@@ -3456,6 +3464,7 @@ list_files_github <- function(branch){
 #' @param FIL 
 #' @param FGP 
 #' @param globs global parameters, defaults to SettGlobs
+#' @noRd
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   if (identical(class(FIL), "data.frame")) {
     FIL <- data.table::data.table(FIL)
@@ -3668,6 +3677,7 @@ LeggTilNyeVerdiKolonner <- function(TNF, NYEdscr, postMA = FALSE) {
 #' @param FIL 
 #' @param FGP 
 #' @param parameters global parameters
+#' @noRd
 FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
   if (identical(class(FIL), "data.frame")) {
     FIL <- data.table::data.table(FIL)
@@ -3766,7 +3776,8 @@ FinnDesign <- function(FIL, FGP = list(amin = 0, amax = 120), parameters) {
 #'
 #' @param file 
 #' @param IDKOLS 
-#' @param ... 
+#' @param ...
+#' @noRd 
 readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
   FIL <- readRDS(file, ...)
   if (IDKOLS == FALSE) {
@@ -3783,7 +3794,8 @@ readRDS_KH <- function(file, IDKOLS = FALSE, ...) {
 #' setkeym (kb)
 #'
 #' @param DTo 
-#' @param keys 
+#' @param keys
+#' @noRd 
 setkeym <- function(DTo, keys) {
   
   # Foroesk paa aa speede opp naar setkeyv brukes for aa sikre key(DTo)=keys
@@ -3795,6 +3807,7 @@ setkeym <- function(DTo, keys) {
 
 #' @title DumpTabell
 #' @description 
+#' @noRd
 DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
   if(is.null(format)) format <- getOption("khfunctions.defdumpformat")
   for(fmt in format){
@@ -3818,6 +3831,7 @@ DumpTabell <- function(TABELL, TABELLnavn, format = NULL) {
 #' @param tildesign 
 #' @param SkalAggregeresOpp skal noen deler evt aggregeres opp?
 #' @param parameters global parameters
+#' @noRd
 FinnRedesign <- function(fradesign, tildesign, SkalAggregeresOpp = character(), parameters) {
   KB = parameters$KB
   AggPri = parameters$DefDesign$AggPri
@@ -4441,6 +4455,7 @@ YAlagVal <- function(FG, YL, AL, vals = get_value_columns(names(FG))) {
 #' @param verdi 
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
+#' @noRd
 TilFilLogg <- function(koblid, felt, verdi, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
   # Sjekk om finnes rad for filid, eller lag ny
   if (nrow(sqlQuery(globs$log, paste("SELECT * FROM INNLES_LOGG WHERE KOBLID=", koblid, " AND SV='S' AND BATCH='", batchdate, "'", sep = ""))) == 0) {
@@ -4474,6 +4489,8 @@ connect_khlogg <- function(){
 #' @param gruppe 
 #' @param batchdate 
 #' @param globs global parameters, defaults to SettGlobs
+#' @noRd
+@noRd
 SkrivKBLogg <- function(KB, type, filbesk, gruppe, batchdate = SettKHBatchDate(), globs = get_global_parameters()) {
   sqlQuery(globs$log, paste("DELETE * FROM KODEBOK_LOGG WHERE KOBLID=", filbesk$KOBLID, " AND TYPE='", type, "' AND SV='S'", sep = ""))
   sqlSave(globs$log, cbind(KOBLID = filbesk$KOBLID, FILGRUPPE = gruppe, FELTTYPE = type, SV = "S", KB[, c("ORG", "KBOMK", "OMK", "FREQ", "OK")], BATCHDATE = batchdate), "KODEBOK_LOGG", rownames = FALSE, append = TRUE)
@@ -4486,4 +4503,97 @@ initiate_read_log <- function(filedescription, parameters){
   RODBC::sqlQuery(parameters$log, paste0("DELETE * FROM INNLES_LOGG WHERE KOBLID=", filedescription$KOBLID, "AND SV='S'"))
   RODBC::sqlQuery(parameters$log, paste0("INSERT INTO INNLES_LOGG ( KOBLID,BATCH, SV, FILGRUPPE) SELECT =", filedescription$KOBLID, ",'", parameters$batchdate, "', 'S','", filedescription$FILGRUPPE, "'"))
   return(invisible(NULL))
+}
+
+
+#' @title set_manheader
+#' @description
+#' Manually sets headers according to parameters set in INNLESING::MANHEADER
+#' @noRd
+set_manheader <- function(file, manheader){
+  if(is_empty(manheader)) return(file)
+  manheader_split <- trimws(unlist(strsplit(manheader, "=")))
+  old <- format_colname_string_as_vector(string = manheader_split[1], old_new = "old", file = file)
+  new <- format_colname_string_as_vector(string = manheader_split[2], old_new = "new", file = file)
+  if(length(old) != length(new)) stop("Feil i MANHEADER: Ulikt antall kolonner angitt på hver side av '='")
+  data.table::setnames(file, old = old, new = new)
+  return(file)
+}
+
+#' SVcloneRecord (kb)
+#'
+#' @param dbh 
+#' @param table 
+#' @param koblid 
+#' @noRd
+SVcloneRecord <- function(dbh, table, koblid) {
+  design <- names(sqlQuery(dbh, paste("SELECT * FROM ", table, " WHERE KOBLID=-1", sep = "")))
+  felt <- paste(design, collapse = ",")
+  feltm <- sub("SV", "'V' AS SV", felt)
+  sql <- paste(
+    "INSERT INTO ", table, "(", felt, ")",
+    "SELECT ", feltm, "FROM ", table,
+    "WHERE KOBLID=", koblid, "AND SV='S'"
+  )
+  sqlQuery(dbh, sql)
+}
+
+
+#' @title do_handle_coverage
+#' @keywords internal
+#' @noRd
+do_handle_coverage <- function(dt, geolevel = c("B", "V"), parameters){
+  if("dekningprikket" %notin% names(dt)) dt[, dekningprikket := 0L]
+  geolevel <- match.arg(geolevel)
+  if(geolevel %notin% collapse::funique(dt[["GEOniv"]])) return(invisible(NULL))
+  khtools::msg(paste0("\n** Skjuler tall med dårlig dekning for GEOniv == '", geolevel, "'"))
+  khtools::msg("- Originalt", dt[GEOniv == geolevel, .N], "rader")
+  # Sette inn kommentar om kriteriene?
+  dims <- parameters$outdimensions
+  flags <- c(grep("\\.f$", names(dt), value = T))
+  skjul <- get_deletestrata(dt, dims, geolevel)
+  if(skjul[, .N] > 0){
+    dt[skjul, dekningprikket := 1L, on = dims]
+    n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
+    dt[dekningprikket == 1L & !spv_tmp %in% c(3,4), (c(flags, "spv_tmp")) := 1L] 
+    khtools::msg("-", n_new, "rader skjules")
+  } else {
+    khtools::msg("- Ingen rader skjules")
+  }
+}
+
+#' @title get_deletestrata
+#' @keywords internal
+#' @noRd
+get_deletestrata <- function(dt, dims, level){
+  overcat <- switch(level,
+                    "B" = collapse::funique(substr(dt[GEOniv == "B", GEO], 1, 4)),
+                    "V" = sub("00$", "", collapse::funique(substr(dt[GEOniv == "V", GEO], 1, 6))))
+  deletestrata <- data.table::copy(dt)[(GEOniv == level | GEO %in% overcat), .SD, .SDcols = c("GEOniv", dims, "sumTELLER", "sumNEVNER")]
+  overlevels <- switch(level, 
+                       "B" = "K", 
+                       "V" = c("K", "B"))
+  length_overniv <- ifelse(level == "B", 4, 6)
+  deletestrata[, let(GEOniv = data.table::fifelse(GEOniv %in% overlevels, "Over", "Under"),
+                     overniv = sub("00$", "", substr(GEO, 1, length_overniv)))]
+  
+  deletecodes <- unique(deletestrata[GEOniv == "Under", .SD, .SDcols = c("overniv", "GEO")])
+  
+  bycols <- c("overniv", "GEOniv", setdiff(dims, "GEO"))
+  g <- collapse::GRP(deletestrata, bycols)
+  deletestrata <- collapse::add_vars(g[["groups"]],
+                                     keep = collapse::fsum(is.na(deletestrata[["sumTELLER"]]), g = g) == 0,
+                                     collapse::fsum(collapse::get_vars(deletestrata, c("sumTELLER", "sumNEVNER")), g = g))[keep == TRUE][, keep := NULL]
+  deletestrata <- data.table::melt(deletestrata, measure.vars = c("sumTELLER", "sumNEVNER"), variable.name = "col", value.name = "val")
+  deletestrata <- data.table::dcast(deletestrata, ... ~ GEOniv, value.var = "val")
+  deletestrata[, ukjent := 1 - (Under/Over)] 
+  deletestrata[is.nan(ukjent) & Over == 0 & Under == 0, ukjent := 0]
+  bycols <- setdiff(bycols, "GEOniv")
+  f <- as.formula(paste(paste(bycols, collapse = " + "), "~ col"))
+  deletestrata <- data.table::dcast(deletestrata, formula = f, value.var = "ukjent")
+  deletestrata[, diff := sumTELLER - sumNEVNER]
+  deletestrata <- deletestrata[sumTELLER > getOption("khfunctions.dekning_sumteller") | abs(diff) > getOption("khfunctions.dekning_diff"), .SD, .SDcols = bycols]
+  
+  delete <- collapse::join(deletestrata, deletecodes, on = "overniv", multiple = TRUE, verbose = FALSE, overid = 2)[, .SD, .SDcols = dims]
+  return(delete)
 }

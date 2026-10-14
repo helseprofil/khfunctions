@@ -14,5 +14,6 @@ merge_teller_nevner(parameters, standardfiles = FALSE, design = NULL)
 \item{design}{Design list}
 }
 \description{
-merge_teller_nevner
+Merge TELLER/NEVNER files, create initial KUBE and update the empty data.table by reference.
+Return the initial design, to be used later.
 }

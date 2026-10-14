@@ -4,86 +4,105 @@
 #'
 #' @param name Name of kube, corresponding to KUBE_NAVN in ACCESS
 #' @param write should results be written to files, default = TRUE. Set to FALSE for testing (only save to global envir)
+#' @param ramlimit max RAM allocation for duckdb. If NULL, default value is 8GB.
 #' @param alarm if TRUE, plays a sound when done
-#' @param geonaboprikk  should the file be secondary censored on geographical codes? default = TRUE
-#' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")
+#' @param year year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.profileyear")
 #' @param dumps list of required dumps, in the format list(dumpname = "format")
-#' @param removebuffer should original files in the buffer be removed when no longer needed to free memory?
-#' @param qualcontrol perform initial qualcontrol of data (default = FALSE for now)
+#' @param qualcontrol perform initial qualcontrol of data
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
-LagKUBE <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, year = getOption("khfunctions.year"), dumps = list(), removebuffer = TRUE, qualcontrol = TRUE) {
+LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.profileyear"), dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
+  khtools::header(paste0("Starter kubekjøring: ", name))
   
   # 0. Hente inn parametre
   user_args <- as.list(environment())
   parameters <- get_cubeparameters(user_args = user_args)
-  if(parameters$write) sink(file = file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt")), split = TRUE)
-  if(!parameters$geonaboprikk) message("OBS! GEO-naboprikking er deaktivert!")
+  parameters[["loggpath"]] <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), 
+                                        getOption("khfunctions.kube.logg"), paste0(parameters$name, "_", parameters$batchdate, "_LOGG.txt"))
+  if(parameters$write) sink(file = parameters$loggpath, split = TRUE)
   # For dev and debug: use SetKubeParameters("NAME") and run step by step below
   
   # 1. Laste inn filer og oppdatere parametre
-  parameters <- load_and_format_files(parameters = parameters)
+  load_and_format_filegroups(parameters = parameters)
+  parameters <- get_filedesign(parameters = parameters)
+  parameters <- set_predictionfilter(parameters = parameters)
   save_kubespec_csv(spec = parameters$CUBEinformation)
   write_access_specs(parameters = parameters)
   
-  # 2. Koble teller og nevner
-  KUBE <- data.table::data.table()
-  CUBEdesign <- merge_teller_nevner(outdata = KUBE, parameters = parameters)
-  # Kan lese kube direkte fra duckdb her i stedet for å oppdatere en tom dt i merge_teller_nevner
+  # 2. Koble teller og nevner, hente ut kubedesign
+  khtools::header("Merger teller- og nevnerfil")
+  parameters <- merge_teller_nevner(parameters = parameters, standardfiles = FALSE, design = NULL)
 
-    # 3. Aggregering til flerårige tall
-  organize_file_for_moving_average(dt = KUBE)
-  parameters[["MOVAVparameters"]] <- get_movav_information(dt = KUBE, parameters = parameters)
-  KUBE <- aggregate_to_periods(dt = KUBE, parameters = parameters)
-  add_crude_rate(dt = KUBE, parameters = parameters)
-  set_initial_spvtmp(dt = KUBE)
-  parameters[["CUBEdesign"]] <- update_cubedesign_after_moving_average(dt = KUBE, origdesign = CUBEdesign, parameters = parameters)
+  # 3. Aggregering til flerårige tall og oppdatere kubedesign
+  parameters <- get_movav_information(parameters = parameters)
+  if(parameters$MOVAV$is_movav) khtools::header("Aggregering til flerårige tall")
+  aggregate_to_periods(tablename = "KUBE", parameters = parameters, standard = FALSE)
+  parameters <- update_cubedesign_after_moving_average(parameters = parameters)
+
+  # 3b. Legger til prikkeinfo-kolonner og crude RATE etter aggregering
+  add_censorinfo_cube(con = parameters$duck, tablename = "KUBE")
+  add_crude_rate(con = parameters$duck, tablename = "KUBE")
   
-  # 4. Standardisering 
-  add_predteller(dt = KUBE, parameters = parameters)
-  add_meisskala(dt = KUBE, parameters = parameters)
-  if(parameters$removebuffer) remove_original_files_from_buffer()
-  scale_rate_and_meisskala(dt = KUBE, parameters = parameters)
-
+  # 4. Standardisering
+  add_predteller(parameters = parameters)
+  add_meisskala(parameters = parameters)
+  
   # 5. Redigere kolonner og filtrere ugyldige rader
-  parameters[["MALTALL"]] <- get_maltall_column(parameters = parameters)
-  do_format_cube_columns(dt = KUBE, parameters = parameters)
-  add_smr_and_meis(dt = KUBE, parameters = parameters)
-  KUBE <- filter_invalid_geo_alder_kjonn(dt = KUBE, parameters = parameters)
-  fix_geo_special(dt = KUBE, parameters = parameters)
-  parameters[["etabs"]] <- get_etabs(columnnames = names(KUBE), parameters = parameters)
-  set_etab_names(dt = KUBE, etablist = parameters$etabs)
+  khtools::header("Formatterer kolonner i KUBE")
+  # do_filter_invalid_geo_alder_kjonn(parameters$duck, "KUBE")
+  scale_rate_and_meisskala(parameters = parameters)
+  do_format_cube_columns(parameters = parameters)
+  add_smr_and_meis(parameters = parameters)
+  fix_geo_special(parameters = parameters)
+  parameters[["tabnames"]] <- rename_tab_columns(parameters = parameters)
   parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
-  parameters[["outdimensions"]] <- get_outdimensions(dt = KUBE, etabs = parameters$etabs$tabnames, parameters = parameters)
+  parameters[["outdimensions"]] <- get_outdimensions(parameters = parameters)
   
   # 6. Prikking og dekningsgrad bydel/lks
-  KUBE <- do_censor_cube(dt = KUBE, parameters = parameters)
-  do_handle_coverage(dt = KUBE, geolevel = "B", parameters = parameters)
-  do_handle_coverage(dt = KUBE, geolevel = "V", parameters = parameters)
+  # - Dette skjer i R fortsatt, kan oversettes på et senere tidspunkt
+  dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = "KUBE")
+  dt <- do_censor_cube(dt = dt, parameters = parameters)
+  do_handle_coverage_bydel_lks(dt = dt, parameters = parameters)
+  khtools::duckdb_write_and_replace_table_from_R(con = parameters$duck, tablename = "KUBE", data = dt)
+  rm(dt)
+  invisible(gc())
   
-  # 7. Postprosess og sluttrediger - manuelle/eksterne kodesnutter
-  KUBE <- do_special_handling(name = "RSYNT_POSTPROSESS", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$RSYNT_POSTPROSESS, parameters = parameters)
-  KUBE <- do_special_handling(name = "SLUTTREDIGER", dt = KUBE, dt_name = "KUBE", code = parameters$CUBEinformation$SLUTTREDIGER, parameters = parameters)
-  if("V" %in% unlist(strsplit(parameters$CUBEinformation$GEOniv, ","))){
-    KUBE <- add_missing_lks(dt = KUBE, parameters = parameters)
-  }
+  # 7. Postprosess og sluttrediger 
+  ## - manuelle/eksterne kodesnutter
+  ## - legger til manglende LKS-rader og setter endelig SPVFLAGG
+  do_special_handling(name = "RSYNT_POSTPROSESS", tablename = "KUBE", dt_name = "KUBE", 
+                      code = parameters$CUBEinformation$RSYNT_POSTPROSESS, 
+                      parameters = parameters)
+  do_special_handling(name = "SLUTTREDIGER", tablename = "KUBE", dt_name = "KUBE", 
+                      code = parameters$CUBEinformation$SLUTTREDIGER, 
+                      parameters = parameters)
+  
+  add_missing_lks(parameters = parameters)
+  set_spvflagg(con = parameters$duck)
   
   # 8. Slicing av outputfiler
-  RESULTAT <- list(KUBE = KUBE)
-  RESULTAT[["ALLVIS"]] <- data.table::copy(RESULTAT[["KUBE"]])
-  do_remove_censored_observations(dt = RESULTAT[["ALLVIS"]], outvalues = parameters$outvalues, parameters = parameters)
-  generate_and_export_all_friskvik_indicators(dt = RESULTAT[["ALLVIS"]], parameters = parameters)
-  RESULTAT[["ALLVIS"]] <- RESULTAT[["ALLVIS"]][, .SD, .SDcols = c(parameters$outdimensions, parameters$outvalues, "SPVFLAGG")]
-  RESULTAT[["QC"]] <- LagQCKube(data = RESULTAT, allvistabs = parameters$outdimensions)
-  RESULTAT[["ALLVIS"]] <- do_special_handling(name = "ALLVISFILTER", dt = RESULTAT[["ALLVIS"]], dt_name = "ALLVIS", code = parameters$CUBEinformation$ALLVISFILTER, parameters = parameters)
-  write_cube_output(outputlist = RESULTAT, parameters = parameters)
+  khtools::header("Genererer (og eksporterer) resultatfiler")
+  generate_allvis_base(parameters = parameters)
+  generate_and_export_all_friskvik_indicators(parameters = parameters)
+  generate_qc_table(parameters = parameters)
+  generate_allvis_export_table(parameters = parameters)
+  do_special_handling(name = "ALLVISFILTER", tablename = "ALLVIS", dt_name = "ALLVIS", 
+                      code = parameters$CUBEinformation$ALLVISFILTER, 
+                      parameters = parameters)
+  write_cube_output(parameters = parameters)
+  RESULTAT <- list(
+    KUBE = khtools::duckdb_fetch_table(parameters$duck, "KUBE"),
+    ALLVIS = khtools::duckdb_fetch_table(parameters$duck, "ALLVIS"),
+    QC = khtools::duckdb_fetch_table(parameters$duck, "QC")
+  )
   assign("RESULTAT", RESULTAT, envir = .GlobalEnv)
+  
   if(parameters$qualcontrol) control_cube_output(outputlist = RESULTAT, parameters = parameters)
-  print_console_message("\n\n-------------------------KUBE", parameters$name, "FERDIG--------------------------------------")
-  print_console_message("\nSe output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
+  khtools::header(paste0("KUBE ", parameters$name, " er ferdig"))
+  khtools::msg("Se output med RESULTAT$KUBE (full), RESULTAT$ALLVIS (utfil) eller RESULTAT$QC (kvalkont)")
   if(alarm) try(beepr::beep(1))
 }
 
@@ -121,33 +140,38 @@ get_lagkube_guardfile_path <- function(){
 }
 
 #' @keywords internal
+#' @description Rydder opp etter kubekjøring
 #' @noRd
 lagkube_cleanup <- function(parameters){
   guardfile <- get_lagkube_guardfile_path()
   if(file.exists(guardfile)) fs::file_delete(guardfile)
-  if(parameters$write) sink()
-  if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  if(!is.null(parameters$duck)){
-    DBI::dbDisconnect(parameters$duck)
-    fs::file_delete(DBI::dbGetInfo(parameters$duck)$dbname)
+  if(parameters$write){
+    sink()
+    if(is_not_empty(parameters$loggpath)) do_clean_sink_log(path = parameters$loggpath)
   }
+  if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
+  khtools::duckdb_shutdown(parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)
   }
-  RODBC::odbcCloseAll()
 }
 
 #' @keywords internal
+#' @description
+#' Fjerner alle rader med DuckDB Progress: x % fra loggen, og fjerner overflødige tomme rader
 #' @noRd
-remove_original_files_from_buffer <- function(){
-  .GlobalEnv$BUFFER <- NULL
-  gc()
+do_clean_sink_log <- function(path){
+  x <- readLines(path, warn = FALSE)
+  x <- x[!grepl("^DuckDB progress:", x)]
+  is_empty <- trimws(x) == ""
+  keep <- !is_empty | !data.table::shift(is_empty, fill = FALSE)
+  writeLines(x[keep],path)
 }
 
 #' LagKubeDatertCsv
 #' Wrapper around LagKUBE, with default options to save output files
 #' @export
-LagKubeDatertCsv <- function(name, write = TRUE, alarm = FALSE, geonaboprikk = TRUE, dumps = list()){ 
-  invisible(LagKUBE(name = name, write = write, alarm = alarm, geonaboprikk = geonaboprikk, dumps = dumps))
+LagKubeDatertCsv <- function(name, write = TRUE, alarm = FALSE, dumps = list()){ 
+  invisible(LagKUBE(name = name, write = write, alarm = alarm, dumps = dumps))
 }

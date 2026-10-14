@@ -6,9 +6,6 @@
 \usage{
 LesMultiHead(mhstr)
 }
-\arguments{
-\item{mhstr}{}
-}
 \description{
 LesMultiHead (kb)
 }

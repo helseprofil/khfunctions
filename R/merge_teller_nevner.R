@@ -3,17 +3,14 @@
 #' Merge TELLER/NEVNER files, create initial KUBE and update the empty data.table by reference. 
 #' Return the initial design, to be used later. 
 #' 
-#' @param outdata empty data.table, to be updated by reference
 #' @param parameters parameters generated with get_cubeparameters()
 #' @param standardfiles Should standard teller and nevner files be used? default = FALSE
 #' @param design Design list
-merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, design = NULL){
+merge_teller_nevner <- function(parameters, standardfiles = FALSE, design = NULL){
   if(standardfiles){
-    print_console_message("\n\n* Merger standardteller- og standardnevnerfil\n")
     tellerfile <- "STANDARDTELLER"
     nevnerfile <- "STANDARDNEVNER"
   } else {
-    print_console_message("\n* Merger teller- og nevnerfil")
     tellerfile <- "TELLER"
     nevnerfile <- "NEVNER"
   }
@@ -35,77 +32,103 @@ merge_teller_nevner <- function(outdata, parameters, standardfiles = FALSE, desi
     TNdesign <- InitDesign
   }
   
-  tellerfiltype <- ifelse(standardfiles, "standardtellerfil", "tellerfil")
-  print_console_message("\n** Lager", tellerfiltype, "fra", tellerfilnavn, "\n")
-  do_redesign_file(filename = tellerfilnavn, filedesign = tellerfildesign, tndesign = TNdesign, parameters = parameters, name = tellerfiltype)
+  con <- parameters$duck
+  
+  tablename_teller <- ifelse(standardfiles, "STANDARD_TELLER", "TELLER")
+  khtools::msg("* Lager", tablename_teller, "fra", tellerfilnavn)
+  do_redesign_table_duckdb(con = con, newtable = tablename_teller, orgtable = tellerfilnavn,
+                          filedesign = tellerfildesign, targetdesign = TNdesign, parameters = parameters)
   
   if(isnevnerfil) {
-    nevnerfiltype <- ifelse(standardfiles, "standardnevnerfil", "nevnerfil")
-    print_console_message("\n* Lager", nevnerfiltype, "fra", nevnerfilnavn, "\n")
-    do_redesign_file(filename = nevnerfilnavn, filedesign = nevnerfildesign, tndesign = TNdesign, parameters = parameters, name = nevnerfiltype)
+    tablename_nevner <- ifelse(standardfiles, "STANDARD_NEVNER", "NEVNER")
+    khtools::msg("\n* Lager", tablename_nevner, "fra", nevnerfilnavn)
+    do_redesign_table_duckdb(con = con, newtable = tablename_nevner, orgtable = nevnerfilnavn,
+                            filedesign = nevnerfildesign, targetdesign = TNdesign, parameters = parameters)
   }
   
   implicitnull_defs <- parameters$fileinformation[[tellerfilnavn]]$vals
   if(isnevnerfil) implicitnull_defs <- c(implicitnull_defs, parameters$fileinformation[[nevnerfilnavn]]$vals)
   
-  tnftype <- ifelse(standardfiles, "standardTNF", "TNF")
+  tntype <- ifelse(standardfiles, "STANDARD_KUBE", "KUBE")
   
-  if (length(KUBEdesign) > 0) {
-    print_console_message("\n** Rektangulariserer")
-    set_rectangularized_cube_design(colnames = DBI::dbListFields(parameters$duck, tellerfiltype), 
-                                    design = KUBEdesign$TMP, parameters = parameters, tnfname = tnftype)
-    report_removed_codes(orgtable = tellerfiltype, recttable = tnftype, parameters = parameters)
-    merge_duckdb_table(result = tnftype, mergeto = tnftype, mergefrom = tellerfiltype, con = parameters$duck)
+  if(length(KUBEdesign) > 0) {
+    khtools::msg("\n* Rektangulariserer")
+    set_rectangularized_cube_design(colnames = khtools::duckdb_get_columns(con, tablename_teller), 
+                                    design = KUBEdesign$TMP, parameters = parameters, tnfname = tntype)
+    report_removed_codes(orgtable = tablename_teller, recttable = tntype, parameters = parameters)
+    khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_teller,
+                                 join_cols = get_duckdb_join_cols(con, tntype, tablename_teller))
     if(isnevnerfil){
-      merge_duckdb_table(result = tnftype, mergeto = tnftype, mergefrom = nevnerfiltype, con = parameters$duck)
+      khtools::duckdb_merge_tables(con = con, mergeto = tntype, mergefrom = tablename_nevner,
+                                   join_cols = get_duckdb_join_cols(con, tntype, tablename_nevner))
     }
-    set_implicit_null_after_merge_duckdb(table = tnftype, implicitnull_defs = implicitnull_defs, con = parameters$duck)
-    print_console_message("\n*** Ferdig rektangularisert og merget teller-nevner-fil")
+    set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
+    khtools::msg("\n* Ferdig rektangularisert og merget", tntype)
   } else if (isnevnerfil) {
-    merge_duckdb_table(result = tnftype, mergeto = tellerfiltype, mergefrom = nevnerfiltype, con = parameters$duck)
-    set_implicit_null_after_merge_duckdb(table = tnftype, implicitnull_defs = implicitnull_defs, con = parameters$duck)
-    # TNF <- collapse::join(tellerfil, nevnerfil, how = "l", overid = 0, verbose = 0)
-    # rm(tellerfil, nevnerfil)
-    # set_implicit_null_after_merge(dt = TNF, implicitnull_defs = implicitnull_defs)
-    print_console_message("\n*** Ferdig merget teller-nevner-fil")
+    khtools::duckdb_merge_tables(con = con, mergeto = tablename_teller, mergefrom = tablename_nevner, result = tntype,
+                                 join_cols = get_duckdb_join_cols(con, tablename_teller, tablename_nevner))
+    set_implicit_null_after_merge_duckdb(table = tntype, implicitnull_defs = implicitnull_defs, con = con)
+    khtools::msg("\n* Ferdig merget", tntype)
   } else {
-    invisible(
-      DBI::dbExecute(parameters$duck, paste0("CREATE OR REPLACE TABLE ", tnftype, " AS SELECT * FROM ", tellerfiltype))
-    )
-    # TNF <- tellerfil
-    # rm(tellerfil)
-    print_console_message("\n*** Ferdig merget teller-nevner-fil, har ikke nevnerfil, så TNF == tellerfil")
+    khtools::duckdb_drop_tables(con, tntype)
+    invisible(DBI::dbExecute(con, paste0("CREATE TABLE ", tntype, " AS SELECT * FROM ", tablename_teller)))
+    khtools::msg("\n* Ferdig merget", tntype, ". Har ikke nevnerfil, så", tntype, " = tellerfil")
   }
   
-  TNF <- data.table::setDT(DBI::dbReadTable(parameters$duck, tnftype))
+  do_filter_invalid_geo_alder_kjonn(con = con, tablename = tntype)
   
   isNYEKOL_RAD <- is_not_empty(parameters$TNPinformation$NYEKOL_RAD)
-  if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
   isNYEKOL_KOL <- is_not_empty(parameters$TNPinformation$NYEKOL_KOL)
-  if(isNYEKOL_KOL) compute_new_value_from_formula(dt = TNF, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
+  if(isNYEKOL_RAD || isNYEKOL_KOL){
+    dt <- khtools::duckdb_fetch_table(con = con, tablename = tntype)
+    if(isNYEKOL_RAD) compute_new_value_from_row_sum(dt = dt, formulas = parameters$TNPinformation$NYEKOL_RAD, fileinfo = parameters$fileinformation[[tellerfilnavn]], parameters = parameters)
+    if(isNYEKOL_KOL) compute_new_value_from_formula(dt = dt, formulas = parameters$TNPinformation$NYEKOL_KOL, post_moving_average = FALSE)
+    khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tntype, data = dt)
+  }
   
-  dimorg <- dim(TNF)
-  TNF <- do_filter_file(file = TNF, design = KUBEdesign$MAIN, parameters = parameters)
-  if (!identical(dimorg, dim(TNF))) print_console_message("\n*** Siste filtrering til kubedesign, hadde dim:", dimorg, "fikk dim:", dim(TNF), "\n")
-  
-  TNF <- set_teller_nevner_names(file = TNF, TNPparameters = parameters$TNPinformation)
-  outdata[, (names(TNF)) := TNF]
-  rm(TNF)
-  do_clean_duckdb(parameters = parameters)
-  return(KUBEdesign$MAIN)
+  do_filter_dimensions_duckdb(con = con, tablename = tntype, filters = KUBEdesign$MAIN, parameters = parameters)
+  set_teller_nevner_names_duckdb(con = con, tablename = tntype, TNPparameters = parameters$TNPinformation)
+  do_balance_missing_teller_nevner(con = con, tablename = tntype)
+  khtools::duckdb_clean(con = parameters$duck)
+  if(!standardfiles) parameters[["CUBEdesign"]] <- KUBEdesign$MAIN
+  return(invisible(parameters))
 }
 
-set_initial_spvtmp <- function(dt){
-  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(dt))
-  if (length(tncols) > 0L) {
-    dt[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
+#' @title do_filter_invalid_geo_alder_kjonn
+#' @description remove GEO codes not listed in ACCESS:GEOkoder, as well as invalid KJONN AND ALDER
+#' @keywords internal
+#' @noRd
+do_filter_invalid_geo_alder_kjonn <- function(con, tablename){
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  
+  where <- c("EXISTS (SELECT 1 FROM GEOkoder g WHERE g.GEO = t.GEO AND g.TYP = 'O' AND g.TIL = 9999)")
+  vars <- "GEO"
+  if ("ALDERl" %in% cols) {
+    illegal <- strsplit(getOption("khfunctions.alder_illegal"), "_", fixed = T)[[1]][1]
+    ukjent <- strsplit(getOption("khfunctions.alder_ukjent"), "_", fixed = T)[[1]][1]
+    verdier <- paste(khtools::sql_quote_S(con, c(illegal, ukjent)), collapse = ", ")
+    where <- c(where, sprintf("CAST(t.ALDERl AS VARCHAR) NOT IN (%s)", verdier))
   }
+  
+  if ("KJONN" %in% cols){
+    verdier <- paste(khtools::sql_quote_S(con, c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))), collapse = ", ")
+    where <- c(where, sprintf("CAST(t.KJONN AS VARCHAR) NOT IN (%s)", verdier))
+  }
+  
+  where_sql <- paste(where, collapse = "\n AND ")
+  sql_feil <- sprintf("SELECT COUNT(*) AS n FROM %s t WHERE NOT (%s)", khtools::sql_quote_I(con, tablename), where_sql)
+  n_fjernes <- DBI::dbGetQuery(con, sql_feil)$n
+  if(n_fjernes > 0){
+    khtools::msg("- Fjerner", n_fjernes, "rader med ugyldig GEO, ALDER eller KJONN")
+    sql <- sprintf("SELECT t.* FROM %s t WHERE %s",
+                   khtools::sql_quote_I(con, tablename), where_sql)
+    khtools::duckdb_replace_existing_table(con = con, target = tablename, select_sql = sql)
+  }
+  invisible(NULL)
 }
+
 
 #' @title get_initialdesign
-#' @param design 
-#' @param tellerfildesign 
-#' @param nevnerfildesign 
 #' @param parameters global parameters
 get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, parameters){
   
@@ -124,12 +147,9 @@ get_initialdesign <- function(design, tellerfildesign, nevnerfildesign, paramete
 }
 
 #' FinnFellesTab (kb)
-#'
-#' @param DF1 
-#' @param DF2 
 #' @param parameters global parameters
 FinnFellesTab <- function(DF1, DF2, parameters) {
-  print_console_message("Starter i FinnFellesTab.")
+  # khtools::msg("- Finner fellestab for", DF1, "og", DF2)
   FTabs <- list()
   for (del in intersect(names(DF1$Part), names(DF2$Part))) {
     FTabs[[del]] <- unique(rbind(DF1$Part[[del]], DF2$Part[[del]]))
@@ -144,14 +164,11 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
   gc()
   data.table::setnames(Dekk, old = names(Dekk), new = gsub("_omk$", "", names(Dekk)))
   FDes <- find_filedesign(Dekk, parameters = parameters)
-  print_console_message(" Ferdig i FinnFellesTab\n")
   return(FDes)
 }
 
 #' FinnKubeDesignB (kb)
 #'
-#' @param ORGd 
-#' @param FGP 
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
@@ -165,10 +182,7 @@ FinnKubeDesignB <- function(InitDesign, filename, parameters) {
 
 #' FinnKubeDesign (kb)
 #'
-#' @param KUBEdscr 
-#' @param ORGd 
 #' @param bruk0 finn design med _0-kolonnene, brukes  
-#' @param FGP 
 #' @param parameters global parameters
 #' @keywords internal
 #' @noRd
@@ -231,22 +245,23 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   return(Deler)
 }
 
-#' @title do_redesign_file
-#'
-#' @param filename 
-#' @param filedesign 
-#' @param tndesign 
-#' @param parameters global parameters
-#' @keywords internal
+#' @title do_redesign_table_duckdb
+#' @description
+#' Tar originalfilgruppene som er lest inn, og bruker ønsket design til å filtrere og kode om verdier for videre bruk
+#' Skriver ferdig redesignet til ny tabell, beholder originaltabellen slik at denne kan være
 #' @noRd
-do_redesign_file <- function(filename, filedesign, tndesign, parameters, name){
-  redesign <- find_redesign(orgdesign = filedesign, targetdesign = tndesign, parameters = parameters)
-  if(nrow(redesign$Udekk) > 0) print_console_message("\n**Filen", filename, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
-  file <- do_filter_and_recode_to_redesign(dt = fetch_filegroup_from_duckdb(filegroup = filename, parameters = parameters),
-                                           redesign = redesign, parameters = parameters)
-  print_console_message("\n*** Skriver", name, "til duckdb...\n")
-  DBI::dbWriteTable(parameters$duck, name = name, value = file, overwrite = T)
+do_redesign_table_duckdb <- function(con, newtable, orgtable, filedesign, targetdesign, parameters){
+  khtools::duckdb_drop_tables(con, newtable)
+  khtools::duckdb_create_new_table(con, 
+                                   target = newtable, 
+                                   select_sql = sprintf("SELECT * FROM %s", 
+                                                        khtools::sql_quote_I(con, orgtable)))
+  redesign <- find_redesign(orgdesign = filedesign, targetdesign = targetdesign, parameters = parameters)
+  if(nrow(redesign$Udekk) > 0) khtools::msg("\n-- Filen", orgtable, "mangler tall for ", nrow(redesign$Udekk), "strata. Disse får flagg = 9 under omkoding")
+  filter_and_recode_table_duckdb(con = con, tablename = newtable, redesign = redesign, parameters = parameters)
 }
+
+
 
 #' @title set_rectangularized_cube_design
 #' @description
@@ -277,8 +292,9 @@ set_rectangularized_cube_design <- function(colnames, design, parameters, tnfnam
                                                    rektangularisert))
   }
   
-  print_console_message("\n*** Skriver", tnfname, "til duckdb...\n")
-  DBI::dbWriteTable(parameters$duck, name = tnfname, value = rektangularisert, overwrite = T)
+  khtools::msg("- Skriver rektangularisert", paste0(tnfname, "-design"), "til duckdb...")
+  khtools::duckdb_drop_tables(parameters$duck, tnfname)
+  khtools::duckdb_write_table(parameters$duck, tablename = tnfname, data = rektangularisert)
 }
 
 #' @title get_removed_codes
@@ -290,47 +306,65 @@ report_removed_codes <- function(orgtable, recttable, parameters){
   if(length(remove) == 0) return(invisible(NULL))
   remove_valid <- remove[!grepl("99$", remove)]
   if (length(remove_valid) > 0) {
-    print_console_message("!! GEO ", paste(remove_valid, collapse = ","), " kastes ved rektangularisering!!\n")
-    print_console_message("!! Dessuten kastes ", length(setdiff(remove, remove_valid)), "99-koder!\n")
+    khtools::msg("!! GEO ", paste(remove_valid, collapse = ","), " kastes ved rektangularisering!!\n")
+    khtools::msg("!! Dessuten kastes ", length(setdiff(remove, remove_valid)), "99-koder!\n")
     r <- paste0(remove, collapse = ", ")
     print(DBI::dbGetQuery(parameters$duck, paste0("SELECT * FROM ", orgtable, " WHERE GEO IN (", r, ")")))
-    print_console_message("#---#\n")
+    khtools::msg("#---#\n")
   } else if (length(setdiff(remove, remove_valid)) > 0) {
-    print_console_message("Kaster ", length(setdiff(remove, remove_valid)), "99-koder ved rektangulerisering.\n")
+    khtools::msg("Kaster ", length(setdiff(remove, remove_valid)), "99-koder ved rektangulerisering.\n")
   }
 }
 
-#' @title do_filter_file
-#'
-#' @param file 
-#' @param design 
-#' @param parameters global parameters
-do_filter_file <- function(file, design, parameters){
-  for (del in names(design)) {
-    cols <- parameters$DefDesign$DelKols[[del]]
-    if (all(cols %in% names(file))) {
-      file <- collapse::join(file, design[[del]][, ..cols], on = cols, how = "right", multiple = T, overid = 0, verbose = 0)
-    }
+set_teller_nevner_names_duckdb <- function(con, tablename, TNPparameters) {
+  khtools::msg("- Setter teller- og nevnernavn")
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$TELLERKOL), "TELLER\\1", cols)
+  newnames <- gsub(sprintf("^%s(\\.f|\\.a|)$", TNPparameters$NEVNERKOL), "NEVNER\\1", newnames)
+  
+  dup_names <- unique(newnames[duplicated(newnames)])
+  if(length(dup_names)){
+    warning(paste0("\nNB!!! DUPLICATED COLUMN NAMES!",
+        "\nThe following column names were duplicated when trying to set ",
+        "TELLER and NEVNER according to what is provided in TNP_PROD:\n",
+        paste(" -", dup_names, collapse = "\n"), "\nAre you trying to e.g. add a separate NEVNER file to a file already containing NEVNER?"),
+      call. = FALSE, immediate. = TRUE)
   }
-  return(file)
+  
+  idx <- which(cols != newnames)
+  renamecols <- khtools::sql_quote_I(con, cols[idx])
+  renamenewnames <- khtools::sql_quote_I(con, newnames[idx])
+  
+  sql <- sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s",
+                 tablename, renamecols, renamenewnames)
+  sql <- paste(sql, collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
 }
 
-#' @title set_teller_nevner_names
-#' @description Sets name of teller and nevner column to TELLER and NEVNER by reference
-set_teller_nevner_names <- function(file, TNPparameters){
-  newnames <- gsub(paste0("^", TNPparameters$TELLERKOL, "(\\.f|\\.a|)$"), "TELLER\\1", names(file))
-  newnames <- gsub(paste0("^", TNPparameters$NEVNERKOL, "(\\.f|\\.a|)$"), "NEVNER\\1", newnames)
-  # warn_duplicated_teller_nevner_names(TNPparameters$TELLERKOL, TNPparameters$NEVNERKOL, names(file))
-  data.table::setnames(file, names(file), newnames)
-  warn_duplicated_column_names(names(file))
-  return(file)
+#' @title do_balance_missing_teller_nevner
+#' @description
+#' Balanserer missing i teller og nevner slik at sumteller og sumnevner er balansert. 
+#' @noRd
+do_balance_missing_teller_nevner <- function(con, tablename){
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  if (!all(c("TELLER", "NEVNER") %in% cols)) return(invisible(NULL))
+  
+  khtools::msg("- Balanserer missing teller og nevner slik at sumNEVNER og sumTELLER er basert på likt antall år")
+  table_sql <- khtools::sql_quote_I(con, tablename)
+  maxf <- 'GREATEST("TELLER.f", "NEVNER.f")'
+  
+  sql <- sprintf(
+    'UPDATE %s 
+    SET
+      "TELLER.f" = %s,
+      "NEVNER.f" = %s,
+      TELLER = NULL,
+      NEVNER = NULL
+    WHERE %s <> 0',
+    table_sql, maxf, maxf, maxf
+  )
+  invisible(DBI::dbExecute(con, sql))
+  invisible(NULL)
 }
 
-warn_duplicated_column_names <- function(columnnames){
-  if(any(duplicated(columnnames))){
-    message(paste0("\nNB!!! DUPLICATED COLUMN NAMES!",
-                   "\nThe following column names were duplicated when trying to set TELLER and NEVNER according to what is provided in TNP_PROD:\n", 
-                   paste(" -", columnnames[duplicated(columnnames)], collapse = "\n"),
-                   "\nAre you trying to e.g. add a separate NEVNER file to a file already containing NEVNER?"))
-  } 
-}

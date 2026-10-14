@@ -7,7 +7,7 @@
 make_godkjent_folder(
   profil = c("FHP", "OVP"),
   geoniv = c("K", "F", "B"),
-  year = getOption("khfunctions.year")
+  year = getOption("khfunctions.profileyear")
 )
 }
 \description{

@@ -1,28 +1,27 @@
 # PRODUCTION ----
 # 
-# update_production_folder <- function(year = getOption("khfunctions.year"), prodfolder = getOption("khfunctions.kube.prod")){
+# update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.kube.prod")){
 #   prod <- file.path(getOption("khfunctions.root"), getOption("khfunctions.kubedir"), prodfolder)
 #   if(!dir.exists(prod)) dir.create(prod)
 #   arkiv <- file.path(prod, "arkiv")
 #   if(!dir.exists(arkiv)) dir.create(arkiv)
 #   orgprodfiles <- list.files(prod, pattern = ".csv")
 # 
-#   con <- connect_khelsa()
-#   on.exit(RODBC::odbcCloseAll())
+#   con <- khtools::connect_khelsa()
 #   kubestatus_ok <- read_kubestatus(con, year = year)[, filenames := paste0(KUBE_NAVN, "_", DATOTAG_KUBE, ".csv")]
 #   alltargetfiles <- kubestatus_ok[, filenames]
 #   notwanted <- setdiff(orgprodfiles, alltargetfiles)
 #   if(length(notwanted) > 0){
-#     print_console_message("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
+#     khtools::msg("\nFølgende filer finnes i produksjonsmappe, men ikke i kubestatus:", 
 #         paste("\n -", notwanted))
-#     print_console_message("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
+#     khtools::msg("\n\nHvis du fortsetter, vil disse flyttes til arkivet.\nAlternativt må du oppdatere datotag i kubestatus.")
 #     x <- utils::menu(title = "\n\nVil du flytte disse filene til arkivet og fortsette?",
 #                      choices = c("Ja, flytt filene", "Nei, avbryt"))
 #     if(x == 2){
-#       print_console_message("\nAvbryter oppdatering av mappe...")
+#       khtools::msg("\nAvbryter oppdatering av mappe...")
 #       return(invisible(NULL))
 #     } else {
-#       print_console_message("\nFlytter filer til arkiv")
+#       khtools::msg("\nFlytter filer til arkiv")
 #       from <- file.path(prod, notwanted)
 #       to <- file.path(arkiv, notwanted)
 #       fs::file_move(from, to)
@@ -41,13 +40,13 @@
 #' @export
 make_godkjent_folder <- function(profil = c("FHP", "OVP"),
                                  geoniv = c("K", "F", "B"),
-                                 year = getOption("khfunctions.year")) {
+                                 year = getOption("khfunctions.profileyear")) {
   profil <- match.arg(profil)
   geoniv <- match.arg(geoniv)
   message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)
   
-  con <- connect_khelsa()
-  on.exit(RODBC::odbcCloseAll(), add = T)
+  con <- khtools::connect_khelsa()
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
   
   friskvik <- read_friskvik(con, profil, geoniv, year)
   kubestatus <- read_kubestatus(con, year)
@@ -64,11 +63,11 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   if(length(filelist$notfound) > 0) report_godkjent_files_notfound(filelist$notfound, year)
   
   if(utils::packageVersion("qualcontrol") < base::package_version("1.3.8")){
-    print_console_message("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
+    khtools::msg("\n Installer qualcontrol versjon > 1.3.8 for å sjekke filene i godkjentmappen")
     return(invisible(NULL))
   } 
 
-  print_console_message("\n* SJEKKER FRISKVIKFILER\n\n")
+  khtools::msg("\n* SJEKKER FRISKVIKFILER\n\n")
   qualcontrol::check_friskvik(profile = profil, geolevel = geoniv, profileyear = year, save = T)
   tabname <- paste0("FRISKVIKSJEKK_", profil,"_", geoniv)
   if(nrow(.GlobalEnv[[tabname]]) > 0) evaluate_friskviksjekk(tabname = tabname)
@@ -78,14 +77,14 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
 evaluate_friskviksjekk <- function(tabname){
   d <- data.table::copy(.GlobalEnv[[tabname]])
   miss_kube <- d[is.na(Kube), .N]
-  if(miss_kube > 0) print_console_message("\n** Ikke alle kubefiler ble lest inn, feil i funksjonen eller manglende kuber")
+  if(miss_kube > 0) khtools::msg("\n** Ikke alle kubefiler ble lest inn, feil i funksjonen eller manglende kuber")
   problem <- d[ALT_OK != "Ja", .N]
   if(problem > 0){
-    print_console_message(paste0("\n** Noen av filene har potensielle problemer, se tabell med View(", tabname, ") for detaljer"))
+    khtools::msg(paste0("\n** Noen av filene har potensielle problemer, se tabell med View(", tabname, ") for detaljer"))
     problem_indikatorer <- d[ALT_OK != "Ja", unique(Friskvik)]
-    print_console_message("\n** Sjekk spesielt følgende indikatorer: ", paste0("\n - ", problem_indikatorer))
+    khtools::msg("\n** Sjekk spesielt følgende indikatorer: ", paste0("\n - ", problem_indikatorer))
   } else {
-    print_console_message("\n** Ingen problemer avdekket")
+    khtools::msg("\n** Ingen problemer avdekket")
   }
 }
 
@@ -95,7 +94,7 @@ read_friskvik <- function(con, profil, geoniv, year){
   friskvik_sql <- paste("SELECT", friskvik_columns, "FROM FRISKVIK WHERE AARGANG =", year, 
                         "AND PROFILTYPE =", paste0("'", profil, "'"),
                         "AND MODUS =", paste0("'", geoniv, "'"))
-  friskvik <- data.table::setDT(RODBC::sqlQuery(con, friskvik_sql))
+  friskvik <- data.table::setDT(DBI::dbGetQuery(con, friskvik_sql))
   return(friskvik)
 }
 
@@ -104,7 +103,7 @@ read_kubestatus <- function(con, year){
   kubestatus_columns <- paste0(c("KUBE_NAVN", "DATOTAG_KUBE", "QC_OK"), collapse = ", ")
   kubestatus_table <- paste0("KUBESTATUS_", year)
   kubestatus_sql <- paste("SELECT", kubestatus_columns, "FROM", kubestatus_table, "WHERE QC_OK = '1'")
-  kubestatus <- data.table::setDT(RODBC::sqlQuery(con, kubestatus_sql))
+  kubestatus <- data.table::setDT(DBI::dbGetQuery(con, kubestatus_sql))
   return(kubestatus)
 }
 

@@ -1,26 +1,88 @@
+set_initial_spvtmp <- function(dt){
+  tncols <- intersect(c("TELLER.f", "NEVNER.f"), names(dt))
+  if (length(tncols) > 0L) {
+    dt[, let(spv_tmp = do.call(pmax, c(.SD, list(na.rm = TRUE)))), .SDcols = tncols]
+  }
+}
+
+#' @title add_spvflagg
+#' @description
+#' Legger til eller oppdaterer SPVFLAGG i KUBE basert på spv_tmp
+#' @noRd
+set_spvflagg <- function(con){
+  
+  khtools::duckdb_ensure_columns(con, "KUBE", c(SPVFLAGG = "INTEGER"))
+  invisible(DBI::dbExecute(con,
+    "UPDATE KUBE
+    SET SPVFLAGG =
+      CASE
+        WHEN spv_tmp IS NULL THEN 0
+        WHEN spv_tmp IN (-1, 4) THEN 3
+        WHEN spv_tmp = 9 THEN 1
+        ELSE spv_tmp
+      END
+    "
+  ))
+  
+  invisible(NULL)
+}
+
+#' @title add_censorinfo_cube
+#' @description
+#' Initierer prikkeinfo_koloner
+#' @param con db connection
+#' @param tablename tabellnavn
+#' @noRd
+add_censorinfo_cube <- function(con, tablename){
+  allcols <- khtools::duckdb_get_columns(con, tablename)
+  if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
+  censorcolumns <- khtools::sql_quote_I(con, c(getOption("khtools.prikkeinfo"), "spv_tmp"))
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
+  addcols <- sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s INTEGER DEFAULT 0", tbl_sql, censorcolumns)
+  sql_censor <- paste(addcols, collapse = ";\n")
+  invisible(DBI::dbExecute(con, sql_censor))
+  
+  # Set initial spv_tmp
+  f_cols<- khtools::sql_quote_I(con, intersect(c("TELLER.f", "NEVNER.f"), allcols))
+  sql_spv <- NULL
+  if(length(f_cols) == 1L){
+    sql_spv <- sprintf(
+      "UPDATE %s SET spv_tmp = %s",
+      tbl_sql,f_cols)
+    invisible(DBI::dbExecute(con, sql_spv))
+  } else if(length(f_cols) > 1L){
+    sql_spv <- sprintf(
+      "UPDATE %s SET spv_tmp = GREATEST(%s)",
+      tbl_sql, paste(f_cols, collapse = ", "))
+    invisible(DBI::dbExecute(con, sql_spv))
+  }
+  if(!is.null(sql_spv)) invisible(DBI::dbExecute(con, sql_spv)) 
+    
+  invisible(NULL)
+}
+
 #' @keywords internal
 #' @noRd
 do_censor_cube <- function(dt, parameters){
   save_filedump_if_requested(dumpname = "PRIKKpre", dt = dt, parameters = parameters)
   on.exit({save_filedump_if_requested(dumpname = "PRIKKpost", dt = dt, parameters = parameters)}, add = TRUE)
-  if(is_empty(parameters$Censor_type)) return(dt)
-  
+  if(is_empty(parameters$Censor_type)){
+    khtools::header("Ingen prikking")
+    return(dt)
+  }
+
+  khtools::header("Starter personvernhåndtering (prikking)")  
   if(parameters$Censor_type == "R"){
-    # data.table::set(dt, j = getOption("khfunctions.prikkeinfo"), value = 0L)
-    print_console_message("\n* Prikker data (NY R-prikking)")
     do_censor_primary_secondary(dt = dt, parameters = parameters)
   }
   if(parameters$Censor_type == "STATA"){
-    print_console_message("\n** STATA-prikking er aktiv, gjør endringer i ACCESS om du ønsker R-prikking")
+    khtools::msg("\n** STATA-prikking er aktiv, gjør endringer i ACCESS om du ønsker R-prikking")
     # Må slette verdiene for rader med spv_tmp = 9
-    vals <- get_value_columns(names(dt))
+    vals <- identify_values(names(dt))
     idx <- which(dt[["spv_tmp"]] == 9)
     data.table::set(dt, i = idx, j = vals, value = NA)
-    # print_console_message("\n* Prikker data (Ny R-prikking som overtar for STATA-prikking)")
-    # do_censor_primary_secondary(dt = dt, parameters = parameters)
-    # Ready to replace the rows below
-    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$etabs)
-    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims, geonaboprikk = parameters$geonaboprikk, geoprikktriangel = get_geonaboprikk_triangles())
+    dims <- find_dims_for_stataprikk(dt = dt, etabs = parameters$tabnames)
+    save_kubespec_csv(spec = parameters$CUBEinformation, dims = dims)
     if("spv_tmp" %in% names(dt)) dt[, spv_tmp := NULL] # must delete if old stata censoring is to be used
     dt <- do_censor_kube_stata(dt = dt, parameters = parameters)
   }
@@ -54,20 +116,19 @@ do_censor_primary_secondary <- function(dt, parameters){
   alltriangles <- get_censor_triangles(parameters = parameters)
   # CHECK TRIANGLE VALUES - verdiene i et triangel må eksistere i kuben
   # Trenger ikke sjekke geotriangler som er maskinelle, men manuelt angitte triangler bør sjekkes for feil. 
-  dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$etabs$tabnames), names(dt))
+  dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$tabnames), names(dt))
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
-  print_console_message("\n* Starter personvernhåndtering")
   do_censor_primary(dt = dt, limits = limits)
   do_censor_serie(dt = dt, limits = limits, dims = dims)
   if(length(alltriangles) > 0){
-    print_console_message("\n* NABOPRIKKING på:", names(alltriangles), "\n")
+    khtools::msg("\n** NABOPRIKKING på:", names(alltriangles))
     do_naboprikk(dt = dt, alltriangles = alltriangles, limits = limits, dims = dims)
   } else {
-    print_console_message("\n* Ingen naboprikking satt opp\n")
+    khtools::msg("** Ingen naboprikking satt opp")
   }
-  valuesF <- paste0(get_value_columns(names(dt)), ".f")
+  valuesF <- paste0(identify_values(names(dt)), ".f")
   dt[spv_tmp %in% c(3,4), (valuesF) := 3] # Disse brukes Foreløpig til å sette spvflagg. Disse kan endres i postprosess-script.
 }
 
@@ -80,20 +141,21 @@ do_censor_primary_secondary <- function(dt, parameters){
 #' og settes som unntak her. Kan settes som spesialgrense og inkluderes i limits.
 #' Dersom høye tall skal aksepteres, bør også nevner-teller-prikking kunne slås av.
 #' @keywords internal
-#' @noRD
+#' @noRd
 do_censor_primary <- function(dt, limits){
+  khtools::msg("** Primærprikking:")
   if(is_not_empty(limits$TELLER)){
-    print_console_message("\n*** Prikker på liten teller og teller-nevner")
-    idx <- which(dt[["spv_tmp"]] == 0 & 
+    khtools::msg("*** Teller og teller-nevner <=", limits$TELLER)
+    idx <- which(dt[["spv_tmp"]] != 9 & 
                    (dt[["sumTELLER"]] <= limits$TELLER | dt[["sumNEVNER"]] - dt[["sumTELLER"]] <= limits$TELLER))
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
   if(is_not_empty(limits$NEVNER)){
-    print_console_message("\n*** Prikker på liten nevner")
-    idx <- which(dt[["spv_tmp"]] == 0 & dt[["sumNEVNER"]] <= limits$NEVNER)
+    khtools::msg("*** Nevner <=", limits$NEVNER)
+    idx <- which(dt[["spv_tmp"]] != 9 & dt[["sumNEVNER"]] <= limits$NEVNER)
     data.table::set(dt, i = idx, j = c("pvern", "orgprikket", "spv_tmp"), value = list(1L, 1L, 3L))
   }
-  print_console_message("\n** Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
+  khtools::msg("- Antall primærprikker i filen: ", dt[orgprikket == 1L, .N])
 }
 
 #' @title do_censor_serie
@@ -108,6 +170,8 @@ do_censor_primary <- function(dt, limits){
 #' @noRd
 do_censor_serie <- function(dt, limits, dims){
   seriedims <- setdiff(dims, "AAR")
+  data.table::uniqueN(dt[, ..seriedims])
+  
   primary_limit <- getOption("khfunctions.anon_hullandel")
   weak_limit <- getOption("khfunctions.anon_svakandel")
   helper_columns <- c("weak", "propweak", "propprimary")
@@ -117,10 +181,11 @@ do_censor_serie <- function(dt, limits, dims){
   # Kan holde spv_tmp == 9 utenfor her
   dt[, let(propweak = mean(weak, na.rm = T), propprimary = mean(orgprikket, na.rm = T)), by = seriedims]
   
-  idx <- which(dt[["spv_tmp"]] == 0 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
+  idx <- which(dt[["spv_tmp"]] != 9 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
   data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
-  print_console_message(paste0("\n** Serieprikker ", dt[serieprikket == 1, .N], " rader fordi tidsserien har en andel personvernprikker > ", primary_limit, 
-             " eller at andelen sumTELLER <= ", limits$STATTOL, " > ", weak_limit))
+  khtools::msg("\n** Serieprikker dersom tidsserien har:\n*** Andel personvernprikker >", primary_limit, 
+             "\n*** Andel sumTELLER <=", limits$STATTOL, ">", weak_limit)
+  khtools::msg("- Antall serieprikker: ", dt[serieprikket == 1, .N])
   data.table::set(dt, j = helper_columns, value = NULL)
 }
 
@@ -247,7 +312,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
     }
     nyeprikker <- collapse::fsum(dt[[itcol]])
     onlyserie <- ifelse(iteration <= max_serie_rounds, " (bare serieprikker brukt)", "")
-    print_console_message(paste0("\n** Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie, "\n"))
+    khtools::msg(paste0("- Antall nye prikker i runde ", iteration, ": ", nyeprikker, onlyserie))
     force_runde <- iteration <= max_serie_rounds
     iteration <- iteration + 1L
   }
@@ -257,7 +322,7 @@ do_naboprikk <- function(dt, alltriangles, limits, dims){
 #' @title get_censor_limits
 #' @description Fetch censor limits from access
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_censor_limits <- function(spec){
   limits <- list()
   limits[["TELLER"]] <- ifelse(is_not_empty(spec$Stata_PRIKK_T), spec$Stata_PRIKK_T, spec$PRIKK_T)
@@ -269,7 +334,7 @@ get_censor_limits <- function(spec){
 #' @title get_censor_triangles
 #' @description Fetch censor triangles from access
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_censor_triangles <- function(parameters){
   spec <- parameters$CUBEinformation
   naboprikkdims <- grep("nabopr", names(spec), value = T)
@@ -292,7 +357,7 @@ get_censor_triangles <- function(parameters){
     names(out)[names(out) == "SPES"] <- correctname
   }
   
-  if(parameters$CUBEinformation$GEO_NABOPRIKK == "1"){
+  if(isTRUE(parameters$CUBEinformation$GEO_NABOPRIKK)){
     out[["GEO"]] <- get_geonabotriangles(parameters = parameters)
   }
   
@@ -303,7 +368,7 @@ get_censor_triangles <- function(parameters){
 #' @title get_geonabotriangles
 #' @description Fetch geo triangles from options and filters to geolevels in file
 #' @keywords internal
-#' @noRD
+#' @noRd
 get_geonabotriangles <- function(parameters){
   geolevels <- strsplit(parameters$CUBEinformation$GEOniv, ",")[[1]]
   alltriangles <- getOption("khfunctions.geoprikk")
@@ -320,7 +385,7 @@ get_geonabotriangles <- function(parameters){
 #' @description Converts triangles to list of values in each triangle, handling special variants aswell
 #' Written with assistance from copilot
 #' @keywords internal
-#' @noRD
+#' @noRd
 clean_triangles <- function(list){
   if(length(list) == 0) return(invisible(NULL))
   for(dim in names(list)){
@@ -405,54 +470,15 @@ warn_if_special_triangles <- function(alltriangles) {
   }, logical(1L))]
   
   if (length(special_dims) > 0L) {
-    print_console_message("\n**** Spesialstrata oppdaget for dimensjonene: ",
+    khtools::msg("*** Spesialstrata oppdaget for dimensjonene: ",
         paste(special_dims, collapse = ", "),
-        "\n**** Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
+        "\n- Dette kan øke kjøretiden for naboprikking pga betingede trekanter.\n")
   } 
 }
 
-#' @title do_remove_censored_observations
-#' @description
-#' Removes censored observations and set SPVFLAGG
-#' 
-#' Først beregnes max .f-variabel for rader der ingen av .f-variablene == 2. (tSPV_uten2) og for alle (tSPV_alle)
-#' Dette er unoedvendig kronglete. Men dersom f.eks RATE.f=2 pga TELLER.f=1, oenskes SPVFLAGG=1. 
-#' tSPV_uten2 prioriteres, og dersom denne == 0 vil tSPV_alle brukes for å sette SPVFLAGG.
-#' @keywords internal
-#' @noRd
-do_remove_censored_observations <- function(dt, outvalues, parameters){
-  data.table::set(dt, j = "SPVFLAGG", value = 0L)
-  
-  if(is_empty(parameters$Censor_type) || parameters$Censor_type == "R"){
-    check_if_spv_tmp_correct(dt, parameters)
-    dt[, SPVFLAGG := spv_tmp]
-  } else if(parameters$Censor_type == "STATA"){
-    valF <- paste0(union(getOption("khfunctions.valcols"), outvalues), ".f")
-    valF <- intersect(names(dt), valF)
-    if(length(valF) > 0){
-      dt[, tSPV_alle := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-      dt[, tSPV_uten2 := do.call(pmax, c(.SD[, lapply(.SD, function(x) data.table::fifelse(x == 2, 0, x))], 
-                                         list(na.rm = TRUE))), .SDcols = valF] 
-      dt[, SPVFLAGG := data.table::fifelse(tSPV_uten2 == 0, tSPV_alle, tSPV_uten2)]
-      dt[, c("tSPV_uten2", "tSPV_alle") := NULL]
-    }
-  }
-  dt[is.na(SPVFLAGG), SPVFLAGG := 0L]
-  dt[SPVFLAGG %in% c(-1L, 4L), SPVFLAGG := 3L]
-  dt[SPVFLAGG == 9L, SPVFLAGG := 1L]
-  dt[SPVFLAGG > 0L, (outvalues) := NA]
-}
 
-#' @title check_if_spv_tmp_correct
-#' @description
-#' If spv_tmp is 0, but a .f-column is > 0, spv_tmp is corrected before being used to set SPVFLAGG. 
-#' @keywords internal
-#' @noRd
-check_if_spv_tmp_correct <- function(dt, parameters){
-  valF <- paste0(union(getOption("khfunctions.valcols"), parameters$outvalues), ".f")
-  valF <- intersect(names(dt), valF)
-  dt[spv_tmp == 0 & rowSums(dt[, .SD, .SDcols = valF]) > 0, spv_tmp := do.call(pmax, c(.SD, list(na.rm = T))), .SDcols = valF]
-}
+
+
 
 #' @title do_censor_kube_stata
 #' @description
@@ -483,7 +509,7 @@ get_geonaboprikk_triangles <- function(){
 #' @description Saves ACCESS specs + list of dimensions to be used in STATA censoring
 #' @keywords internal
 #' @noRd
-save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktriangel = NULL){
+save_kubespec_csv <- function(spec, dims = NULL){
   rootDir <- file.path(fs::path_home(), "helseprofil")
   if (!fs::dir_exists(rootDir))
     fs::dir_create(rootDir)
@@ -493,8 +519,6 @@ save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktr
   varSpec <- c("KUBE_NAVN", varStata)
   varDF <- specDF[, .SD, .SDcols = varSpec]
   if(!is.null(dims)) varDF[, DIMS := list(dims)]
-  if(!is.null(geonaboprikk)) varDF[, GEOnaboprikk := as.character(geonaboprikk)]
-  if(!is.null(geoprikktriangel)) varDF[, names(geoprikktriangel) := geoprikktriangel]
   fileSpec <- file.path(rootDir, "kubespec.csv")
   data.table::fwrite(varDF, fileSpec, sep = ";", sep2 = c("", " ", ""))
   return(invisible(specDF))
@@ -505,8 +529,7 @@ save_kubespec_csv <- function(spec, dims = NULL, geonaboprikk = NULL, geoprikktr
 #' Helper function for kube_spec, finding dimensions in KUBE
 #' @keywords internal
 #' @noRd
-find_dims_for_stataprikk <- function(dt, etabs){
-  alldims <- c(getOption("khfunctions.khtabs"), etabs$tabnames)
+find_dims_for_stataprikk <- function(dt, parameters){
+  alldims <- c(getOption("khfunctions.khtabs"), parameters$tabnames)
   alldims[alldims %in% names(dt)]
 }
-

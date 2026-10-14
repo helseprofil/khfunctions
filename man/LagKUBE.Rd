@@ -8,11 +8,10 @@ LagKUBE(
   name,
   write = TRUE,
   alarm = FALSE,
-  geonaboprikk = TRUE,
-  year = getOption("khfunctions.year"),
+  year = getOption("khfunctions.profileyear"),
   dumps = list(),
-  removebuffer = TRUE,
-  qualcontrol = TRUE
+  qualcontrol = TRUE,
+  ramlimit = NULL
 )
 }
 \arguments{
@@ -22,15 +21,13 @@ LagKUBE(
 
 \item{alarm}{if TRUE, plays a sound when done}
 
-\item{geonaboprikk}{should the file be secondary censored on geographical codes? default = TRUE}
-
-\item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")}
+\item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.profileyear")}
 
 \item{dumps}{list of required dumps, in the format list(dumpname = "format")}
 
-\item{removebuffer}{should original files in the buffer be removed when no longer needed to free memory?}
+\item{qualcontrol}{perform initial qualcontrol of data}
 
-\item{qualcontrol}{perform initial qualcontrol of data (default = FALSE for now)}
+\item{ramlimit}{max RAM allocation for duckdb. If NULL, default value is 8GB.}
 }
 \value{
 complete data file, publication ready file, and quality control file.

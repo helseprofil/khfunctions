@@ -10,10 +10,10 @@
 #' @noRd
 compute_new_value_from_formula <- function(dt, formulas, post_moving_average = FALSE){
   if(is_empty(formulas)) return(invisible(dt))
-  values <- get_value_columns(names(dt))
+  values <- identify_values(names(dt))
   formulas <- trimws(unlist(strsplit(formulas, ";")))
   for(f in formulas){
-    print_console_message("\n*** Legger til nye kolonner: ", f)
+    khtools::msg("\n*** Legger til nye kolonner: ", f)
     name <-  gsub("^(.*?)=(.*)$", "\\1", f)
     formula <- gsub("^(.*?)=\\{(.*)\\}$", "\\2", f)
     included_columns <- character()
@@ -33,33 +33,257 @@ compute_new_value_from_formula <- function(dt, formulas, post_moving_average = F
   return(invisible(dt))
 }
 
+compute_new_value_from_formula_duckdb <- function(con, tablename, formulas, post_moving_average = FALSE){
+  
+  if(is_empty(formulas)) return(invisible(NULL))
+  
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  values <- identify_values(cols)
+  
+  formulas <- trimws(
+    unlist(
+      strsplit(formulas, ";", fixed = TRUE)
+    )
+  )
+  
+  table_sql <- khtools::sql_quote_I(con, tablename)
+  
+  for(f in formulas){
+    
+    khtools::msg(
+      paste0("\n*** Legger til nye kolonner: ", f)
+    )
+    
+    name <- sub(
+      "^(.*?)=(.*)$",
+      "\\1",
+      f
+    )
+    
+    formula <- sub(
+      "^(.*?)=\\{(.*)\\}$",
+      "\\2",
+      f
+    )
+    
+    included_columns <- values[
+      vapply(
+        values,
+        grepl,
+        logical(1),
+        x = formula,
+        fixed = TRUE
+      )
+    ]
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s DOUBLE",
+        table_sql,
+        khtools::sql_quote_I(con, name)
+      )
+    )
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s INTEGER",
+        table_sql,
+        khtools::sql_quote_I(con, paste0(name, ".f"))
+      )
+    )
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        "ALTER TABLE %s ADD COLUMN %s INTEGER",
+        table_sql,
+        khtools::sql_quote_I(con, paste0(name, ".a"))
+      )
+    )
+    
+    if(post_moving_average){
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          "ALTER TABLE %s ADD COLUMN %s INTEGER",
+          table_sql,
+          khtools::sql_quote_I(con, paste0(name, ".n"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          khtools::sql_quote_I(con, paste0(name, ".fn1"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          khtools::sql_quote_I(con, paste0(name, ".fn3"))
+        )
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "ALTER TABLE %s",
+            "ADD COLUMN %s INTEGER DEFAULT 0"
+          ),
+          table_sql,
+          khtools::sql_quote_I(con, paste0(name, ".fn9"))
+        )
+      )
+    }
+    
+    f_sql <- paste0(
+      khtools::sql_quote_I(
+        con,
+        paste0(included_columns, ".f")
+      ),
+      collapse = ", "
+    )
+    
+    a_sql <- paste0(
+      khtools::sql_quote_I(
+        con,
+        paste0(included_columns, ".a")
+      ),
+      collapse = ", "
+    )
+    
+    sql <- sprintf(
+      paste(
+        "UPDATE %s",
+        "SET",
+        "%s = %s,",
+        "%s = GREATEST(%s),",
+        "%s = GREATEST(%s)"
+      ),
+      table_sql,
+      
+      khtools::sql_quote_I(con, name),
+      formula,
+      
+      khtools::sql_quote_I(con, paste0(name, ".f")),
+      f_sql,
+      
+      khtools::sql_quote_I(con, paste0(name, ".a")),
+      a_sql
+    )
+    
+    DBI::dbExecute(con, sql)
+    
+    if(post_moving_average){
+      
+      n_sql <- paste0(
+        khtools::sql_quote_I(
+          con,
+          paste0(included_columns, ".n")
+        ),
+        collapse = ", "
+      )
+      
+      DBI::dbExecute(
+        con,
+        sprintf(
+          paste(
+            "UPDATE %s",
+            "SET %s = GREATEST(%s)"
+          ),
+          table_sql,
+          khtools::sql_quote_I(con, paste0(name, ".n")),
+          n_sql
+        )
+      )
+    }
+    
+    DBI::dbExecute(
+      con,
+      sprintf(
+        paste(
+          "UPDATE %s",
+          "SET",
+          "%s = NULL,",
+          "%s = 2",
+          "WHERE",
+          "NOT ISFINITE(%s)",
+          "OR %s IS NULL"
+        ),
+        table_sql,
+        khtools::sql_quote_I(con, name),
+        khtools::sql_quote_I(con, paste0(name, ".f")),
+        khtools::sql_quote_I(con, name),
+        khtools::sql_quote_I(con, name)
+      )
+    )
+  }
+  
+  invisible(NULL)
+}
+
+
+#' @title add_crude_rate
+#' @family duckdb
 #' @noRd
-add_crude_rate <- function(dt, parameters){
-  if(!"NEVNER" %in% names(dt)){
-    print_console_message("\n** Har ikke NEVNER, kan ikke beregne crude RATE")
+add_crude_rate <- function(con, tablename){
+  khtools::msg("- Legger til crude RATE")
+  cols <- khtools::duckdb_get_columns(con, tablename)
+  if(!"NEVNER" %in% cols){
+    khtools::msg("- Har ikke NEVNER, kan ikke beregne crude RATE")
     return(invisible(NULL))
   } 
+  tbl_sql <- khtools::sql_quote_I(con, tablename)
+  sql_addcols <- sprintf(
+    'ALTER TABLE %s ADD COLUMN IF NOT EXISTS RATE DOUBLE;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.f" INTEGER;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.a" INTEGER;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS "RATE.n" INTEGER;',
+    tbl_sql, tbl_sql, tbl_sql, tbl_sql)
+  invisible(DBI::dbExecute(con, sql_addcols))
   
-  dt[, let(RATE = TELLER/NEVNER,
-           RATE.f = pmax(TELLER.f, NEVNER.f, na.rm = T),
-           RATE.a = pmax(TELLER.a, NEVNER.a, na.rm = T),
-           RATE.n = pmax(TELLER.n, NEVNER.n, na.rm = T))]
+  sql_rate <- sprintf(
+    'UPDATE %s SET
+    RATE = TELLER / NULLIF(NEVNER, 0),
+    "RATE.f" = GREATEST("TELLER.f", "NEVNER.f"),
+    "RATE.a" = GREATEST("TELLER.a", "NEVNER.a"),
+    "RATE.n" = GREATEST("TELLER.n", "NEVNER.n")',
+    tbl_sql)
   
-  dt[is.nan(RATE) | is.infinite(RATE), let(RATE = NA)]
-  # Sett .f = 2 dersom RATE ikke lar seg beregne og RATE.f ikke allerede er satt til max av TELLER.f/NEVNER.f
-  dt[is.na(RATE) & RATE.f == 0, let(TELLER.f = 2, NEVNER.f = 2, RATE.f = 2, spv_tmp = 2L)]
+  invisible(DBI::dbExecute(con, sql_rate))
   
-  if(parameters$MOVAVparameters$is_movav){
-    dt[, (paste0("RATE", c(".fn1", ".fn3", ".fn9"))) := 0]
-  }
+  sql_ratemissing <- sprintf(
+    'UPDATE %s SET
+    "TELLER.f" = 2, "NEVNER.f" = 2, "RATE.f" = 2, spv_tmp = 2
+    WHERE RATE IS NULL AND "RATE.f" = 0',
+    tbl_sql)
+  
+  invisible(DBI::dbExecute(con, sql_ratemissing))
+  invisible(NULL)
 }
+
+
 
 #' @title compute_new_value_from_row_sum
 #' @description
 #' Used to compute columns described in ACCESS columns
 #' - FILFILTRE::NYEKOL_RAD
 #' - TNP_PROD::NYEKOL_RAD
-#' @param dt 
 #' @keywords internal
 #' @noRd
 compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
@@ -73,14 +297,14 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
   
   for(formula in formulas){
     formula <- trimws(formula)
-    print_console_message("\n*** Legger til kolonner som sum av rader: ", formula)
+    khtools::msg("\n*** Legger til kolonner som sum av rader: ", formula)
     fparts <- extract_formula_parts(formula = formula, fileinfo = fileinfo, parameters = parameters)
     
     newdata <- EkstraherRadSummer(dt, pstrorg = fparts$filter, FGP = fileinfo, parameters = parameters)
     oldcols <- paste0(fparts$old, c("", ".f", ".a"))
     newcols <- paste0(fparts$new, c("", ".f", ".a"))
     data.table::setnames(newdata, oldcols, newcols)
-    newdims <- get_dimension_columns(names(newdata))
+    newdims <- identify_dimensions(names(newdata))
     merge_cols_by_reference(orgdata = dt, newdata = newdata[, .SD, .SDcols = c(newdims, newcols)])
     valdef <- fileinfo$vals
     valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
@@ -130,8 +354,8 @@ add_filtercols_and_recodecols <- function(fparts, parameters){
 #' @noRd
 merge_cols_by_reference <- function(orgdata, newdata){
   commoncols <- intersect(
-    get_dimension_columns(names(orgdata)),
-    get_dimension_columns(names(newdata))
+    identify_nonvalues(names(orgdata)),
+    identify_nonvalues(names(newdata))
   )
   newcols_names <- setdiff(names(newdata), commoncols)
   
@@ -151,27 +375,6 @@ merge_cols_by_reference <- function(orgdata, newdata){
   newcols_vals <- newdata[orgdata, on = commoncols, ..newcols_names]
   data.table::set(orgdata, j = newcols_names, value = newcols_vals)
 }
-
-#' #' @title set_lead_value
-#' #' @description 
-#' #' shifts year by `shift`, before merging to main table. 
-#' #' in prefix, m/p means plus/minus. Prefix need to include `_A_` as column names must match expected names later.  
-#' #' @keywords internal
-#' #' @noRd
-#' set_lead_year <- function(file, shift, vals = NULL){
-#'   if(is.null(vals)) stop("vals must be specified to generate lead values")
-#'   d <- data.table::copy(file)
-#'   data.table::set(d, j = c("AARl", "AARh"), 
-#'                   value = list(d[["AARl"]] + shift, NULL))
-#' 
-#'   tabcols <- get_dimension_columns(names(d))
-#'   prefix <- paste0("Y", ifelse(shift < 0, "p", "m"), abs(shift), "_A_") 
-#'   oldvals <- paste0(rep(vals, each = 3), c("", ".f", ".a"))
-#'   newvals <- paste0(prefix, oldvals)
-#'   data.table::setnames(d, old = oldvals, new = newvals)
-#'   d <- d[, .SD, .SDcols = c(tabcols, newvals)]
-#'   return(d)
-#' }
 
 # Existing functions to be replaced and removed ---- 
 
@@ -232,4 +435,4 @@ EkstraherRadSummer <- function(dt, pstrorg, FGP = list(amin = 0, amax = 120), pa
   return(dt)
 }
 
-
+# TO DELETE ---- 

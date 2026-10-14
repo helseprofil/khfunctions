@@ -7,12 +7,6 @@
 get_initialdesign(design, tellerfildesign, nevnerfildesign, parameters)
 }
 \arguments{
-\item{design}{}
-
-\item{tellerfildesign}{}
-
-\item{nevnerfildesign}{}
-
 \item{parameters}{global parameters}
 }
 \description{
