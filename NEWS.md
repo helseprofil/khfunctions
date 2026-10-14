@@ -17,6 +17,8 @@
     - khtools har egne options som skal brukes på tvers, men som ikke endres. Disse brukes som "khtools.optionsnavn"
     - Pakken ikke lenger avhengig av orgdata da funksjonaliteten er flyttet til khtools
   - Filnavn og batchdato droppet fra duckdbnavnet for å unngå akkumulering av db-filer lokalt
+  - Outputfiler skrives direkte fra duckdb ([issue168](https://github.com/helseprofil/khfunctions/issues/178))
+    - Kolonnetyper blir satt eksplisitt ved eksportering av ALLVISfil ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
   - Parametertabeller som `KnrHarm`, `GeoKoder` og `LKS_STARTAAR` leses direkte inn i duckdb ([issue169](https://github.com/helseprofil/khfunctions/issues/169))
   - `classify_columns()` implementert for å klassifisere kolonner som dimensjoner/verdier/hjelpekolonner 
       - wrappere: identify_values, identify_nonvalues, and identify_dimensions
@@ -34,7 +36,7 @@
   - graveyard3 opprettet, for funksjoner erstattet av khtools
 
 ## LagFilgruppe
-  - Implementert duckdb-løsning for LagFilgruppe 
+  - Implementert duckdb-løsning for LagFilgruppe ([issue158](https://github.com/helseprofil/khfunctions/issues/158))
       - Prosessering og stabling av originalfiler gjøres i duckdb, som minimerer minnebehov
           - Originaliler som ikke er parquet leses inn i R og encoding fikses før filen skrives til duckdb
           - Alle kolonner gjøres om til tekst ved innlesing
@@ -42,7 +44,6 @@
       - `RSYNT1` er flyttet ut av read_original_file, slik at parquetfiler kan leses direkte inn i duckdb
       - Rensing, omdøping og konvertering av kolonnetyper skjer nå i duckdb
       - `RSYNT_PRE_FGLAGRING` bruker nå duckdb, slik at filer ikke må leses inn i minnet (dersom snutt er SQL)
-      - `write_filegroup_output` skriver outputfilene direkte fra duckdb
   - Partisjonerte versjoner av BEF_GKny er utfaset, siden det går raskt å filtrere en sortert filgruppe direkte ved innlesing. 
 
 ## LagKUBE
@@ -53,8 +54,6 @@
   - `do_harmonize_geo` er oversatt til sql og kjøres i duckdb, med add_fylke som valgfritt argument
   - Aggregering og standardisering oversatt til sql og gjøres i duckdb. 
   - "SPVFLAGG" blir nå satt i KUBE (tidligere i ALLVIS) for å være tilgjengelig for kvalitetskontroll
-  - Outputfiler skrives direkte fra duckdb
-      - Kolonnetyper blir satt eksplisitt ved eksportering av ALLVISfil ([issue176](https://github.com/helseprofil/khfunctions/issues/176))
   - BUFFER er utfaset siden filer ikke holdes i minnet lenger
 
 ## Bugfix
