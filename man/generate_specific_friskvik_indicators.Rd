@@ -7,7 +7,7 @@
 generate_specific_friskvik_indicators(
   cubename = NULL,
   friskvik_id = NULL,
-  year = getOption("khfunctions.year")
+  year = getOption("khfunctions.profileyear")
 )
 }
 \arguments{
@@ -15,7 +15,7 @@ generate_specific_friskvik_indicators(
 
 \item{friskvik_id}{Kan evt spesifisere FRISVIK_ID. Dersom denne er NULL lages alle}
 
-\item{year}{friskvikår, default = getOption("khfunctions.year")}
+\item{year}{friskvikår, default = getOption("khfunctions.profileyear")}
 }
 \description{
 Lager friskvikfiler fra allerede godkjent kube

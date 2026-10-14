@@ -6,7 +6,7 @@
 \alias{khfunctions-package}
 \title{khfunctions: Data processing for FHP/OVP}
 \description{
-What the package does (one paragraph).
+Dataprosessering for helseprofilene
 }
 \author{
 \strong{Maintainer}: Vegard Lysne \email{vegard.lysne@helsedir.no}

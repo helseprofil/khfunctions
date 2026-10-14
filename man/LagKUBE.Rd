@@ -8,7 +8,7 @@ LagKUBE(
   name,
   write = TRUE,
   alarm = FALSE,
-  year = getOption("khfunctions.year"),
+  year = getOption("khfunctions.profileyear"),
   dumps = list(),
   qualcontrol = TRUE,
   ramlimit = NULL
@@ -21,7 +21,7 @@ LagKUBE(
 
 \item{alarm}{if TRUE, plays a sound when done}
 
-\item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.year")}
+\item{year}{year to get valid GEO codes and to produce correct FRISKVIK files, defaults to getOption("khfunctions.profileyear")}
 
 \item{dumps}{list of required dumps, in the format list(dumpname = "format")}
 

@@ -41,7 +41,27 @@ make_table_from_original_file <- function(file_number, codebooklog, parameters){
   append_temp_orgfil_to_filgruppe(con = con)
 }
 
-# Process file DUCKDB ----
+#' @title append_temp_orgfil_to_filgruppe
+#' @description Stack original files to generate filegroup
+#' @family duckdb
+#' @noRd
+append_temp_orgfil_to_filgruppe <- function(con){
+  
+  if(!DBI::dbExistsTable(con, "temp_orgfile")) stop("temp_orgfile finnes ikke i duckdb")
+  
+  if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
+    khtools::duckdb_create_new_table(con, "FILGRUPPE", "SELECT * FROM temp_orgfile")
+  } else {
+    khfunctions::tools::duckdb_append_table(con, 
+                                            target = "FILGRUPPE", 
+                                            source = "temp_orgfile")
+  }
+  clean_tempfiles(con)
+  invisible(NULL)
+}
+
+# Process file ----
+## manheader ----
 #' @title set_manheader_duckdb
 #' @description manual renaming of columns from ACCESS::INNLESING
 #' @family duckdb
@@ -84,7 +104,8 @@ manheader_to_vector <- function(string, old_new = c("old", "new"), origcols){
   }
   stop("Feil i MANHEADER: både kolonnenavn og posisjon angitt som gamle kolonnenavn")
 }
-  
+
+## default names and values----  
 #' @title give_columns_default_name
 #' @description
 #' Renames columns to GEO, AAR, KJONN, ALDER, UTDANN, INNVKAT, LANDBAK, TAB1:3, VAL1:3
@@ -117,6 +138,43 @@ give_columns_default_names_duckdb <- function(filedescription, defcolumns, con){
   }
 }
 
+#' @title do_set_default_values_duckdb
+#' @description setter default verdier for kolonner som ikke finnes i originalfil
+#' @family duckdb
+#' @noRd
+do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
+  if(length(defaultcolumns) == 0) return(invisible(NULL))
+  
+  default <- filedescription[, ..defaultcolumns]
+  default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
+  existing_cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
+  cols_to_add <- setdiff(defaultcolumns, existing_cols)
+  cols_to_update <- intersect(defaultcolumns, existing_cols)
+  if(length(cols_to_add) > 0){
+    for(col in cols_to_add){
+      DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR DEFAULT %s",
+                                  as.character(khtools::sql_quote_I(con, col)),
+                                  as.character(khtools::sql_quote_S(con, default[[col]][1]))))
+    }
+  }
+  
+  if(length(cols_to_update) > 0){
+    set_clause <- paste(vapply(cols_to_update, function(col) {
+      sprintf("%s = %s", 
+              as.character(khtools::sql_quote_I(con, col)),
+              as.character(khtools::sql_quote_S(con, default[[col]][1]))
+      )
+    },
+    character(1)
+    ),
+    collapse = ", "
+    )
+    DBI::dbExecute(con, sprintf("UPDATE temp_orgfile SET %s", set_clause))
+  }
+  invisible(NULL)
+}
+
+## kastkols ----
 #' @title do_handle_kastkols_duckdb
 #' @description delete columns
 #' @family duckdb
@@ -140,6 +198,7 @@ do_handle_kastkols_duckdb <- function(kastkols, con){
   invisible(NULL)
 }
 
+## reshape ----
 #' @title do_reshape_var_duckdb
 #' @description reshape columns accoring to ACCESS::INNLESING
 #' @family duckdb
@@ -229,41 +288,7 @@ get_reshape_parameters <- function(filedescription, allcolumns){
   return(out)
 }
 
-#' @title do_set_default_values_duckdb
-#' @description setter default verdier for kolonner som ikke finnes i originalfil
-#' @family duckdb
-#' @noRd
-do_set_default_values_duckdb <- function(filedescription, defaultcolumns, con){
-  if(length(defaultcolumns) == 0) return(invisible(NULL))
-  
-  default <- filedescription[, ..defaultcolumns]
-  default[, names(.SD) := lapply(.SD, function(x) sub("^<(.*)>$", "\\1", x))]
-  existing_cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
-  cols_to_add <- setdiff(defaultcolumns, existing_cols)
-  cols_to_update <- intersect(defaultcolumns, existing_cols)
-  if(length(cols_to_add) > 0){
-    for(col in cols_to_add){
-      DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR DEFAULT %s",
-                                  as.character(khtools::sql_quote_I(con, col)),
-                                  as.character(khtools::sql_quote_S(con, default[[col]][1]))))
-    }
-  }
-  
-  if(length(cols_to_update) > 0){
-    set_clause <- paste(vapply(cols_to_update, function(col) {
-      sprintf("%s = %s", 
-              as.character(khtools::sql_quote_I(con, col)),
-              as.character(khtools::sql_quote_S(con, default[[col]][1]))
-          )
-        },
-        character(1)
-      ),
-      collapse = ", "
-    )
-    DBI::dbExecute(con, sprintf("UPDATE temp_orgfile SET %s", set_clause))
-  }
-  invisible(NULL)
-}
+## formatting ----
 
 #' @title drop_unwanted_columns_duckdb
 #' @description Fjerner kolonner som ikke trengs videre
@@ -298,6 +323,32 @@ convert_na_to_empty_duckdb <- function(con) {
   invisible(NULL)
 }
 
+#' @title do_recode_tknr_db
+#' @description Koder om TKNR-koder til kommunekoder via TKNR-tabellen i access
+#' @noRd
+do_recode_tknr <- function(tknr, parameters){
+  if (is_empty(tknr) || tknr != "1") return(invisible(NULL))
+  
+  on.exit(khtools::duckdb_drop_tables(con, "temp_tknr"), add = TRUE)
+  khtools::msg("\n* Omkoder fra TKNR")
+  # DBI::dbWriteTable(parameters$duck, "temp_tknr", parameters$TKNR,overwrite = TRUE)
+  khtools::duckdb_write_table(parameters$duck, "temp_tknr", data = parameters$TKNR)
+  DBI::dbExecute(parameters$duck,
+                 "UPDATE temp_orgfile AS t SET GEO = x.NYKODE FROM temp_tknr AS x WHERE t.GEO = x.ORGKODE AND x.NYKODE IS NOT NULL"
+  )
+  invisible(NULL)
+}
+
+#' @title do_recode_soner_4_db
+#' @description Gjør 4-sifrede sonekoder om til 6-sifret ved å legge til 00
+#' @noRd
+do_recode_soner_4 <- function(filedescription, con) {
+  if(is_empty(filedescription$SONER) || !grepl("4", filedescription$SONER)) return(invisible(NULL))
+  khtools::msg("\n* Omkoder 4-sifrede GEO-koder til 6-sifret sonekode")
+  DBI::dbExecute(con, "UPDATE temp_orgfile SET GEO = GEO || '00' WHERE length(GEO) = 4")
+  invisible(NULL)
+}
+
 #' @title check_if_all_columns_exist
 #' @description
 #' Checks if obligatory columns GEO, AAR, Val1, and values defined in  exists
@@ -315,43 +366,6 @@ check_if_all_columns_exist <- function(filecolumns, con){
   if(!all(default %in% allcols)) stop("Feil i innlesing: Kolonnene <", default[!(default %in% allcols)], "> skulle fått default verdi, men finnes ikke\n")
   return(invisible(NULL))
 }
-
-#' @title append_temp_orgfil_to_filgruppe
-#' @description Stack original files to generate filegroup
-#' @family duckdb
-#' @noRd
-append_temp_orgfil_to_filgruppe <- function(con){
-  
-  if(!DBI::dbExistsTable(con, "temp_orgfile")) stop("temp_orgfile finnes ikke i duckdb")
-  
-  # cols_orgfile <- khtools::duckdb_get_columns(con, "temp_orgfile")
-  
-  if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
-    khtools::duckdb_create_new_table(con, "FILGRUPPE", "SELECT * FROM temp_orgfile")
-    return(invisible(NULL))
-  } 
-  # else {
-  #   cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
-  #   missing_cols <- setdiff(cols_orgfile, cols_filgruppe)
-  #   if(length(missing_cols) > 0) {
-  #     for(col in missing_cols) {
-  #       invisible(DBI::dbExecute(con, sprintf("ALTER TABLE FILGRUPPE ADD COLUMN %s VARCHAR default ''", 
-  #                                             as.character(khtools::sql_quote_I(con, col)))))
-  #     }
-  #   }
-  # }
-  # cols_filgruppe <- khtools::duckdb_get_columns(con, "FILGRUPPE")
-  # missing_in_temp_orgfile <- setdiff(cols_filgruppe, cols_orgfile)
-  # for(col in missing_in_temp_orgfile){
-  #   invisible(DBI::dbExecute(con, sprintf("ALTER TABLE temp_orgfile ADD COLUMN %s VARCHAR default ''", 
-  #                                         as.character(khtools::sql_quote_I(con, col)))))
-  # }
-  # 
-  khtools::duckdb_append_table(con, target = "FILGRUPPE", source = "temp_orgfile")
-  clean_tempfiles(con)
-  invisible(NULL)
-}
-
 
 # HELPERS ----
 #' @title report_filegroup_progress
@@ -378,11 +392,12 @@ identify_columns_in_file <- function(filedescription){
   return(list(have = cols_in_file, default = cols_with_default_value))
 }
 
+#' @title clean_tempfiles
+#' @noRd
 clean_tempfiles <- function(con){
   tabs <- c("temp_orgfile", "temp_orgfile_reshape", "temp_recode")
   khtools::duckdb_drop_tables(con, tabs)
 }
-
 
 # TO BE DELETED ---- 
 

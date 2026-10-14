@@ -116,15 +116,8 @@ fix_geo_special <- function(parameters){
 
 #' @title do_handle_coverage_bydel_lks
 #' @description
-#' A short description...
-#' 
-#' @param dt 
-#' @param parameters 
-#'
-#' @returns
-#' @export
-#'
-#' @examples
+#' Skjuler bydel og levekårsdata med for dårlig dekning
+#' @noRd
 do_handle_coverage_bydel_lks <- function(dt, parameters){
   if(isFALSE(parameters$CUBEinformation$GEO_DEKNING_BV)) return(invisible(NULL))
   geonivs <- collapse::funique(dt[["GEOniv"]])
