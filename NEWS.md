@@ -1,3 +1,6 @@
+# khfunctions 2.0.2 (2026-10-14)
+- Fjerning av flere barnesykdommer
+
 # khfunctions 2.0.1 (2026-10-14)
 - Fjerning av barnesykdommer i 2.0.0
 
