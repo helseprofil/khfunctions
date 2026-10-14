@@ -1,4 +1,4 @@
-# khfunctions 2.0.0
+# khfunctions 2.0.0 (2026-10-14)
 
 - Nyheter på norsk fra nå
 
