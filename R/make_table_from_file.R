@@ -52,9 +52,9 @@ append_temp_orgfil_to_filgruppe <- function(con){
   if(!DBI::dbExistsTable(con, "FILGRUPPE")) {
     khtools::duckdb_create_new_table(con, "FILGRUPPE", "SELECT * FROM temp_orgfile")
   } else {
-    khfunctions::tools::duckdb_append_table(con, 
-                                            target = "FILGRUPPE", 
-                                            source = "temp_orgfile")
+    khtools::duckdb_append_table(con, 
+                                 target = "FILGRUPPE", 
+                                 source = "temp_orgfile")
   }
   clean_tempfiles(con)
   invisible(NULL)
