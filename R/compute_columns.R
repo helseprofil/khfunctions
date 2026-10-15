@@ -307,7 +307,7 @@ compute_new_value_from_row_sum <- function(dt, formulas, fileinfo, parameters){
     newdims <- identify_dimensions(names(newdata))
     merge_cols_by_reference(orgdata = dt, newdata = newdata[, .SD, .SDcols = c(newdims, newcols)])
     valdef <- fileinfo$vals
-    valdef[fparts$new] <- ifelse(grepl("BEF_GKny", fileinfo$FILGRUPPE, ignore.case = T), valdef["BEF"], valdef[fparts$old])
+    valdef[fparts$new] <- valdef[fparts$old]
     set_implicit_null_after_merge(dt = dt, implicitnull_defs = valdef)
   }
   return(invisible(dt))
