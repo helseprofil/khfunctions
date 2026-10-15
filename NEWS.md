@@ -1,3 +1,6 @@
+# khfunctions 2.0.3 (2026-10-15)
+- i compute_new_value_from_rowsums ble val-definisjoner for implisitte nuller feil for filgruppe BEF_GKny, da denne er håndtert tidligere i løypen. 
+
 # khfunctions 2.0.2 (2026-10-14)
 - Fjerning av flere barnesykdommer
 

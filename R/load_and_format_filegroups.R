@@ -57,8 +57,8 @@ load_filegroup_to_duckdb <- function(con, filegroup, parameters){
   filter <- paste0(c(tabfilter, alderfilter, yearfilter, lksfilter), collapse = " AND ")
   readcols <- identify_readcols(allcols = allcols, bef = isbef, parameters = parameters)
   
-  if(length(filter) == 0){
-    khtools::msg("* Leser inn filgruppe", filegroup, "til duckdb")
+  if(length(filter) == 0 | filter == ""){
+    khtools::msg("* Leser inn hele filgruppe", filegroup, "til duckdb")
   } else {
     khtools::msg("* Leser inn filgruppe", filegroup, "til duckdb med filter", filter)
   }
