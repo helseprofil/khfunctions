@@ -237,6 +237,7 @@ generate_allvis_select <- function(parameters){
 #' @examples
 #' # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
 #' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
+#' # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "envir", KODEBOKpost = c("envir", "R") ))
 save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "RESHAPEpre", "RESHAPEpost", "RSYNT2pre", "RSYNT2post",
                                                     "KODEBOKpre", "KODEBOKpost", "RSYNT_PRE_FGLAGRINGpre", "RSYNT_PRE_FGLAGRINGpost",
                                                     "MOVAVpre", "MOVAVpost", "SLUTTREDIGERpre", "SLUTTREDIGERpost", 
@@ -244,22 +245,31 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
                                        dt = NULL, parameters, koblid = NULL, duck = FALSE, tablename = NULL){
   if(is.null(dumpname) || !dumpname %in% names(parameters$dumps)) return(invisible(NULL))
   if(is.null(dt) && (isFALSE(duck) | is.null(tablename))) stop("Filedump requested, but data not provided or in duckdb")
+  khtools::msg("* Lagrer fildump", dumpname)
+  if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
+  con <- parameters$duck
+  
   format <- parameters$dumps[[dumpname]]
   dumpdir <- file.path(getOption("khtools.root"), getOption("khfunctions.dumpdir"))
   filename <- paste0(parameters$name, "_", dumpname)
   if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
   
-  if(is.null(dt) && isTRUE(duck)){
-    dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = tablename)
+  if("envir" %in% format){
+    .GlobalEnv$DUMPS[[filename]] <- khtools::duckdb_fetch_table(con, tablename)
   }
-    
-  if("CSV" %in% format) data.table::fwrite(dt, file = file.path(dumpdir, paste0(filename, ".csv")), sep = ";")
+  
   if("R" %in% format){
-    if(!exists("DUMPS", envir = .GlobalEnv)) .GlobalEnv$DUMPS <- list()
-    .GlobalEnv$DUMPS[[filename]] <- data.table::copy(dt)
-    do_write_parquet(dt = dt, filepath = file.path(dumpdir, paste0(filename, ".parquet")))
+    .GlobalEnv$DUMPS[[filename]] <- khtools::duckdb_fetch_table(con, tablename)
+    khtools::duckdb_save_file(con = parameters$duck, filepath = file.path(dumpdir, paste0(filename, ".parquet")), source = tablename)
   } 
+    
+  if("CSV" %in% format){
+    .GlobalEnv$DUMPS[[filename]] <- khtools::duckdb_fetch_table(con, tablename)
+    khtools::duckdb_save_file(con = parameters$duck, filepath = file.path(dumpdir, paste0(filename, ".csv")), source = tablename)
+  } 
+  
   if("STATA" %in% format){
+    dt <- khtools::duckdb_fetch_table(con = parameters$duck, tablename = tablename)
     dtout <- fix_column_names_pre_stata(dt)
     haven::write_dta(dtout, path = file.path(dumpdir, paste0(filename, ".dta")))
   }

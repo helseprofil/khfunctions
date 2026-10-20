@@ -4,14 +4,12 @@
 \alias{read_original_file}
 \title{read_original_file}
 \usage{
-read_original_file(filedescription, parameters, dumps = list())
+read_original_file(filedescription, parameters)
 }
 \arguments{
 \item{filedescription}{Row from parameters$read_parameters corresponding to the current file}
 
 \item{parameters}{filegroup parameters, set by \code{get_filegroup_parameters()}}
-
-\item{dumps}{any file dumps requested}
 }
 \value{
 original file is read into duckdb as \code{temp_orgfile}

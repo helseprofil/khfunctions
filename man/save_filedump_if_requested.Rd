@@ -54,4 +54,5 @@ Cube processing:
 \examples{
 # LagKUBE("KUBENAVN", dumps = list(PRIKKpre = "STATA", PRIKKpost = c("CSV", "STATA", "R"))
 # LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "STATA", KODEBOKpost = c("CSV", "STATA", "R") )
+# LagFilgruppe("FILGRUPPENAVN", dumps = list(RSYNT1pre = "envir", KODEBOKpost = c("envir", "R") ))
 }

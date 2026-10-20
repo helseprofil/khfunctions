@@ -2,14 +2,13 @@
 #' @description
 #' Read and formats an original file before stacking
 make_table_from_original_file <- function(file_number, codebooklog, parameters){
-  dumps = parameters$dumps
   report_filegroup_progress(file_number = file_number, parameters = parameters)
   con <- parameters$duck
   clean_tempfiles(con = con)
   
   filedescription <- parameters$read_parameters[file_number]
   filecolumns <- identify_columns_in_file(filedescription = filedescription)
-  read_original_file(filedescription = filedescription, parameters = parameters, dumps = dumps)
+  read_original_file(filedescription = filedescription, parameters = parameters)
   set_manheader_duckdb(manheader = filedescription$MANHEADER, con = con)
   
   if(is_not_empty(filedescription$RSYNT1)){

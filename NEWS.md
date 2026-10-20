@@ -1,3 +1,9 @@
+# khfunctions 2.0.4 (2026-10-20)
+
+- Lagt til funksjon for å aggregere ungdatafiler i tilfeller der flere indikatorer skal slås sammen til en
+- Fikset det slik at fildumper automatisk legges i environment ved lagring av CSV eller parquet-format. 
+    - Dersom format = "envir", lagres ingen output til disk, f.eks. `dumps = list(RSYNT1pre = "envir")`
+
 # khfunctions 2.0.3 (2026-10-15)
 - i compute_new_value_from_rowsums ble val-definisjoner for implisitte nuller feil for filgruppe BEF_GKny, da denne er håndtert tidligere i løypen. 
 
