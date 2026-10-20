@@ -5,9 +5,8 @@
 #' according to parameters set inn INNLESARGS (or default values). 
 #' @param filedescription Row from parameters$read_parameters corresponding to the current file
 #' @param parameters filegroup parameters, set by `get_filegroup_parameters()`
-#' @param dumps any file dumps requested
 #' @returns original file is read into duckdb as `temp_orgfile`
-read_original_file <- function(filedescription, parameters, dumps = list()){
+read_original_file <- function(filedescription, parameters){
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
   outtable <- "temp_orgfile"
   con <- parameters$duck
