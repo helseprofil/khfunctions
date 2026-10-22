@@ -1,7 +1,7 @@
 #' @title make_table_from_original_file
 #' @description
 #' Read and formats an original file before stacking
-make_table_from_original_file <- function(file_number, codebooklog, parameters){
+make_table_from_original_file <- function(file_number, parameters){
   report_filegroup_progress(file_number = file_number, parameters = parameters)
   con <- parameters$duck
   clean_tempfiles(con = con)
