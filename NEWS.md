@@ -1,3 +1,8 @@
+# khfunctions (development version)
+
+- Implementert mulighet for å kopiere fil over til lokal tempdisk før innlesing. Foreløpig bare aktuelt for UNGDATA hvor gevinsten er stor pga antall kolonner i filen.
+    - Option `khfunctions.localread_patterns` angir regex-mønstre som matcher de originalfilene som skal behandles på denne måten.
+
 # khfunctions 2.0.4 (2026-10-20)
 
 - Lagt til funksjon for å aggregere ungdatafiler i tilfeller der flere indikatorer skal slås sammen til en

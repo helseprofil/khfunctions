@@ -8,8 +8,25 @@
 #' @returns original file is read into duckdb as `temp_orgfile`
 read_original_file <- function(filedescription, parameters){
   read_arg_list <- format_innlesarg_as_list(filedescription$INNLESARG)
-  outtable <- "temp_orgfile"
   con <- parameters$duck
+  outtable <- "temp_orgfile"
+  
+  original_filepath <- filedescription$filepath
+  if(!file.exists(original_filepath)) stop("Finner ikke fil: ", original_filepath)
+  
+  # Forsøk å kopiere lokalt for raskere lesing dersom localread = TRUE
+  if(isTRUE(parameters$localread)){
+    tmp_filepath <- tempfile(fileext = paste0(".", tools::file_ext(original_filepath)))
+    on.exit(unlink(tmp_filepath, force = TRUE), add = TRUE)
+    copied <- isTRUE(suppressWarnings(file.copy(from = original_filepath, to = tmp_filepath, overwrite = TRUE)))
+    if(copied){
+      filedescription$filepath <- tmp_filepath
+      khtools::msg("- Leser fra lokal tempfil (raskest)")
+    } else {
+      khtools::msg("- Kunne ikke kopiere til lokal tempfil, leser fra nettverksdisk")
+    }
+  }
+  
   switch(toupper(filedescription$FORMAT),
          "PARQUET" = do_read_org_parquet(filedescription = filedescription, con = con, outtable = outtable),
          "XLS" = do_read_org_excel(filedescription = filedescription, read_arg_list = read_arg_list, con = con, outtable = outtable),
@@ -62,9 +79,9 @@ format_innlesarg_as_list <- function(args){
 do_read_org_parquet <- function(filedescription, con, outtable){
   path <- normalizePath(filedescription$filepath, winslash = "/")
   khtools::duckdb_drop_tables(con, outtable)
-  sql <- sprintf("CREATE TABLE %s AS SELECT * FROM read_parquet('%s')", khtools::sql_quote_I(con, outtable), path)
+  sql <- sprintf("SELECT * FROM read_parquet('%s')", path)
   tryCatch(
-    invisible(DBI::dbExecute(con, sql)),
+    khtools::duckdb_create_new_table(con, target = outtable, select_sql = sql),
     error = function(e) {
       stop( "Error when reading file: ", filedescription$FILNAVN, "\n", conditionMessage(e))
     }
