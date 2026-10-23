@@ -31,6 +31,12 @@ classify_columns <- function(columnnames){
   vals_helpers <- grep("^(.*?)\\.(f|a|n|fn1|fn3|fn9)$", columnnames, value = T)
   misc <- setdiff(columnnames, c(dims, vals, vals_helpers))
   
+  dupl <- intersect(dims, vals)
+  
+  if(length(dupl) > 0){
+    for(col in dupl) dims <- setdiff(dims, col) 
+  }
+  
   list(dims = dims, vals = vals, vals_helpers = vals_helpers, misc = misc)
 }
 
