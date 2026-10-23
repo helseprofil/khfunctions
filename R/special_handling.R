@@ -269,6 +269,18 @@ do_write_stata_file <- function(dt, statafiles, use_parquet){
   }
 }
 
+#' @title convert_dt_to_arrow_table
+#' @description
+#' Removes attributes except column names before converting to an arrow table (for writing)
+#' @param dt data.table
+#' @noRd
+convert_dt_to_arrow_table <- function(dt){
+  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
+  for(att in attremove) data.table::setattr(dt, att, NULL)
+  table <- arrow::as_arrow_table(dt)
+  return(table)
+}
+
 #' @title do_read_stata_file
 #' @description
 #' Reads in file after stata processing. If use_parquet, the statafiles$parquet_in file is read, or the statafiles$dta file is read.

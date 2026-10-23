@@ -1523,19 +1523,6 @@ LagQCKube <- function(data, allvistabs){
   return(QC)
 }
 
-
-#' @title convert_dt_to_arrow_table
-#' @description
-#' Removes attributes except column names before converting to an arrow table (for writing)
-#' @param dt data.table
-#' @noRd
-convert_dt_to_arrow_table <- function(dt){
-  attremove <- grep("^(class|names)$", names(attributes(dt)), value = T, invert = T)
-  for(att in attremove) data.table::setattr(dt, att, NULL)
-  table <- arrow::as_arrow_table(dt)
-  return(table)
-}
-
 #' @title do_write_parquet
 #' @description
 #' Wrapper around arrow::write_parquet, which first applies convert_dt_to_arrow_table() to generate a arrow table for writing.
