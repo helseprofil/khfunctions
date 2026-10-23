@@ -261,7 +261,9 @@ set_stata_filenames <- function(batchdate, tmpdir){
 do_write_stata_file <- function(dt, statafiles, use_parquet){
   khtools::msg("\n*** Skriver STATA-fil")
   if(use_parquet){
-    do_write_parquet(dt = dt, filepath = statafiles$parquet_out)
+    arrow::write_parquet(x = convert_dt_to_arrow_table(dt), 
+                         sink = statafiles$parquet_out, 
+                         compression = "snappy")
   } else {
     haven::write_dta(dt, statafiles$dta)
   }

@@ -1,3 +1,13 @@
+# khfunctions 2.0.5
+
+- Implementert mulighet for å kopiere fil over til lokal tempdisk før innlesing. Foreløpig bare aktuelt for UNGDATA hvor gevinsten er stor pga antall kolonner i filen.
+    - Option `khfunctions.localread_patterns` angir regex-mønstre som matcher de originalfilene som skal behandles på denne måten.
+- Implementert funksjonalitet for å sette unike startår i kombinasjonsindikatorer fra ungdata.    
+- Bugfix 
+    - do_write_stata_file brukte en utfaset skrivefunksjon.
+    - Fjernet utfaset argument `codebooklog` i `make_table_from_original_file`
+    - `classify_columns` tar høyde for overlapp mellom verdi- og dimensjonskolonner. Dersom det finnes en .f-kolonne regnes kolonnen som verdi og ikke dimensjon.
+
 # khfunctions 2.0.4 (2026-10-20)
 
 - Lagt til funksjon for å aggregere ungdatafiler i tilfeller der flere indikatorer skal slås sammen til en

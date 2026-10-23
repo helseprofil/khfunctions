@@ -22,10 +22,10 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
   
   khtools::header("Starter lesing, formattering og stabling av originalfiler")
   if(parameters$n_files == 1){
-    make_table_from_original_file(file_number = 1, codebooklog = codebooklog, parameters = parameters)
+    make_table_from_original_file(file_number = 1, parameters = parameters)
   } else {
     for(file_number in 1:parameters$n_files){ # (For dev, can set file_number in e.g 1:3)
-      make_table_from_original_file(file_number = file_number, codebooklog = codebooklog, parameters = parameters)
+      make_table_from_original_file(file_number = file_number, parameters = parameters)
     }
   }
   clean_tempfiles(con = parameters$duck)

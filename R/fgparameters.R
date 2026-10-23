@@ -21,11 +21,17 @@ get_filegroup_parameters <- function(user_args){
   parameters[["old_locale"]] <- ensure_utf8_encoding()
   parameters[["threads"]] <- set_threads()
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
+  parameters[["localread"]] <- get_localread(parameters$name)
   create_codebooklog_tables(con = parameters$duck)
   
   return(parameters)
 }
 
+get_localread <- function(name){
+  localread_patterns <- getOption("khfunctions.localread_patterns", character())
+  length(localread_patterns) > 0 &&
+    any(vapply(localread_patterns, grepl, logical(1), x = name, ignore.case = TRUE ))
+}
 #' @noRd
 read_filegroups_and_add_values <- function(filegroup = NULL, parameters, translate_bef = FALSE){
   if(is.null(filegroup)) filegroup <- parameters$name
