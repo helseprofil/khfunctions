@@ -182,7 +182,7 @@ generate_tmp_prednevner <- function(con, gentable, design, parameters){
   
   if(missyears$n > 0){
     sql_delete <- sprintf('DELETE FROM %s WHERE AARl IN (%s)',
-      output_sql, paste(missyears$years, collapse = ", "))
+                          tmp_prednevner_sql, paste(missyears$years, collapse = ", "))
     invisible(DBI::dbExecute(con, sql_delete))
   }
   

@@ -1,4 +1,11 @@
-# khfunctions 2.0.5
+# khfunctions 2.0.6 (2026-10-26)
+
+- Fikset en liten bug i filtrering av merget teller-nevner-tabell som gav utslag når enkeltår skulle filtreres bort.
+- Liten justering av ungdata-spesialfunksjoner
+- Bugfix i generate_tmp_prednevner når årganger skulle filtreres ut
+- Rydding i dospecial_handling, unngår å hente ut data mer enn nødvendig fra duckdb.
+
+# khfunctions 2.0.5 (2026-10-23)
 
 - Implementert mulighet for å kopiere fil over til lokal tempdisk før innlesing. Foreløpig bare aktuelt for UNGDATA hvor gevinsten er stor pga antall kolonner i filen.
     - Option `khfunctions.localread_patterns` angir regex-mønstre som matcher de originalfilene som skal behandles på denne måten.
@@ -85,6 +92,8 @@
 - LKS startår gjorde ingenting ikke dersom bydelsstart eller DK2020 ikke var satt opp ([issue175](https://github.com/helseprofil/khfunctions/issues/175))
 - Fikset skrivefeil i `save_filedump_if_requested` som ikke fungerte for csv-output.
 - Rettet bug i find_redesign hvor merge_cbpart_to_full brukte en keyed tabell, som gjorde mergen ustabil og feil. 
+
+------------------------------------------------
 
 # khfunctions 1.2.7 (2026-08-10)
 
