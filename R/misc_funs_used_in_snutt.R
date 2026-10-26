@@ -50,15 +50,16 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
 #' For å lage kombinasjonsindikatorer av ungdata må dataene reshapes før den generelle RSYNT1-snutten slår inn
 #' Denne funksjonen reshaper data og lager et langt datasett hvor disse spørsmålene er lagt i TAB1 og TAB3
 #' @export
-ungdata_reshape_questions <- function(data, questions, filedescription){
+ungdata_reshape_questions <- function(data, questions, fd = NULL){
+  if(is.null(fd)) fd <- filedescription
   cols <- intersect(names(data), questions)
   khtools::msg("- reshaper følgende spørsmål til TAB1 (svar) + TAB3 (spørsmål): ", paste(cols, collapse = ", "))
   data <- data.table::melt(data, 
-                           variable.name = filedescription[["TAB3"]], 
-                           value.name = filedescription[["TAB1"]], 
+                           variable.name = fd[["TAB3"]], 
+                           value.name = fd[["TAB1"]], 
                            measure.vars = cols, 
                            variable.factor = FALSE)
-  data <- data[!is.na(x), env = list(x = filedescription[["TAB1"]])]
+  data <- data[!is.na(x), env = list(x = fd[["TAB1"]])]
   return(data)
 }
 

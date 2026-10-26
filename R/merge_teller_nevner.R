@@ -174,8 +174,8 @@ FinnFellesTab <- function(DF1, DF2, parameters) {
 #' @noRd
 FinnKubeDesignB <- function(InitDesign, filename, parameters) {
   KubeD <- list(
-    TMP = FinnKubeDesign(parameters$CUBEinformation, InitDesign, bruk0 = TRUE, FGP = parameters$fileinformation[[filename]], parameters = parameters),
-    MAIN = FinnKubeDesign(parameters$CUBEinformation, InitDesign, bruk0 = FALSE, FGP = parameters$fileinformation[[filename]], parameters = parameters)
+    TMP = FinnKubeDesign(KUBEdscr = parameters$CUBEinformation, ORGd = InitDesign, bruk0 = TRUE, FGP = parameters$fileinformation[[filename]], parameters = parameters),
+    MAIN = FinnKubeDesign(KUBEdscr = parameters$CUBEinformation, ORGd = InitDesign, bruk0 = FALSE, FGP = parameters$fileinformation[[filename]], parameters = parameters)
   )
   return(KubeD)
 }
@@ -190,17 +190,17 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
   Deler <- list()
   for (del in names(parameters$DefDesign$DelKolN)) {
     if (del %in% names(ORGd$Part)) {
+      orgd_part <- data.table::copy(ORGd$Part)[[del]][, .SD,.SDcols = setdiff(names(ORGd$Part[[del]]), paste0(del, "_HAR"))]
       koldel <- parameters$DefDesign$DelKolN[del]
       koldel0 <- paste0(koldel, "_0")
       iskoldel0 <- !is.null(KUBEdscr[[koldel0]]) && !is.na(KUBEdscr[[koldel0]]) && KUBEdscr[[koldel0]] != ""
       
-      if (bruk0 == TRUE && iskoldel0) {
+      if(bruk0 == TRUE && iskoldel0) {
         delListStr <- KUBEdscr[[koldel0]]
       } else {
         delListStr <- KUBEdscr[[koldel]]
       }
-      isdelListStr <- !is.null(delListStr) && !is.na(delListStr) && delListStr != ""
-      if (isdelListStr) {
+      if(is_not_empty(delListStr)) {
         minus <- grepl("^-\\[", delListStr)
         delListStr <- gsub("^-\\[(.*)\\]$", "\\1", delListStr)
         delListA <- unlist(stringr::str_split(delListStr, ","))
@@ -219,8 +219,7 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
         }
         listDT <- data.table::setnames(data.table::as.data.table(delListA), parameters$DefDesign$DelKols[[del]])
         if (minus == TRUE) {
-          data.table::setkeyv(listDT, data.table::key(ORGd$Part[[del]]))
-          Deler[[del]] <- ORGd$Part[[del]][!listDT, ]
+          Deler[[del]] <- orgd_part[!listDT]
         } else {
           Deler[[del]] <- listDT
         }
@@ -232,10 +231,10 @@ FinnKubeDesign <- function(KUBEdscr, ORGd, bruk0 = TRUE, FGP = list(amin = 0, am
           if(start > stopp) stop(paste0("Kan ikke ha ACCESS::KUBER::", delN, "start (", start, ") > ", delN, "stopp (", stopp, ")"))
           delL <- paste0(delN, "l")
           delH <- paste0(delN, "h")
-          DT <- data.table::copy(ORGd$Part[[del]])
+          DT <- orgd_part
           Deler[[del]] <- DT[DT[[delL]] >= start & DT[[delH]] <= stopp, .SD, .SDcols = c(delL, delH)]
         } else {
-          Deler[[del]] <- ORGd$Part[[del]]  
+          Deler[[del]] <- orgd_part
         }
       } else {
         Deler[[del]] <- ORGd$Part[[del]][, ..koldel]

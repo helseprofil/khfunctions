@@ -1,4 +1,9 @@
-# khfunctions (development version)
+# khfunctions 2.0.6 (2026-10-26)
+
+- Fikset en liten bug i filtrering av merget teller-nevner-tabell som gav utslag når enkeltår skulle filtreres bort.
+- Liten justering av ungdata-spesialfunksjoner
+- Bugfix i generate_tmp_prednevner når årganger skulle filtreres ut
+- Rydding i dospecial_handling, unngår å hente ut data mer enn nødvendig fra duckdb.
 
 # khfunctions 2.0.5 (2026-10-23)
 

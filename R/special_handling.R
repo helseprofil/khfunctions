@@ -45,9 +45,9 @@ do_special_handling <- function(name, tablename = NULL, dt_name = NULL, code, pa
     return(invisible(NULL))
   }
   
-  dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
   
   if(is_stata){
+    dt <- khtools::duckdb_fetch_table(con = con, tablename = tablename)
     if(name == "RSYNT1"){
       dt[, let(filgruppe = filedescription$FILGRUPPE, delid = filedescription$DELID, tab1_innles = filedescription$TAB1)]
     }
@@ -66,21 +66,21 @@ do_special_handling <- function(name, tablename = NULL, dt_name = NULL, code, pa
   code <- ensure_correct_url(code, name)
   khtools::msg("- Starter R-snutt:", name)
   code_env <- new.env()
-  assign(dt_name, dt, envir = code_env)
+  assign(dt_name,
+         khtools::duckdb_fetch_table(con = con, tablename = tablename), 
+         envir = code_env)
   assign("parameters", parameters, envir = code_env)
   assign("filedescription", filedescription, envir = code_env)
-  
   rsynterr <- try(eval(parse(text = code), envir = code_env), silent = TRUE)
   if(inherits(rsynterr, "try-error")){
     print(rsynterr)
     stop("Something went wrong in R")
   }
+  
+  if(!exists(dt_name, envir = code_env, inherits = FALSE)) stop(sprintf("R-snutt opprettet ikke objektet '%s'", dt_name))
 
-  dt <- code_env[[dt_name]]
-  extracols <- grep("^(filgruppe|delid|tab1_innles)$", names(dt), value = T)
-  if(length(extracols) > 0) dt[, (extracols) := NULL]
   khtools::msg("-- R-snutt ferdig")
-  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = dt)
+  khtools::duckdb_write_and_replace_table_from_R(con = con, tablename = tablename, data = code_env[[dt_name]])
   khtools::duckdb_clean(con = con)
   return(invisible(NULL))
 }
