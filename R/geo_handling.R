@@ -72,10 +72,9 @@ fix_geo_special <- function(parameters){
   dk2020start <- specs[["DK2020_STARTAAR"]]
   geonivs <- DBI::dbGetQuery(con, "SELECT DISTINCT GEOniv FROM KUBE")[[1]]
   
-  flags <- intersect(
-    c("spv_tmp", grep("\\.f$", khtools::duckdb_get_columns(con, "KUBE"), value = TRUE)),
-    khtools::duckdb_get_columns(con, "KUBE")
-  )
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
+  flags <- intersect(c("spv_tmp", grep("\\.f$", cols, value = TRUE)), cols)
+  values <- classify_columns(cols)$vals
   
   where <- character()
   
@@ -106,6 +105,7 @@ fix_geo_special <- function(parameters){
   where_sql <- paste(where, collapse = "\nOR\n")
   
   set_sql <- c(
+    sprintf("%s = NULL", khtools::sql_quote_I(con, values)),
     sprintf("%s = 9", khtools::sql_quote_I(con, flags)),
     sprintf("%s = 1", khtools::sql_quote_I(con, "geoprikket"))
   )
@@ -122,9 +122,10 @@ do_handle_coverage_bydel_lks <- function(dt, parameters){
   if(isFALSE(parameters$CUBEinformation$GEO_DEKNING_BV)) return(invisible(NULL))
   geonivs <- collapse::funique(dt[["GEOniv"]])
   if(isFALSE(any(c("B", "V") %in% geonivs))) return(invisible(NULL))
+  khtools::msg("* Skjuler tall med dårlig dekningsgrad (mye ukjent grunnkrets)")
   for(geoniv in c("B", "V")){
     if(!geoniv %in% geonivs) next
-    khtools::msg(sprintf("* Skjuler %s-tall med dårlig dekning (relativt til kommunetallet)", ifelse(geoniv == "B", "bydels", "levekårssone")))
+    khtools::msg(sprintf("- %s-tall (relativt til kommunetallet)", ifelse(geoniv == "B", "bydels", "levekårssone")))
     dims <- parameters$outdimensions
     flags <- c(grep("\\.f$", names(dt), value = T))
     overcat <-  collapse::funique(substr(dt[GEOniv == geoniv, GEO], 1, 4))
@@ -154,9 +155,9 @@ do_handle_coverage_bydel_lks <- function(dt, parameters){
       dt[delete, dekningprikket := 1L, on = dims]
       n_new <- dt[spv_tmp == 0 & dekningprikket == 1L, .N]
       dt[dekningprikket == 1L & !spv_tmp %in% c(3,4), (c(flags, "spv_tmp")) := 1L] 
-      khtools::msg("-", n_new, "rader skjules")
+      khtools::msg("--", n_new, "nye rader skjules")
     } else {
-      khtools::msg("- Ingen rader skjules")
+      khtools::msg("-- Ingen rader med dårlig dekning")
     }
   }
 }
