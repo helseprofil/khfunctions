@@ -1,3 +1,8 @@
+# khfunctions 2.0.7 (2026-10-29)
+
+- Holder nå 9 utenfor serieprikking. Dette vil (kan) gi noe mer serieprikking av tidsserier som er kortere enn hele kuben.
+- For fix_geo_special settes tall nå eksplisitt til NA. Dette fordi de tidligere utløste serieprikking pga stattol dersom de ble stående som 0. 
+
 # khfunctions 2.0.6 (2026-10-26)
 
 - Fikset en liten bug i filtrering av merget teller-nevner-tabell som gav utslag når enkeltår skulle filtreres bort.

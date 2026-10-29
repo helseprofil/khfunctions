@@ -177,9 +177,8 @@ do_censor_serie <- function(dt, limits, dims){
   helper_columns <- c("weak", "propweak", "propprimary")
   data.table::set(dt, j = helper_columns, value = 0)
   
-  data.table::set(dt, i = which(dt[["sumTELLER"]] <= limits$STATTOL), j = "weak", value = 1L)
-  # Kan holde spv_tmp == 9 utenfor her
-  dt[, let(propweak = mean(weak, na.rm = T), propprimary = mean(orgprikket, na.rm = T)), by = seriedims]
+  data.table::set(dt, i = which(dt[["sumTELLER"]] <= limits$STATTOL & dt[["spv_tmp"]] != 9), j = "weak", value = 1L)
+  dt[spv_tmp != 9, let(propweak = mean(weak, na.rm = T), propprimary = mean(orgprikket, na.rm = T)), by = seriedims]
   
   idx <- which(dt[["spv_tmp"]] != 9 & (dt[["propweak"]] > weak_limit | dt[["propprimary"]] > primary_limit))
   data.table::set(dt, i = idx, j = c("serieprikket", "spv_tmp"), value = list(1L, 4L))
