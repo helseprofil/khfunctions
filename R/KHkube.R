@@ -80,7 +80,7 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
                       parameters = parameters)
   
   add_missing_lks(parameters = parameters)
-  set_spvflagg(con = parameters$duck)
+  set_spvflagg(parameters = parameters)
   
   # 8. Slicing av outputfiler
   khtools::header("Genererer (og eksporterer) resultatfiler")

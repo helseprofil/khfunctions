@@ -8,9 +8,26 @@ set_initial_spvtmp <- function(dt){
 #' @title add_spvflagg
 #' @description
 #' Legger til eller oppdaterer SPVFLAGG i KUBE basert på spv_tmp
+#' Først sikre at spv_tmp er riktig, at ikke det er satt noen .f-kolonner 
+#' i snutter som ikke har ført til endret spv_tmp.
 #' @noRd
-set_spvflagg <- function(con){
+set_spvflagg <- function(parameters){
+  con <- parameters$duck
+  cols <- khtools::duckdb_get_columns(con, "KUBE")
+  flag_cols <- paste0(union(getOption("khfunctions.valcols"), parameters$outvalues), ".f")
+  flag_cols <- khtools::sql_quote_I(con, intersect(cols, flag_cols))
+  if(length(flag_cols) > 0) {
+    max_expr <- sprintf("GREATEST(%s)", paste(sprintf("COALESCE(%s, 0)", flag_cols), collapse = ", "))
+    invisible(DBI::dbExecute(con,
+      sprintf(
+        "UPDATE KUBE SET spv_tmp = %s 
+        WHERE spv_tmp = 0 AND %s > 0",
+        max_expr, max_expr
+      )
+    ))
+  }
   
+  # Sett SPVFLAGG basert på spv_tmp
   khtools::duckdb_ensure_columns(con, "KUBE", c(SPVFLAGG = "INTEGER"))
   invisible(DBI::dbExecute(con,
     "UPDATE KUBE

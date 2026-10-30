@@ -1,3 +1,7 @@
+# khfunctions 2.0.8 (2026-10-30)
+
+- Sikrer at spv_tmp er oppdatert før SPVFLAGG settes. Dersom flaggkolonner er satt i snutter må spv_tmp oppdateres først. 
+
 # khfunctions 2.0.7 (2026-10-29)
 
 - Holder nå 9 utenfor serieprikking. Dette vil (kan) gi noe mer serieprikking av tidsserier som er kortere enn hele kuben.
