@@ -1,3 +1,5 @@
+# khfunctions 2.0.8
+
 # khfunctions 2.0.7 (2026-10-29)
 
 - Holder nå 9 utenfor serieprikking. Dette vil (kan) gi noe mer serieprikking av tidsserier som er kortere enn hele kuben.
