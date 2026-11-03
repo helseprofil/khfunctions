@@ -8,9 +8,12 @@ get_filegroup_parameters <- function(user_args){
   parameters <- get_global_parameters()
   on.exit(DBI::dbDisconnect(parameters$dbh))
   parameters <- c(parameters, user_args)
+  if(!parameters$name %in% DBI::dbGetQuery(parameters$dbh, "SELECT FILGRUPPE FROM FILGRUPPER")[["FILGRUPPE"]]){
+    stop("Finner ikke FILGRUPPE='", parameters$name, "' i ACCESS::FILGRUPPER, har du skrevet riktig?")
+  }
+  
   parameters[["duck"]] <- khtools::duckdb_init(dbname = "filgruppeduck", mem_limit_gb = parameters[["ramlimit"]]) 
   khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
-  # DBI::dbWriteTable(parameters$duck, "GeoKoder", parameters$GeoKoder, temporary = FALSE, overwrite = TRUE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
   parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)
   parameters[["n_files"]] <- nrow(parameters$read_parameters)

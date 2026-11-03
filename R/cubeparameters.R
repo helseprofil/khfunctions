@@ -8,6 +8,9 @@ get_cubeparameters <- function(user_args = list()) {
   parameters <- get_global_parameters()
   on.exit(DBI::dbDisconnect(parameters$dbh))
   parameters <- c(parameters, user_args)
+  if(!parameters$name %in% DBI::dbGetQuery(parameters$dbh, "SELECT KUBE_NAVN FROM KUBER")[["KUBE_NAVN"]]){
+    stop("Finner ikke KUBE_NAVN='", parameters$name, "' i ACCESS::KUBER, har du skrevet riktig?")
+  }
   parameters[["duck"]] <- khtools::duckdb_init(dbname = "kubeduck", mem_limit_gb = parameters[["ramlimit"]]) 
   khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE, field.types = c(FRA = "INTEGER", TIL = "INTEGER"))
   parameters[["CUBEinformation"]] <- get_cube_information(parameters = parameters)

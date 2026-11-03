@@ -1,6 +1,7 @@
 # khfunctions (development version)
 
 - ungdata_reshape_questions finner faktisk filedescription når den ikke er angitt som argument.
+- LagKUBE og LagFilgruppe gir informativ feilmelding dersom kuben/filgruppen ikke er satt opp i access
 
 # khfunctions 2.0.8 (2026-10-30)
 

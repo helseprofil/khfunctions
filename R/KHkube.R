@@ -12,6 +12,7 @@
 #' @return complete data file, publication ready file, and quality control file.
 #' @export 
 LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunctions.profileyear"), dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
+  parameters <- NULL
   on.exit(lagkube_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   check_if_lagkube_available()
@@ -141,15 +142,16 @@ get_lagkube_guardfile_path <- function(){
 #' @keywords internal
 #' @description Rydder opp etter kubekjøring
 #' @noRd
-lagkube_cleanup <- function(parameters){
+lagkube_cleanup <- function(parameters = NULL){
   guardfile <- get_lagkube_guardfile_path()
   if(file.exists(guardfile)) fs::file_delete(guardfile)
-  if(parameters$write){
+  if(is.null(parameters)) return(invisible(NULL))
+  if(isTRUE(parameters$write)){
     sink()
     if(is_not_empty(parameters$loggpath)) do_clean_sink_log(path = parameters$loggpath)
   }
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
-  khtools::duckdb_shutdown(parameters$duck)
+  if(!is.null(parameters$duck)) khtools::duckdb_shutdown(parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)

@@ -9,6 +9,7 @@
 #' @param qualcontrol perform initial qualcontrol of data
 #' @export
 LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE, ramlimit = NULL) {
+  parameters <- NULL
   on.exit(lagfilgruppe_cleanup(parameters = parameters), add = TRUE)
   check_connection_folders()
   khtools::header(paste0("Starter filgruppekjøring: ", name))
@@ -61,10 +62,11 @@ LagFilgruppe <- function(name, write = TRUE, dumps = list(), qualcontrol = TRUE,
 }
 
 lagfilgruppe_cleanup <- function(parameters){
-  if(parameters$write) sink()
+  if(isTRUE(parameters$write)) sink()
+  if(is.null(parameters)) return(invisible(NULL))
   if(parameters$old_locale != "nb-NO.UTF-8") Sys.setlocale("LC_ALL", parameters$old_locale)
   if(exists("org_geo_codes", envir = .GlobalEnv)) rm(org_geo_codes, envir = .GlobalEnv)
-  khtools::duckdb_shutdown(con = parameters$duck)
+  if(!is.null(parameters$duck)) khtools::duckdb_shutdown(con = parameters$duck)
   if(!is.null(parameters$threads)){
     data.table::setDTthreads(parameters$threads$dt)
     collapse::set_collapse(nthreads = parameters$threads$collapse)
