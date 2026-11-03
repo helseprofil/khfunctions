@@ -1,3 +1,7 @@
+# khfunctions (development version)
+
+- ungdata_reshape_questions finner faktisk filedescription når den ikke er angitt som argument.
+
 # khfunctions 2.0.8 (2026-10-30)
 
 - Sikrer at spv_tmp er oppdatert før SPVFLAGG settes. Dersom flaggkolonner er satt i snutter må spv_tmp oppdateres først. 

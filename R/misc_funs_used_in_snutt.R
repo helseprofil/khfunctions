@@ -51,7 +51,7 @@ do_harmonize_geo <- function(file, vals = list(), rectangularize = TRUE, paramet
 #' Denne funksjonen reshaper data og lager et langt datasett hvor disse spørsmålene er lagt i TAB1 og TAB3
 #' @export
 ungdata_reshape_questions <- function(data, questions, fd = NULL){
-  if(is.null(fd)) fd <- filedescription
+  if(is.null(fd)) fd <- get("filedescription", envir = parent.frame())
   cols <- intersect(names(data), questions)
   khtools::msg("- reshaper følgende spørsmål til TAB1 (svar) + TAB3 (spørsmål): ", paste(cols, collapse = ", "))
   data <- data.table::melt(data, 
