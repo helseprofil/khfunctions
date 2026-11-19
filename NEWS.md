@@ -1,7 +1,8 @@
 # khfunctions (development version)
 
-- ungdata_reshape_questions finner faktisk filedescription når den ikke er angitt som argument.
-- LagKUBE og LagFilgruppe gir informativ feilmelding dersom kuben/filgruppen ikke er satt opp i access
+- `ungdata_reshape_questions` finner faktisk filedescription når den ikke er angitt som argument.
+- `LagKUBE` og `LagFilgruppe` gir informativ feilmelding dersom kuben/filgruppen ikke er satt opp i access
+- `make_godkjent_folder()` bruker korrekt tilkoblingsfunksjon
 
 # khfunctions 2.0.8 (2026-10-30)
 

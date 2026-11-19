@@ -45,7 +45,7 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   geoniv <- match.arg(geoniv)
   message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)
   
-  con <- khtools::connect_khelsa()
+  con <- khtools:::connect_khelsa()
   on.exit(DBI::dbDisconnect(con), add = TRUE)
   
   friskvik <- read_friskvik(con, profil, geoniv, year)
