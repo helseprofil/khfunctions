@@ -65,7 +65,7 @@ do_special_handling <- function(name, tablename = NULL, dt_name = NULL, code, pa
   if(is.null(dt_name)) stop("Datasettet har ikke blitt gitt et navn før snutt")
   code <- ensure_correct_url(code, name)
   khtools::msg("- Starter R-snutt:", name)
-  code_env <- new.env()
+  code_env <- new.env(parent = parent.frame())
   assign(dt_name,
          khtools::duckdb_fetch_table(con = con, tablename = tablename), 
          envir = code_env)
