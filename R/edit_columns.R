@@ -115,6 +115,11 @@ rename_tab_columns <- function(parameters){
   tabcols <- grep("^TAB\\d+$", cols, value = TRUE)
   if(length(tabcols) == 0) return(invisible(NULL))
   tabnames <- vapply(tabcols, function(x) spec[[x]], character(1))
+  if(any(is.na(tabnames))){
+    missing <- tabnames[is.na(tabnames)]
+    stop("TAB-kolonnen(e) ", paste(names(missing), collapse = ", "), 
+         " finnes i datasettet men er ikke satt i ACCESS::FILGRUPPER")
+  }
   
   sql <- paste(
     sprintf(

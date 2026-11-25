@@ -1,6 +1,6 @@
 Package: khfunctions
 Title: Data processing for FHP/OVP
-Version: 2.0.9
+Version: 2.0.10
 Authors@R: 
     person("Vegard", "Lysne", , "vegard.lysne@helsedir.no", role = c("aut", "cre"))
 Description: Dataprosessering for helseprofilene
@@ -25,7 +25,7 @@ Imports:
     dplyr (>= 1.1.4),
     DBI (>= 1.2.3),
     parallel,
-    khtools (>= 0.0.0.9000)
+    khtools (>= 1.0.0)
 Suggests: 
     methods,
     testthat (>= 3.0.0),

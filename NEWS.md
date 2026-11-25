@@ -1,3 +1,10 @@
+# khfunctions 2.0.10
+
+- Bedre feilmeldinger
+    - rename_tab_columns gir beskjed dersom en TAB-kolonne ikke er angitt i ACCESS::FILGRUPPER
+- Bruker `getOption("khfunctions.duck")` som arbeidsdatabase for både filgruppe og kube
+- `generate_specific_friskvik_indicators` oppretter ny kobling til access og fungerer på eldre kuber uten SPVFLAGG
+
 # khfunctions 2.0.9 (2026-11-09)
 
 - `ungdata_reshape_questions` finner faktisk filedescription når den ikke er angitt som argument.

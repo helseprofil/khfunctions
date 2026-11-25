@@ -6,13 +6,15 @@
 #' @return A list of relevant parameters
 get_filegroup_parameters <- function(user_args){
   parameters <- get_global_parameters()
-  on.exit(DBI::dbDisconnect(parameters$dbh))
+  dbh <- parameters$dbh
+  on.exit(DBI::dbDisconnect(dbh))
   parameters <- c(parameters, user_args)
   if(!parameters$name %in% DBI::dbGetQuery(parameters$dbh, "SELECT FILGRUPPE FROM FILGRUPPER")[["FILGRUPPE"]]){
     stop("Finner ikke FILGRUPPE='", parameters$name, "' i ACCESS::FILGRUPPER, har du skrevet riktig?")
   }
   
-  parameters[["duck"]] <- khtools::duckdb_init(dbname = "filgruppeduck", mem_limit_gb = parameters[["ramlimit"]]) 
+  parameters[["duck"]] <- khtools::duckdb_init(dbname = getOption("khfunctions.duck"), 
+                                               mem_limit_gb = parameters[["ramlimit"]]) 
   khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)
   parameters[["read_parameters"]] <- get_read_parameters(parameters = parameters)
@@ -25,6 +27,7 @@ get_filegroup_parameters <- function(user_args){
   parameters[["threads"]] <- set_threads()
   parameters[["KnrHarm"]] <- get_geo_recoding(parameters = parameters)
   parameters[["localread"]] <- get_localread(parameters$name)
+  parameters[["dbh"]] <- NULL
   create_codebooklog_tables(con = parameters$duck)
   
   return(parameters)

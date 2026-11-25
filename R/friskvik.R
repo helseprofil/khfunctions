@@ -163,12 +163,12 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   user_args <- list(name = cubename, year = year)
   parameters <- get_cubeparameters(user_args = user_args)
   on.exit({
-    duckfile <- DBI::dbGetInfo(parameters$duck)$dbname
-    DBI::dbDisconnect(parameters$duck)
-    if(fs::file_exists(duckfile)) fs::file_delete(duckfile)
-  }, add = TRUE)
+    khtools::duckdb_shutdown(con = parameters$duck)
+    }, add = TRUE)
+  khelsa <- khtools:::connect_khelsa()
+  on.exit(DBI::dbDisconnect(khelsa), add = TRUE)
   
-  valid_cube <- read_kubestatus(parameters$dbh, year)[KUBE_NAVN == cubename]
+  valid_cube <- read_kubestatus(con = khelsa, year)[KUBE_NAVN == cubename]
   
   if(nrow(valid_cube) == 0){
     khtools::msg("*** Ingen godkjent kube funnet i KUBESTATUS, kan ikke lage friskvikfiler")
@@ -203,10 +203,18 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   kubepath <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.dat"), "R", cube_name)
   
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
-  
-  khtools::duckdb_create_new_table(con = parameters$duck, target = "KUBE",
+  con <- parameters$duck
+  khtools::duckdb_create_new_table(con = con, target = "KUBE",
                                    select_sql = sprintf("SELECT * FROM read_parquet(%s)", 
                                                         khtools::sql_quote_S(con, kubepath)))
+  
+  # Kompatibilitetsfiks for kuber som ikke har SPVFLAGG-kolonnen
+  if(!"SPVFLAGG" %in% khtools::duckdb_get_columns(con, "KUBE")){
+    parameters[["outvalues"]] <- get_outvalues_allvis(parameters = parameters)
+    set_spvflagg(parameters = parameters)
+  }
+  
+  
   generate_allvis_base(parameters = parameters)
   
   khtools::msg("\n* Skriver filer: ")
