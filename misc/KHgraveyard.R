@@ -4597,3 +4597,18 @@ get_deletestrata <- function(dt, dims, level){
   delete <- collapse::join(deletestrata, deletecodes, on = "overniv", multiple = TRUE, verbose = FALSE, overid = 2)[, .SD, .SDcols = dims]
   return(delete)
 }
+
+#' FinnFilGruppeFraKoblid (kb)
+#'
+#' @param globs global parameters, defaults to SettGlobs
+FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
+  return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
+}
+
+#' KHerr (kb)
+KHerr <- function(error) {
+  khtools::msg(
+    "***************************************************************************\n",
+    "*KHFEIL!! ", error, "\n***************************************************************************\n"
+  )
+}
