@@ -62,24 +62,6 @@ set_implicit_null_after_merge <- function(dt, implicitnull_defs = list()) {
 
 ## OLD, to be replaced or killed ----
 
-#' KHerr (kb)
-KHerr <- function(error) {
-  khtools::msg(
-    "***************************************************************************\n",
-    "*KHFEIL!! ", error, "\n***************************************************************************\n"
-  )
-}
-
-#' FinnFilGruppeFraKoblid (kb)
-#'
-#' @param globs global parameters, defaults to SettGlobs
-FinnFilGruppeFraKoblid <- function(koblid, globs = get_global_parameters()) {
-  return(as.character(sqlQuery(globs$dbh, paste("SELECT FILGRUPPE FROM ORGINNLESkobl WHERE KOBLID=", koblid, sep = ""), stringsAsFactors = FALSE)))
-}
-
-
-
-
 ## Try to handle problem with "memory exhausted (limit reached?)" the solution above
 #' expand.grid.df (ybk)
 expand.grid.df <- function(...) {
