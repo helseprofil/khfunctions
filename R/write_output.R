@@ -25,7 +25,7 @@ write_filegroup_output <- function(parameters){
 #' @noRd
 write_codebooklog <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
-  khtools::msg("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  khtools::msg("\n* Skriver kodebok-logg til", getOption("kh.paths")$filgruppe$kblogg)
   path <- getOption("kh.paths")$filgruppe$kblogg
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
@@ -38,7 +38,7 @@ write_codebooklog <- function(parameters){
 #' @noRd
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
-  khtools::msg("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  khtools::msg("\n* Skriver filgruppesjekk til", getOption("kh.paths")$filgruppe$sjekk)
   path <- getOption("kh.paths")$filgruppe$sjekk
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)

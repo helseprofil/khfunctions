@@ -32,11 +32,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
     khtools::msg("\n*** ADVARSEL: modus ", FVdscr$MODUS, " støttes ikke for FRISKVIK")
     return(invisible(NULL))
   }
-  FriskVDir <- switch(FVdscr$MODUS,
-                      "K" = ifelse(FVdscr$PROFILTYPE == "FHP",getOption("khfunctions.fhpK"),getOption("khfunctions.ovpK")),
-                      "B" = ifelse(FVdscr$PROFILTYPE == "FHP",getOption("khfunctions.fhpB"),getOption("khfunctions.ovpB")),
-                      "F" = ifelse(FVdscr$PROFILTYPE == "FHP",getOption("khfunctions.fhpF"),getOption("khfunctions.ovpF")))
-  
+
   # GEO-filter
   geo_filter <- switch(FVdscr$MODUS,
                        "K" = c("K", "F", "L"),
@@ -75,7 +71,6 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   
   select_cols <- c(getOption("kh.friskviktabs"), getOption("kh.friskvikvals"))
   available_cols <- DBI::dbListFields(con, "ALLVIS_base")
-  missing_cols <- setdiff(select_cols, available_cols)
   
   select_expr <- vapply(select_cols,
     function(x){ 
@@ -104,12 +99,17 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   }
   
   # Sette filsti
-  setPath <- file.path(getOption("kh.paths")$kube$root,
-                       FriskVDir, parameters$year, "csv")
+  profile <- tolower(FVdscr$PROFILTYPE)
+  geolevel <- switch(FVdscr$MODUS,
+                     "F" = "fylke",
+                     "K" = "kommune",
+                     "B" = "bydel")
+  friskvik_path <- getOption("kh.paths")$kube$friskvik[[profile]][[geolevel]]
+  setPath <- file.path(friskvik_path, parameters$year, "csv")
   
   if(!fs::dir_exists(setPath)) fs::dir_create(setPath)
   filename <- file.path(setPath, paste0(FVdscr$INDIKATOR, "_", parameters$batchdate,".csv"))
-  msgpath <- paste0(FriskVDir, "/", parameters$year, "/csv/", basename(filename))
+  msgpath <- file.path(basename(friskvik_path), parameters$year, "csv", basename(filename))
   
   # Sjekke antall rader
   nrows_sql <- sprintf("SELECT COUNT(*) AS N FROM ALLVIS_base WHERE %s", where_sql)

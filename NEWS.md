@@ -2,6 +2,8 @@
 
 - Implementere ny versjon av khtools for pakke-config
 - Implementere ny arkitektur for filstier og kolonnelister fra config-arkitektur
+- Rettet ikke-kritisk feil i `do_collect_naboprikk` hvor `naboprikket` alltid ble opprettet på nytt. 
+- Rettet feil i `filter_invalid_geo_alder_kjonn` som ikke sjekket etter ukjent alder, bare invalid alder.
 
 # khfunctions 2.0.10
 

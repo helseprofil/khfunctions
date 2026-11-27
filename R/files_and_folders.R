@@ -1,7 +1,7 @@
 # PRODUCTION ----
 # 
-# update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.kube.prod")){
-#   prod <- file.path(getOption("kh.paths")$root, getOption("khfunctions.kubedir"), prodfolder)
+# update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.publication.dir")){
+#   prod <- file.path(getOption("kh.paths")$kube$statbank$root, prodfolder)
 #   if(!dir.exists(prod)) dir.create(prod)
 #   arkiv <- file.path(prod, "arkiv")
 #   if(!dir.exists(arkiv)) dir.create(arkiv)

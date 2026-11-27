@@ -114,7 +114,7 @@ do_censor_cube <- function(dt, parameters){
 #' @keywords internal
 #' @noRd
 do_collect_naboprikk <- function(dt){
-  if(!"^naboprikket$" %in% names(dt)) dt[, naboprikket := 0L]
+  if(!"naboprikket" %in% names(dt)) dt[, naboprikket := 0L]
   naboprikkcols <- grep("^naboprikketIomg", names(dt), value = T)
   if(length(naboprikkcols) > 0) dt[rowSums(dt[, ..naboprikkcols]) > 0, naboprikket := 1L]
 }
@@ -506,7 +506,7 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @keywords internal
 #' @noRd
 do_censor_kube_stata <- function(dt, parameters){
-  sfile <- file.path(getOption("kh.paths")$root, getOption("khfunctions.stataprikkfile"))
+  sfile <- file.path(getOption("kh.paths")$snuttdir, getOption("khfunctions.stataprikking"))
   script <- paste0('include "', sfile, '"')
   dt <- do_stata_processing(dt = dt, script = script, parameters = parameters)
   return(dt)

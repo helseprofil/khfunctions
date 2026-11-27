@@ -294,7 +294,7 @@ get_reshape_parameters <- function(filedescription, allcolumns){
 #' @family duckdb
 #' @noRd
 drop_unwanted_columns_duckdb <- function(con){
-  keep_cols <- c(getOption("khfunctions.kolorgs"))
+  keep_cols <- c(getOption("kh.fgcols"))
   existing_cols <- khtools::duckdb_get_columns(con, "temp_orgfile")
   cols_to_drop <- setdiff(existing_cols, keep_cols)
   if(length(cols_to_drop) == 0) return(invisible(NULL))
@@ -385,7 +385,7 @@ report_filegroup_progress <- function(file_number, parameters){
 #' @returns list of columns existing and columns to be given default values
 #' @noRd
 identify_columns_in_file <- function(filedescription){
-  cols <- getOption("khfunctions.kolorgs")
+  cols <- getOption("kh.fgcols")
   cols_in_file <- cols[grepl("^[^-<]", filedescription[, ..cols])]
   cols_with_default_value <- cols[grep("^<.*>", filedescription[, ..cols])]
   return(list(have = cols_in_file, default = cols_with_default_value))

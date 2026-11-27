@@ -13,7 +13,7 @@ get_filegroup_parameters <- function(user_args){
     stop("Finner ikke FILGRUPPE='", parameters$name, "' i ACCESS::FILGRUPPER, har du skrevet riktig?")
   }
   
-  parameters[["duck"]] <- khtools::duckdb_init(dbname = getOption("khfunctions.duck"), 
+  parameters[["duck"]] <- khtools::duckdb_init(dbname = getOption("kh.workdb")$khfunctions, 
                                                mem_limit_gb = parameters[["ramlimit"]]) 
   khtools::duckdb_write_table(parameters$duck, "GeoKoder", parameters$GeoKoder, temp = FALSE)
   parameters[["filegroup_information"]] <- read_filegroups_and_add_values(parameters = parameters)

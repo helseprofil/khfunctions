@@ -25,7 +25,7 @@ Imports:
     dplyr (>= 1.1.4),
     DBI (>= 1.2.3),
     parallel,
-    khtools (>= 1.0.0)
+    khtools (>= 1.0.0.9000)
 Suggests: 
     methods,
     testthat (>= 3.0.0),

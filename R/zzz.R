@@ -51,7 +51,7 @@ check_connection_folders <- function(){
   db_khelsa <- getOption("kh.paths")$database$khelsa
   
   if(is.null(root) || length(root) != 1L || is.na(root) || !nzchar(root)) {
-    stop("Option 'kh.paths.root' er ikke satt.", call. = FALSE)
+    stop("Elementet 'root' mangler i option  'kh.paths'.", call. = FALSE)
   }
   
   if(!dir.exists(root)) {
@@ -59,7 +59,7 @@ check_connection_folders <- function(){
   }
   
   if(is.null(db_khelsa) || length(db_khelsa) != 1L || is.na(db_khelsa) || !nzchar(db_khelsa)) {
-    stop("Option 'kh.paths.database.khelsa' er ikke satt.", call. = FALSE)
+    stop("Elementet 'database$khelsa' mangler i option 'kh.paths'.", call. = FALSE)
   }
   
   if(!file.exists(db_khelsa)) {

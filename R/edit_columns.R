@@ -243,7 +243,7 @@ set_alder_aar <- function(dt){
 filter_invalid_geo_alder_kjonn <- function(dt, parameters){
   valid_geo <- parameters[["GeoKoder"]][TYP == "O" & TIL == 9999, GEO]
   dt <- dt[GEO %in% valid_geo]
-  if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_illegal"))]
+  if("ALDER" %in% names(dt)) dt <- dt[!ALDER %in% c(getOption("khfunctions.alder_illegal"), getOption("khfunctions.alder_ukjent"))]
   if("KJONN" %in% names(dt)) dt <- dt[!KJONN %in% c(getOption("khfunctions.illegal"), getOption("khfunctions.ukjent"))]
   return(dt)
 }

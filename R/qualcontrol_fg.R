@@ -23,7 +23,7 @@ analyze_cleanlog <- function(log){
   print(out)
   khtools::msg("\n-----\n")
   warning(paste0("Kolonnene i tabellen over med verdi = 0 indikerer at det finnes ugyldige verdier. Dette må sannsynligvis ordnes i kodebok før ny kjøring.",
-                 "\nSe fullstendig logg her: ", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk")))
+                 "\nSe fullstendig logg her: ", getOption("kh.paths")$filgruppe$sjekk))
 }
 
 #' @title warn99
