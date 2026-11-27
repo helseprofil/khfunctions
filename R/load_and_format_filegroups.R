@@ -227,6 +227,7 @@ set_filter_lks_sql <- function(isbef, islks, allcols){
 #' @description selects which columns to read from filegroup
 #' @noRd
 identify_readcols <- function(allcols, bef = FALSE,  parameters){
+  alldims <- c(getOption("kh.dim.standard"),"TAB1", "TAB2", "TAB3")
   
   if(!bef){
     cols <- setdiff(allcols, c("KOBLID", "ROW", "FYLKE"))
@@ -234,7 +235,7 @@ identify_readcols <- function(allcols, bef = FALSE,  parameters){
     befcols <- unique(grep("^BEF|^mBEF", unlist(parameters$TNPinformation[c("TELLERKOL", "NEVNERKOL")],
                                                 use.names = FALSE),value = TRUE))
     befcols <- paste0(rep(befcols, each = 3), c("", ".f", ".a"))
-    cols <- c(grep(paste0("^",getOption("khfunctions.standarddimensions"),collapse = "|"),allcols,value = TRUE),
+    cols <- c(grep(paste0("^", alldims, collapse = "|"),allcols,value = TRUE),
               intersect(allcols, befcols))
   }
   return(cols)

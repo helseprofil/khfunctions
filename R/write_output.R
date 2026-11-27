@@ -96,7 +96,7 @@ generate_allvis_base <- function(parameters){
   con <- parameters$duck
   cols <- DBI::dbListFields(con, "KUBE")
   cols <- cols[!grepl("\\.(f|a|n|fn[0-9]+)$|^naboprikketIomg\\d+$|^spv_tmp$", cols) | cols == "RATE.n"]
-  qcvals <- intersect(getOption("khfunctions.qcvals"), cols)
+  qcvals <- intersect(getOption("kh.qcvals"), cols)
   
   qcols <- as.character(khtools::sql_quote_I(con, cols))
   select_expr <- c(qcols)
@@ -140,7 +140,7 @@ generate_allvis_export_table <- function(parameters){
 generate_qc_table <- function(parameters){
   
   con <- parameters$duck
-  qcvals <- intersect(getOption("khfunctions.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
+  qcvals <- intersect(getOption("kh.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
   prikkvals <- intersect(getOption("kh.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
   
   cols <- unique(c(

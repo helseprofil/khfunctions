@@ -133,7 +133,7 @@ do_censor_primary_secondary <- function(dt, parameters){
   alltriangles <- get_censor_triangles(parameters = parameters)
   # CHECK TRIANGLE VALUES - verdiene i et triangel må eksistere i kuben
   # Trenger ikke sjekke geotriangler som er maskinelle, men manuelt angitte triangler bør sjekkes for feil. 
-  dims <- intersect(c(getOption("khfunctions.khtabs"), parameters$tabnames), names(dt))
+  dims <- intersect(c(getOption("kh.dim.standard"), parameters$tabnames), names(dt))
   data.table::setkeyv(dt, c(dims))
   warn_if_special_triangles(alltriangles = alltriangles)
   
@@ -546,6 +546,6 @@ save_kubespec_csv <- function(spec, dims = NULL){
 #' @keywords internal
 #' @noRd
 find_dims_for_stataprikk <- function(dt, parameters){
-  alldims <- c(getOption("khfunctions.khtabs"), parameters$tabnames)
+  alldims <- c(getOption("kh.dim.standard"), parameters$tabnames)
   alldims[alldims %in% names(dt)]
 }

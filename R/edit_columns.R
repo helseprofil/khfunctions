@@ -135,7 +135,7 @@ rename_tab_columns <- function(parameters){
 #' @noRd
 get_outdimensions <- function(parameters){
   con <- parameters$duck
-  dims <- c(getOption("khfunctions.khtabs"), as.character(parameters$tabnames))
+  dims <- c(getOption("kh.dim.standard"), as.character(parameters$tabnames))
   if(is_not_empty(parameters$CUBEinformation$DIMDROPP)){
     dimdropp <- unlist(strsplit(parameters$CUBEinformation$DIMDROPP, ","))
     dims <- setdiff(dims, dimdropp)

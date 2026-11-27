@@ -1,5 +1,8 @@
 # khfunctions (development version)
 
+- Implementere ny versjon av khtools for pakke-config
+- Implementere ny arkitektur for filstier og kolonnelister fra config-arkitektur
+
 # khfunctions 2.0.10
 
 - Bedre feilmeldinger
