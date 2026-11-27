@@ -120,7 +120,6 @@ LagKUBE <- function(name, write = TRUE, alarm = FALSE, year = getOption("khfunct
 #' @noRd
 check_if_lagkube_available <- function(){
   file <- get_lagkube_guardfile_path()
-  continue <- TRUE
   if(file.exists(file)){
     force_continue <- utils::menu(choices = c("YES", "NO"),
                                   title = paste0("It appears that another cube is already being processed on this computer. ",
@@ -128,8 +127,9 @@ check_if_lagkube_available <- function(){
                                                  "If you are not running another file, you can continue.\n\n",
                                                  "Continue?"))
     if(force_continue == 2) stop("LagKUBE() stopped due to paralell processing. Wait until the other file is done and start again")
+    fs::file_delete(file)
   }
-  if(continue) fs::file_create(file)
+  fs::file_create(file)
 }
 
 #' @keywords internal

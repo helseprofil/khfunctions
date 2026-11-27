@@ -187,8 +187,6 @@ do_censor_primary <- function(dt, limits){
 #' @noRd
 do_censor_serie <- function(dt, limits, dims){
   seriedims <- setdiff(dims, "AAR")
-  data.table::uniqueN(dt[, ..seriedims])
-  
   primary_limit <- getOption("khfunctions.anon_hullandel")
   weak_limit <- getOption("khfunctions.anon_svakandel")
   helper_columns <- c("weak", "propweak", "propprimary")
