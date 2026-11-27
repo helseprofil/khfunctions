@@ -73,7 +73,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   
   where_sql <- paste(where, collapse = " AND ")
   
-  select_cols <- c(getOption("khtools.friskvik.tabs"), getOption("khtools.friskvik.vals"))
+  select_cols <- c(getOption("kh.friskviktabs"), getOption("kh.friskvikvals"))
   available_cols <- DBI::dbListFields(con, "ALLVIS_base")
   missing_cols <- setdiff(select_cols, available_cols)
   
@@ -82,7 +82,7 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
       x_quote <- as.character(khtools::sql_quote_I(con, x))
       if(x %in% available_cols){ 
         x_quote
-      } else if(x %in% getOption("khtools.friskvik.tabs")){
+      } else if(x %in% getOption("kh.friskviktabs")){
         sprintf("CAST(NULL AS VARCHAR) AS %s", x_quote)
       } else {
         sprintf("CAST(NULL AS DOUBLE) AS %s", x_quote)
@@ -95,17 +95,16 @@ generate_and_export_friskvik_indicator <- function(id, parameters){
   if(is_not_empty(FVdscr$ALTERNATIV_MALTALL)){
     altcol <- FVdscr$ALTERNATIV_MALTALL
     select_expr <- c(
-      getOption("khtools.friskvik.tabs"),
+      getOption("kh.friskviktabs"),
       sprintf("%s AS MALTALL", altcol),
       sprintf(
         "CAST(NULL AS DOUBLE) AS %s",
-        setdiff(getOption("khtools.friskvik.vals"), "MALTALL"))
+        setdiff(getOption("kh.friskvikvals"), "MALTALL"))
     )
   }
   
   # Sette filsti
-  setPath <- file.path(getOption("khtools.root"),
-                       getOption("khfunctions.kubedir"),
+  setPath <- file.path(getOption("kh.paths")$kube$root,
                        FriskVDir, parameters$year, "csv")
   
   if(!fs::dir_exists(setPath)) fs::dir_create(setPath)
@@ -165,7 +164,7 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
   on.exit({
     khtools::duckdb_shutdown(con = parameters$duck)
     }, add = TRUE)
-  khelsa <- khtools:::connect_khelsa()
+  khelsa <- khtools::connect_access(getOption("kh.paths")$database$khelsa)
   on.exit(DBI::dbDisconnect(khelsa), add = TRUE)
   
   valid_cube <- read_kubestatus(con = khelsa, year)[KUBE_NAVN == cubename]
@@ -200,7 +199,7 @@ generate_specific_friskvik_indicators <- function(cubename = NULL, friskvik_id =
                         paste0("\n- INDIKATOR: ",names, ", ID: ", ids), overwritewarning)
   
   cube_name <- sprintf("%s_%s.parquet", valid_cube$KUBE_NAVN, valid_cube$DATOTAG_KUBE)
-  kubepath <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.dat"), "R", cube_name)
+  kubepath <- file.path(getOption("kh.paths")$kube$statbank$dat, "R", cube_name)
   
   if(!file.exists(kubepath)) stop("Finner ikke godkjent kube ", kubepath, "\nSjekk om datotag i kubestatus er korrekt")
   con <- parameters$duck

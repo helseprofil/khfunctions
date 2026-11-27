@@ -20,9 +20,9 @@ is_empty <- function(value){
 #' @noRd
 classify_columns <- function(columnnames){
   alldims <- c(
-    getOption("khtools.dim.standard"),
-    getOption("khtools.dim.interval"),
-    getOption("khtools.dim.tab")
+    getOption("kh.dim.standard"),
+    getOption("kh.dim.interval"),
+    getOption("kh.dim.tab")
   )
   
   dims <- intersect(columnnames, alldims)

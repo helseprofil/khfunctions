@@ -4,7 +4,7 @@
 \alias{make_table_from_original_file}
 \title{make_table_from_original_file}
 \usage{
-make_table_from_original_file(file_number, codebooklog, parameters)
+make_table_from_original_file(file_number, parameters)
 }
 \description{
 Read and formats an original file before stacking

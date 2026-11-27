@@ -4,7 +4,7 @@
 #' @returns list
 get_global_parameters <- function(){
   globs <- list()
-  globs[["dbh"]] <- khtools:::connect_khelsa()
+  globs[["dbh"]] <- khtools::connect_access(getOption("kh.paths")$database$khelsa)
   globs[["batchdate"]] <- SettKHBatchDate()
   globs[["validdates"]] <- paste0("VERSJONFRA <=", FormatSqlBatchdate(globs$batchdate), " AND VERSJONTIL >", FormatSqlBatchdate(globs$batchdate))
   globs[["GeoKoder"]] <- data.table::setDT(DBI::dbGetQuery(globs$dbh, "SELECT * from GEOKoder", as.is = TRUE), key = "GEO")

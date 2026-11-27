@@ -5,6 +5,8 @@ export(LagKUBE)
 export(LagKubeDatertCsv)
 export(generate_specific_friskvik_indicators)
 export(make_godkjent_folder)
+export(ungdata_reshape_questions)
+export(ungdata_set_startaar_tab3)
 importFrom(data.table,
   "%chin%",
   "%notin%",

@@ -53,7 +53,7 @@ set_spvflagg <- function(parameters){
 add_censorinfo_cube <- function(con, tablename){
   allcols <- khtools::duckdb_get_columns(con, tablename)
   if("spv_tmp" %in% allcols) stop("Prøver å legge til prikkekolonner, men disse finnes allerede")
-  censorcolumns <- khtools::sql_quote_I(con, c(getOption("khtools.prikkeinfo"), "spv_tmp"))
+  censorcolumns <- khtools::sql_quote_I(con, c(getOption("kh.prikkeinfo"), "spv_tmp"))
   tbl_sql <- khtools::sql_quote_I(con, tablename)
   addcols <- sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s INTEGER DEFAULT 0", tbl_sql, censorcolumns)
   sql_censor <- paste(addcols, collapse = ";\n")
@@ -506,7 +506,7 @@ warn_if_special_triangles <- function(alltriangles) {
 #' @keywords internal
 #' @noRd
 do_censor_kube_stata <- function(dt, parameters){
-  sfile <- file.path(getOption("khtools.root"), getOption("khfunctions.stataprikkfile"))
+  sfile <- file.path(getOption("kh.paths")$root, getOption("khfunctions.stataprikkfile"))
   script <- paste0('include "', sfile, '"')
   dt <- do_stata_processing(dt = dt, script = script, parameters = parameters)
   return(dt)

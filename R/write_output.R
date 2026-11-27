@@ -8,9 +8,8 @@
 write_filegroup_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   khtools::msg("\n\n* SAVING OUTPUT FILES:\n")
-  root <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"))
-  parquet <- file.path(root, getOption("khfunctions.fg.ny"), paste0(parameters$name, ".parquet"))
-  datert <- file.path(root, getOption("khfunctions.fg.dat"), paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
+  parquet <- file.path(getOption("kh.paths")$filgruppe$ny, paste0(parameters$name, ".parquet"))
+  datert <- file.path(getOption("kh.paths")$filgruppe$dat, paste0(parameters$name, "_", parameters$batchdate, ".parquet"))
   con <- parameters$duck
   if(grepl("BEF_GKny", parameters$name, ignore.case = T)){
     add_lks_filter(con = con)
@@ -27,7 +26,7 @@ write_filegroup_output <- function(parameters){
 write_codebooklog <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
   khtools::msg("\n* Skriver kodebok-logg til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
-  path <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.kblogg"))
+  path <- getOption("kh.paths")$filgruppe$kblogg
   name <- paste0("KBLOGG_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
   log <- khtools::duckdb_fetch_table(parameters$duck, "codebooklog")
@@ -40,7 +39,7 @@ write_codebooklog <- function(parameters){
 write_cleanlog <- function(log, parameters){
   if(!parameters$write) return(invisible(NULL))
   khtools::msg("\n* Skriver filgruppesjekk til", getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
-  path <- file.path(getOption("khtools.root"), getOption("khfunctions.fgdir"), getOption("khfunctions.fg.sjekk"))
+  path <- getOption("kh.paths")$filgruppe$sjekk
   name <- paste0("FGSJEKK_", parameters$name, "_", parameters$batchdate, ".csv")
   move_old_files_to_archive(path = path, parameters = parameters)
   data.table::fwrite(log, file = file.path(path, name), sep = ";", bom = T)
@@ -142,7 +141,7 @@ generate_qc_table <- function(parameters){
   
   con <- parameters$duck
   qcvals <- intersect(getOption("khfunctions.qcvals"), DBI::dbListFields(con, "ALLVIS_base"))
-  prikkvals <- intersect(getOption("khtools.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
+  prikkvals <- intersect(getOption("kh.prikkeinfo"), DBI::dbListFields(con, "ALLVIS_base"))
   
   cols <- unique(c(
     parameters$outdimensions,
@@ -165,13 +164,12 @@ generate_qc_table <- function(parameters){
 #' @noRd
 write_cube_output <- function(parameters){
   if(!parameters$write) return(invisible(NULL))
-  basepath <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"))
   name <- parameters$name
-  datert_parquet_full <- file.path(basepath, getOption("khfunctions.kube.dat"), "R", paste0(name, "_", parameters$batchdate, ".parquet"))
-  allvis_csv <- file.path(basepath, getOption("khfunctions.kube.dat"), "csv", paste0(name, "_", parameters$batchdate, ".csv"))
-  allvis_parquet <- file.path(basepath, getOption("khfunctions.kube.dat"), "parquet", paste0(name, "_", parameters$batchdate, ".parquet"))
-  qc_parquet <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
-  qc_csv <- file.path(basepath, getOption("khfunctions.kube.qc"), paste0("QC_", name, "_", parameters$batchdate, ".csv"))
+  datert_parquet_full <- file.path(getOption("kh.paths")$kube$statbank$dat$full, paste0(name, "_", parameters$batchdate, ".parquet"))
+  allvis_csv <- file.path(getOption("kh.paths")$kube$statbank$dat$csv, paste0(name, "_", parameters$batchdate, ".csv"))
+  allvis_parquet <- file.path(getOption("kh.paths")$kube$statbank$dat$parquet, paste0(name, "_", parameters$batchdate, ".parquet"))
+  qc_parquet <- file.path(getOption("kh.paths")$kube$statbank$qc, paste0("QC_", name, "_", parameters$batchdate, ".parquet"))
+  qc_csv <- file.path(getOption("kh.paths")$kube$statbank$qc, paste0("QC_", name, "_", parameters$batchdate, ".csv"))
   
   con <- parameters$duck
   # Skriv KUBE
@@ -250,7 +248,7 @@ save_filedump_if_requested <- function(dumpname = c("RSYNT1pre", "RSYNT1post", "
   con <- parameters$duck
   
   format <- parameters$dumps[[dumpname]]
-  dumpdir <- file.path(getOption("khtools.root"), getOption("khfunctions.dumpdir"))
+  dumpdir <- getOption("kh.paths")$dumpdir
   filename <- paste0(parameters$name, "_", dumpname)
   if(!is.null(koblid)) filename <- paste0(filename, "_", koblid)
   
@@ -301,8 +299,7 @@ write_access_specs <- function(parameters){
       specs <- data.table::rbindlist(list(specs, melt_access_spec(parameters$friskvik[ID == i], name = paste0("FRISKVIK:ID-", i))))
     }
   }
-  
-  file <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), getOption("khfunctions.kube.specs"), paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
+  file <- file.path(getOption("kh.paths")$kube$statbank$specs, paste0("spec_", parameters$name, "_", parameters$batchdate, ".csv"))
   data.table::fwrite(specs, file = file, sep = ";")
 }
 

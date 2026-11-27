@@ -1,7 +1,7 @@
 # PRODUCTION ----
 # 
 # update_production_folder <- function(year = getOption("khfunctions.profileyear"), prodfolder = getOption("khfunctions.kube.prod")){
-#   prod <- file.path(getOption("khtools.root"), getOption("khfunctions.kubedir"), prodfolder)
+#   prod <- file.path(getOption("kh.paths")$root, getOption("khfunctions.kubedir"), prodfolder)
 #   if(!dir.exists(prod)) dir.create(prod)
 #   arkiv <- file.path(prod, "arkiv")
 #   if(!dir.exists(arkiv)) dir.create(arkiv)
@@ -43,9 +43,13 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
                                  year = getOption("khfunctions.profileyear")) {
   profil <- match.arg(profil)
   geoniv <- match.arg(geoniv)
-  message("Finner godkjente filer for ", profil, " (", geoniv, ") for ", year)
+  geofull <- switch(geoniv,
+                    "F" = "fylke",
+                    "K" = "kommune",
+                    "B" = "bydel")
+  khtools::msg("Finner godkjente filer for", profil, " (", geofull, ") for", year)
   
-  con <- khtools:::connect_khelsa()
+  con <- khtools::connect_access(getOption("kh.paths")$database$khelsa)
   on.exit(DBI::dbDisconnect(con), add = TRUE)
   
   friskvik <- read_friskvik(con, profil, geoniv, year)
@@ -56,7 +60,7 @@ make_godkjent_folder <- function(profil = c("FHP", "OVP"),
   files <- alle[, friskvikfile := paste0(INDIKATOR, "_", DATOTAG_KUBE, ".csv")][["friskvikfile"]]
   if(length(files) < 1) return(message("\nIngen godkjente filer funnet, avbryter"))
   
-  paths <- get_godkjent_paths(profil, geoniv, year)
+  paths <- get_godkjent_paths(profil, geofull, year)
   filelist <- godkjent_files_exist(files, paths)
   
   do_godkjent_copy_files(filelist$found, paths)
@@ -116,11 +120,9 @@ godkjent_summary_msg <- function(friskvik, alle){
 }
 
 #' @noRd
-get_godkjent_paths <- function(profil, geoniv, year){
+get_godkjent_paths <- function(profil, geofull, year){
   batchdate <- SettKHBatchDate()
-  base <- file.path(getOption("khtools.root"),
-                    getOption("khfunctions.kubedir"),
-                    getOption(paste0("khfunctions.", tolower(profil), geoniv)),
+  base <- file.path(getOption("kh.paths")$kube$friskvik[[tolower(profil)]][[tolower(geofull)]],
                     year)
   paths <- list(from = file.path(base, "csv"),
                 to = file.path(base, "GODKJENT", batchdate))
